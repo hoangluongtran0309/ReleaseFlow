@@ -1,0 +1,16 @@
+WEBVTT
+
+00:00.000 --> 00:10.500
+Download the three files of the latest release into an empty directory.
+
+00:10.500 --> 00:13.500
+Check them against the published checksums before running anything.
+
+00:13.500 --> 00:21.000
+quickstart.sh writes .env with a new database password and master key, and never prints them.
+
+00:21.000 --> 00:35.000
+It starts PostgreSQL and ReleaseFlow and waits until the application is healthy. Here the images were already downloaded; a first start downloads them.
+
+00:35.000 --> 00:37.900
+ReleaseFlow is running. Create the first administrator at /register.

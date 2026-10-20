@@ -1652,5 +1652,8 @@
   },
   "selfHost.operations.dashboard.caption": {
     "message": "Dashboard mà demo stack dựng sẵn trong Grafana, qua một ngày của một workspace mẫu. Grafana không được dịch."
+  },
+  "selfHost.steps.video.caption": {
+    "message": "Các lệnh trên chạy với bản release v1.0.0, trong 38 giây. Image đã có sẵn trên máy này; lần khởi động đầu tiên sẽ tải chúng nên lâu hơn."
   }
 }
