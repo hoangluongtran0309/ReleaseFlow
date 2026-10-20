@@ -65,6 +65,7 @@ const config = {
     format: 'detect',
     hooks: {
       onBrokenMarkdownLinks: 'throw',
+      onBrokenMarkdownImages: 'throw',
     },
   },
 

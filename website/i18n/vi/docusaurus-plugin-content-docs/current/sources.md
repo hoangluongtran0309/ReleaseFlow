@@ -31,6 +31,8 @@ thường. Trong một Organization, mỗi repository hoặc project chỉ kết
 nhưng các Organization khác nhau có thể kết nối cùng một repository, và cùng một tên trên hai
 nhà cung cấp là hai nguồn riêng biệt. Hiện chưa ngắt kết nối hay thay thế được một nguồn.
 
+![Kết nối một repository GitHub trên trang Projects; webhook secret, chỉ hiện một lần, đã được che](assets/sources/sr-1-connect-github.webp)
+
 Nguồn không tồn tại trả về `404 source_not_found`, và nguồn đã được kết nối trả về
 `409 github_repository_already_connected`, `409 gitlab_project_already_connected`,
 `409 linear_team_already_connected` hoặc `409 jira_project_already_connected`. Thành viên gọi
@@ -64,6 +66,8 @@ Mỗi pull request đã merge chỉ được lưu một lần cho mỗi reposito
 không sao, và hai repository của cùng một Project đều có thể có pull request #12. Trang Project
 hiển thị thời điểm của lần gửi được chấp nhận gần nhất; thời điểm này xuất hiện ngay khi GitHub
 gửi `ping` đầu tiên.
+
+![Một nguồn GitHub: webhook path, lần nhận gần nhất và access token đã cấu hình](assets/sources/sr-2-github-source.webp)
 
 Để thử endpoint trên máy mà không cần GitHub, ký đúng chuỗi byte bạn gửi đi:
 
@@ -102,6 +106,8 @@ Cả hai chỉ hiện một lần, trên trang và trong trường `signingToken
 printf 'whsec_%s\n' "$(printf '%s=' "$WEBHOOK_SECRET" | tr '_-' '/+' | base64 -d | base64 -w0)"
 ```
 
+![Trang sau khi kết nối một project GitLab: webhook path, secret và Signing token cho GitLab, cả hai giá trị đã được che](assets/sources/sr-1-gitlab-connected.webp)
+
 `POST /webhooks/gitlab/{webhookId}` không cần phiên đăng nhập hay CSRF token, và ReleaseFlow
 xác minh lần gửi bằng chính secret của nguồn đó trước khi đọc payload. Cách kiểm tra nào được
 áp dụng là do bạn chọn khi kết nối nguồn:
@@ -127,6 +133,8 @@ Organization và Project lấy từ nguồn, không bao giờ từ payload:
 Mỗi merge request chỉ được lưu một lần cho mỗi nguồn, nên gửi lại cũng không sao. GitLab chỉ
 đặt định danh cho lần gửi khi dùng chế độ ký, nên một thay đổi ghi lại `X-Gitlab-Event-UUID`
 khi nó là GUID, và không ghi gì trong trường hợp còn lại.
+
+![Một nguồn GitLab: instance, webhook path, lần nhận gần nhất và access token](assets/sources/sr-3-gitlab-source.webp)
 
 Chỉ kết nối được những instance có tên trong `RELEASEFLOW_GITLAB_ALLOWED_HOSTS` (mặc định
 `gitlab.com`). Mỗi mục là `host` hoặc `host:port`, nghĩa là HTTPS, hoặc một origin đầy đủ như
@@ -160,6 +168,8 @@ Linear tự tạo signing secret, nên tạo webhook bên Linear trước: trong
 **Settings → API → Webhooks**, đặt URL là địa chỉ ReleaseFlow của bạn nối thêm đường dẫn
 ReleaseFlow hiển thị cho nguồn, và bật sự kiện **Issues**. Sao chép secret Linear hiển thị
 rồi dán nó, cùng một API key, khi kết nối team trong ReleaseFlow.
+
+![Trang sau khi kết nối một team Linear: webhook path để khai báo với Linear, còn signing secret do Linear tạo đã được dán vào](assets/sources/sr-4-linear-connected.webp)
 
 `POST /webhooks/linear/{webhookId}` không cần phiên đăng nhập hay CSRF token. Một lần gửi tự
 chứng minh bằng bốn điều, tất cả đều phải đúng:
@@ -214,6 +224,8 @@ project sẽ không bao giờ được đọc. Một thay đổi từ Jira:
 - bắt đầu bằng key, nên quy tắc tiêu đề Conventional Commit không bao giờ khớp với nó: khi không
   có AI, một thay đổi từ Jira là Unknown và cần review.
 
+![Một nguồn Jira: không có webhook, thời điểm đọc gần nhất và lần đọc tới; email tài khoản đã được che](assets/sources/sr-5-jira-source.webp)
+
 Một lượt đọc thất bại vẫn giữ nguyên vị trí và thử lại, và nguồn hiển thị **Kết nối đang lỗi**
 cho tới khi có một lượt thành công. Một lỗi mà Jira có thể tự vượt qua, như giới hạn tốc độ hay
 sự cố, được thử lại tối đa năm lần, sau khoảng chờ Jira yêu cầu (tối đa một giờ) hoặc sau 2, 4,
@@ -235,10 +247,19 @@ không. Tối đa mười issue được đọc từ Jira và hiển thị trong
 {{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}
 ```
 
+Issue được đọc lúc thay đổi được ghi nhận, và thay đổi giữ đúng những gì đọc được khi đó: tiêu
+đề và trạng thái là của thời điểm ấy, không được cập nhật về sau, nên một note viết lúc duyệt có
+thể ghi `In Progress` cho một issue đã xong từ đó tới nay. Chúng là bằng chứng về việc thay đổi đã
+trỏ tới đâu, không phải góc nhìn trực tiếp vào công cụ theo dõi issue.
+
+![Một thay đổi GitHub cùng issue Jira mà nó nhắc tới, được liên kết với tiêu đề và trạng thái đọc lúc ghi nhận thay đổi](assets/sources/sr-6-linked-issue.webp)
+
 Commit message chỉ được dùng để tìm key; chúng không bao giờ được lưu lại. Khi không đọc được
 commit, hoặc Jira không cho xem một issue mà thay đổi có nhắc tới, thay đổi được thử lại rồi
 đánh dấu **Danh sách issue liên kết chưa đầy đủ**, khiến nó bắt buộc phải review. Một key theo
 sau là dấu gạch nối, như trong `feature/APP-3-export`, không được coi là có nhắc tới.
+
+![Một thay đổi nhắc tới DBV-15 và DBV-999: Jira chỉ trả về DBV-15, nên thay đổi cần review vì linked issue không đầy đủ](assets/sources/sr-6-linked-incomplete.webp)
 
 ## Access token {#access-tokens}
 
@@ -268,6 +289,10 @@ mới sẽ thay token cũ. Các lỗi là `400 github_token_rejected`, `400 gitl
 `503 github_unavailable`, `503 gitlab_unavailable` hoặc `503 jira_unavailable` khi không kết nối
 được; `404 source_not_found`; và `403` với thành viên.
 
+![Đặt access token cho một nguồn GitHub chưa có token: token được gõ dưới dạng dấu chấm và không bao giờ hiện lại](assets/sources/sr-7-access-token.webp)
+
+![Một nguồn có token không còn dùng được: Kết nối đang lỗi, và form thay access token](assets/sources/sr-8-connection-failing.webp)
+
 Danh sách tệp thay đổi của GitLab lấy từ các diff của merge request, tối đa mười trang, mỗi
 trang một trăm. Một diff mà GitLab báo là bị thu gọn, quá lớn hoặc bị cắt khiến cả danh sách
 được coi là không có, chứ không phải là danh sách ngắn hơn, nhờ vậy một tệp chưa từng được thấy
@@ -294,6 +319,8 @@ trong 90 ngày qua qua cùng quy trình xử lý như một lần gửi webhook:
 và, khi đã cấu hình AI, thay đổi được phân loại một lần. Mục nào đã được ghi trước đó, qua
 webhook hay qua một lần import trước, sẽ được bỏ qua, nên import và webhook không bao giờ tạo
 bản trùng của nhau. Thay đổi được import mang nhãn **Đã import**.
+
+![Import 90 ngày gần nhất trong Change Inbox: lần import chạy tới khi xong, và các thay đổi được import hiện ra](assets/sources/sr-9-history-import.webp)
 
 Import từ GitHub dừng ở pull request đầu tiên được cập nhật trước khoảng thời gian của nó, và cả
 hai loại import đều dừng sau 500 thay đổi mới với trạng thái **Dừng ở giới hạn**, vị trí được

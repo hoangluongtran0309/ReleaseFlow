@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00.000 --> 00:12.180
+Người quản lý release tạo v1.1.0, thêm mọi thay đổi đang chờ và gửi review. Những thay đổi đã bị loại khỏi release không được đề xuất.
+
+00:12.180 --> 00:24.180
+Mỗi thay đổi đều có quyết định: một cái được duyệt nguyên trạng, một cái được phân loại lại thành Security, một cái bị từ chối.
+
+00:24.180 --> 00:32.300
+Khi mọi thay đổi đã có quyết định, release được duyệt và mỗi audience có một note cho từng ngôn ngữ.
+
+00:32.300 --> 00:40.120
+Publish đóng băng các note; note nào cũng tải xuống được.
+
+00:40.120 --> 00:46.880
+Ai cũng đọc được note đã publish trên public changelog mà không cần đăng nhập.
+
+00:46.880 --> 00:50.480
+Cùng rule đó cũng gửi note vào kênh Slack của team.

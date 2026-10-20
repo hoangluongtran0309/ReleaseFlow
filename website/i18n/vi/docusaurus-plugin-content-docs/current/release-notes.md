@@ -16,6 +16,8 @@ trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu 
 | `contributor` | chi tiết triển khai và thay đổi mã nguồn | như operator, nhưng là chi tiết triển khai thay cho chi tiết chung |
 | `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | chỉ thay đổi gì và narrative |
 
+![Trang Audiences: ba preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
+
 Một audience có một **mã** (chữ thường, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái; cố định
 sau khi tạo), một **tên hiển thị**, một **ý định truyền đạt** mà AI làm theo khi viết narrative
 cho audience đó, và một **template**. Template là
@@ -23,7 +25,9 @@ cho audience đó, và một **template**. Template là
 các biến `whatChanged`, `whyChanged`, `technicalDetail`, `migrationStep`, `narrative`,
 `reference`, `pullRequestNumber`, `pullRequestUrl` và `linkedIssues` — một danh sách mà mỗi phần
 tử có `key`, `title`, `type`, `status` và `url`, được escape như mọi văn bản khác lấy từ công cụ
-theo dõi issue. `reference` là cách nguồn của thay đổi gọi tên nó: `#12` cho pull request GitHub,
+theo dõi issue, đúng như khi được đọc lúc thay đổi được ghi nhận
+([Issue Jira liên kết](sources.md#linked-jira-issues)). `reference` là cách nguồn của thay đổi
+gọi tên nó: `#12` cho pull request GitHub,
 `!12` cho merge request GitLab, và key của issue, như `APP-12` hay `ENG-12`, cho Jira và Linear;
 `pullRequestNumber` là con số trần, bất kể nguồn nào. Một section như
 `{{#narrative}} — {{.}}{{/narrative}}` biến mất khi giá trị rỗng. **Xem thử** dựng một thay đổi
@@ -31,6 +35,8 @@ mẫu. Template được kiểm tra khi lưu: nó phải biên dịch được, 
 `{{narrative}}` thay vì gọi tên một audience khác.
 
 Các template chi tiết đi kèm liên kết một thay đổi bằng `[{{reference}}]({{pullRequestUrl}})`.
+
+![Sửa template của một audience rồi lưu lại](assets/release-notes/rn-2-template.webp)
 
 Một Organization giữ từ 1 đến 20 audience. Audience không xoá được khi còn thứ gì đó nhắc tới
 nó: một release note, một hành động của quy tắc automation, hoặc lịch sử chạy automation. Quy
@@ -115,6 +121,10 @@ Release chỉ được publish khi mọi release note đều sẵn sàng: nếu 
 `409 translations_not_ready`, và cơ sở dữ liệu cũng từ chối. Sửa một bản tóm tắt sau khi duyệt
 sẽ dịch văn bản mới. Xem [ADR-0015](adr/0015-multilingual-release-notes.md).
 
+![Vài giây sau khi duyệt: note tiếng Việt đang dịch và vẫn hiện văn bản chưa dịch](assets/release-notes/rn-3-translating.webp)
+
+![Cùng note đó khi bản dịch đã về: tóm tắt release và mọi thay đổi đều bằng tiếng Việt](assets/release-notes/rn-4-translated.webp)
+
 ```text
 GET  /api/organization/release-languages
 PUT  /api/organization/release-languages                               {"targetLanguages"}
@@ -128,6 +138,8 @@ Mở **Release** để chuẩn bị các release của một Project. Trang này
 không bắt buộc, đồng thời liệt kê các release của Project kèm bộ lọc theo trạng thái và số
 lượng. Một Project có thể chuẩn bị nhiều release cùng lúc, và mỗi thay đổi thuộc về tối đa một
 release.
+
+![Các release của một Project theo trạng thái: bốn release đã publish, không có release nào ở nháp, review hay đã duyệt](assets/release-notes/rn-5-releases.webp)
 
 Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
 
@@ -148,6 +160,8 @@ Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
    theo template nữa), rồi chọn **Publish release này**.
 4. **Đã publish.** Xem [Publish](#publishing).
 
+![Một release đang review ngay sau khi thêm mọi thay đổi có sẵn](assets/release-notes/rn-6-add-all.webp)
+
 Mọi thành viên đều làm được mọi bước, nên một người có thể tự chuẩn bị, review, duyệt và
 publish cùng một release. ReleaseFlow ghi lại ai đã review từng thay đổi, ai đã duyệt và ai đã
 publish, nhưng không yêu cầu hai người khác nhau.
@@ -157,6 +171,8 @@ Trước khi publish, một release có thể được đặt lịch hoặc bỏ
 review trên thay đổi của nó), hoặc bị huỷ bỏ (các thay đổi của nó lại dùng được). Đưa về nháp
 cũng xoá các release note; duyệt lại sẽ viết release note mới.
 
+![Thời điểm phát hành dự kiến của một release, theo UTC](assets/release-notes/rn-8-planned-time.webp)
+
 Trước khi duyệt, phần xem trước cho thấy release note của mỗi audience sẽ viết gì. Một release
 note bắt đầu bằng tiêu đề và bản tóm tắt của release và phần tổng quan **Có gì mới** kèm số
 lượng, cảnh báo về thay đổi phá vỡ tương thích, rồi liệt kê thay đổi phá vỡ tương thích trước,
@@ -164,6 +180,8 @@ sau đó là tính năng, sửa lỗi, hiệu năng, tài liệu và bảo trì.
 audience viết ra từ bản tóm tắt trung lập và narrative của audience đó; khi không có bản tóm
 tắt, tiêu đề pull request được dùng thay, sau khi bỏ tiền tố Conventional Commit. Các nhãn là
 tiếng Anh hoặc tiếng Việt, theo ngôn ngữ đầu ra.
+
+![Các note của một release, mỗi audience và ngôn ngữ một note; note operator đã được sửa tay và được đánh dấu là viết tay](assets/release-notes/rn-7-manual-note.webp)
 
 Trong lúc review và sau khi duyệt, **Sửa tóm tắt** trên tab Review cho phép một người viết hoặc
 sửa bản tóm tắt của một thay đổi và narrative của từng audience. Việc này dùng được dù AI đã
@@ -238,6 +256,8 @@ của mọi audience, cùng với người publish và thời điểm publish. S
 hiển thị người đã duyệt và người đã publish release, và có một tab cho mỗi audience và ngôn ngữ
 với release note đã dựng, Markdown của nó, nút **Sao chép**, và liên kết **Tải về** để dùng cho
 GitHub Releases hoặc một changelog. Tệp tải về có tên `<version>-<audience>-<language>.md`.
+
+![Một release đã publish: chọn note Contributor · vi và tải nó về dưới dạng Markdown](assets/release-notes/rn-9-publish.webp)
 
 Một release đã publish không sửa, đặt lịch, review, huỷ bỏ, gỡ publish hay đổi nội dung được, và
 các release note của nó cũng vậy. Các thay đổi của nó vẫn sửa được trong Hộp thay đổi, nhưng

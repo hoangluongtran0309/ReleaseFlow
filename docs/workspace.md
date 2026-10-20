@@ -16,6 +16,8 @@ Registration also seeds the Organization's [category catalog](changes.md#categor
 its three preset [audiences](release-notes.md#audiences), and its public changelog
 address.
 
+![Filling in the registration form, then signing in to the new Organization](assets/workspace/w-1-register.webp)
+
 A password has at least 12 characters and at most 72 UTF-8 bytes, the most BCrypt reads,
 and is stored only as a BCrypt hash. The same rule applies when an invitation is accepted.
 
@@ -43,12 +45,18 @@ classification, decide possible duplicates, and prepare, approve, and publish re
 They can read a Project's sources, imports, and sensitive paths, the category catalog,
 and the release note languages, but not the Members, Audiences, or Automation pages.
 
+![The Members page: the members with their roles, and the invitations with their state](assets/workspace/w-4-members.webp)
+
 An invitation link has the form `/accept-invite#token=…` and is shown once.
 ReleaseFlow stores only a hash of it. The link expires after seven days (set
 `RELEASEFLOW_INVITATION_TTL`, for example `P3D`, to change this), works once,
 and can be reissued or revoked from the Members page. The invitee confirms the
 organization, chooses a name and a password, and signs in as a member. Roles
 cannot be changed and members cannot be removed yet.
+
+![Inviting a teammate by email; the one-time link shown afterwards is covered](assets/workspace/w-2-invite.webp)
+
+![The invitation page: the Organization and the invited email, with fields for a name and a password](assets/workspace/w-3-accept.webp)
 
 REST clients use the same rules:
 
@@ -78,6 +86,10 @@ first change, collect changes into a release, finish a review, publish an approv
 release, continue a draft, or nothing waiting. A workspace with an open draft and
 no changes at all is still waiting for its first change, because there is nothing
 to put in the draft.
+
+![The overview of a new Project: every counter at zero, and the next step is to connect a source](assets/workspace/w-5a-connect-a-source.webp)
+
+![The overview later, with a release approved: the next step is to collect the changes not yet in a release](assets/workspace/w-5b-collect-changes.webp)
 
 The header and mobile navigation switch between Projects. ReleaseFlow remembers the
 last one in the `releaseflow_project` cookie, so a page reached without `?project=`
@@ -136,6 +148,13 @@ account and writes the cookie, which outranks the account, so the change shows a
 once. The cookie is `HttpOnly`, lasts a year, and is `Secure` when the request
 was.
 
+![Choosing Tiếng Việt in the account menu: the page switches to Vietnamese at once](assets/workspace/w-6-language-picker.webp)
+
+The account step reads the language a session started with, not the account as it
+is now. A choice made in another browser, or through the API, reaches a session
+that was already signed in only when it signs in again; until then that session
+keeps its own cookie or, without one, the language it began with.
+
 ```text
 GET /api/me/ui-locale                  (any member)
 PUT /api/me/ui-locale {"uiLocale"}     (the same member)
@@ -168,6 +187,8 @@ tag such as `en`, `vi`, or `pt-BR`. It is chosen at registration
 (`outputLanguage`, English by default) and shown on the Projects page, where
 administrators can change it. Changes affect only changes classified
 afterwards.
+
+![The output language form on the Projects page](assets/workspace/w-7-output-language.webp)
 
 ```text
 GET /api/organization/output-language                     (any member)

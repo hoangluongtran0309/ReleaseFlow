@@ -10,6 +10,8 @@ Một quy tắc gửi release note đã publish tới nơi người đọc của
 nó chạy, project nó theo dõi (hoặc mọi project), và các action nó thực hiện theo thứ tự. Mỗi
 action nêu audience và ngôn ngữ của release note mà nó gửi.
 
+![Các rule automation cùng trigger và trạng thái bật hay tắt của từng rule; một webhook path đã được che](assets/automation/a-1-rules.webp)
+
 Có năm điều có thể khiến một quy tắc chạy:
 
 | Chạy khi | Cần gì | Điều gì xảy ra |
@@ -25,6 +27,8 @@ Slack, email và Microsoft Teams: không có ai theo dõi khi chúng chạy. Quy
 project từ release mà nó lặp lại. **Xem lần chạy tới** trên trang, hoặc
 `POST /api/automation/rules/cron-preview`, cho biết khi nào một biểu thức sẽ chạy lần tới,
 trước khi quy tắc nào lưu nó.
+
+![Thử một lịch cron ở một múi giờ: trang cho biết lần chạy tới](assets/automation/a-3-schedule.webp)
 
 Viết quy tắc trước; quy tắc mới luôn ở trạng thái tắt. Bật nó là lúc ReleaseFlow kiểm tra rằng
 các lần gửi có thể thực hiện được: project và mọi audience thuộc Organization của bạn, ngôn ngữ
@@ -47,6 +51,8 @@ Có tám loại action:
 | Microsoft Teams | URL callback của Workflows, cũng là secret của action | Đăng release note vào chat hoặc channel mà flow nhắm tới, request tối đa 28 KiB |
 | Zendesk | Một subdomain, client ID và secret OAuth, ID số của section, và user segment không bắt buộc | Publish release note thành một bài viết Help Center bằng ngôn ngữ của action, tối đa 1.000.000 byte |
 
+![Một rule chạy khi release được publish, với chín action theo thứ tự; site Atlassian và trang Notion đã được che](assets/automation/a-2-rule-editor.webp)
+
 Một Slack webhook URL phải trỏ tới một origin mà hệ thống triển khai cho phép — `hooks.slack.com`
 hoặc `hooks.slack-gov.com`, trừ khi `RELEASEFLOW_SLACK_ALLOWED_HOSTS` quy định khác — và được
 kiểm tra lại trước mỗi lần gửi. Một site Confluence được kiểm tra theo cách tương tự, nhưng dựa
@@ -61,11 +67,23 @@ không bao giờ xác nhận sẽ giữ trạng thái không rõ kết quả cho
 trang thứ hai. Secret chỉ ghi được: một khi đã lưu, không phản hồi, trang hay log nào lặp lại nó,
 và để trống trường này khi sửa sẽ giữ nguyên secret đang có.
 
+![GitHub Release do một rule viết từ note contributor](assets/automation/a-4-github-release.webp)
+
+![Email một rule đã gửi kèm note đã publish](assets/automation/a-4-email.webp)
+
+![Tin nhắn Slack một rule đã đăng cho release](assets/automation/a-5-slack.webp)
+
+![Trang Notion một rule đã tạo cho release](assets/automation/a-5-notion.webp)
+
+![Trang Confluence một rule đã tạo cho release](assets/automation/a-5-confluence.webp)
+
 ## Quy tắc do hệ thống khác gọi {#a-rule-another-system-calls}
 
 Lưu một quy tắc chạy khi có hệ thống khác gọi sẽ tạo cho nó một đường dẫn và một secret 256 bit,
 cả hai chỉ hiện một lần. **Xoay secret** thay secret và giữ nguyên đường dẫn; secret cũ ngừng
 hoạt động ngay lập tức.
+
+![Secret của một rule do hệ thống khác gọi, chỉ hiện một lần sau khi đổi secret; đã được che](assets/automation/a-6-webhook-secret.webp)
 
 Một lời gọi là một `POST` tới đường dẫn đó với `{"releaseId": "…"}` và ba header:
 
@@ -108,6 +126,10 @@ chỉ lặp lại đúng action đó. Một action mà không ai xác nhận đ�
 khi request đã đi, hoặc worker dừng trong năm phút — được ghi là không rõ kết quả và không bao
 giờ tự gửi lại; lặp lại nó sẽ yêu cầu bạn xác nhận rằng lần gửi có thể xảy ra hai lần. **Huỷ**
 để action đang thực hiện ghi lại kết quả của nó và dừng các action còn lại.
+
+![Một lần chạy có action GitHub Release thất bại với github_release_conflict: các action sau nó đang chờ, cùng nút chạy lại và huỷ](assets/automation/a-7-run-failed.webp)
+
+![Một action không rõ kết quả: chạy lại có thể gửi hai lần](assets/automation/a-8-run-unknown.webp)
 
 ## REST {#rest}
 
@@ -211,6 +233,8 @@ release note đó không tốn gì — action tìm thấy mục của chính nó
 `public_changelog_conflict`, thay vì viết đè lên thứ mà ai đó có thể đã đọc. Action changelog
 công khai không cần secret hay cấu hình, và không dùng được cho quy tắc chạy theo lịch.
 
+![Một mục public changelog, đọc khi không đăng nhập](assets/automation/a-10-changelog-entry.webp)
+
 Một release được publish cho một audience bằng nhiều ngôn ngữ, mỗi ngôn ngữ một action, là một
 thẻ duy nhất trên `/changelog/{slug}`: thẻ mở bằng ngôn ngữ được publish trước, và liệt kê mọi
 ngôn ngữ dưới dạng liên kết gọi bằng chính ngôn ngữ đó, như *English* và *Tiếng Việt*, kèm
@@ -218,6 +242,8 @@ ngôn ngữ dưới dạng liên kết gọi bằng chính ngôn ngữ đó, nh�
 ngôn ngữ khác: nó được cache dạng bất biến, nên một ngôn ngữ publish sau sẽ không có mặt trên đó.
 Phần khung quanh một release note theo ngôn ngữ giao diện của người đọc, nên `<html lang>` là
 ngôn ngữ đó, còn bản thân release note mang ngôn ngữ của mục.
+
+![Public changelog đọc khi không đăng nhập: mỗi release một thẻ, kèm link cho từng ngôn ngữ](assets/automation/a-9-public-changelog.webp)
 
 Đặt `RELEASEFLOW_PUBLIC_BASE_URL` là địa chỉ dùng để truy cập hệ thống triển khai này (mặc định
 `http://localhost:8080`); mọi liên kết công khai — URL chuẩn, các mục RSS, địa chỉ mà một lần chạy

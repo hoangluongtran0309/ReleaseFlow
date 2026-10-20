@@ -1,0 +1,19 @@
+WEBVTT
+
+00:00.000 --> 00:12.180
+The release manager creates v1.1.0, adds every available change and asks for review. Changes excluded from releases are not offered.
+
+00:12.180 --> 00:24.180
+Every change gets a decision: one is approved as shown, one is reclassified as Security, one is rejected.
+
+00:24.180 --> 00:32.300
+With every change decided, the release is approved and one note per audience and language is written.
+
+00:32.300 --> 00:40.120
+Publishing freezes the notes; each one can be downloaded.
+
+00:40.120 --> 00:46.880
+Anyone can read the published note on the public changelog, without signing in.
+
+00:46.880 --> 00:50.480
+The same rule also posts it to the team's Slack channel.

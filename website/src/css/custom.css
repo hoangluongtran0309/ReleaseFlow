@@ -459,6 +459,15 @@ main p a:not(.button):hover {
   font-weight: 700;
 }
 
+/* A screenshot in a guide sits on its own line, framed like the cards around it. */
+.theme-doc-markdown p > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius-lg);
+}
+
 .theme-doc-markdown p,
 .theme-doc-markdown li {
   color: var(--rf-text-2);

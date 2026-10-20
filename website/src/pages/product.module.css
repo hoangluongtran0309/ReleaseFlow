@@ -337,6 +337,28 @@ section.deepDive {
   flex: 1 1 600px;
 }
 
+/* Walkthrough and the screenshot under a stage */
+.walkthrough {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.walkthrough > figure,
+.stageScreenshot {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.stageScreenshot {
+  margin-top: 48px;
+}
+
+.publishStack .stageScreenshot {
+  margin-top: 0;
+}
+
 /* Publish */
 .publishStack {
   display: flex;

@@ -44,6 +44,8 @@ curl -s -b "$JAR" -c "$JAR" -H "X-CSRF-TOKEN: $TOKEN" \
   -H 'Content-Type: application/json' -d '{"name": "Website"}' "$BASE/api/projects"
 ```
 
+![Chạy các lệnh trên với một deployment: CSRF token, đăng nhập, session và một Project mới](assets/api/api-1-session.gif)
+
 Một phiên đăng nhập kết thúc sau 30 phút không có request nào, và khi ứng dụng khởi động lại;
 sau đó, mọi lời gọi trả về `401 authentication_required` cho tới khi script đăng nhập lại.
 `POST /logout` kết thúc phiên ngay lập tức. Đặt `RELEASEFLOW_SESSION_COOKIE_SECURE=true` mỗi

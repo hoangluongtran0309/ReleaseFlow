@@ -85,6 +85,8 @@ administrator. Flyway creates the schema on startup. Everything else — AI, tra
 email, provider timeouts, the public changelog address — is optional and listed in
 [Configuration](configuration.md).
 
+![The empty registration form at /register](assets/getting-started/gs-1-register.webp)
+
 ## Run the demo stack
 
 `docker-compose.demo.yml` builds the image from this checkout and runs it with
@@ -99,6 +101,8 @@ docker compose -f docker-compose.demo.yml up --build
 
 The application is on `http://127.0.0.1:8080`, Grafana on `http://127.0.0.1:3000`, and
 Prometheus on `http://127.0.0.1:9090`. See [Operations](operations.md).
+
+![The workspace overview after the first sign-in, recommending one next step: create a project](assets/getting-started/gs-2-first-overview.webp)
 
 ## Next steps
 

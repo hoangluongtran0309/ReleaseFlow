@@ -24,6 +24,12 @@
   gap: 40px;
 }
 
+.dashboard {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
 .splitTop {
   display: flex;
   flex-wrap: wrap;

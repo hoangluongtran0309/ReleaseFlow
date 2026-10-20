@@ -57,9 +57,13 @@ review cũng vậy:
 | Có thể trùng với một thay đổi trước đó | Thay đổi trông giống một thay đổi trước đó (xem [Tín hiệu review](#review-signals)) |
 | AI đề xuất một category mới | Không có category nào trong danh mục phù hợp (xem [Category](#categories)) |
 
+![Một thay đổi Unknown: hai label bug và enhancement mâu thuẫn và nó chạm vào file nhạy cảm, nên nó chờ một người chọn category](assets/changes/c-6-unknown.webp)
+
 Mỗi thay đổi giữ lại các quy tắc đã khớp, các `reviewTriggers` có kiểu và `changedFiles` của
 nó, và hộp thay đổi hiển thị chúng. Một lần review quyết định thay đổi có trigger nhưng vẫn giữ
 trigger lại làm hồ sơ.
+
+![Một pull request có tiêu đề feat nhưng mọi file thay đổi đều là tài liệu: được phân loại là Documentation, và thẻ ghi rõ lý do](assets/changes/c-1-why.webp)
 
 ### Sensitive path {#sensitive-paths}
 
@@ -84,6 +88,8 @@ mẫu tối đa 256 ký tự; một mẫu không biên dịch được, hoặc q
 khi thử lại bằng AI; những thay đổi đã phân loại giữ nguyên trigger của chúng. Xem
 [ADR-0014](adr/0014-project-sensitive-paths.md).
 
+![Sensitive path của một Project: danh sách có sẵn, rồi các pattern Project thêm vào](assets/changes/c-2-sensitive-paths.webp)
+
 ## Hộp thay đổi {#change-inbox}
 
 Mở `/changes` để xem hộp thay đổi (Change Inbox) của một Project, hoặc gọi
@@ -94,6 +100,10 @@ cho những thay đổi được quy tắc quyết định mà không cần ngư
 trạng thái hợp lệ trả về `400 invalid_change_filter`, và Project của Organization khác trả về
 `404 project_not_found`. Mỗi thay đổi trả về mã `category` cùng `categoryName` và
 `categoryGroup`, đúng như lúc nó được phân loại.
+
+![Change Inbox lọc theo Fix: trạng thái đồng bộ của từng nguồn, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
+
+![Lọc Change Inbox để chỉ còn các thay đổi bị đánh giá là thiếu context](assets/changes/c-4-context-filter.webp)
 
 ## Phân loại và tóm tắt bằng AI {#ai-classification-and-summaries}
 
@@ -126,6 +136,8 @@ thay đổi trả về chúng dưới dạng `neutralSummary` và `audienceNarra
 `contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
 giờ bị câu trả lời AI sau đó thay thế.
 
+![Tóm tắt trung lập của một thay đổi, tiếp theo là một đoạn viết cho từng audience](assets/changes/c-5-summary.webp)
+
 Quy tắc luôn được ưu tiên:
 
 - category mà quy tắc đã chọn được giữ nguyên;
@@ -144,6 +156,8 @@ hỏi lại. Một người có thể bấm **Thử lại bằng AI** trong Hộ
 CSRF token. Trigger thất bại vẫn được giữ, nên vẫn có người review thay đổi. Một thay đổi
 Unknown được phân loại khi chưa cấu hình nhà cung cấp nào, và chưa ai review, cũng gửi được theo
 cách đó khi đã có nhà cung cấp.
+
+![Một thay đổi mà phân loại bằng AI thất bại: nó cần review, và sau đó một người đã sửa category của nó](assets/changes/c-10-ai-failed.webp)
 
 | Kết quả | Phản hồi REST |
 | --- | --- |
@@ -167,6 +181,8 @@ Xác nhận mà không thay đổi gì sẽ giữ nguồn phân loại ban đầ
 hoặc cờ phá vỡ tương thích sẽ khiến người review trở thành nguồn phân loại, hiển thị là "Sửa lại
 bởi". Một thay đổi có thể được review lại; lần review gần nhất được giữ.
 
+![Một thay đổi sau khi một người sửa category thành Fix: thẻ ghi ai đã sửa](assets/changes/c-8-correct.webp)
+
 REST client gọi `POST /api/projects/{projectId}/changes/{changeId}/review` với phiên đăng nhập,
 CSRF token và `{"category": "fix", "breaking": false}`. Category là một mã trong danh mục,
 không phân biệt hoa thường. Lời gọi trả về thay đổi đã cập nhật; `400 invalid_change_review` cho
@@ -184,6 +200,8 @@ Không có gì bị xoá và không có gì được quyết định thay: thay 
 và trạng thái review, vẫn review được, dù trang tổng quan không còn đếm nó trong số thay đổi cần
 review. **Đưa trở lại vào release** rút lại quyết định đó. Bộ lọc **Release** của Hộp thay đổi
 chỉ hiện những thay đổi đã loại. Xem [ADR-0033](adr/0033-change-exclusion.md).
+
+![Một thay đổi đã loại khỏi release: badge Đã loại khỏi release, lý do, và nút Đưa trở lại vào release](assets/changes/c-13-exclude.webp)
 
 Một thay đổi đang thuộc một release, ở bất kỳ trạng thái nào, phải được gỡ khỏi release đó
 trước: bỏ nó khỏi bản nháp, hoặc từ chối nó trong lúc review. Thay đổi còn đang xử lý thì không
@@ -237,6 +255,8 @@ cho mỗi thay đổi. Thay đổi mới cần review với trigger **Có thể 
 đó**. Cả hai thẻ đều hiển thị cặp này, và bất kỳ thành viên nào cũng có thể **Xác nhận trùng**
 hoặc đánh dấu **Không trùng**, một lần duy nhất.
 
+![Một cặp có thể trùng: một pull request GitHub và một issue Linear, giống nhau 95%, kèm bằng chứng và hai nút xác nhận hoặc bỏ qua](assets/changes/c-9-duplicate.webp)
+
 ```text
 GET  /api/projects/{projectId}/duplicate-candidates?status=OPEN
 POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision   {"decision": "CONFIRMED" | "DISMISSED"}
@@ -258,6 +278,8 @@ năng, Tài liệu, Bảo trì hoặc Khác. Release note được chia mục th
 `SECURITY` mới trong nhóm Sửa lỗi sẽ xuất hiện dưới mục **Bug Fixes** (trong release note tiếng
 Việt là **Sửa lỗi**). Phá vỡ tương thích vẫn là một cờ riêng.
 
+![Category catalog, có Security được thêm vào nhóm Fix](assets/changes/c-11-catalog.webp)
+
 - **Quy tắc.** Mỗi quy tắc cố định chỉ định một nhóm và một mã ưu tiên, ví dụ `fix` chỉ định
   nhóm Sửa lỗi và mã `FIX`. Category ưu tiên được dùng nếu nó đang hoạt động; nếu không thì dùng
   category đang hoạt động đầu tiên của nhóm theo thứ tự mã; nếu nhóm không có category nào, quy
@@ -275,6 +297,8 @@ Việt là **Sửa lỗi**). Phá vỡ tương thích vẫn là một cờ riên
   Sau khi Thêm vào danh mục hoặc Gán, thay đổi nhận category đó, hiển thị là **Category được đề
   xuất**, và vẫn cần một người review. Một đề xuất không bao giờ tự trở thành category, và mỗi
   đề xuất chỉ được quyết định một lần.
+
+![Quyết định một category do AI đề xuất: gắn nó vào category Security đã có](assets/changes/c-12-proposal.webp)
 
 Xem [ADR-0012](adr/0012-category-catalog.md).
 

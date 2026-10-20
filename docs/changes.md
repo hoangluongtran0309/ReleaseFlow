@@ -59,9 +59,13 @@ review trigger:
 | Possible duplicate of an earlier change | The change looks like an earlier one (see [Review signals](#review-signals)) |
 | AI proposed a new category | No category of the catalog fits (see [Categories](#categories)) |
 
+![An Unknown change: its labels bug and enhancement conflict and it touches sensitive files, so it waits for a person to choose a category](assets/changes/c-6-unknown.webp)
+
 Each change keeps the rules that matched, its typed `reviewTriggers`, and its
 `changedFiles`, and the inbox shows them. A review settles a triggered change
 but keeps the trigger as a record.
+
+![A pull request titled feat whose changed files are all documentation: classified as Documentation, and the card says why](assets/changes/c-1-why.webp)
 
 ### Sensitive paths
 
@@ -89,6 +93,8 @@ New patterns apply to changes classified afterwards, including an AI retry;
 changes already classified keep their triggers. See
 [ADR-0014](adr/0014-project-sensitive-paths.md).
 
+![A Project's sensitive paths: the built-in list, then the patterns the Project added](assets/changes/c-2-sensitive-paths.webp)
+
 ## Change Inbox
 
 Open `/changes` to browse a Project's inbox, or call
@@ -100,6 +106,10 @@ code such as `feature` or `security`, in any case), `status`
 `400 invalid_change_filter`, and another Organization's Project returns
 `404 project_not_found`. Each change returns its `category` code with its
 `categoryName` and `categoryGroup`, as recorded when it was classified.
+
+![The Change Inbox filtered to Fix: the sync state of each source, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
+
+![Filtering the Change Inbox to the changes whose context was judged insufficient](assets/changes/c-4-context-filter.webp)
 
 ## AI classification and summaries
 
@@ -133,6 +143,8 @@ and the changes API returns them as `neutralSummary` and `audienceNarratives`
 with `contentLanguage` and `aiProvider`. A summary written by a person on a
 release page is never replaced by a later AI answer.
 
+![A change's neutral summary, followed by one narrative for each audience](assets/changes/c-5-summary.webp)
+
 The rules always win:
 
 - a category the rules chose is kept;
@@ -152,6 +164,8 @@ with AI** in the Change Inbox, or call
 session and a CSRF token. The failure trigger stays, so a person still reviews the change.
 An Unknown change that was classified while no provider was configured, and that nobody
 has reviewed, can be sent the same way once one is.
+
+![A change whose AI classification failed: it needed review, and a person has since corrected its category](assets/changes/c-10-ai-failed.webp)
 
 | Outcome | REST response |
 | --- | --- |
@@ -178,6 +192,8 @@ AI). Changing the category or breaking flag makes the reviewer the source,
 shown as "Corrected by". A change can be reviewed again; the latest review is
 kept.
 
+![A change after a person corrected its category to Fix: the card says who corrected it](assets/changes/c-8-correct.webp)
+
 REST clients call `POST /api/projects/{projectId}/changes/{changeId}/review`
 with the session, a CSRF token, and `{"category": "fix", "breaking": false}`.
 The category is a code of the catalog in any case. It returns the updated
@@ -197,6 +213,8 @@ its category, breaking flag, and review state, and can still be reviewed, though
 overview no longer counts it among the changes that need review. **Include in releases
 again** takes the decision back. The **Releases** filter of the Inbox shows only the
 excluded changes. See [ADR-0033](adr/0033-change-exclusion.md).
+
+![Excluding a change from releases with a reason; the change then carries the Excluded from releases badge](assets/changes/c-13-exclude.webp)
 
 A change that belongs to a release, of any status, is removed from it first: take it
 out of the draft, or reject it during review. A change still processing cannot be
@@ -252,6 +270,8 @@ files. A pair at least `RELEASEFLOW_DUPLICATE_THRESHOLD` similar (default
 needs review with a **Possible duplicate** trigger. Both cards show the pair,
 and any member can **Confirm duplicate** or mark it **Not a duplicate**, once.
 
+![A possible duplicate: a GitHub pull request and a Linear issue, 95% similar, with the evidence and the Confirm and Dismiss buttons](assets/changes/c-9-duplicate.webp)
+
 ```text
 GET  /api/projects/{projectId}/duplicate-candidates?status=OPEN
 POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision   {"decision": "CONFIRMED" | "DISMISSED"}
@@ -273,6 +293,8 @@ groups: Feature, Fix, Performance, Documentation, Maintenance, or Other.
 Release notes are sectioned by group, so a new `SECURITY` category in the Fix
 group appears under **Bug Fixes**. Breaking stays a separate flag.
 
+![The category catalog, with Security added to the Fix group](assets/changes/c-11-catalog.webp)
+
 - **Rules.** Each fixed rule names a group and a preferred code, for example
   `fix` names Fix and `FIX`. The preferred category is used if it is active;
   otherwise the first active category of the group by code; if the group has
@@ -293,6 +315,8 @@ group appears under **Bug Fixes**. Breaking stays a separate flag.
   After Add to catalog or Map, the change takes that category, shown as
   **Suggested category**, and still needs a person's review. A proposal never
   becomes a category by itself, and each is decided once.
+
+![Deciding a category the AI proposed: mapping it to the existing Security category](assets/changes/c-12-proposal.webp)
 
 See [ADR-0012](adr/0012-category-catalog.md).
 

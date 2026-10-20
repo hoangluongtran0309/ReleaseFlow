@@ -1,6 +1,9 @@
 import Link from '@docusaurus/Link';
 import Translate, {translate} from '@docusaurus/Translate';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Heading from '@theme/Heading';
+import ThemedImage from '@theme/ThemedImage';
 import styles from './styles.module.css';
 
 const repository = 'https://github.com/hoangluongtran0309/ReleaseFlow';
@@ -27,16 +30,13 @@ function CheckIcon() {
   );
 }
 
-function FrameIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M3 8h18M8 12h8M8 16h5" />
-    </svg>
-  );
-}
-
-function ShowcaseFrame({title, description}) {
+/** A screenshot of the application in the reader's language and theme, 1600 × 1000. */
+function ShowcaseFrame({title, description, slug, alt}) {
+  const {
+    i18n: {currentLocale},
+  } = useDocusaurusContext();
+  const light = useBaseUrl(`/media/home/${slug}.${currentLocale}.light.webp`);
+  const dark = useBaseUrl(`/media/home/${slug}.${currentLocale}.dark.webp`);
   return (
     <article className={styles.showcaseCard}>
       <div className={styles.mediaFrame}>
@@ -45,12 +45,7 @@ function ShowcaseFrame({title, description}) {
           <span />
           <span />
         </div>
-        <div className={styles.placeholder}>
-          <FrameIcon />
-          <span>
-            <Translate id="homepage.showcase.placeholder">Product screenshot reserved</Translate>
-          </span>
-        </div>
+        <ThemedImage className={styles.screenshot} sources={{light, dark}} alt={alt} width={1600} height={1000} />
       </div>
       <div className={styles.showcaseCopy}>
         <Heading as="h3">{title}</Heading>
@@ -73,13 +68,18 @@ function ProductShowcase() {
           </Heading>
           <p className={styles.sectionDescription}>
             <Translate id="homepage.showcase.description">
-              Product walkthroughs will live here. The frames are ready for real screenshots without pretending a
-              mockup is the application.
+              Screenshots of ReleaseFlow at work on a sample project, in the language and theme you are reading in.
             </Translate>
           </p>
         </div>
         <div className={styles.showcaseGrid}>
           <ShowcaseFrame
+            slug="h-1-change-inbox"
+            alt={translate({
+              id: 'homepage.showcase.inbox.alt',
+              message:
+                'The Change Inbox: the sync state of a Jira, a GitHub, and a GitLab source, then a change with its category and review badges',
+            })}
             title={<Translate id="homepage.showcase.inbox.title">Change Inbox</Translate>}
             description={
               <Translate id="homepage.showcase.inbox.description">
@@ -89,6 +89,11 @@ function ProductShowcase() {
             }
           />
           <ShowcaseFrame
+            slug="h-2-release-review"
+            alt={translate({
+              id: 'homepage.showcase.release.alt',
+              message: 'A release in review with two of its five changes decided, and the preview of its contributor note',
+            })}
             title={<Translate id="homepage.showcase.release.title">Release review</Translate>}
             description={
               <Translate id="homepage.showcase.release.description">

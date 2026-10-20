@@ -631,26 +631,19 @@
   background: var(--rf-border-strong);
 }
 
-.screenshotArea {
-  display: flex;
-  min-height: 340px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+.screenshotMedia {
   margin: 16px;
-  padding: 16px;
+  overflow: hidden;
   border: 1px solid var(--rf-border);
   border-radius: var(--rf-radius-lg);
   background: var(--rf-surface-inset);
-  color: var(--rf-accent-text);
-  text-align: center;
 }
 
-.screenshotArea span {
-  color: var(--rf-text-emph);
-  font-size: 13px;
-  font-weight: 600;
+.screenshotMedia img,
+.screenshotMedia video {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .screenshot figcaption {

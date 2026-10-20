@@ -11,6 +11,8 @@ what makes it run, the project it watches (or every project), and the actions it
 carries out, in order. Each action names the audience and language whose note it
 delivers.
 
+![The automation rules with their triggers and whether each is enabled; a webhook path is covered](assets/automation/a-1-rules.webp)
+
 Five things can make a rule run:
 
 | Runs when | What it needs | What happens |
@@ -26,6 +28,8 @@ Slack, email, and Microsoft Teams: nobody is watching
 when they go off. A schedule takes its project from the release it repeats.
 **Preview next run** on the page, or `POST /api/automation/rules/cron-preview`,
 says when an expression would next fire before any rule keeps it.
+
+![Trying a cron schedule in a time zone: the page says when it would run next](assets/automation/a-3-schedule.webp)
 
 Write the rule first; it starts disabled. Enabling it is the moment ReleaseFlow
 checks that the deliveries can be made: the project and every audience belong to
@@ -49,6 +53,8 @@ Eight kinds of action exist:
 | Microsoft Teams | The Workflows callback URL, which is the action's secret | Posts the note into the chat or channel the flow targets, up to 28 KiB of request |
 | Zendesk | A subdomain, an OAuth client ID and secret, a numeric section, and an optional user segment | Publishes the note as a Help Center article in the action's language, up to 1,000,000 bytes |
 
+![A rule that runs when a release is published, with nine actions in order; the Atlassian site and the Notion page are covered](assets/automation/a-2-rule-editor.webp)
+
 A Slack webhook URL must name an origin the deployment allows —
 `hooks.slack.com` or `hooks.slack-gov.com` unless `RELEASEFLOW_SLACK_ALLOWED_HOSTS`
 says otherwise — and is checked again before every delivery. A Confluence site is
@@ -65,11 +71,23 @@ until a person says a second page is acceptable. A secret is
 write-only: once stored, no response, page, or log ever repeats it, and leaving
 the field empty while editing keeps the one already there.
 
+![The GitHub Release a rule wrote from the contributor note](assets/automation/a-4-github-release.webp)
+
+![The email a rule sent with the published note](assets/automation/a-4-email.webp)
+
+![The Slack message a rule posted for the release](assets/automation/a-5-slack.webp)
+
+![The Notion page a rule created for the release](assets/automation/a-5-notion.webp)
+
+![The Confluence page a rule created for the release](assets/automation/a-5-confluence.webp)
+
 ## A rule another system calls
 
 Saving a rule that runs when another system calls it gives it a path and a
 256-bit secret, both shown once. **Rotate secret** replaces the secret and keeps
 the path; the old secret stops working at once.
+
+![The secret of a rule another system calls, shown once after Rotate secret; covered here](assets/automation/a-6-webhook-secret.webp)
 
 A call is a `POST` to that path with `{"releaseId": "…"}` and three headers:
 
@@ -113,6 +131,10 @@ confirm — a connection that dropped after the request went out, or a worker th
 stopped for five minutes — is recorded as unknown and never sent again on its
 own; repeating it asks you to confirm the delivery may happen twice. **Cancel**
 lets the action already on its way record its result and stops the rest.
+
+![A run whose GitHub Release action failed with github_release_conflict: the actions behind it are pending, with Run again and Cancel](assets/automation/a-7-run-failed.webp)
+
+![An action whose outcome is unknown: running it again may deliver twice](assets/automation/a-8-run-unknown.webp)
 
 ## REST
 
@@ -218,6 +240,8 @@ audience, and language that are already public fails as
 public changelog action takes no secret and no configuration, and cannot be used by a
 rule that fires on a schedule.
 
+![A public changelog entry, read signed out](assets/automation/a-10-changelog-entry.webp)
+
 A release published for one audience in several languages, by one action per language,
 is one card on `/changelog/{slug}`: it opens on the language published first, and lists
 every language as a link named in its own language, such as *English* and *Tiếng Việt*,
@@ -225,6 +249,8 @@ with `hreflang` and `lang`. An entry's own page names its language. It does not 
 other languages: it is cached as immutable, and a language published later would be
 missing from it. The page around a note follows the reader's interface language, so
 `<html lang>` is that language and the note itself carries the entry's.
+
+![A public changelog read signed out: one card per release, with a link for each language](assets/automation/a-9-public-changelog.webp)
 
 Set `RELEASEFLOW_PUBLIC_BASE_URL` to the address this deployment is reached at (default
 `http://localhost:8080`); every public link — the canonical URL, the RSS items, the
