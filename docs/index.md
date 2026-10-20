@@ -31,6 +31,8 @@ notes written from the same reviewed facts instead of rewritten by hand three ti
    Releases, Slack, email, Notion, Confluence, Microsoft Teams, Zendesk, or a public
    changelog with an RSS feed. See [Automation](automation.md).
 
+![The Change Inbox of a Project: the sync state of its Jira, GitHub, and GitLab sources, then a change with its category, review, and exclusion badges](assets/index/i-1-change-inbox.webp)
+
 Each step is recorded, so a published note always shows who reviewed what went into it.
 
 ## What you run

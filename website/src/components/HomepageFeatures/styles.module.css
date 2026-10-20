@@ -54,54 +54,29 @@
 }
 
 .mediaFrame {
-  aspect-ratio: 16 / 9;
   padding: 0 1rem 1rem;
   border-bottom: 1px solid var(--rf-border);
   background: var(--rf-surface-2);
 }
-
 .browserBar {
   display: flex;
   height: 2.5rem;
   align-items: center;
   gap: 0.4rem;
 }
-
 .browserBar span {
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 999px;
   background: var(--rf-border-strong);
 }
-
-.placeholder {
-  display: grid;
-  height: calc(100% - 2.5rem);
-  place-content: center;
-  place-items: center;
-  gap: 0.7rem;
-  border: 1px dashed var(--rf-border-strong);
+.screenshot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rf-border);
   border-radius: 0.65rem;
-  background: var(--rf-surface);
-  color: var(--rf-text-2);
-  text-align: center;
 }
-
-.placeholder svg {
-  width: 2rem;
-  height: 2rem;
-  fill: none;
-  stroke: var(--rf-accent-text);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.5;
-}
-
-.placeholder span {
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
 .showcaseCopy {
   padding: 1.4rem 1.5rem 1.6rem;
 }

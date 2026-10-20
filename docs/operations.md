@@ -51,6 +51,8 @@ Prometheus keeps seven days of history. Alerting,
 durable storage, a retention policy, and access control are a real deployment's
 own to bring. See [ADR-0026](adr/0026-deployment-observability.md).
 
+![The ReleaseFlow Operations dashboard in Grafana, over 24 hours](assets/operations/o-1-grafana.webp)
+
 ## Container image
 
 The `Dockerfile` builds the JAR in a JDK stage and copies it into a Temurin 21 JRE image

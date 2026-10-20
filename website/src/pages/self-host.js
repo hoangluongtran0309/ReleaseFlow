@@ -5,6 +5,7 @@
 
 import Link from '@docusaurus/Link';
 import Translate, {translate} from '@docusaurus/Translate';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import {
   ActionButton,
@@ -21,6 +22,7 @@ import {
   Hero,
   Lead,
   LinkCard,
+  ScreenshotFrame,
   Section,
   SectionHeader,
   Steps,
@@ -416,6 +418,23 @@ function Operations() {
             </Translate>
           </LinkCard>
         </Grid>
+        <div className={styles.dashboard}>
+          <ScreenshotFrame
+            src={useBaseUrl('/media/self-host/s-2-grafana.webp')}
+            width={1600}
+            height={1000}
+            alt={translate({
+              id: 'selfHost.operations.dashboard.alt',
+              message:
+                'The ReleaseFlow Operations dashboard in Grafana over 24 hours: changes needing review, classification throughput and time, AI error rate, action failures, unconfirmed deliveries, and whether Prometheus reaches the application',
+            })}
+            caption={translate({
+              id: 'selfHost.operations.dashboard.caption',
+              message:
+                'The dashboard the demo stack provisions in Grafana, over a day of a sample workspace. Grafana is not translated.',
+            })}
+          />
+        </div>
       </Container>
     </Section>
   );

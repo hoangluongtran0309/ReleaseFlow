@@ -469,7 +469,10 @@ where it first appears; ADRs are linked from the slice they record.
   themes, and English and Vietnamese: the guides, Getting started, Configuration,
   Operations, and the REST API are translated, keeping each English anchor, while the
   architecture, the implementation status, and the decision records fall back to English.
-  Links, anchors, and Markdown file links fail the build; a link to a file
+  Screenshots and animations of a sample project illustrate the guides in both languages,
+  and the landing, Product, and Self-host pages carry screenshots, a captioned walkthrough
+  video, and the Grafana dashboard. Links, anchors, Markdown file links, and images fail
+  the build; a link to a file
   beside `docs/` points at it on `main`. A `Docs` workflow builds it on every pull request
   and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
   dependencies at high severity, allowing only listed advisories that no release fixes.

@@ -2,8 +2,10 @@
 // Behaviour described here comes from docs/sources.md, docs/changes.md,
 // docs/release-notes.md and docs/automation.md; the change "Fix time zone offset in
 // scheduled digests" and its notes are illustrations and are always labelled as examples.
+// The video and screenshots are of a real release of a sample project, and say so.
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Translate, {translate} from '@docusaurus/Translate';
 import Heading from '@theme/Heading';
 import Layout from '@theme/Layout';
@@ -153,8 +155,56 @@ function HeroSection() {
   );
 }
 
-/** One stage of the tour: words on one side, a figure on the other. */
-function DeepDive({band, reverse, id, eyebrow, title, body, checks, link, figure, narrowCopy}) {
+function Walkthrough() {
+  const {
+    i18n: {currentLocale},
+  } = useDocusaurusContext();
+  const media = (file) => useBaseUrl(`/media/product/${file}`);
+  return (
+    <Section band="alt" labelledBy="walkthrough-title">
+      <Container className={styles.walkthrough}>
+        <SectionHeader
+          id="walkthrough-title"
+          align="center"
+          eyebrow={translate({id: 'product.walkthrough.eyebrow', message: 'Walkthrough'})}
+          title={translate({id: 'product.walkthrough.title', message: 'One release, from draft to the public changelog.'})}
+          lead={translate({
+            id: 'product.walkthrough.lead',
+            message:
+              'Fifty seconds of a real release of a sample project: created, reviewed, approved, published, read without signing in, and posted to Slack.',
+          })}
+        />
+        <ScreenshotFrame
+          caption={translate({
+            id: 'product.walkthrough.caption',
+            message: 'Release v1.1.0 of the sample project dbvault. Captions in English and Vietnamese.',
+          })}>
+          <video controls muted playsInline preload="metadata" poster={media('p-0.poster.webp')} width={1280} height={800}>
+            <source src={media('p-0.mp4')} type="video/mp4" />
+            <track kind="captions" srcLang="en" label="English" src={media('p-0.en.vtt')} default={currentLocale === 'en'} />
+            <track kind="captions" srcLang="vi" label="Tiếng Việt" src={media('p-0.vi.vtt')} default={currentLocale === 'vi'} />
+          </video>
+        </ScreenshotFrame>
+      </Container>
+    </Section>
+  );
+}
+
+/** A screenshot of the stage just described, under its words and its diagram. */
+function StageScreenshot({file, localized, width, height, alt, caption}) {
+  const {
+    i18n: {currentLocale},
+  } = useDocusaurusContext();
+  const src = useBaseUrl(`/media/product/${localized ? `${file}.${currentLocale}` : file}.webp`);
+  return (
+    <div className={styles.stageScreenshot}>
+      <ScreenshotFrame src={src} alt={alt} width={width} height={height} caption={caption} />
+    </div>
+  );
+}
+
+/** One stage of the tour: words on one side, a figure on the other, and a screenshot below. */
+function DeepDive({band, reverse, id, eyebrow, title, body, checks, link, figure, screenshot, narrowCopy}) {
   return (
     <Section band={band} labelledBy={id} className={styles.deepDive}>
       <Container className={reverse ? `${styles.split} ${styles.reverse}` : styles.split}>
@@ -165,6 +215,7 @@ function DeepDive({band, reverse, id, eyebrow, title, body, checks, link, figure
         </div>
         {figure}
       </Container>
+      {screenshot && <Container>{screenshot}</Container>}
     </Section>
   );
 }
@@ -347,6 +398,20 @@ function Publish() {
             </article>
           ))}
         </Grid>
+        <StageScreenshot
+          file="p-4-operator"
+          width={1600}
+          height={1240}
+          alt={translate({
+            id: 'product.publish.screenshot.alt',
+            message:
+              'The published operator note of release v1.1.0, with a tab for every audience and language and the note as Markdown beside it',
+          })}
+          caption={translate({
+            id: 'product.publish.screenshot.caption',
+            message: 'The real thing: the operator note of a published release of the sample project.',
+          })}
+        />
         <p className={styles.lockLine}>
           <Icon name="lock" size={16} />
           <Translate id="product.publish.frozen">
@@ -443,6 +508,7 @@ export default function Product() {
       })}>
       <main>
         <HeroSection />
+        <Walkthrough />
         <DeepDive
           id="collect-title"
           eyebrow={translate({id: 'product.collect.eyebrow', message: '01 · Collect'})}
@@ -472,6 +538,23 @@ export default function Product() {
             </TextLink>
           }
           figure={<CollectFigure />}
+          screenshot={
+            <StageScreenshot
+              file="p-1-sources"
+              localized
+              width={1608}
+              height={1155}
+              alt={translate({
+                id: 'product.collect.screenshot.alt',
+                message:
+                  'Four source cards: a GitHub repository, a GitLab project, and a Linear team with their last delivery, and a Jira project with its last and next read',
+              })}
+              caption={translate({
+                id: 'product.collect.screenshot.caption',
+                message: 'The four sources of one Project of the sample workspace, as the Projects page shows them.',
+              })}
+            />
+          }
         />
         <DeepDive
           band="alt"
@@ -504,6 +587,23 @@ export default function Product() {
             </TextLink>
           }
           figure={<ClassifyFigure />}
+          screenshot={
+            <StageScreenshot
+              file="p-2-classify"
+              localized
+              width={1600}
+              height={1000}
+              alt={translate({
+                id: 'product.classify.screenshot.alt',
+                message:
+                  'A pull request classified as Fix because of its title type, waiting for review because it changed six sensitive files, with its AI summary below',
+              })}
+              caption={translate({
+                id: 'product.classify.screenshot.caption',
+                message: 'A real change in the Change Inbox: why it is Fix, and which files sent it to review.',
+              })}
+            />
+          }
         />
         <DeepDive
           narrowCopy
@@ -530,9 +630,13 @@ export default function Product() {
           figure={
             <div className={styles.screenshotSlot}>
               <ScreenshotFrame
-                label={translate({
+                src={useBaseUrl('/media/product/p-3-review.webp')}
+                width={900}
+                height={728}
+                alt={translate({
                   id: 'product.review.screenshot',
-                  message: 'Release review · product screenshot reserved',
+                  message:
+                    'A release review: one change approved as shown, one reclassified as Security with a note, one rejected',
                 })}
                 caption={translate({
                   id: 'product.review.caption',

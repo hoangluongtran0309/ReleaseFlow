@@ -17,6 +17,8 @@ Organization starts with three presets, named in its output language
 | `contributor` | implementation detail and code changes | as operator, with implementation instead of detail |
 | `end_user` | plain language, what people notice | what changed and the narrative only |
 
+![The Audiences page: the three presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
+
 An audience has a **code** (lowercase letters, digits, and underscores,
 starting with a letter; fixed once created), a **display name**, a
 **communication intent** that the AI follows when it writes the audience's
@@ -25,7 +27,8 @@ narrative, and a **template**. Templates are
 Markdown with the variables `whatChanged`, `whyChanged`, `technicalDetail`,
 `migrationStep`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and
 `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
-`url`, escaped like any other tracker text. `reference` is how the change's source
+`url`, escaped like any other tracker text, as they were read when the change was recorded
+([Linked Jira issues](sources.md#linked-jira-issues)). `reference` is how the change's source
 names it: `#12` for a GitHub pull request, `!12` for a GitLab merge request, and the
 issue key, such as `APP-12` or `ENG-12`, for Jira and Linear; `pullRequestNumber` is
 the bare number whatever the source. A section such as
@@ -34,6 +37,8 @@ it is saved: it must compile, use only these variables, and use `{{narrative}}`
 rather than naming another audience.
 
 The shipped detailed templates link a change as `[{{reference}}]({{pullRequestUrl}})`.
+
+![Editing an audience's template and saving it](assets/release-notes/rn-2-template.webp)
 
 An Organization keeps between 1 and 20 audiences. An audience cannot be deleted
 while something still names it: a release note, an automation rule's action, or an
@@ -124,6 +129,10 @@ when every note is ready: otherwise publishing returns
 summary after approval translates the new text. See
 [ADR-0015](adr/0015-multilingual-release-notes.md).
 
+![Seconds after approval: the Vietnamese note is Translating and still shows the untranslated text](assets/release-notes/rn-3-translating.webp)
+
+![The same note once its translations arrived: the release summary and every change are in Vietnamese](assets/release-notes/rn-4-translated.webp)
+
 ```text
 GET  /api/organization/release-languages
 PUT  /api/organization/release-languages                               {"targetLanguages"}
@@ -137,6 +146,8 @@ with a version (up to 50 characters), an optional summary, and an optional
 planned release time in UTC, and lists the Project's releases with status
 filters and counts. A Project can prepare several releases at once, and each
 change belongs to at most one release.
+
+![A Project's releases by status: four published, none in draft, review, or approval](assets/release-notes/rn-5-releases.webp)
 
 A release moves through four steps, shown at the top of its page:
 
@@ -162,6 +173,8 @@ A release moves through four steps, shown at the top of its page:
    follows its template), then **Publish release**.
 4. **Published.** See [Publishing](#publishing).
 
+![Creating a release, adding every available change, and requesting review](assets/release-notes/rn-6-add-all.webp)
+
 Any member can take every step, so one person can prepare, review, approve, and publish
 the same release. ReleaseFlow records who reviewed each change, who approved, and who
 published, but it does not require two different people.
@@ -172,6 +185,8 @@ the reviews on its changes), or discarded (its changes become available
 again). Returning to draft also deletes the release notes; approving again
 writes new ones.
 
+![The planned release time of a release, in UTC](assets/release-notes/rn-8-planned-time.webp)
+
 Before approval, the preview shows what each audience's note would say. A note
 starts with the release title and summary and a **What's New** overview with
 counts, warns about breaking changes, and lists breaking changes first, then
@@ -180,6 +195,8 @@ written by the audience's template from its neutral summary and the audience's
 narrative; without a summary, the pull request title is used, with its
 Conventional Commit prefix removed. Labels are English or Vietnamese, following
 the output language.
+
+![A release's notes, one per audience and language; the operator note was edited by hand and is marked Manual](assets/release-notes/rn-7-manual-note.webp)
 
 During review and after approval, **Edit summary** on the Review tab lets a
 person write or correct a change's summary and each audience's narrative. This
@@ -258,6 +275,8 @@ page then becomes read-only. It shows who approved and published the release,
 and offers one tab per audience and language with the rendered note, its
 Markdown, a **Copy** button, and a **Download** link for GitHub Releases or a
 changelog. Downloaded files are named `<version>-<audience>-<language>.md`.
+
+![Publishing an approved release: it becomes Published, and a note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
 
 A published release cannot be edited, scheduled, reviewed, discarded,
 unpublished, or changed in content, and neither can its notes. Its changes can

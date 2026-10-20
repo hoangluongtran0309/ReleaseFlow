@@ -133,6 +133,13 @@ npm --prefix website run build               # both languages, as CI builds them
   page with no translation shows the English one. A translated heading keeps the English
   page's anchor, as in `## Nguồn {#sources}`, so links from other pages still land. The
   architecture, the implementation status, and the decision records stay in English.
+- A screenshot sits on its own line under the paragraph it shows, as
+  `![what it shows](assets/<guide>/<name>.webp)`, with the file in `docs/assets/<guide>/`.
+  The Vietnamese page uses the same line, and the file at the same path under its own
+  `assets/` shows the Vietnamese interface, or the English picture again when there is
+  none. Pictures for the site's own pages live in `website/static/media/`. Use WebP: a
+  still under 250 KB, an animation under 2.5 MB and 12 seconds. A missing image fails the
+  build, like a broken link.
 - The site's own wording — navbar, footer, sidebar, and landing page — is translated in
   `website/i18n/vi/`. `code.json` holds only the site's own strings and the few the theme
   does not translate itself.

@@ -15,6 +15,8 @@ triển khai, nên đăng ký lại cùng một email sẽ trả về `409 email
 Việc đăng ký cũng tạo sẵn [danh mục category](changes.md#categories) của Organization,
 ba [audience](release-notes.md#audiences) mẫu, và địa chỉ changelog công khai.
 
+![Điền form đăng ký, rồi đăng nhập vào Organization vừa tạo](assets/workspace/w-1-register.webp)
+
 Mật khẩu dài ít nhất 12 ký tự và tối đa 72 byte UTF-8, giới hạn mà BCrypt đọc được, và chỉ
 được lưu dưới dạng mã băm BCrypt. Quy tắc này cũng áp dụng khi chấp nhận lời mời.
 
@@ -42,11 +44,17 @@ viên đọc được nguồn, các lần import và sensitive path của một 
 và các ngôn ngữ release note, nhưng không vào được trang Thành viên, Audience và
 Automation.
 
+![Trang Members: các thành viên cùng vai trò, và các lời mời cùng trạng thái của chúng](assets/workspace/w-4-members.webp)
+
 Liên kết mời có dạng `/accept-invite#token=…` và chỉ hiện một lần. ReleaseFlow chỉ lưu bản
 băm của nó. Liên kết hết hạn sau bảy ngày (đặt `RELEASEFLOW_INVITATION_TTL`, ví dụ `P3D`,
 để đổi thời hạn), chỉ dùng được một lần, và có thể cấp lại hoặc thu hồi ở trang Thành
 viên. Người được mời xác nhận Organization, chọn tên và mật khẩu, rồi đăng nhập với vai
 trò thành viên. Hiện chưa đổi được vai trò và chưa xoá được thành viên.
+
+![Mời một đồng đội qua email; link dùng một lần hiện ra sau đó đã được che](assets/workspace/w-2-invite.webp)
+
+![Trang nhận lời mời: Organization và email được mời, cùng ô nhập tên và mật khẩu](assets/workspace/w-3-accept.webp)
 
 REST client tuân theo cùng các quy tắc:
 
@@ -74,6 +82,10 @@ chưa xong, theo thứ tự cố định: tạo project, kết nối nguồn, ch
 đổi vào một release, hoàn tất review, publish release đã duyệt, làm tiếp bản nháp, hoặc
 không còn gì phải chờ. Một workspace có bản nháp đang mở mà chưa có thay đổi nào vẫn được
 coi là đang chờ thay đổi đầu tiên, vì chưa có gì để đưa vào bản nháp.
+
+![Tổng quan của một Project mới: mọi bộ đếm bằng 0, và bước tiếp theo là kết nối nguồn](assets/workspace/w-5a-connect-a-source.webp)
+
+![Tổng quan về sau, khi đã có release được duyệt: bước tiếp theo là gom các thay đổi chưa thuộc release nào](assets/workspace/w-5b-collect-changes.webp)
 
 Thanh tiêu đề và menu trên di động dùng để chuyển giữa các Project. ReleaseFlow nhớ Project
 gần nhất trong cookie `releaseflow_project`, nên một trang mở ra không kèm `?project=` sẽ
@@ -131,6 +143,13 @@ cookie. Bộ chọn ngôn ngữ nằm trong menu người dùng; chọn một ng
 và ghi cookie, mà cookie được ưu tiên hơn tài khoản, nên thay đổi hiện ra ngay. Cookie là
 `HttpOnly`, có hiệu lực một năm, và là `Secure` khi yêu cầu dùng HTTPS.
 
+![Chọn English trong menu tài khoản: trang đổi sang tiếng Anh ngay](assets/workspace/w-6-language-picker.webp)
+
+Bước tài khoản đọc ngôn ngữ mà session có lúc bắt đầu, không phải tài khoản ở thời điểm hiện
+tại. Một lựa chọn được thực hiện ở trình duyệt khác, hoặc qua API, chỉ tới được một session
+đang đăng nhập sẵn khi session đó đăng nhập lại; trước lúc ấy, session giữ cookie của chính
+nó, hoặc nếu không có cookie thì giữ ngôn ngữ nó có lúc bắt đầu.
+
 ```text
 GET /api/me/ui-locale                  (any member)
 PUT /api/me/ui-locale {"uiLocale"}     (the same member)
@@ -161,6 +180,8 @@ Mỗi Organization viết bản tóm tắt AI bằng một ngôn ngữ đầu ra
 `vi` hoặc `pt-BR`. Ngôn ngữ này được chọn lúc đăng ký (`outputLanguage`, mặc định tiếng Anh)
 và hiện trên trang Project, nơi quản trị viên có thể đổi nó. Thay đổi chỉ áp dụng cho các
 thay đổi được phân loại sau đó.
+
+![Form output language trên trang Projects](assets/workspace/w-7-output-language.webp)
 
 ```text
 GET /api/organization/output-language                     (any member)
