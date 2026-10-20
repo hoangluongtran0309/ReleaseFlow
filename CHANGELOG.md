@@ -12,6 +12,8 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-20
+
 ### Added
 
 - Organizations with administrator and member roles, single-use invitation links,
@@ -65,3 +67,6 @@ section into the version's entry, and the GitHub release is written from it.
 - A documentation site in English and Vietnamese, read from `docs/`, with product,
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
+
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.0
