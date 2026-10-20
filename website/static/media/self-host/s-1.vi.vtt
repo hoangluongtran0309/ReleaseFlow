@@ -1,0 +1,16 @@
+WEBVTT
+
+00:00.000 --> 00:10.500
+Tải ba tệp của bản release mới nhất vào một thư mục trống.
+
+00:10.500 --> 00:13.500
+Đối chiếu chúng với checksum đã công bố trước khi chạy bất cứ thứ gì.
+
+00:13.500 --> 00:21.000
+quickstart.sh ghi .env với mật khẩu cơ sở dữ liệu và master key mới, và không bao giờ in chúng ra.
+
+00:21.000 --> 00:35.000
+Script khởi động PostgreSQL và ReleaseFlow rồi chờ tới khi ứng dụng sẵn sàng. Ở đây image đã được tải từ trước; lần khởi động đầu tiên sẽ tải chúng.
+
+00:35.000 --> 00:37.900
+ReleaseFlow đã chạy. Tạo administrator đầu tiên ở /register.

@@ -6,6 +6,7 @@
 import Link from '@docusaurus/Link';
 import Translate, {translate} from '@docusaurus/Translate';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import {
   ActionButton,
@@ -146,6 +147,10 @@ function Requirements() {
 }
 
 function QuickstartSteps() {
+  const {
+    i18n: {currentLocale},
+  } = useDocusaurusContext();
+  const media = (file) => useBaseUrl(`/media/self-host/${file}`);
   return (
     <Section band="alt" labelledBy="steps-title">
       <Container className={styles.splitTop}>
@@ -204,6 +209,20 @@ function QuickstartSteps() {
             },
           ]}
         />
+      </Container>
+      <Container className={styles.quickstartVideo}>
+        <ScreenshotFrame
+          caption={translate({
+            id: 'selfHost.steps.video.caption',
+            message:
+              'The commands above against the v1.0.0 release, in 38 seconds. The images were already on this machine; a first start downloads them, which takes longer.',
+          })}>
+          <video controls muted playsInline preload="metadata" poster={media('s-1.poster.webp')} width={1280} height={760}>
+            <source src={media('s-1.mp4')} type="video/mp4" />
+            <track kind="captions" srcLang="en" label="English" src={media('s-1.en.vtt')} default={currentLocale === 'en'} />
+            <track kind="captions" srcLang="vi" label="Tiếng Việt" src={media('s-1.vi.vtt')} default={currentLocale === 'vi'} />
+          </video>
+        </ScreenshotFrame>
       </Container>
     </Section>
   );

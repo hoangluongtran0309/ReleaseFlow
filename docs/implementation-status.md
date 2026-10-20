@@ -470,8 +470,8 @@ where it first appears; ADRs are linked from the slice they record.
   Operations, and the REST API are translated, keeping each English anchor, while the
   architecture, the implementation status, and the decision records fall back to English.
   Screenshots and animations of a sample project illustrate the guides in both languages,
-  and the landing, Product, and Self-host pages carry screenshots, a captioned walkthrough
-  video, and the Grafana dashboard. Links, anchors, Markdown file links, and images fail
+  and the landing, Product, and Self-host pages carry screenshots, captioned recordings of a
+  release and of the quickstart, and the Grafana dashboard. Links, anchors, Markdown file links, and images fail
   the build; a link to a file
   beside `docs/` points at it on `main`. A `Docs` workflow builds it on every pull request
   and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
