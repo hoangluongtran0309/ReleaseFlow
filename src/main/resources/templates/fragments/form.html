@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* The top of a form that came back with errors, placed inside the form so it reads the
+       form's th:object. It says how many fields need a change — each one says what under
+       itself, and the page script moves focus to the first — and lists in full any error
+       that belongs to the form as a whole. `shown` lets a form repeated on one page, such
+       as one per Project card, show it only on the copy that was sent. It spans every
+       column of a grid form, so it never takes the cell of the first field. */-->
+<th:block th:fragment="errorSummary(shown)">
+    <div class="col-span-full" th:if="${shown and #fields.hasAnyErrors()}">
+        <div th:replace="~{fragments/alert :: alertBody('error', ~{fragments/form :: summaryBody})}"></div>
+    </div>
+</th:block>
+
+<div th:fragment="summaryBody" class="grid gap-1"
+     th:with="fieldErrors=${#fields.errors('*').size() - #fields.globalErrors().size()}">
+    <p class="font-semibold"
+       th:text="${fieldErrors > 0} ? #{ui.form.errorSummary(${fieldErrors})} : #{ui.form.notSaved}">2 fields need a change.</p>
+    <ul class="list-disc pl-5" th:if="${#fields.hasGlobalErrors()}">
+        <li th:each="error : ${#fields.globalErrors()}" th:text="${error}">The provider did not answer.</li>
+    </ul>
+</div>
+
+<!--/* The error under one field, by its property path, with the id the field's
+       aria-describedby names. */-->
+<span th:fragment="fieldError(path, id)" th:id="${id}" class="field-error"
+      th:if="${#fields.hasErrors(path)}" th:errors="*{__${path}__}">Enter a whole number.</span>
+</body>
+</html>

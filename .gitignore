@@ -1,0 +1,23 @@
+target/
+.idea/
+.vscode/
+*.iml
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+/.claude/
+node/
+node_modules/
+
+# Playwright's own output, written on a failing run.
+/playwright-report/
+/test-results/
+
+# Downloaded by mvnw from wrapperUrl and checked against wrapperSha256Sum.
+.mvn/wrapper/maven-wrapper.jar
+
+# The documentation site's build output and Docusaurus cache.
+/website/build/
+/website/.docusaurus/

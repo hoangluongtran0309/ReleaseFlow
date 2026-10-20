@@ -1,0 +1,244 @@
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.heroCopy > p {
+  max-width: 760px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.h2 {
+  margin: 0;
+  color: var(--rf-text);
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.warningCard,
+.warningCard:hover {
+  border-color: var(--rf-security-border);
+  background: var(--rf-warning-bg);
+}
+
+.warningCard svg:first-child {
+  color: var(--rf-security);
+}
+
+/* First pull request */
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 56px;
+}
+
+.intro {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 340px;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.label {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-surface);
+  color: var(--rf-text-emph);
+  font-family: var(--rf-font-mono);
+  font-size: 13px;
+}
+
+.label:hover {
+  border-color: var(--rf-border-hover);
+  color: var(--rf-text-strong);
+  text-decoration: none;
+}
+
+.steps {
+  display: flex;
+  min-width: 0;
+  flex: 2 1 560px;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 20px 22px;
+  border: 1px solid var(--rf-border-control);
+  border-radius: var(--rf-radius-xl);
+  background: var(--rf-surface);
+}
+
+.stepNumber {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rf-accent-tint-border);
+  border-radius: var(--rf-radius-pill);
+  color: var(--rf-accent-text);
+  font-family: var(--rf-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stepBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stepTitle {
+  margin: 0;
+  color: var(--rf-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.stepBody p {
+  margin: 0;
+  color: var(--rf-text-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.stepBody p code {
+  padding: 1px 5px;
+  border: 1px solid var(--rf-border);
+  border-radius: 5px;
+  background: var(--rf-inline-code-bg);
+  color: var(--rf-inline-code-text);
+  font-size: 0.88em;
+  overflow-wrap: anywhere;
+}
+
+.code :global(.theme-code-block) {
+  margin: 6px 0 0;
+}
+
+/* Maintainer */
+.maintainer {
+  display: flex;
+  max-width: 520px;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--rf-border-control);
+  border-radius: var(--rf-radius-xl);
+  background: var(--rf-surface);
+}
+
+.avatar {
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rf-accent-tint-border);
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-accent-tint-strong);
+  color: var(--rf-accent-text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.maintainerName {
+  margin: 0;
+  color: var(--rf-text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.maintainerRole {
+  margin: 2px 0 4px;
+  color: var(--rf-text-2);
+  font-size: 14px;
+}
+
+.maintainerLink {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--rf-font-mono);
+  font-size: 13px;
+}
+
+/* Code of Conduct band */
+.conduct {
+  padding-block: 88px;
+  border-top: 1px solid var(--rf-border-nav);
+  background: var(--rf-bg-deep);
+}
+
+.conductInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.conductCopy {
+  display: flex;
+  max-width: 680px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conductCopy p {
+  margin: 0;
+  color: var(--rf-text-2);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+@media (max-width: 860px) {
+  .split {
+    gap: 40px;
+  }
+
+  .step {
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .conduct {
+    padding-block: 64px;
+  }
+}

@@ -1,0 +1,1617 @@
+{
+  "homepage.eyebrow": {
+    "message": "Mã nguồn mở · tự triển khai"
+  },
+  "homepage.title": {
+    "message": "Release note do đội ngũ review. Hạ tầng do bạn kiểm soát."
+  },
+  "homepage.tagline": {
+    "message": "Thu thập các thay đổi đã hoàn thành, phân loại bằng quy tắc giải thích được, review những gì quan trọng và publish release note cho từng audience — từ một ứng dụng chạy trên hạ tầng của chính bạn."
+  },
+  "homepage.action.selfHost": {
+    "message": "Tự triển khai ReleaseFlow"
+  },
+  "homepage.action.docs": {
+    "message": "Khám phá tài liệu"
+  },
+  "homepage.value.review": {
+    "message": "Workflow có người review"
+  },
+  "homepage.value.quickstart": {
+    "message": "Quickstart bằng Docker Compose"
+  },
+  "homepage.value.license": {
+    "message": "Apache 2.0, không chia open-core"
+  },
+  "homepage.description": {
+    "message": "Release note tự triển khai, có người review, từ thay đổi đã hoàn thành đến từng audience."
+  },
+  "homepage.diagram.aria": {
+    "message": "Các source đi qua quy tắc và bước review của con người để trở thành release note sẵn sàng cho từng audience."
+  },
+  "homepage.diagram.sources": {
+    "message": "Các source"
+  },
+  "homepage.diagram.core": {
+    "message": "ReleaseFlow"
+  },
+  "homepage.diagram.review": {
+    "message": "Quy tắc + người review"
+  },
+  "homepage.diagram.outputs": {
+    "message": "Release note cho từng audience"
+  },
+  "homepage.showcase.eyebrow": {
+    "message": "Giới thiệu sản phẩm"
+  },
+  "homepage.showcase.heading": {
+    "message": "Hai thời điểm quan trọng của mỗi release"
+  },
+  "homepage.showcase.description": {
+    "message": "Các walkthrough sản phẩm sẽ được đặt tại đây. Khung đã sẵn sàng cho screenshot thật mà không giả vờ mockup là giao diện ứng dụng."
+  },
+  "homepage.showcase.placeholder": {
+    "message": "Khung dành cho screenshot sản phẩm"
+  },
+  "homepage.showcase.inbox.title": {
+    "message": "Change Inbox"
+  },
+  "homepage.showcase.inbox.description": {
+    "message": "Review các thay đổi đã được chuẩn hóa từ GitHub, GitLab, Linear và Jira cùng category và bằng chứng review của chúng."
+  },
+  "homepage.showcase.release.title": {
+    "message": "Review release"
+  },
+  "homepage.showcase.release.description": {
+    "message": "Quyết định từng thay đổi trước khi duyệt, sau đó publish các release note bất biến được viết riêng cho từng audience."
+  },
+  "homepage.selfhost.eyebrow": {
+    "message": "Tự triển khai / quickstart"
+  },
+  "homepage.selfhost.heading": {
+    "message": "Chạy trên một máy chỉ với vài câu lệnh"
+  },
+  "homepage.selfhost.description": {
+    "message": "Quickstart của bản phát hành chạy ReleaseFlow và PostgreSQL bằng Docker Compose. Không cần clone repository và không phải biên dịch."
+  },
+  "homepage.selfhost.requirement.docker": {
+    "message": "Docker Compose v2 và openssl"
+  },
+  "homepage.selfhost.requirement.stack": {
+    "message": "Chỉ ứng dụng và PostgreSQL — không có thành phần thừa"
+  },
+  "homepage.selfhost.requirement.local": {
+    "message": "Ứng dụng chỉ bind vào loopback; database không được publish"
+  },
+  "homepage.selfhost.link.guide": {
+    "message": "Hướng dẫn quickstart đầy đủ"
+  },
+  "homepage.selfhost.link.configuration": {
+    "message": "Cấu hình"
+  },
+  "homepage.selfhost.link.operations": {
+    "message": "Vận hành"
+  },
+  "homepage.selfhost.terminal.title": {
+    "message": "Quickstart"
+  },
+  "homepage.selfhost.command.aria": {
+    "message": "Các câu lệnh quickstart"
+  },
+  "homepage.selfhost.open": {
+    "message": "Sau đó mở"
+  },
+  "homepage.selfhost.keepenv.title": {
+    "message": "Hãy giữ file .env được tạo ra."
+  },
+  "homepage.selfhost.keepenv.description": {
+    "message": "File này chứa mật khẩu database và khóa dùng để mã hóa các credential đã lưu."
+  },
+  "homepage.privacy.eyebrow": {
+    "message": "Quyền riêng tư & kiến trúc"
+  },
+  "homepage.privacy.heading": {
+    "message": "Deployment của bạn là nguồn dữ liệu chính"
+  },
+  "homepage.privacy.description": {
+    "message": "ReleaseFlow gồm một ứng dụng Spring Boot và một database PostgreSQL. Bạn quyết định chúng chạy ở đâu và được phép kết nối tới những dịch vụ bên ngoài nào."
+  },
+  "homepage.privacy.deploy.title": {
+    "message": "Tự triển khai"
+  },
+  "homepage.privacy.deploy.description": {
+    "message": "Chạy cùng mã nguồn Apache-2.0 trên hạ tầng của bạn. Không có hosted control plane hay bản enterprise để phải phụ thuộc."
+  },
+  "homepage.privacy.secrets.title": {
+    "message": "Bảo vệ credential đã lưu"
+  },
+  "homepage.privacy.secrets.description": {
+    "message": "Webhook secret và provider token được mã hóa bằng master key do bạn cung cấp và không bao giờ được đọc lại vào trang hay API response."
+  },
+  "homepage.privacy.optional.title": {
+    "message": "Tự chọn mọi dịch vụ outbound"
+  },
+  "homepage.privacy.optional.description": {
+    "message": "AI, dịch thuật, email và các tích hợp delivery đều là tùy chọn. Chúng chỉ chạy khi bạn cấu hình và sử dụng."
+  },
+  "homepage.architecture.aria": {
+    "message": "GitHub, GitLab, Linear và Jira kết nối tới ứng dụng ReleaseFlow cùng database PostgreSQL được tự triển khai. Các provider tùy chọn kết nối từ ReleaseFlow."
+  },
+  "homepage.architecture.sources": {
+    "message": "Các source của bạn"
+  },
+  "homepage.architecture.boundary": {
+    "message": "Hạ tầng của bạn"
+  },
+  "homepage.architecture.application": {
+    "message": "Ứng dụng ReleaseFlow"
+  },
+  "homepage.architecture.database": {
+    "message": "Dữ liệu + credential đã mã hóa"
+  },
+  "homepage.architecture.optional": {
+    "message": "Các provider tùy chọn"
+  },
+  "homepage.privacy.link.architecture": {
+    "message": "Đọc kiến trúc đầy đủ"
+  },
+  "homepage.community.eyebrow": {
+    "message": "Cộng đồng & sức khỏe dự án"
+  },
+  "homepage.community.heading": {
+    "message": "Kiểm tra dự án. Cùng định hình bước tiếp theo."
+  },
+  "homepage.community.description": {
+    "message": "ReleaseFlow công khai mã nguồn, các quyết định, lịch sử phát hành, quy trình bảo mật và cách đóng góp."
+  },
+  "homepage.community.panel.title": {
+    "message": "Tham gia cộng đồng"
+  },
+  "homepage.community.panel.description": {
+    "message": "Đặt câu hỏi, báo cáo vấn đề hoặc đóng góp."
+  },
+  "homepage.community.discussions.title": {
+    "message": "Thảo luận"
+  },
+  "homepage.community.discussions.description": {
+    "message": "Câu hỏi, ý tưởng và phản hồi"
+  },
+  "homepage.community.issues.title": {
+    "message": "Issues"
+  },
+  "homepage.community.issues.description": {
+    "message": "Lỗi và yêu cầu tính năng"
+  },
+  "homepage.community.contributing.title": {
+    "message": "Đóng góp"
+  },
+  "homepage.community.contributing.description": {
+    "message": "Hướng dẫn phát triển và pull request"
+  },
+  "homepage.health.panel.title": {
+    "message": "Kiểm tra sức khỏe dự án"
+  },
+  "homepage.health.panel.description": {
+    "message": "Theo dõi các liên kết nguồn chính thức thay vì số đếm ước lượng."
+  },
+  "homepage.health.ci": {
+    "message": "Workflow build và test"
+  },
+  "homepage.health.codeql": {
+    "message": "Phân tích bảo mật"
+  },
+  "homepage.health.releases.title": {
+    "message": "Bản phát hành"
+  },
+  "homepage.health.releases.description": {
+    "message": "Các artifact đã publish"
+  },
+  "homepage.health.changelog": {
+    "message": "Các thay đổi đã ghi nhận"
+  },
+  "homepage.health.security.title": {
+    "message": "Bảo mật"
+  },
+  "homepage.health.security.description": {
+    "message": "Chính sách báo cáo riêng tư"
+  },
+  "homepage.health.license": {
+    "message": "Giấy phép dự án"
+  },
+  "theme.colorToggle.ariaLabel.mode.system": {
+    "message": "chế độ hệ thống",
+    "description": "The name for the system color mode"
+  },
+  "theme.IconExternalLink.ariaLabel": {
+    "message": "(mở trong thẻ mới)",
+    "description": "The ARIA label for the external link icon"
+  },
+  "theme.navbar.mobileDropdown.collapseButton.expandAriaLabel": {
+    "message": "Mở rộng danh sách",
+    "description": "The ARIA label of the button to expand the mobile dropdown navbar item"
+  },
+  "theme.navbar.mobileDropdown.collapseButton.collapseAriaLabel": {
+    "message": "Thu gọn danh sách",
+    "description": "The ARIA label of the button to collapse the mobile dropdown navbar item"
+  },
+  "ui.copy.copied": {
+    "message": "Đã sao chép"
+  },
+  "ui.copy.label": {
+    "message": "Sao chép"
+  },
+  "ui.copy.status.copied": {
+    "message": "Đã sao chép vào clipboard"
+  },
+  "ui.copy.status.failed": {
+    "message": "Không sao chép được; tự chọn văn bản để sao chép"
+  },
+  "navbar.languages": {
+    "message": "Ngôn ngữ"
+  },
+  "navbar.sections": {
+    "message": "Chính"
+  },
+  "navbar.menu.open": {
+    "message": "Menu"
+  },
+  "navbar.sections.mobile": {
+    "message": "Menu chính"
+  },
+  "footer.tagline": {
+    "message": "Release note do đội ngũ review. Hạ tầng do bạn kiểm soát."
+  },
+  "footer.facts": {
+    "message": "Apache 2.0 · Tự triển khai · Java 21"
+  },
+  "footer.improve": {
+    "message": "Cải thiện trang này trên GitHub"
+  },
+  "selfHost.meta.title": {
+    "message": "Tự triển khai"
+  },
+  "selfHost.meta.description": {
+    "message": "Chạy ReleaseFlow và PostgreSQL trên máy của bạn bằng quickstart Docker Compose."
+  },
+  "selfHost.hero.eyebrow": {
+    "message": "Tự triển khai"
+  },
+  "selfHost.hero.title": {
+    "message": "Chạy ReleaseFlow trên hạ tầng bạn đã tin tưởng."
+  },
+  "selfHost.hero.lead": {
+    "message": "Một ứng dụng Spring Boot và một database PostgreSQL, khởi động bằng Docker Compose. Mọi người đều chạy cùng mã nguồn Apache-2.0: không có hosted control plane, không có bản enterprise, không chia open-core."
+  },
+  "selfHost.hero.guide": {
+    "message": "Hướng dẫn quickstart đầy đủ"
+  },
+  "selfHost.hero.releases": {
+    "message": "Các bản phát hành trên GitHub"
+  },
+  "selfHost.terminal.label": {
+    "message": "Quickstart"
+  },
+  "selfHost.terminal.codeLabel": {
+    "message": "Các câu lệnh quickstart"
+  },
+  "selfHost.terminal.copy": {
+    "message": "Sao chép các câu lệnh quickstart"
+  },
+  "selfHost.terminal.open": {
+    "message": "Sau đó mở {url} để tạo administrator đầu tiên."
+  },
+  "selfHost.terminal.keepEnv.title": {
+    "message": "Giữ lại file .env được tạo ra."
+  },
+  "selfHost.terminal.keepEnv.text": {
+    "message": "File này chứa mật khẩu database và khóa dùng để mã hóa các credential đã lưu."
+  },
+  "selfHost.requirements.eyebrow": {
+    "message": "Trước khi bắt đầu"
+  },
+  "selfHost.requirements.title": {
+    "message": "Máy chủ cần những gì"
+  },
+  "selfHost.requirements.lead": {
+    "message": "Một máy do bạn kiểm soát, cùng vài công cụ tiêu chuẩn. Không phải biên dịch và không cần clone repository."
+  },
+  "selfHost.requirements.docker": {
+    "message": "Docker Engine hoặc Docker Desktop, với Compose đủ mới để chờ một service healthy. Nó chạy container của ứng dụng và PostgreSQL."
+  },
+  "selfHost.requirements.openssl": {
+    "message": "Tạo mật khẩu database và credential master key trong lần chạy đầu tiên."
+  },
+  "selfHost.requirements.verify.title": {
+    "message": "curl và sha256sum"
+  },
+  "selfHost.requirements.verify": {
+    "message": "Tải các file của bản phát hành và kiểm tra chúng với SHA256SUMS. Trên macOS, dùng shasum -a 256."
+  },
+  "selfHost.requirements.platform.title": {
+    "message": "Linux hoặc macOS"
+  },
+  "selfHost.requirements.platform": {
+    "message": "Trên Windows, chạy bên trong WSL 2. Image chỉ có bản amd64, nên Apple silicon chạy nó qua giả lập."
+  },
+  "selfHost.requirements.network.title": {
+    "message": "Mạng"
+  },
+  "selfHost.requirements.network": {
+    "message": "Lần khởi động đầu tiên tải hai image. Sau đó nó chỉ gọi tới các source bạn kết nối và các provider bạn bật; các source gửi webhook phải truy cập được tới nó."
+  },
+  "selfHost.steps.eyebrow": {
+    "message": "Bên trong"
+  },
+  "selfHost.steps.title": {
+    "message": "Quickstart làm những gì"
+  },
+  "selfHost.steps.lead": {
+    "message": "Năm bước: bạn tự chạy hai bước đầu, quickstart.sh làm phần còn lại. Đọc script trước khi chạy."
+  },
+  "selfHost.steps.source": {
+    "message": "Đọc quickstart.sh"
+  },
+  "selfHost.steps.download.title": {
+    "message": "Tải các file của bản phát hành"
+  },
+  "selfHost.steps.download.text": {
+    "message": "compose.yaml, quickstart.sh và SHA256SUMS được lấy từ bản phát hành mới nhất trên GitHub."
+  },
+  "selfHost.steps.verify.title": {
+    "message": "Kiểm tra trước khi chạy bất cứ thứ gì"
+  },
+  "selfHost.steps.verify.text": {
+    "message": "sha256sum đối chiếu các file đã tải với checksum đã công bố."
+  },
+  "selfHost.steps.secrets.title": {
+    "message": "Kiểm tra máy, rồi ghi .env"
+  },
+  "selfHost.steps.secrets.text": {
+    "message": "Script xác nhận Docker, Compose v2 và một daemon truy cập được, và không cài đặt gì. Trong lần chạy đầu tiên, nó ghi mật khẩu database và credential master key mới vào .env, chỉ bạn đọc được."
+  },
+  "selfHost.steps.start.title": {
+    "message": "Khởi động hai container"
+  },
+  "selfHost.steps.start.text": {
+    "message": "Ứng dụng ReleaseFlow và PostgreSQL, không có gì khác. Script chờ đến khi ứng dụng healthy."
+  },
+  "selfHost.steps.private.title": {
+    "message": "Mặc định là riêng tư"
+  },
+  "selfHost.steps.private.text": {
+    "message": "Ứng dụng chỉ lắng nghe trên 127.0.0.1, và cổng database hoàn toàn không được publish."
+  },
+  "selfHost.topology.eyebrow": {
+    "message": "Đưa vào production"
+  },
+  "selfHost.topology.title": {
+    "message": "Đặt proxy của bạn phía trước, giữ phần còn lại riêng tư."
+  },
+  "selfHost.topology.lead": {
+    "message": "Quickstart dành cho một máy: nó chỉ lắng nghe trên loopback, còn TLS, backup và lưu trữ secret là phần một deployment thật phải tự lo. Để chia sẻ ReleaseFlow với đội ngũ, phục vụ nó qua HTTPS từ một reverse proxy bạn đang chạy, và đặt {cookie} cùng {url} theo địa chỉ công khai."
+  },
+  "selfHost.topology.figure": {
+    "message": "Trình duyệt của đội ngũ và webhook từ GitHub, GitLab và Linear đi tới một reverse proxy trên hạ tầng của bạn; proxy chuyển tiếp tới ReleaseFlow trên 127.0.0.1 cổng 8080. ReleaseFlow dùng một database PostgreSQL không được publish, và chỉ gọi ra ngoài tới các source API và provider bạn cấu hình."
+  },
+  "selfHost.topology.team": {
+    "message": "Đội ngũ của bạn"
+  },
+  "selfHost.topology.browser": {
+    "message": "Trình duyệt"
+  },
+  "selfHost.topology.webhooks": {
+    "message": "Webhook từ source"
+  },
+  "selfHost.topology.boundary": {
+    "message": "Hạ tầng của bạn"
+  },
+  "selfHost.topology.proxy": {
+    "message": "Reverse proxy"
+  },
+  "selfHost.topology.proxy.meta": {
+    "message": "TLS trên domain của bạn"
+  },
+  "selfHost.topology.database.meta": {
+    "message": "Không publish · credential đã mã hóa"
+  },
+  "selfHost.topology.outbound": {
+    "message": "Outbound, chỉ những gì bạn cấu hình"
+  },
+  "selfHost.topology.outbound.list": {
+    "message": "Source API · AI · DeepL · Email · Delivery"
+  },
+  "selfHost.checklist.eyebrow": {
+    "message": "Checklist production"
+  },
+  "selfHost.checklist.title": {
+    "message": "Trước khi đội ngũ phụ thuộc vào nó"
+  },
+  "selfHost.checklist.guide": {
+    "message": "Hướng dẫn vận hành"
+  },
+  "selfHost.checklist.https.lead": {
+    "message": "Phục vụ qua HTTPS."
+  },
+  "selfHost.checklist.https.text": {
+    "message": "Đặt một reverse proxy trên domain của bạn phía trước, và đặt RELEASEFLOW_SESSION_COOKIE_SECURE=true."
+  },
+  "selfHost.checklist.backup.lead": {
+    "message": "Backup PostgreSQL."
+  },
+  "selfHost.checklist.backup.text": {
+    "message": "Theo lịch, và thử restore ít nhất một lần."
+  },
+  "selfHost.checklist.env.lead": {
+    "message": "Giữ file .env an toàn."
+  },
+  "selfHost.checklist.env.text": {
+    "message": "File này chứa master key mã hóa các credential đã lưu; thiếu nó, dữ liệu không thể mở lại được."
+  },
+  "selfHost.checklist.database.lead": {
+    "message": "Không publish database."
+  },
+  "selfHost.checklist.database.text": {
+    "message": "Chỉ ứng dụng được phép truy cập nó."
+  },
+  "selfHost.checklist.providers.lead": {
+    "message": "Chỉ bật những provider bạn cần."
+  },
+  "selfHost.checklist.providers.text": {
+    "message": "Mỗi provider là một kết nối outbound do bạn chọn."
+  },
+  "selfHost.checklist.releases.lead": {
+    "message": "Theo dõi bản phát hành và cảnh báo bảo mật."
+  },
+  "selfHost.checklist.releases.text": {
+    "message": "Đọc changelog trước mỗi lần nâng cấp: database chỉ migrate tiến lên."
+  },
+  "selfHost.operations.eyebrow": {
+    "message": "Vận hành"
+  },
+  "selfHost.operations.title": {
+    "message": "Vận hành hằng ngày"
+  },
+  "selfHost.operations.configuration.title": {
+    "message": "Tham chiếu cấu hình"
+  },
+  "selfHost.operations.configuration.text": {
+    "message": "Mọi thiết lập ứng dụng đọc, được nhóm theo mục đích."
+  },
+  "selfHost.operations.upgrade.title": {
+    "message": "Nâng cấp"
+  },
+  "selfHost.operations.upgrade.text": {
+    "message": "Tải bundle mới hơn vào cạnh .env, kiểm tra nó, rồi chạy lại script."
+  },
+  "selfHost.operations.health.title": {
+    "message": "Health và số liệu"
+  },
+  "selfHost.operations.health.text": {
+    "message": "Một management port riêng tư phục vụ health và bốn metric Prometheus."
+  },
+  "selfHost.operations.artifacts.title": {
+    "message": "Artifact đã phát hành"
+  },
+  "selfHost.operations.artifacts.text": {
+    "message": "Mỗi bản phát hành publish những gì, và cách kiểm tra các file đã tải."
+  },
+  "selfHost.faq.eyebrow": {
+    "message": "FAQ"
+  },
+  "selfHost.faq.title": {
+    "message": "Câu hỏi về tự triển khai"
+  },
+  "selfHost.faq.edition.q": {
+    "message": "Có bản hosted hoặc bản trả phí không?"
+  },
+  "selfHost.faq.edition.a": {
+    "message": "Không. Mọi người đều chạy cùng mã nguồn Apache-2.0. Không có hosted control plane hay bản enterprise để phải phụ thuộc."
+  },
+  "selfHost.faq.ai.q": {
+    "message": "Tôi có cần AI provider không?"
+  },
+  "selfHost.faq.ai.a": {
+    "message": "Không. Các quy tắc phân loại thay đổi mà không cần AI. AI, dịch thuật, email và các tích hợp delivery đều là tùy chọn, và mỗi thứ chỉ chạy khi bạn cấu hình."
+  },
+  "selfHost.faq.outbound.q": {
+    "message": "Nó tạo những kết nối outbound nào?"
+  },
+  "selfHost.faq.outbound.a": {
+    "message": "Chỉ tới các source bạn kết nối và các provider bạn cấu hình. Bạn quyết định nó được phép kết nối tới những dịch vụ bên ngoài nào."
+  },
+  "selfHost.faq.secrets.q": {
+    "message": "Token và webhook secret được lưu thế nào?"
+  },
+  "selfHost.faq.secrets.a": {
+    "message": "Được mã hóa trong PostgreSQL bằng master key bạn cung cấp. Chúng không bao giờ được đọc lại vào trang hay API response."
+  },
+  "selfHost.faq.help.q": {
+    "message": "Tôi tìm trợ giúp ở đâu?"
+  },
+  "selfHost.faq.help.a": {
+    "message": "Hỏi trong {discussions}, báo lỗi trong {issues}, và gửi vấn đề bảo mật qua {security}."
+  },
+  "selfHost.faq.help.discussions": {
+    "message": "GitHub Discussions"
+  },
+  "selfHost.faq.help.issues": {
+    "message": "Issues"
+  },
+  "selfHost.faq.help.security": {
+    "message": "kênh báo cáo riêng tư"
+  },
+  "selfHost.cta.title": {
+    "message": "Bị kẹt ở một bước?"
+  },
+  "selfHost.cta.text": {
+    "message": "Tìm trong tài liệu, hoặc hỏi trong Discussions kèm phiên bản bạn dùng và những gì bạn đã chạy."
+  },
+  "selfHost.cta.search": {
+    "message": "Tìm trong tài liệu"
+  },
+  "selfHost.cta.discussions": {
+    "message": "Hỏi trong Discussions"
+  },
+  "product.meta.title": {
+    "message": "Sản phẩm"
+  },
+  "product.meta.description": {
+    "message": "Cách ReleaseFlow thu thập, phân loại, review và publish release note cho từng audience."
+  },
+  "product.example": {
+    "message": "Ví dụ"
+  },
+  "product.hero.eyebrow": {
+    "message": "Sản phẩm"
+  },
+  "product.hero.title": {
+    "message": "Mọi thay đổi đều được review trước khi công bố."
+  },
+  "product.hero.lead": {
+    "message": "ReleaseFlow thu thập các thay đổi đã hoàn thành từ những công cụ đội ngũ của bạn đang dùng, phân loại chúng bằng quy tắc ai cũng đọc được, để một người quyết định, và publish release note viết riêng cho từng audience."
+  },
+  "product.hero.selfHost": {
+    "message": "Tự triển khai ReleaseFlow"
+  },
+  "product.hero.quickstart": {
+    "message": "Đọc quickstart"
+  },
+  "product.steps.label": {
+    "message": "ReleaseFlow hoạt động thế nào"
+  },
+  "product.steps.collect.title": {
+    "message": "Thu thập"
+  },
+  "product.steps.collect.text": {
+    "message": "Pull request đã merge và issue đã hoàn thành từ những công cụ đội ngũ của bạn đang dùng."
+  },
+  "product.steps.classify.title": {
+    "message": "Phân loại"
+  },
+  "product.steps.classify.text": {
+    "message": "Quy tắc xếp mỗi thay đổi vào một category và ghi lại quy tắc nào đã khớp."
+  },
+  "product.steps.classify.tag.rules": {
+    "message": "Quy tắc đọc được"
+  },
+  "product.steps.classify.tag.ai": {
+    "message": "AI tùy chọn"
+  },
+  "product.steps.review.title": {
+    "message": "Review"
+  },
+  "product.steps.review.text": {
+    "message": "Một người quyết định từng thay đổi trước khi release được duyệt."
+  },
+  "product.steps.review.tag.release": {
+    "message": "Review release"
+  },
+  "product.steps.publish.title": {
+    "message": "Publish"
+  },
+  "product.steps.publish.text": {
+    "message": "Mỗi audience một release note, được cố định khi release được publish."
+  },
+  "product.steps.publish.tag.changelog": {
+    "message": "Changelog công khai"
+  },
+  "product.collect.eyebrow": {
+    "message": "01 · Thu thập"
+  },
+  "product.collect.title": {
+    "message": "Bốn nguồn, một danh sách thay đổi."
+  },
+  "product.collect.lead": {
+    "message": "GitHub, GitLab, Linear và Jira mô tả công việc theo cách riêng. ReleaseFlow ghi nhận pull request đã merge, merge request đã merge và issue đã hoàn thành thành cùng một loại thay đổi, để việc review không phụ thuộc vào nơi công việc diễn ra."
+  },
+  "product.collect.check.delivery": {
+    "message": "GitHub, GitLab và Linear gửi qua webhook; Jira được đọc theo lịch"
+  },
+  "product.collect.check.history": {
+    "message": "Import lịch sử 90 ngày gần nhất từ GitHub hoặc GitLab, không trùng lặp"
+  },
+  "product.collect.check.secrets": {
+    "message": "Webhook secret và access token được mã hóa khi lưu"
+  },
+  "product.collect.link": {
+    "message": "Kết nối nguồn đầu tiên"
+  },
+  "product.collect.figure.label": {
+    "message": "Sơ đồ: thay đổi từ GitHub, GitLab, Linear và Jira trở thành cùng một loại thay đổi trong Change Inbox."
+  },
+  "product.collect.figure.sources": {
+    "message": "Các nguồn"
+  },
+  "product.collect.figure.pullRequests": {
+    "message": "pull request"
+  },
+  "product.collect.figure.mergeRequests": {
+    "message": "merge request"
+  },
+  "product.collect.figure.issues": {
+    "message": "issue"
+  },
+  "product.collect.figure.change": {
+    "message": "Thay đổi đã ghi nhận"
+  },
+  "product.collect.figure.title": {
+    "message": "Tiêu đề"
+  },
+  "product.collect.figure.source": {
+    "message": "Nguồn"
+  },
+  "product.collect.figure.sourceValue": {
+    "message": "GitHub · pull request"
+  },
+  "product.collect.figure.labels": {
+    "message": "Label"
+  },
+  "product.collect.figure.inbox": {
+    "message": "sẵn sàng để phân loại và review"
+  },
+  "product.classify.eyebrow": {
+    "message": "02 · Phân loại"
+  },
+  "product.classify.title": {
+    "message": "Quy tắc đọc được. Kết quả kiểm tra được."
+  },
+  "product.classify.lead": {
+    "message": "Việc phân loại bắt đầu bằng các quy tắc cố định: một Conventional Commit type trong tiêu đề, một label quen thuộc, hoặc một thay đổi chỉ chạm tới tài liệu. Mỗi thay đổi giữ lại các quy tắc đã khớp, để người review thấy vì sao nó được xếp như vậy."
+  },
+  "product.classify.check.review": {
+    "message": "Thay đổi breaking, Unknown và chạm tới file nhạy cảm luôn cần một người review"
+  },
+  "product.classify.check.ai": {
+    "message": "AI tùy chọn bổ sung những gì quy tắc còn bỏ ngỏ; quy tắc luôn được ưu tiên"
+  },
+  "product.classify.check.correct": {
+    "message": "Người review có thể sửa category hoặc cờ breaking của bất kỳ thay đổi nào"
+  },
+  "product.classify.link": {
+    "message": "Đọc các quy tắc phân loại"
+  },
+  "product.classify.figure.label": {
+    "message": "Sơ đồ: label bug khớp một quy tắc gán category Fix, và người review thấy lý do."
+  },
+  "product.classify.figure.change": {
+    "message": "Thay đổi"
+  },
+  "product.classify.figure.changeMeta": {
+    "message": "Pull request GitHub · label: bug, digests"
+  },
+  "product.classify.figure.rule": {
+    "message": "Quy tắc đã khớp"
+  },
+  "product.classify.figure.ruleValue": {
+    "message": "Label {label}"
+  },
+  "product.classify.figure.assigns": {
+    "message": "gán category"
+  },
+  "product.classify.figure.shown": {
+    "message": "Hiển thị cho người review"
+  },
+  "product.classify.figure.because": {
+    "message": "vì pull request có label {label}"
+  },
+  "product.review.eyebrow": {
+    "message": "03 · Review"
+  },
+  "product.review.title": {
+    "message": "Một người duyệt mọi release."
+  },
+  "product.review.lead": {
+    "message": "Review release đưa từng quyết định tới đội ngũ của bạn: duyệt thay đổi như đang hiển thị, sửa phân loại hoặc tóm tắt của nó, hoặc loại nó khỏi release. Sau đó duyệt release, kiểm tra release note của từng audience và publish."
+  },
+  "product.review.check.evidence": {
+    "message": "Review trigger và bằng chứng nằm cạnh mỗi thay đổi"
+  },
+  "product.review.check.decision": {
+    "message": "Release chỉ được duyệt khi mọi thay đổi đều đã có quyết định"
+  },
+  "product.review.link": {
+    "message": "Release đi tới publish thế nào"
+  },
+  "product.review.screenshot": {
+    "message": "Review release · khung dành cho screenshot sản phẩm"
+  },
+  "product.review.caption": {
+    "message": "Review release: quyết định từng thay đổi, rồi duyệt release."
+  },
+  "product.publish.eyebrow": {
+    "message": "04 · Publish"
+  },
+  "product.publish.title": {
+    "message": "Một release, viết riêng cho từng audience."
+  },
+  "product.publish.lead": {
+    "message": "Khi release được duyệt, ReleaseFlow viết mỗi audience một release note từ template của audience đó. Publish sẽ cố định chúng, và các quy tắc automation gửi từng release note tới nơi người đọc đang ở."
+  },
+  "product.publish.contributor.name": {
+    "message": "Lập trình viên"
+  },
+  "product.publish.contributor.intent": {
+    "message": "Chi tiết triển khai và thay đổi mã nguồn"
+  },
+  "product.publish.operator.name": {
+    "message": "Vận hành"
+  },
+  "product.publish.operator.intent": {
+    "message": "Rủi ro vận hành, rollback, những gì cần theo dõi"
+  },
+  "product.publish.operator.note": {
+    "message": "Digest giờ theo múi giờ của từng workspace. Không cần migrate; theo dõi lần chạy theo lịch đầu tiên."
+  },
+  "product.publish.endUser.name": {
+    "message": "Người dùng cuối"
+  },
+  "product.publish.endUser.intent": {
+    "message": "Ngôn ngữ dễ hiểu, những gì mọi người nhận thấy"
+  },
+  "product.publish.endUser.note": {
+    "message": "Digest theo lịch giờ đến đúng thời điểm bạn chọn, dù đội ngũ làm việc ở đâu."
+  },
+  "product.publish.exampleNote": {
+    "message": "Release note ví dụ"
+  },
+  "product.publish.frozen": {
+    "message": "Release note đã publish được cố định: không gì sửa được chúng sau đó, kể cả SQL trực tiếp."
+  },
+  "product.optional.eyebrow": {
+    "message": "Provider tùy chọn"
+  },
+  "product.optional.title": {
+    "message": "Tính năng bổ sung chỉ bật khi bạn bật."
+  },
+  "product.optional.lead": {
+    "message": "ReleaseFlow hoạt động mà không cần dịch vụ bên thứ ba nào. AI, dịch thuật, email và delivery chỉ chạy khi bạn cấu hình, và các secret mà quy tắc của bạn lưu được mã hóa trong database của chính bạn."
+  },
+  "product.optional.link": {
+    "message": "Lưu lượng outbound hoạt động thế nào"
+  },
+  "product.optional.pill": {
+    "message": "Tùy chọn"
+  },
+  "product.optional.ai.title": {
+    "message": "Phân loại và tóm tắt bằng AI"
+  },
+  "product.optional.ai.text": {
+    "message": "OpenAI, Anthropic hoặc DeepSeek đề xuất category, một bản tóm tắt trung lập và narrative cho từng audience. Quy tắc luôn được ưu tiên, và nội dung do người viết không bao giờ bị thay thế."
+  },
+  "product.optional.translation.title": {
+    "message": "Dịch bằng DeepL"
+  },
+  "product.optional.translation.text": {
+    "message": "Dịch mỗi release note sang mọi ngôn ngữ mà Organization của bạn dùng. Việc publish chờ đến khi mọi bản dịch sẵn sàng."
+  },
+  "product.optional.email.title": {
+    "message": "Email"
+  },
+  "product.optional.email.text": {
+    "message": "Gửi release note đã publish tới tối đa 100 địa chỉ qua SMTP server của chính bạn."
+  },
+  "product.optional.delivery.title": {
+    "message": "Delivery"
+  },
+  "product.optional.delivery.text": {
+    "message": "Đăng release note đã publish lên GitHub Releases, Slack, Microsoft Teams, Notion, Confluence hoặc help centre Zendesk."
+  },
+  "product.cta.title": {
+    "message": "Xem nó trên chính các thay đổi của bạn."
+  },
+  "product.cta.text": {
+    "message": "Khởi động ReleaseFlow bằng Docker Compose, kết nối một repository, và review release tiếp theo trước khi có ai đọc nó."
+  },
+  "product.cta.source": {
+    "message": "Xem mã nguồn"
+  },
+  "search.trigger": {
+    "message": "Tìm kiếm"
+  },
+  "search.dialog.title": {
+    "message": "Tìm trong ReleaseFlow"
+  },
+  "search.input.label": {
+    "message": "Tìm trong tài liệu và các trang"
+  },
+  "search.input.placeholder": {
+    "message": "Tìm hướng dẫn, cấu hình và API"
+  },
+  "search.close": {
+    "message": "Đóng tìm kiếm"
+  },
+  "search.results.label": {
+    "message": "Kết quả tìm kiếm"
+  },
+  "search.group.docs": {
+    "message": "Tài liệu"
+  },
+  "search.group.api": {
+    "message": "API"
+  },
+  "search.group.pages": {
+    "message": "Trang"
+  },
+  "search.error": {
+    "message": "Tìm kiếm hiện không khả dụng."
+  },
+  "search.loading": {
+    "message": "Đang tải chỉ mục tìm kiếm…"
+  },
+  "search.empty.prompt": {
+    "message": "Gõ để tìm trong các hướng dẫn, tham chiếu API và các trang của site."
+  },
+  "search.noResults.title": {
+    "message": "Không có kết quả cho “{query}”"
+  },
+  "search.noResults.text": {
+    "message": "Thử ít từ hơn hoặc từ khác, hoặc {discussions}."
+  },
+  "search.noResults.discussions": {
+    "message": "hỏi trong Discussions"
+  },
+  "search.hint.navigate": {
+    "message": "Di chuyển"
+  },
+  "search.hint.open": {
+    "message": "Mở"
+  },
+  "search.hint.close": {
+    "message": "Đóng"
+  },
+  "search.count": {
+    "message": "{count} kết quả"
+  },
+  "search.allResults": {
+    "message": "Mở trang tìm kiếm"
+  },
+  "docs.sidebar.label": {
+    "message": "Các trang tài liệu"
+  },
+  "docs.sidebar.browse": {
+    "message": "Duyệt tài liệu"
+  },
+  "docs.sidebar.filter.label": {
+    "message": "Lọc trang"
+  },
+  "docs.sidebar.filter.placeholder": {
+    "message": "Lọc trang"
+  },
+  "docs.sidebar.toggle": {
+    "message": "Các trang trong {category}"
+  },
+  "docs.sidebar.noMatch": {
+    "message": "Không có trang nào khớp với “{filter}”."
+  },
+  "docs.breadcrumbs.docs": {
+    "message": "Tài liệu"
+  },
+  "docs.meta.updated": {
+    "message": "Cập nhật {date}"
+  },
+  "docs.toc.report": {
+    "message": "Báo cáo vấn đề"
+  },
+  "docs.toc.top": {
+    "message": "Về đầu trang"
+  },
+  "docs.feedback.question": {
+    "message": "Trang này có hữu ích không?"
+  },
+  "docs.feedback.yes": {
+    "message": "Có"
+  },
+  "docs.feedback.no": {
+    "message": "Không"
+  },
+  "docs.feedback.thanks": {
+    "message": "Cảm ơn bạn đã cho biết. Để nói điều gì còn thiếu hoặc sai, {issue}."
+  },
+  "docs.feedback.issue": {
+    "message": "mở một issue"
+  },
+  "docsHome.eyebrow": {
+    "message": "Tài liệu"
+  },
+  "docsHome.title": {
+    "message": "Tài liệu ReleaseFlow"
+  },
+  "docsHome.lead": {
+    "message": "Cài đặt, kết nối các nguồn, review release đầu tiên và gửi release note tới mọi audience."
+  },
+  "docsHome.search": {
+    "message": "Tìm hướng dẫn, cấu hình và API"
+  },
+  "docsHome.start.title": {
+    "message": "Bắt đầu từ đây"
+  },
+  "docsHome.start.recommended": {
+    "message": "Nên đọc trước"
+  },
+  "docsHome.start.quickstart.title": {
+    "message": "Quickstart"
+  },
+  "docsHome.start.quickstart.cta": {
+    "message": "Bắt đầu quickstart"
+  },
+  "docsHome.start.quickstart.text": {
+    "message": "Chạy ReleaseFlow và PostgreSQL bằng Docker Compose, rồi tạo administrator đầu tiên."
+  },
+  "docsHome.start.concepts.title": {
+    "message": "Một thay đổi đi thế nào"
+  },
+  "docsHome.start.concepts.cta": {
+    "message": "Tìm hiểu mô hình"
+  },
+  "docsHome.start.concepts.text": {
+    "message": "Nguồn, phân loại, review, audience và publish, và một thay đổi đi qua chúng thế nào."
+  },
+  "docsHome.start.production.title": {
+    "message": "Checklist production"
+  },
+  "docsHome.start.production.cta": {
+    "message": "Chuẩn bị cho production"
+  },
+  "docsHome.start.production.text": {
+    "message": "HTTPS, backup, master key và nâng cấp, trước khi đội ngũ phụ thuộc vào nó."
+  },
+  "docsHome.topics.title": {
+    "message": "Duyệt theo chủ đề"
+  },
+  "docsHome.topic.getStarted": {
+    "message": "ReleaseFlow là gì, và cách chạy nó"
+  },
+  "docsHome.topic.guides": {
+    "message": "Từ nguồn đầu tiên tới việc gửi tự động"
+  },
+  "docsHome.topic.reference": {
+    "message": "REST API và mọi thiết lập"
+  },
+  "docsHome.topic.operate": {
+    "message": "Chạy, theo dõi và kiểm tra một deployment"
+  },
+  "docsHome.topic.internals": {
+    "message": "Cách nó được xây dựng, và các quyết định phía sau"
+  },
+  "docsHome.intro.label": {
+    "message": "Giới thiệu"
+  },
+  "docsHome.help.title": {
+    "message": "Không tìm thấy điều bạn cần?"
+  },
+  "docsHome.help.discussions.title": {
+    "message": "Hỏi trong Discussions"
+  },
+  "docsHome.help.discussions.text": {
+    "message": "Câu hỏi về cài đặt và workflow."
+  },
+  "docsHome.help.report.title": {
+    "message": "Báo cáo vấn đề về tài liệu"
+  },
+  "docsHome.help.report.text": {
+    "message": "Điều gì đó sai, thiếu hoặc đã cũ."
+  },
+  "docsHome.help.improve.title": {
+    "message": "Cải thiện tài liệu"
+  },
+  "docsHome.help.improve.text": {
+    "message": "Mỗi trang đều có link sửa tới mã nguồn của nó."
+  },
+  "api.sidebar.label": {
+    "message": "Các thao tác REST API"
+  },
+  "api.sidebar.browse": {
+    "message": "Duyệt endpoint"
+  },
+  "api.sidebar.docs": {
+    "message": "Tài liệu"
+  },
+  "api.table.default": {
+    "message": "Mặc định {value}"
+  },
+  "api.required": {
+    "message": "Bắt buộc"
+  },
+  "api.optional": {
+    "message": "Tùy chọn"
+  },
+  "api.table.name": {
+    "message": "Tên"
+  },
+  "api.table.field": {
+    "message": "Trường"
+  },
+  "api.table.type": {
+    "message": "Kiểu"
+  },
+  "api.table.required": {
+    "message": "Bắt buộc"
+  },
+  "api.table.notes": {
+    "message": "Ghi chú"
+  },
+  "api.schema.arrayOf": {
+    "message": "Một mảng {name}, mỗi phần tử gồm:"
+  },
+  "api.section.errors": {
+    "message": "Lỗi"
+  },
+  "api.errors.status": {
+    "message": "Trạng thái"
+  },
+  "api.errors.code": {
+    "message": "Mã"
+  },
+  "api.errors.scope": {
+    "message": "Áp dụng cho"
+  },
+  "api.errors.see": {
+    "message": "Xem hướng dẫn"
+  },
+  "api.errors.any": {
+    "message": "Mọi endpoint"
+  },
+  "api.errors.area": {
+    "message": "Khu vực {area}"
+  },
+  "api.samples.title": {
+    "message": "Request"
+  },
+  "api.samples.languages": {
+    "message": "Ngôn ngữ mẫu"
+  },
+  "api.response.title": {
+    "message": "Response"
+  },
+  "api.example": {
+    "message": "Ví dụ"
+  },
+  "api.response.example": {
+    "message": "Ví dụ response body"
+  },
+  "api.response.none": {
+    "message": "Không có response body."
+  },
+  "api.role.public": {
+    "message": "Công khai"
+  },
+  "api.role.member": {
+    "message": "Thành viên đã đăng nhập"
+  },
+  "api.role.admin": {
+    "message": "Quản trị viên"
+  },
+  "api.copyPath": {
+    "message": "Sao chép đường dẫn"
+  },
+  "api.signed": {
+    "message": "Request có chữ ký"
+  },
+  "api.readOnly": {
+    "message": "Chỉ đọc"
+  },
+  "api.proof": {
+    "message": "Được chứng minh bằng {proof}, không phải bằng phiên đăng nhập."
+  },
+  "api.readMore": {
+    "message": "Đọc thêm: {section}"
+  },
+  "api.readGuide": {
+    "message": "Đọc hướng dẫn"
+  },
+  "api.source": {
+    "message": "Mã nguồn: {handler}"
+  },
+  "api.section.path": {
+    "message": "Tham số đường dẫn"
+  },
+  "api.section.query": {
+    "message": "Tham số truy vấn"
+  },
+  "api.section.headers": {
+    "message": "Header"
+  },
+  "api.section.body": {
+    "message": "Request body"
+  },
+  "api.body.optional": {
+    "message": "Body là tùy chọn."
+  },
+  "api.body.raw": {
+    "message": "Payload JSON của nhà cung cấp, đúng như khi được ký."
+  },
+  "api.section.response": {
+    "message": "Response"
+  },
+  "api.response.statuses": {
+    "message": "Thành công: {statuses}"
+  },
+  "api.pager.label": {
+    "message": "Thao tác trước và sau"
+  },
+  "api.samples.exampleNote": {
+    "message": "Request body là ví dụ dựng từ schema; thay mọi giá trị giữ chỗ trước khi gửi."
+  },
+  "changelog.meta.title": {
+    "message": "Changelog"
+  },
+  "changelog.meta.description": {
+    "message": "Mọi bản phát hành của ReleaseFlow, nhóm theo loại thay đổi."
+  },
+  "changelog.eyebrow": {
+    "message": "Changelog"
+  },
+  "changelog.title": {
+    "message": "Những gì đã thay đổi trong ReleaseFlow"
+  },
+  "changelog.lead": {
+    "message": "Mọi bản phát hành, nhóm theo loại thay đổi. Đọc ghi chú nâng cấp trước khi chuyển giữa các phiên bản."
+  },
+  "changelog.watch": {
+    "message": "Theo dõi bản phát hành trên GitHub"
+  },
+  "changelog.index.label": {
+    "message": "Các bản phát hành"
+  },
+  "changelog.index.title": {
+    "message": "Các bản phát hành"
+  },
+  "changelog.index.all": {
+    "message": "Mọi bản phát hành trên GitHub"
+  },
+  "changelog.filter.label": {
+    "message": "Lọc theo loại thay đổi"
+  },
+  "changelog.filter.all": {
+    "message": "Tất cả"
+  },
+  "changelog.type.new": {
+    "message": "Mới"
+  },
+  "changelog.type.improved": {
+    "message": "Cải thiện"
+  },
+  "changelog.type.fixed": {
+    "message": "Sửa lỗi"
+  },
+  "changelog.type.security": {
+    "message": "Bảo mật"
+  },
+  "changelog.type.breaking": {
+    "message": "Thay đổi lớn"
+  },
+  "changelog.filter.status": {
+    "message": "Đang hiển thị {count} thay đổi"
+  },
+  "changelog.unreleased": {
+    "message": "Chưa phát hành"
+  },
+  "changelog.unreleased.note": {
+    "message": "Đang phát triển; chưa có trong bản phát hành nào."
+  },
+  "changelog.latest": {
+    "message": "Mới nhất"
+  },
+  "changelog.upgrade": {
+    "message": "Ghi chú nâng cấp."
+  },
+  "changelog.assets": {
+    "message": "Artifact và checksum của bản phát hành"
+  },
+  "changelog.compare": {
+    "message": "So sánh thay đổi"
+  },
+  "changelog.empty": {
+    "message": "Chưa có thay đổi nào thuộc loại này."
+  },
+  "community.meta.title": {
+    "message": "Cộng đồng"
+  },
+  "community.meta.description": {
+    "message": "Nơi hỏi, báo cáo và đóng góp cho ReleaseFlow."
+  },
+  "community.hero.eyebrow": {
+    "message": "Cộng đồng"
+  },
+  "community.hero.title": {
+    "message": "Xây dựng ReleaseFlow một cách công khai."
+  },
+  "community.hero.lead": {
+    "message": "Câu hỏi, báo lỗi, sửa tài liệu và mã nguồn đều giúp dự án tiến lên. Đây là nơi mỗi loại đóng góp nên đến, và điều gì xảy ra sau khi bạn gửi."
+  },
+  "community.hero.discussions": {
+    "message": "Tham gia thảo luận"
+  },
+  "community.hero.contributing": {
+    "message": "Hướng dẫn đóng góp"
+  },
+  "community.where.eyebrow": {
+    "message": "Nên đi đâu"
+  },
+  "community.where.title": {
+    "message": "Chọn đúng nơi"
+  },
+  "community.where.question.title": {
+    "message": "Đặt câu hỏi hoặc chia sẻ ý tưởng"
+  },
+  "community.where.question.text": {
+    "message": "Discussions dành cho vướng mắc khi cài đặt, câu hỏi về workflow, và bàn một ý tưởng trước khi mở issue."
+  },
+  "community.where.bug.title": {
+    "message": "Báo lỗi"
+  },
+  "community.where.bug.text": {
+    "message": "Mẫu báo lỗi hỏi phiên bản bạn dùng, những gì bạn đã chạy, và kết quả bạn mong đợi."
+  },
+  "community.where.feature.title": {
+    "message": "Đề xuất tính năng"
+  },
+  "community.where.feature.text": {
+    "message": "Mẫu đề xuất tính năng bắt đầu từ vấn đề bạn gặp, trước tính năng bạn muốn."
+  },
+  "community.where.docs.title": {
+    "message": "Cải thiện tài liệu"
+  },
+  "community.where.docs.text": {
+    "message": "Mỗi trang tài liệu có link tới file nguồn. Trang tiếng Việt thay đổi trong cùng pull request với trang tiếng Anh."
+  },
+  "community.where.security.title": {
+    "message": "Báo cáo lỗ hổng"
+  },
+  "community.where.security.text": {
+    "message": "Không bao giờ qua issue công khai. Làm theo chính sách bảo mật và báo cáo riêng tư."
+  },
+  "community.pr.eyebrow": {
+    "message": "Đóng góp"
+  },
+  "community.pr.title": {
+    "message": "Pull request đầu tiên của bạn"
+  },
+  "community.pr.lead": {
+    "message": "ReleaseFlow phát triển theo các lát nhỏ, dễ review, nên thay đổi nhỏ và tập trung là dễ được merge nhất. Duyệt issue theo label:"
+  },
+  "community.pr.labels": {
+    "message": "Label của issue"
+  },
+  "community.pr.step1.title": {
+    "message": "Thống nhất thay đổi trước"
+  },
+  "community.pr.step1.text": {
+    "message": "Chọn hoặc mở một issue. Với thay đổi lớn hơn một bản sửa, bàn cách làm trong Discussions trước khi viết."
+  },
+  "community.pr.step2.title": {
+    "message": "Fork, rồi tạo nhánh từ develop"
+  },
+  "community.pr.step2.text": {
+    "message": "Làm việc trên nhánh {fix} hoặc {feature} tạo từ {develop}, nhánh tích hợp."
+  },
+  "community.pr.step3.title": {
+    "message": "Build và test trên máy"
+  },
+  "community.pr.step3.text": {
+    "message": "Bạn cần JDK 21 và Docker, để chạy PostgreSQL cho test. Chạy {verify}, {e2e} khi một trang thay đổi, và {docs} khi một hướng dẫn thay đổi."
+  },
+  "community.pr.step4.title": {
+    "message": "Mở pull request vào develop"
+  },
+  "community.pr.step4.text": {
+    "message": "Đặt tiêu đề theo Conventional Commit, ví dụ {example}. CI, CodeQL, Dependency Review và Secret Scan chạy trên nó, và thay đổi hành vi thêm một dòng vào changelog dưới mục Unreleased."
+  },
+  "community.pr.step5.title": {
+    "message": "Review và merge"
+  },
+  "community.pr.step5.text": {
+    "message": "Người bảo trì review và squash nó vào develop thành một commit. Đóng góp của bạn được cấp phép Apache 2.0, không cần ký thỏa thuận riêng."
+  },
+  "community.open.eyebrow": {
+    "message": "Dự án vận hành thế nào"
+  },
+  "community.open.title": {
+    "message": "Mọi thứ diễn ra ở nơi bạn nhìn thấy được."
+  },
+  "community.open.code.title": {
+    "message": "Mã nguồn"
+  },
+  "community.open.code.text": {
+    "message": "Apache 2.0, một codebase, không có bản enterprise đóng."
+  },
+  "community.open.decisions.title": {
+    "message": "Quyết định"
+  },
+  "community.open.decisions.text": {
+    "message": "Mọi quyết định quan trọng được ghi lại thành một decision record có đánh số."
+  },
+  "community.open.releases.title": {
+    "message": "Bản phát hành"
+  },
+  "community.open.releases.text": {
+    "message": "Mỗi bản phát hành là một tag kèm checksum, SBOM, provenance và một mục changelog."
+  },
+  "community.open.security.title": {
+    "message": "Bảo mật"
+  },
+  "community.open.security.text": {
+    "message": "Báo cáo được xử lý riêng tư; bản sửa, advisory và ghi công được công bố cùng lúc."
+  },
+  "community.maintainers.title": {
+    "message": "Người bảo trì"
+  },
+  "community.maintainers.role": {
+    "message": "Tác giả và người bảo trì của dự án cá nhân này"
+  },
+  "community.conduct.title": {
+    "message": "Quy tắc ứng xử"
+  },
+  "community.conduct.text": {
+    "message": "ReleaseFlow áp dụng Contributor Covenant 2.1 trong issue, pull request, thảo luận và mọi không gian khác của dự án. Báo cáo hành vi không phù hợp riêng tư tới {contact}; danh tính người báo cáo được giữ kín."
+  },
+  "community.conduct.read": {
+    "message": "Đọc quy tắc ứng xử"
+  },
+  "security.meta.title": {
+    "message": "Bảo mật"
+  },
+  "security.meta.description": {
+    "message": "Cách báo cáo riêng tư một lỗ hổng trong ReleaseFlow, và điều gì xảy ra tiếp theo."
+  },
+  "security.hero.eyebrow": {
+    "message": "Chính sách bảo mật"
+  },
+  "security.hero.title": {
+    "message": "Báo cáo lỗ hổng một cách riêng tư."
+  },
+  "security.hero.lead": {
+    "message": "Vui lòng không mở issue công khai. Kênh báo cáo riêng tư của GitHub mở một bản nháp advisory mà chỉ bạn và người bảo trì đọc được, để bản sửa ra mắt trước khi chi tiết được công khai."
+  },
+  "security.hero.report": {
+    "message": "Báo cáo riêng tư trên GitHub"
+  },
+  "security.hero.policy": {
+    "message": "Đọc SECURITY.md"
+  },
+  "security.hero.email": {
+    "message": "Nếu bạn không dùng được kênh báo cáo riêng tư, gửi email tới {email}."
+  },
+  "security.include.title": {
+    "message": "Nội dung cần có"
+  },
+  "security.include.found": {
+    "message": "Bạn đã tìm thấy gì"
+  },
+  "security.include.reproduce": {
+    "message": "Cách tái hiện"
+  },
+  "security.include.reach": {
+    "message": "Kẻ tấn công có thể chạm tới những gì"
+  },
+  "security.include.proof": {
+    "message": "Một proof of concept sẽ có ích; không cần exploit hoạt động được và không bao giờ phải công khai"
+  },
+  "security.process.eyebrow": {
+    "message": "Sau khi bạn báo cáo"
+  },
+  "security.process.title": {
+    "message": "Điều gì xảy ra tiếp theo"
+  },
+  "security.process.lead": {
+    "message": "ReleaseFlow là dự án cá nhân với một người bảo trì, nên không có đội trực xử lý có trả phí và không có bounty."
+  },
+  "security.process.report.title": {
+    "message": "Báo cáo riêng tư"
+  },
+  "security.process.report.text": {
+    "message": "Qua một bản nháp advisory riêng tư trên GitHub, hoặc qua email."
+  },
+  "security.process.report.when": {
+    "message": "Bất cứ khi nào bạn phát hiện"
+  },
+  "security.process.reply.title": {
+    "message": "Phản hồi đầu tiên"
+  },
+  "security.process.reply.text": {
+    "message": "Người bảo trì đọc báo cáo và trả lời bạn."
+  },
+  "security.process.reply.when": {
+    "message": "Trong vòng một tuần"
+  },
+  "security.process.fix.title": {
+    "message": "Sửa lỗi"
+  },
+  "security.process.fix.text": {
+    "message": "Báo cáo được xác nhận là lỗ hổng thật sẽ được sửa trong phiên bản mới nhất và trên main."
+  },
+  "security.process.fix.when": {
+    "message": "Khi bản sửa sẵn sàng"
+  },
+  "security.process.disclose.title": {
+    "message": "Công bố"
+  },
+  "security.process.disclose.text": {
+    "message": "Bản sửa, advisory và ghi công được công bố cùng lúc."
+  },
+  "security.process.disclose.when": {
+    "message": "Cùng với bản sửa"
+  },
+  "security.versions.eyebrow": {
+    "message": "Phiên bản được hỗ trợ"
+  },
+  "security.versions.title": {
+    "message": "Phiên bản nào được sửa lỗi"
+  },
+  "security.versions.lead": {
+    "message": "Chỉ phiên bản phát hành mới nhất và main hiện tại. Các phiên bản cũ hơn không được sửa, và với một người bảo trì thì không có backport: vui lòng nâng cấp. {changelog} cho biết mỗi phiên bản đã thay đổi gì."
+  },
+  "security.versions.changelog": {
+    "message": "Changelog"
+  },
+  "security.versions.none": {
+    "message": "Chưa có phiên bản nào được phát hành, nên main là phiên bản duy nhất được hỗ trợ."
+  },
+  "security.versions.version": {
+    "message": "Phiên bản"
+  },
+  "security.versions.fixes": {
+    "message": "Bản sửa bảo mật"
+  },
+  "security.versions.latest": {
+    "message": "Bản phát hành mới nhất"
+  },
+  "security.versions.supported": {
+    "message": "Được hỗ trợ"
+  },
+  "security.versions.older": {
+    "message": "Phiên bản cũ hơn"
+  },
+  "security.versions.unsupported": {
+    "message": "Không hỗ trợ"
+  },
+  "security.model.eyebrow": {
+    "message": "Mô hình bảo mật"
+  },
+  "security.model.title": {
+    "message": "ReleaseFlow bảo vệ một deployment thế nào"
+  },
+  "security.model.architecture": {
+    "message": "Đọc kiến trúc"
+  },
+  "security.model.encrypted.title": {
+    "message": "Credential được mã hóa"
+  },
+  "security.model.encrypted.text": {
+    "message": "Webhook secret và Access token được mã hóa bằng master key bạn cung cấp; ReleaseFlow không khởi động khi thiếu một master key hợp lệ."
+  },
+  "security.model.writeOnly.title": {
+    "message": "Secret chỉ ghi"
+  },
+  "security.model.writeOnly.text": {
+    "message": "Secret đã lưu không bao giờ được đọc lại vào trang, API response hay log, và webhook secret chỉ hiện một lần."
+  },
+  "security.model.tenants.title": {
+    "message": "Các Organization tách biệt"
+  },
+  "security.model.tenants.text": {
+    "message": "Organization luôn lấy từ người đã đăng nhập, không bao giờ từ request; dữ liệu của Organization khác đơn giản là không tìm thấy."
+  },
+  "security.model.signed.title": {
+    "message": "Webhook có chữ ký, CSRF luôn bật"
+  },
+  "security.model.signed.text": {
+    "message": "Mỗi webhook tự chứng minh bằng secret riêng trên body gốc. Bảo vệ CSRF không bao giờ bị tắt; chỉ các đường dẫn có chữ ký được miễn."
+  },
+  "security.model.private.title": {
+    "message": "Mặc định là riêng tư"
+  },
+  "security.model.private.text": {
+    "message": "Quickstart chỉ lắng nghe trên loopback và không bao giờ publish database; lời gọi ra ngoài chỉ tới những gì bạn cấu hình."
+  },
+  "security.model.releases.title": {
+    "message": "Bản phát hành kiểm chứng được"
+  },
+  "security.model.releases.text": {
+    "message": "Mỗi bản phát hành kèm SHA256SUMS, SBOM và provenance attestation, và mã nguồn được quét bởi CodeQL, Dependency Review và secret scan."
+  },
+  "security.scope.title": {
+    "message": "Phạm vi"
+  },
+  "security.scope.in": {
+    "message": "Trong phạm vi"
+  },
+  "security.scope.in.text": {
+    "message": "Ứng dụng và cấu hình của nó: xác thực và xử lý phiên, cách ly tenant giữa các Organization, kiểm tra chữ ký webhook, lưu trữ secret và quy tắc chỉ hiện một lần, các client gọi ra ngoài và allowlist của chúng, cùng cấu hình CSRF và security header."
+  },
+  "security.scope.out": {
+    "message": "Ngoài phạm vi"
+  },
+  "security.scope.out.demo": {
+    "message": "Demo Compose stack ({file}), chỉ để đánh giá ReleaseFlow trên máy và không phải một deployment production."
+  },
+  "security.scope.out.admin": {
+    "message": "Phát hiện cần credential của chính administrator để chạm tới thứ administrator vốn đã được phép chạm tới."
+  },
+  "security.scope.out.scanner": {
+    "message": "Báo cáo của một công cụ quét mà không giải thích nó thực sự chạm tới gì."
+  },
+  "security.cta.title": {
+    "message": "Chạy cho cả đội ngũ?"
+  },
+  "security.cta.text": {
+    "message": "HTTPS, backup và master key cần có trước khi đội ngũ phụ thuộc vào nó."
+  },
+  "security.cta.checklist": {
+    "message": "Checklist production"
+  },
+  "notFound.code": {
+    "message": "Lỗi 404"
+  },
+  "notFound.title": {
+    "message": "Trang này không có trong release."
+  },
+  "notFound.lead": {
+    "message": "Có thể nó đã chuyển chỗ khi tài liệu được sắp xếp lại, hoặc link bị gõ sai. Tìm nó, hoặc bắt đầu từ một trong các trang sau."
+  },
+  "notFound.search": {
+    "message": "Tìm trong tài liệu, API và site"
+  },
+  "notFound.links.docs.title": {
+    "message": "Trang chủ tài liệu"
+  },
+  "notFound.links.docs.text": {
+    "message": "Hướng dẫn, cấu hình và tham chiếu"
+  },
+  "notFound.links.quickstart.title": {
+    "message": "Quickstart"
+  },
+  "notFound.links.quickstart.text": {
+    "message": "Chạy bằng Docker Compose"
+  },
+  "notFound.links.selfHost.title": {
+    "message": "Tự triển khai"
+  },
+  "notFound.links.selfHost.text": {
+    "message": "Yêu cầu và checklist production"
+  },
+  "notFound.links.changelog.title": {
+    "message": "Changelog"
+  },
+  "notFound.links.changelog.text": {
+    "message": "Những gì đã thay đổi trong mỗi bản phát hành"
+  },
+  "notFound.report": {
+    "message": "Gặp link hỏng trên site này? {report} và nó sẽ được sửa."
+  },
+  "notFound.report.link": {
+    "message": "Báo cáo"
+  },
+  "notFound.figure.title": {
+    "message": "Review release"
+  },
+  "notFound.figure.out": {
+    "message": "Bị loại"
+  },
+  "notFound.figure.evidence": {
+    "message": "Bằng chứng: không có trang ở địa chỉ này"
+  },
+  "notFound.figure.in": {
+    "message": "Được giữ"
+  }
+}

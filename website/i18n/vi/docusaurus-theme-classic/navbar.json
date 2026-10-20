@@ -1,0 +1,42 @@
+{
+  "logo.alt": {
+    "message": "ReleaseFlow",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Docs": {
+    "message": "Tài liệu",
+    "description": "Navbar item with label Docs"
+  },
+  "item.label.Self-host": {
+    "message": "Tự triển khai",
+    "description": "Navbar item with label Self-host"
+  },
+  "item.label.REST API": {
+    "message": "REST API",
+    "description": "Navbar item with label REST API"
+  },
+  "item.label.Decision records": {
+    "message": "Quyết định kiến trúc",
+    "description": "Navbar item with label Decision records"
+  },
+  "item.label.Changelog": {
+    "message": "Changelog",
+    "description": "Navbar item with label Changelog"
+  },
+  "item.label.Releases": {
+    "message": "Bản phát hành",
+    "description": "Navbar item with label Releases"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  },
+  "item.label.Community": {
+    "message": "Cộng đồng",
+    "description": "Navbar item with label Community"
+  },
+  "item.label.Product": {
+    "message": "Sản phẩm",
+    "description": "Navbar item with label Product"
+  }
+}
