@@ -32,6 +32,8 @@ viết từ cùng một bộ dữ kiện đã review, thay vì viết tay lại 
    automation gửi tới GitHub Releases, Slack, email, Notion, Confluence, Microsoft Teams,
    Zendesk, hoặc một changelog công khai có RSS feed. Xem [Automation](automation.md).
 
+![Change Inbox của một Project: trạng thái đồng bộ của các nguồn Jira, GitHub và GitLab, rồi một thay đổi cùng các badge category, review và loại khỏi release](assets/index/i-1-change-inbox.webp)
+
 Mỗi bước đều được ghi lại, nên một release note đã publish luôn cho biết ai đã review những
 gì có trong nó.
 

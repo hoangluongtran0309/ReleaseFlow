@@ -340,7 +340,11 @@ export function Pill({tone = 'outline', children}) {
 }
 
 /** A browser window that reserves the place of a product screenshot until one exists. */
-export function ScreenshotFrame({label, caption}) {
+/**
+ * A picture of the application in a browser frame: an image, or the video passed as children.
+ * The image keeps its own size so the page does not move while it loads.
+ */
+export function ScreenshotFrame({src, alt, width, height, caption, children}) {
   return (
     <figure className={styles.screenshot}>
       <div className={styles.dots} aria-hidden="true">
@@ -348,9 +352,8 @@ export function ScreenshotFrame({label, caption}) {
         <i />
         <i />
       </div>
-      <div className={styles.screenshotArea}>
-        <Icon name="image" size={28} strokeWidth={1.6} />
-        <span>{label}</span>
+      <div className={styles.screenshotMedia}>
+        {children ?? <img src={src} alt={alt} width={width} height={height} loading="lazy" decoding="async" />}
       </div>
       {caption && <figcaption>{caption}</figcaption>}
     </figure>

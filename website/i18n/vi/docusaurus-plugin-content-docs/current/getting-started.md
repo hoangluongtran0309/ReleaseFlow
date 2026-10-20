@@ -84,6 +84,8 @@ Flyway tạo schema khi khởi động. Mọi thứ khác — AI, dịch thuật
 nhà cung cấp, địa chỉ changelog công khai — đều không bắt buộc và được liệt kê trong
 [Cấu hình](configuration.md).
 
+![Form đăng ký trống ở /register](assets/getting-started/gs-1-register.webp)
+
 ## Chạy demo stack {#run-the-demo-stack}
 
 `docker-compose.demo.yml` build image từ bản checkout này và chạy nó cùng PostgreSQL 17,
@@ -98,6 +100,8 @@ docker compose -f docker-compose.demo.yml up --build
 
 Ứng dụng chạy ở `http://127.0.0.1:8080`, Grafana ở `http://127.0.0.1:3000`, và Prometheus ở
 `http://127.0.0.1:9090`. Xem [Vận hành](operations.md).
+
+![Trang tổng quan sau lần đăng nhập đầu tiên, gợi ý một bước tiếp theo: tạo project](assets/getting-started/gs-2-first-overview.webp)
 
 ## Bước tiếp theo {#next-steps}
 

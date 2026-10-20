@@ -31,6 +31,8 @@ canonicalized to lowercase. A repository or project can be connected to one Proj
 Organization, while different Organizations may connect the same one, and the same name
 on two providers is two separate sources. A source cannot be disconnected or replaced yet.
 
+![Connecting a GitHub repository on the Projects page; the webhook secret, shown once, is covered](assets/sources/sr-1-connect-github.webp)
+
 An unknown source returns `404 source_not_found`, and one already connected returns
 `409 github_repository_already_connected`, `409 gitlab_project_already_connected`,
 `409 linear_team_already_connected`, or `409 jira_project_already_connected`. Members get
@@ -66,6 +68,8 @@ Each merged pull request is stored once per repository, so GitHub redeliveries
 are harmless, and two repositories of one Project may both have a pull request #12.
 The Projects page shows the time of the last accepted delivery,
 which appears as soon as GitHub sends its initial `ping`.
+
+![A GitHub source: its webhook path, its last delivery, and a configured access token](assets/sources/sr-2-github-source.webp)
 
 To exercise the endpoint locally without GitHub, sign the exact bytes you send:
 
@@ -106,6 +110,8 @@ secret:
 printf 'whsec_%s\n' "$(printf '%s=' "$WEBHOOK_SECRET" | tr '_-' '/+' | base64 -d | base64 -w0)"
 ```
 
+![The page after connecting a GitLab project: the webhook path, the secret, and the Signing token for GitLab, both values covered](assets/sources/sr-1-gitlab-connected.webp)
+
 `POST /webhooks/gitlab/{webhookId}` needs no session or CSRF token, and
 ReleaseFlow proves the delivery with that source's own secret before it reads
 the payload. Which check applies is chosen when the source is connected:
@@ -132,6 +138,8 @@ The Organization and Project come from the source, never from the payload:
 Each merge request is stored once per source, so redeliveries are harmless.
 GitLab identifies a delivery only in its signing mode, so a change records
 `X-Gitlab-Event-UUID` when it is a GUID and nothing otherwise.
+
+![A GitLab source: its instance, webhook path, last delivery, and access token](assets/sources/sr-3-gitlab-source.webp)
 
 Only instances named in `RELEASEFLOW_GITLAB_ALLOWED_HOSTS` (default
 `gitlab.com`) can be connected. An entry is `host` or `host:port`, which means
@@ -168,6 +176,8 @@ Linear mints the signing secret itself, so create the webhook there first: under
 by the path ReleaseFlow shows for the source, and enable the **Issues** event.
 Copy the secret Linear displays and paste it, with an API key, when connecting
 the team in ReleaseFlow.
+
+![The page after connecting a Linear team: the webhook path to give Linear, whose own signing secret was pasted in](assets/sources/sr-4-linear-connected.webp)
 
 `POST /webhooks/linear/{webhookId}` needs no session or CSRF token. A delivery
 proves itself with four things, all of which must hold:
@@ -225,6 +235,8 @@ the project was connected are never read. A change from Jira:
 - starts with its key, so the Conventional Commit title rule never matches it:
   without AI, a Jira change is Unknown and needs review.
 
+![A Jira source: no webhook, the time of the last read and of the next one; the account email is covered](assets/sources/sr-5-jira-source.webp)
+
 A read that fails keeps its place and tries again, and the source shows
 **Connection failing** until one succeeds. A failure Jira may get over, such as a
 rate limit or an outage, is tried up to five times, after the wait Jira asked for (at
@@ -247,11 +259,20 @@ available to audience templates:
 {{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}
 ```
 
+An issue is read when the change is recorded, and what was read then is what the change keeps:
+its title and status are those of that moment, not refreshed later, so a note written at approval
+can say `In Progress` for an issue finished since. They are evidence of what the change pointed
+at, never a live view of the tracker.
+
+![A GitHub change with the Jira issue it mentions, linked with the title and status read when the change was recorded](assets/sources/sr-6-linked-issue.webp)
+
 Commit messages are only searched for keys; they are never stored. When commits
 could not be read, or Jira would not show an issue the change mentions, the
 change is retried and then marked **Linked issues incomplete**, which forces
 review. A key followed by a hyphen, as in `feature/APP-3-export`, is not taken
 as a mention.
+
+![A change that mentions DBV-15 and DBV-999: Jira returned only DBV-15, so the change needs review for incomplete linked issues](assets/sources/sr-6-linked-incomplete.webp)
 
 ## Access tokens
 
@@ -286,6 +307,10 @@ refuses the token, `503 github_unavailable`, `503 gitlab_unavailable`, or
 `503 jira_unavailable` when it cannot be reached,
 `404 source_not_found`, and `403` for members.
 
+![Setting an access token on a GitHub source that has none: the token is typed as dots and never shown again](assets/sources/sr-7-access-token.webp)
+
+![A source whose token no longer works: Connection failing, and the form to replace the access token](assets/sources/sr-8-connection-failing.webp)
+
 GitLab's changed files come from the merge request's diffs, at most ten pages of
 a hundred. A diff GitLab reports as collapsed, too large, or truncated makes the
 whole list unavailable rather than short, so a file that was never seen is never
@@ -315,6 +340,8 @@ its changed files are listed and, when AI is configured, it is classified once.
 An item already recorded, by webhook or by an earlier import, is skipped, so
 imports and webhooks never duplicate each other. Imported changes carry an
 **Imported** badge.
+
+![Import last 90 days in the Change Inbox: the import runs until it is completed, and the imported changes appear](assets/sources/sr-9-history-import.webp)
 
 A GitHub import stops at the first pull request updated before its window, and
 either import stops after 500 new changes as **Stopped at the limit** with its

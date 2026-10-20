@@ -45,6 +45,8 @@ curl -s -b "$JAR" -c "$JAR" -H "X-CSRF-TOKEN: $TOKEN" \
   -H 'Content-Type: application/json' -d '{"name": "Website"}' "$BASE/api/projects"
 ```
 
+![Running the commands above against a deployment: a CSRF token, signing in, the session, and a new Project](assets/api/api-1-session.gif)
+
 A session ends after 30 minutes without a request, and when the application restarts;
 after that, every call answers `401 authentication_required` until the script signs in
 again. `POST /logout` ends it at once. Set `RELEASEFLOW_SESSION_COOKIE_SECURE=true`

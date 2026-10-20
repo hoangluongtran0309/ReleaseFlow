@@ -47,6 +47,8 @@ lệ lỗi của nhà cung cấp AI, tỉ lệ action thất bại theo trigger,
 báo, lưu trữ bền vững, chính sách lưu giữ dữ liệu và kiểm soát truy cập là phần việc của một hệ
 thống triển khai thật. Xem [ADR-0026](adr/0026-deployment-observability.md).
 
+![Dashboard ReleaseFlow Operations trong Grafana, trong 24 giờ](assets/operations/o-1-grafana.webp)
+
 ## Container image {#container-image}
 
 `Dockerfile` build JAR trong một stage JDK rồi chép nó vào một image Temurin 21 JRE chạy với

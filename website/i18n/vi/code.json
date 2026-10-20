@@ -48,10 +48,7 @@
     "message": "Hai thời điểm quan trọng của mỗi release"
   },
   "homepage.showcase.description": {
-    "message": "Các walkthrough sản phẩm sẽ được đặt tại đây. Khung đã sẵn sàng cho screenshot thật mà không giả vờ mockup là giao diện ứng dụng."
-  },
-  "homepage.showcase.placeholder": {
-    "message": "Khung dành cho screenshot sản phẩm"
+    "message": "Ảnh chụp ReleaseFlow đang làm việc với một project mẫu, theo ngôn ngữ và theme bạn đang đọc."
   },
   "homepage.showcase.inbox.title": {
     "message": "Change Inbox"
@@ -733,7 +730,7 @@
     "message": "Release đi tới publish thế nào"
   },
   "product.review.screenshot": {
-    "message": "Review release · khung dành cho screenshot sản phẩm"
+    "message": "Một lần review release: một thay đổi được duyệt nguyên trạng, một thay đổi được phân loại lại thành Security kèm ghi chú, một thay đổi bị loại"
   },
   "product.review.caption": {
     "message": "Review release: quyết định từng thay đổi, rồi duyệt release."
@@ -1613,5 +1610,47 @@
   },
   "notFound.figure.in": {
     "message": "Được giữ"
+  },
+  "homepage.showcase.inbox.alt": {
+    "message": "Change Inbox: trạng thái đồng bộ của một nguồn Jira, một nguồn GitHub và một nguồn GitLab, rồi một thay đổi cùng các badge category và review"
+  },
+  "homepage.showcase.release.alt": {
+    "message": "Một release đang review, đã quyết định hai trong năm thay đổi, cùng bản xem trước note cho contributor"
+  },
+  "product.walkthrough.eyebrow": {
+    "message": "Xem thử"
+  },
+  "product.walkthrough.title": {
+    "message": "Một release, từ bản nháp tới changelog công khai."
+  },
+  "product.walkthrough.lead": {
+    "message": "Năm mươi giây của một release thật trên một project mẫu: tạo, review, duyệt, publish, đọc mà không cần đăng nhập, và đăng lên Slack."
+  },
+  "product.walkthrough.caption": {
+    "message": "Release v1.1.0 của project mẫu dbvault. Phụ đề tiếng Anh và tiếng Việt."
+  },
+  "product.collect.screenshot.alt": {
+    "message": "Bốn thẻ nguồn: một repository GitHub, một project GitLab và một team Linear cùng lần nhận gần nhất, và một project Jira cùng lần đọc gần nhất và lần đọc tới"
+  },
+  "product.collect.screenshot.caption": {
+    "message": "Bốn nguồn của một Project trong workspace mẫu, như trang Projects hiển thị."
+  },
+  "product.classify.screenshot.alt": {
+    "message": "Một pull request được phân loại là Fix nhờ loại trong tiêu đề, chờ review vì đã đổi sáu file nhạy cảm, và tóm tắt AI bên dưới"
+  },
+  "product.classify.screenshot.caption": {
+    "message": "Một thay đổi thật trong Change Inbox: vì sao nó là Fix, và file nào khiến nó cần review."
+  },
+  "product.publish.screenshot.alt": {
+    "message": "Note operator đã publish của release v1.1.0, có tab cho mọi audience và ngôn ngữ, và bản Markdown của note bên cạnh"
+  },
+  "product.publish.screenshot.caption": {
+    "message": "Bản thật: note operator của một release đã publish trên project mẫu."
+  },
+  "selfHost.operations.dashboard.alt": {
+    "message": "Dashboard ReleaseFlow Operations trong Grafana trong 24 giờ: thay đổi cần review, lưu lượng và thời gian phân loại, tỉ lệ lỗi AI, action thất bại, lần gửi chưa xác nhận, và Prometheus có tới được ứng dụng hay không"
+  },
+  "selfHost.operations.dashboard.caption": {
+    "message": "Dashboard mà demo stack dựng sẵn trong Grafana, qua một ngày của một workspace mẫu. Grafana không được dịch."
   }
 }
