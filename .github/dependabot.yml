@@ -1,0 +1,88 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Ho_Chi_Minh
+    groups:
+      github-actions-minor-patch:
+        update-types: [minor, patch]
+    labels: [dependencies, ci]
+
+  - package-ecosystem: maven
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:15"
+      timezone: Asia/Ho_Chi_Minh
+    groups:
+      maven-minor-patch:
+        update-types: [minor, patch]
+    labels: [dependencies, java]
+
+  - package-ecosystem: npm
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:30"
+      timezone: Asia/Ho_Chi_Minh
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    labels: [dependencies, javascript]
+
+  - package-ecosystem: npm
+    directory: /website
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:35"
+      timezone: Asia/Ho_Chi_Minh
+    groups:
+      website-minor-patch:
+        update-types: [minor, patch]
+    labels: [dependencies, documentation]
+
+  - package-ecosystem: docker
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:45"
+      timezone: Asia/Ho_Chi_Minh
+    groups:
+      docker-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Java 21 is the supported LTS; moving to another major is a decision, not an update.
+      - dependency-name: eclipse-temurin
+        update-types: [version-update:semver-major]
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Asia/Ho_Chi_Minh
+    groups:
+      docker-compose-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # A PostgreSQL major upgrade needs a data migration of its own.
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+    labels: [dependencies, docker]

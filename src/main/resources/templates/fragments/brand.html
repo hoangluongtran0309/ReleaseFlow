@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<span th:fragment="logo(cssClass)" class="releaseflow-logo" th:classappend="${cssClass}"
+      role="img" aria-label="ReleaseFlow">
+    <img th:src="@{/svg/releaseflow-logo-light.svg}" src="/svg/releaseflow-logo-light.svg"
+         width="344" height="80" alt="" aria-hidden="true" class="releaseflow-logo-light">
+    <img th:src="@{/svg/releaseflow-logo-dark.svg}" src="/svg/releaseflow-logo-dark.svg"
+         width="344" height="80" alt="" aria-hidden="true" class="releaseflow-logo-dark">
+</span>
+</body>
+</html>

@@ -1,0 +1,347 @@
+.visuallyHidden {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Navbar trigger */
+.trigger {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--rf-border-control);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface-inset);
+  color: var(--rf-text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.trigger:hover {
+  border-color: var(--rf-border-hover);
+  color: var(--rf-text-2);
+}
+
+.triggerLabel {
+  min-width: 64px;
+  text-align: left;
+}
+
+/* Dialog */
+.backdrop {
+  position: fixed;
+  z-index: calc(var(--ifm-z-index-fixed) + 10);
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh 16px 16px;
+  background: var(--rf-overlay);
+  backdrop-filter: blur(3px);
+}
+
+.dialog {
+  display: flex;
+  width: 100%;
+  max-width: 680px;
+  max-height: 80vh;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-2xl);
+  background: var(--rf-surface-inset);
+  box-shadow: var(--rf-shadow-modal);
+  color: var(--rf-text);
+  font-family: var(--rf-font-sans);
+}
+
+.inputRow {
+  display: flex;
+  min-height: 60px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 0 18px;
+  border-bottom: 1px solid var(--rf-border);
+  color: var(--rf-text-muted);
+}
+
+.input {
+  min-width: 0;
+  height: 58px;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--rf-text);
+  font: inherit;
+  font-size: 17px;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--rf-text-muted);
+  opacity: 1;
+}
+
+.input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.inputRow:focus-within {
+  box-shadow: inset 0 -2px 0 var(--rf-focus);
+}
+
+.esc {
+  display: inline-flex;
+  min-width: 44px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-sm);
+  background: transparent;
+  color: var(--rf-text-2);
+  font-family: var(--rf-font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.esc:hover {
+  border-color: var(--rf-border-hover);
+}
+
+.body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 0 8px;
+}
+
+/* The results scroll on their own, and can take focus so a keyboard can scroll them too. */
+.list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 0;
+  overscroll-behavior: contain;
+}
+
+.list:focus-visible {
+  outline-offset: -2px;
+}
+
+.list[hidden] {
+  display: none;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+}
+
+.groupLabel {
+  padding: 8px 10px 6px;
+  color: var(--rf-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.result {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--rf-text);
+}
+
+.result:hover {
+  color: var(--rf-text);
+  text-decoration: none;
+}
+
+.selected {
+  border-color: var(--rf-accent-tint-border);
+  background: var(--rf-surface-selected);
+}
+
+.tile {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rf-border-control);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+  font-family: var(--rf-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.tile-docs {
+  color: var(--rf-new);
+}
+
+.tile-api {
+  color: var(--rf-improved);
+}
+
+.tile-pages {
+  color: var(--rf-fixed);
+}
+
+.resultText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.resultTitle,
+.resultTrail {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.resultTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.resultTrail {
+  color: var(--rf-text-muted);
+  font-size: 12px;
+}
+
+.enter {
+  flex-shrink: 0;
+  color: var(--rf-accent-text);
+  font-size: 12px;
+  visibility: hidden;
+}
+
+.selected .enter {
+  visibility: visible;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--rf-text-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.message:not(:empty) {
+  padding-block: 16px;
+}
+
+.noResults {
+  color: var(--rf-text);
+  font-size: 15px;
+}
+
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--rf-border);
+  background: var(--rf-surface-2);
+  color: var(--rf-text-muted);
+  font-size: 12px;
+}
+
+.hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.hints span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hints kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-xs);
+  background: var(--rf-surface);
+  box-shadow: none;
+  color: var(--rf-text-2);
+  font-family: var(--rf-font-mono);
+  font-size: 11px;
+}
+
+.allResults {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  color: var(--rf-accent-text);
+}
+
+@media (max-width: 860px) {
+  .trigger {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  /* The label stays the button's name for a screen reader. */
+  .triggerLabel {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    min-width: 0;
+    height: 1px;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .triggerKbd,
+  .hints {
+    display: none;
+  }
+
+  .backdrop {
+    padding: 8px;
+  }
+
+  .dialog {
+    max-height: calc(100dvh - 16px);
+  }
+}

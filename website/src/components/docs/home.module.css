@@ -1,0 +1,266 @@
+.home {
+  background: var(--rf-bg);
+}
+
+.hero {
+  padding: 72px 0 80px;
+  border-bottom: 1px solid var(--rf-border-nav);
+  background: var(--rf-bg-deep);
+}
+
+.heroInner {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.title {
+  margin: 0;
+  color: var(--rf-text);
+  font-size: clamp(38px, 4.6vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.lead {
+  max-width: 680px;
+}
+
+.band {
+  padding: 56px 0 24px;
+}
+
+.band + .band {
+  padding-top: 40px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--rf-text);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* Start here */
+.startGrid,
+.topicGrid,
+.helpGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.startGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+
+.startCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius-2xl);
+  background: var(--rf-surface);
+  color: var(--rf-text);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.startCard:hover,
+.helpCard:hover {
+  border-color: var(--rf-border-hover);
+  background: var(--rf-surface-hover);
+  color: var(--rf-text);
+  text-decoration: none;
+}
+
+.startCard svg {
+  color: var(--rf-accent-text);
+}
+
+.recommended,
+.recommended:hover {
+  border-color: var(--rf-accent-tint-border);
+  background: var(--rf-accent-tint);
+}
+
+.startTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.recommendedLabel {
+  color: var(--rf-accent-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.startTitle {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.startText {
+  color: var(--rf-text-2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.startCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  color: var(--rf-accent-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Browse by topic */
+.topicGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+}
+
+.topic {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius-2xl);
+  background: var(--rf-surface);
+}
+
+.topicHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topicIcon {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rf-accent-tint-border);
+  border-radius: 9px;
+  background: var(--rf-accent-tint-strong);
+  color: var(--rf-accent-text);
+}
+
+.topicTitle {
+  margin: 0;
+  color: var(--rf-text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.topicText {
+  margin: 2px 0 0;
+  color: var(--rf-text-muted);
+  font-size: 13px;
+}
+
+.topicLinks {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topicLinks li + li {
+  border-top: 1px solid var(--rf-border-row);
+}
+
+.topicLinks a {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--rf-text-emph);
+  font-size: 14px;
+}
+
+.topicLinks a:hover {
+  color: var(--rf-accent-text);
+  text-decoration: none;
+}
+
+.topicLinks span {
+  color: var(--rf-text-decor);
+}
+
+/* Introduction */
+.introBand {
+  padding-block: 56px 72px;
+}
+
+/* Help */
+.helpBand {
+  padding: 72px 0 88px;
+  background: var(--rf-bg-alt);
+}
+
+.helpGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+}
+
+.helpCard {
+  display: flex;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--rf-border-control);
+  border-radius: var(--rf-radius-xl);
+  background: var(--rf-surface);
+  color: var(--rf-text);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.helpCard > svg {
+  flex-shrink: 0;
+  color: var(--rf-accent-text);
+}
+
+.helpText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--rf-text-2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.helpTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--rf-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+@media (max-width: 860px) {
+  .hero {
+    padding: 48px 0 56px;
+  }
+
+  .startCard,
+  .topic {
+    padding: 22px;
+  }
+}

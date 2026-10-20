@@ -1,0 +1,252 @@
+.hero {
+  padding: clamp(4rem, 8vw, 6.5rem) 0;
+  border-bottom: 1px solid var(--rf-border-nav);
+  background: var(--rf-bg-deep);
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(25rem, 0.92fr);
+  gap: clamp(3rem, 7vw, 7rem);
+  align-items: center;
+}
+
+.heroCopy {
+  max-width: 44rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+  color: var(--rf-accent-text);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  line-height: 1.25rem;
+  text-transform: uppercase;
+}
+
+.eyebrowMark,
+.diagramMark {
+  display: block;
+  flex-shrink: 0;
+}
+
+.eyebrowMark {
+  width: 24px;
+  height: 24px;
+}
+
+.title {
+  max-width: 46rem;
+  margin: 0;
+  color: var(--rf-text);
+  font-size: clamp(2.9rem, 6vw, 5rem);
+  font-weight: 780;
+  letter-spacing: -0.058em;
+  line-height: 0.98;
+}
+
+.tagline {
+  max-width: 42rem;
+  margin: 1.5rem 0 0;
+  color: var(--rf-text-2);
+  font-size: clamp(1.05rem, 1.6vw, 1.22rem);
+  line-height: 1.72;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.actions :global(.button) {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.valueList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  color: var(--rf-text-2);
+  font-size: 0.82rem;
+  list-style: none;
+}
+
+.valueList li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.valueList svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: var(--rf-accent-text);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.diagram {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-width: 30rem;
+  justify-self: end;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--rf-border);
+  border-radius: 1rem;
+  background: var(--rf-surface);
+  color: var(--rf-text);
+}
+
+.diagramGroup {
+  padding: 1rem;
+  border: 1px solid var(--rf-border);
+  border-radius: 0.75rem;
+  background: var(--rf-surface-2);
+}
+
+.diagramLabel {
+  display: block;
+  margin-bottom: 0.7rem;
+  color: var(--rf-text-2);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.sourceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.sourceGrid span,
+.outputList span {
+  border: 1px solid var(--rf-border);
+  border-radius: 0.5rem;
+  background: var(--rf-surface);
+  color: var(--rf-text-2);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.sourceGrid span {
+  padding: 0.55rem 0.3rem;
+}
+
+.diagramArrow {
+  color: var(--rf-accent-text);
+  font-size: 1.4rem;
+  line-height: 1;
+  text-align: center;
+  transform: rotate(90deg);
+}
+
+.diagramCore {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.8rem;
+  align-items: center;
+  border-color: var(--rf-accent-tint-border);
+  background: var(--rf-accent-tint);
+}
+
+.diagramMark {
+  width: 2.5rem;
+  height: 2.5rem;
+  grid-row: 1 / span 2;
+}
+
+.diagramCore strong {
+  font-size: 1rem;
+}
+
+.diagramCore > span:last-child {
+  color: var(--rf-text-2);
+  font-size: 0.78rem;
+}
+
+.outputList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.outputList span {
+  display: grid;
+  min-height: 3rem;
+  padding: 0.45rem;
+  place-items: center;
+}
+
+@media screen and (max-width: 996px) {
+  .heroGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
+  }
+
+  .heroCopy,
+  .diagram {
+    max-width: 46rem;
+    justify-self: center;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .hero {
+    padding: 3.25rem 0;
+  }
+
+  .title {
+    font-size: clamp(2.65rem, 14vw, 3.8rem);
+  }
+
+  .tagline {
+    font-size: 1rem;
+  }
+
+  .actions {
+    display: grid;
+  }
+
+  .actions :global(.button) {
+    width: 100%;
+  }
+
+  .valueList {
+    display: grid;
+  }
+
+  .diagram {
+    padding: 1rem;
+  }
+
+  .sourceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .outputList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .outputList span {
+    min-height: 2.5rem;
+  }
+}

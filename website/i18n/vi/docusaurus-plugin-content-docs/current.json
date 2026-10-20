@@ -1,0 +1,30 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.Get started": {
+    "message": "Làm quen",
+    "description": "The label for category 'Get started' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Guides": {
+    "message": "Hướng dẫn",
+    "description": "The label for category 'Guides' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Reference": {
+    "message": "Tham chiếu",
+    "description": "The label for category 'Reference' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Operate": {
+    "message": "Triển khai",
+    "description": "The label for category 'Operate' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Internals": {
+    "message": "Kiến trúc",
+    "description": "The label for category 'Internals' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Decision records": {
+    "message": "Quyết định kiến trúc",
+    "description": "The label for category 'Decision records' in sidebar 'docs'"
+  }
+}

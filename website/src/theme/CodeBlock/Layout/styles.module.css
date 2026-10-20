@@ -1,0 +1,21 @@
+.header {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
+  border-bottom: 1px solid var(--rf-code-border);
+  background: var(--rf-code-bg);
+}
+
+.language {
+  color: var(--rf-code-muted);
+  font-family: var(--rf-font-mono);
+  font-size: 12px;
+}
+
+.content {
+  position: relative;
+  direction: ltr;
+}

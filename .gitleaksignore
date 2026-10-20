@@ -1,0 +1,5 @@
+# Findings Gitleaks reports that are not secrets. A fingerprint names one finding in one
+# commit, so an entry here excuses exactly that line of history and nothing else.
+#
+# A commit already on develop cannot be edited, so a false positive is retired here and
+# the code it came from is changed so the pattern does not come back.

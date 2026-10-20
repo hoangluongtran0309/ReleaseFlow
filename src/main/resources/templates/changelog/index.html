@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/public}">
+<head>
+    <title th:text="#{ui.changelog.title(${organizationName})}">Release notes</title>
+</head>
+<body>
+<main layout:fragment="content">
+    <header class="max-w-3xl">
+        <p class="page-eyebrow" th:text="#{ui.changelog.heading}">Release notes</p>
+        <h1 class="page-heading" th:text="${organizationName}">Organization</h1>
+        <p class="page-subtitle" th:text="#{ui.changelog.subtitle}">What has shipped, newest first.</p>
+    </header>
+
+    <p class="section-copy mt-8" th:if="${#lists.isEmpty(cards)}" th:text="#{ui.changelog.empty}">Nothing has been published yet.</p>
+
+    <!--/* One card per release and audience; each language it was published in is a link of its own. */-->
+    <ol class="mt-8 grid grid-cols-1 gap-4" th:unless="${#lists.isEmpty(cards)}">
+        <li class="surface-card min-w-0 p-5 sm:p-6" th:each="card : ${cards}" th:with="entry=${card.first()}"
+            th:id="|entry-${entry.id}|">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm" th:text="${entry.projectName}">Project</span>
+                <time th:datetime="${entry.publishedAt}"
+                      th:text="${publishedOn.format(entry.publishedAt)}">18 Sep 2026</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" th:href="${entry.url}" th:hreflang="${entry.language}"
+                   th:text="${entry.releaseVersion}">1.4.0</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500" th:text="#{ui.changelog.writtenFor(${entry.audienceName})}">Written for End user</p>
+            <nav class="mt-3" th:aria-label="#{ui.changelog.languagesLabel(${entry.releaseVersion})}" aria-label="Languages">
+                <ul class="flex flex-wrap gap-2">
+                    <li th:each="language : ${card.languages()}">
+                        <a class="badge badge-outline badge-sm hover:underline" th:href="${language.url}"
+                           th:hreflang="${language.language}" th:lang="${language.language}"
+                           th:text="${language.languageName()}">English</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+    </ol>
+</main>
+</body>
+</html>

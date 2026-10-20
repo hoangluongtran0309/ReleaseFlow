@@ -1,0 +1,184 @@
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 56px;
+}
+
+.heroCopy {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 460px;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.heroTerminal {
+  min-width: 0;
+  flex: 1 1 540px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.dashboard {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.splitTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 56px;
+}
+
+.stepsIntro {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 340px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stepsList {
+  min-width: 0;
+  flex: 2 1 560px;
+}
+
+.headerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.body {
+  margin: 0;
+  color: var(--rf-text-2);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.body code {
+  padding: 2px 6px;
+  border: 1px solid var(--rf-border);
+  border-radius: 5px;
+  background: var(--rf-inline-code-bg);
+  color: var(--rf-inline-code-text);
+  font-size: 0.88em;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family: var(--rf-font-mono);
+}
+
+/* Deployment diagram */
+.topology {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 3.2fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+  margin: 0;
+}
+
+.inbound {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.node,
+.outbound {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-surface);
+  text-align: center;
+}
+
+.outbound {
+  border: 1px dashed var(--rf-border-strong);
+  background: var(--rf-surface-inset);
+}
+
+.nodeName {
+  color: var(--rf-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.nodeMeta {
+  color: var(--rf-text-muted);
+  font-size: 12px;
+}
+
+.arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rf-text-decor);
+  font-size: 20px;
+}
+
+.boundary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--rf-accent-tint-border);
+  border-radius: var(--rf-radius-2xl);
+  background: var(--rf-accent-tint);
+}
+
+.boundaryLabel {
+  color: var(--rf-accent-text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.boundaryRow {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.boundaryRow .node {
+  border-color: var(--rf-border-control);
+}
+
+@media (max-width: 1080px) {
+  .topology,
+  .boundaryRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .arrow {
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 860px) {
+  .split,
+  .splitTop {
+    gap: 40px;
+  }
+
+  .stack {
+    gap: 32px;
+  }
+}

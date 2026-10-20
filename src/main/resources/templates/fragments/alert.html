@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* The one way a page tells somebody something in place: success, info, warning, or
+       error, each with its own colour and icon. The colour is never the only signal, so
+       the icon differs too. An error interrupts a screen reader; anything else waits its
+       turn. The caller inserts it into an element of its own, which keeps the margin, the
+       id another control points at, and any Alpine state; the alert keeps the look.
+       A severity outside the four fails the page rather than rendering unstyled.
+       Thymeleaf evaluates th:insert's arguments before the th:if beside it, so an
+       argument that only exists when the condition holds goes inside a th:block th:if. */-->
+<div th:fragment="alert(severity, message)"
+     th:assert="${severity == 'success' or severity == 'info' or severity == 'warning' or severity == 'error'}"
+     th:class="|alert alert-${severity}|" th:attr="role=${severity == 'error'} ? 'alert' : 'status'"
+     class="alert alert-error" role="alert">
+    <svg class="icon shrink-0" aria-hidden="true">
+        <use th:href="@{|/svg/ui-icons.svg#${severity == 'success' ? 'check' : severity == 'warning' ? 'alert' : severity}|}"></use>
+    </svg>
+    <span th:text="${message}">Project was not found.</span>
+</div>
+
+<!--/* The same alert around markup of the caller's own, such as a sentence with an action
+       beside it. The body is a fragment the caller marks with th:ref. */-->
+<div th:fragment="alertBody(severity, body)"
+     th:assert="${severity == 'success' or severity == 'info' or severity == 'warning' or severity == 'error'}"
+     th:class="|alert alert-${severity}|" th:attr="role=${severity == 'error'} ? 'alert' : 'status'"
+     class="alert alert-warning" role="status">
+    <svg class="icon shrink-0" aria-hidden="true">
+        <use th:href="@{|/svg/ui-icons.svg#${severity == 'success' ? 'check' : severity == 'warning' ? 'alert' : severity}|}"></use>
+    </svg>
+    <th:block th:replace="${body}"></th:block>
+</div>
+
+<!--/* A UiNotice a controller put on the page: its severity, and its key and values,
+       written in the reader's language here rather than in the controller. */-->
+<th:block th:fragment="notice(notice)">
+    <div th:replace="~{fragments/alert :: alert(${notice.look()}, ${#messages.msgWithParams(notice.key(), notice.args())})}"></div>
+</th:block>
+</body>
+</html>

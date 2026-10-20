@@ -1,0 +1,700 @@
+/*
+ * Design tokens. Dark is the designed theme and the default; the light values are the
+ * design handoff's proposal, checked page by page. Components use these tokens only,
+ * never a literal colour. The single layout breakpoint is 860px (a media query cannot
+ * read a custom property).
+ */
+:root {
+  color-scheme: dark;
+
+  --rf-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --rf-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Page bands */
+  --rf-bg-deep: #050913;
+  --rf-bg: #080d1a;
+  --rf-bg-alt: #111a2e;
+
+  /* Surfaces */
+  --rf-surface: #0d1424;
+  --rf-surface-inset: #0b1120;
+  --rf-surface-2: #111a2e;
+  --rf-surface-hover: #121b30;
+  --rf-surface-active: #141e33;
+  --rf-surface-selected: #1b2540;
+  --rf-overlay: rgb(3 6 14 / 74%);
+  --rf-shadow-modal: 0 24px 80px rgb(0 0 0 / 55%);
+
+  /* Code: dark in both themes */
+  --rf-code-bg: #060a14;
+  --rf-code-subtle: #0a0f1d;
+  --rf-code-text: #d6deeb;
+  --rf-code-comment: #6b7a94;
+  --rf-code-key: #9ba1ff;
+  --rf-code-string: #a8d8b9;
+  --rf-code-ok: #5fd4a0;
+  --rf-code-border: #1e2a42;
+  --rf-code-control: #243049;
+  --rf-code-muted: #8a98b0;
+  --rf-code-strong: #eef2f8;
+  --rf-code-warning: #f2b866;
+  --rf-code-warning-bg: rgb(242 184 102 / 6%);
+  --rf-code-ok-bg: rgb(95 212 160 / 12%);
+  --rf-code-ok-border: rgb(95 212 160 / 35%);
+  --rf-code-get: #6cc6f0;
+  --rf-code-delete: #ff8f7a;
+  --rf-code-selected: #1b2540;
+  --rf-inline-code-bg: #111a2e;
+  --rf-inline-code-text: #e3e8f2;
+
+  /* Borders */
+  --rf-border-nav: #1a2338;
+  --rf-border: #1e2a42;
+  --rf-border-control: #243049;
+  --rf-border-strong: #2a3854;
+  --rf-border-hover: #3a4a6b;
+  --rf-border-row: #172138;
+  --rf-focus: #8f95ff;
+
+  /* Text */
+  --rf-text-strong: #fff;
+  --rf-text: #eef2f8;
+  --rf-text-emph: #d6deeb;
+  --rf-text-2: #b4c0d3;
+  --rf-text-muted: #8a98b0;
+  --rf-text-decor: #5a6a88;
+
+  /* Accent */
+  --rf-accent: #4f46e5;
+  --rf-accent-border: #6a62f5;
+  --rf-accent-hover: #5b54f0;
+  --rf-on-accent: #fff;
+  --rf-accent-text: #9ba1ff;
+  --rf-accent-text-hover: #c7caff;
+  --rf-accent-tint: rgb(79 70 229 / 12%);
+  --rf-accent-tint-strong: rgb(79 70 229 / 18%);
+  --rf-accent-tint-border: rgb(155 161 255 / 35%);
+
+  /* Change types, always paired with a text label */
+  --rf-new: #9ba1ff;
+  --rf-new-bg: rgb(155 161 255 / 12%);
+  --rf-new-border: rgb(155 161 255 / 35%);
+  --rf-improved: #6cc6f0;
+  --rf-improved-bg: rgb(108 198 240 / 12%);
+  --rf-improved-border: rgb(108 198 240 / 35%);
+  --rf-fixed: #5fd4a0;
+  --rf-fixed-bg: rgb(95 212 160 / 12%);
+  --rf-fixed-border: rgb(95 212 160 / 35%);
+  --rf-security: #f2b866;
+  --rf-security-bg: rgb(242 184 102 / 12%);
+  --rf-security-border: rgb(242 184 102 / 35%);
+  --rf-warning-bg: rgb(242 184 102 / 8%);
+  --rf-breaking: #ff8f7a;
+  --rf-breaking-bg: rgb(255 143 122 / 12%);
+  --rf-breaking-border: rgb(255 143 122 / 35%);
+
+  /* Radii */
+  --rf-radius-xs: 4px;
+  --rf-radius-sm: 6px;
+  --rf-radius-nav: 7px;
+  --rf-radius-md: 8px;
+  --rf-radius-lg: 10px;
+  --rf-radius-xl: 12px;
+  --rf-radius-2xl: 14px;
+  --rf-radius-pill: 999px;
+
+  /* Layout */
+  --rf-container: 1240px;
+  --rf-container-docs: 1400px;
+  --rf-container-api: 1440px;
+  --rf-gutter: 24px;
+  --rf-nav-h: 56px;
+  --rf-section-y: 104px;
+  --rf-hero-y-top: 88px;
+  --rf-hero-y-bottom: 96px;
+  --rf-article-max: 760px;
+  --rf-prose-max: 720px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --rf-bg-deep: #f5f7fb;
+  --rf-bg: #fff;
+  --rf-bg-alt: #f3f5fa;
+
+  --rf-surface: #fff;
+  --rf-surface-inset: #f8fafc;
+  --rf-surface-2: #f1f4f9;
+  --rf-surface-hover: #f5f7fb;
+  --rf-surface-active: #eef1f7;
+  --rf-surface-selected: #e8eafd;
+  --rf-overlay: rgb(15 23 42 / 45%);
+  --rf-shadow-modal: 0 24px 80px rgb(15 23 42 / 18%);
+
+  --rf-code-bg: #0b1120;
+  --rf-code-subtle: #111827;
+  --rf-inline-code-bg: #f1f4f9;
+  --rf-inline-code-text: #1f2937;
+
+  --rf-border-nav: #e3e8f0;
+  --rf-border: #e2e8f0;
+  --rf-border-control: #d9e0ea;
+  --rf-border-strong: #cbd5e1;
+  --rf-border-hover: #94a3b8;
+  --rf-border-row: #edf1f6;
+  --rf-focus: #4f46e5;
+
+  --rf-text-strong: #0b1220;
+  --rf-text: #111827;
+  --rf-text-emph: #1f2937;
+  --rf-text-2: #334155;
+  --rf-text-muted: #5b6779;
+  --rf-text-decor: #94a3b8;
+
+  --rf-accent: #4f46e5;
+  --rf-accent-border: #4338ca;
+  --rf-accent-hover: #4338ca;
+  --rf-on-accent: #fff;
+  --rf-accent-text: #4338ca;
+  --rf-accent-text-hover: #3730a3;
+  --rf-accent-tint: rgb(79 70 229 / 8%);
+  --rf-accent-tint-strong: rgb(79 70 229 / 12%);
+  --rf-accent-tint-border: rgb(79 70 229 / 28%);
+
+  --rf-new: #4338ca;
+  --rf-new-bg: rgb(67 56 202 / 8%);
+  --rf-new-border: rgb(67 56 202 / 30%);
+  --rf-improved: #075985;
+  --rf-improved-bg: rgb(7 89 133 / 8%);
+  --rf-improved-border: rgb(7 89 133 / 30%);
+  --rf-fixed: #065f46;
+  --rf-fixed-bg: rgb(6 95 70 / 8%);
+  --rf-fixed-border: rgb(6 95 70 / 30%);
+  --rf-security: #92400e;
+  --rf-security-bg: rgb(146 64 14 / 8%);
+  --rf-security-border: rgb(146 64 14 / 30%);
+  --rf-warning-bg: rgb(146 64 14 / 6%);
+  --rf-breaking: #9a3412;
+  --rf-breaking-bg: rgb(154 52 18 / 8%);
+  --rf-breaking-border: rgb(154 52 18 / 30%);
+}
+
+/*
+ * Infima reads its own variables. They are set on :root[data-theme] so they win over
+ * Infima's html[data-theme='dark'] block, and point at the tokens for both themes.
+ */
+:root,
+:root[data-theme] {
+  --ifm-color-primary: var(--rf-accent-text);
+  --ifm-color-primary-dark: var(--rf-accent-text);
+  --ifm-color-primary-darker: var(--rf-accent-text-hover);
+  --ifm-color-primary-darkest: var(--rf-accent-text-hover);
+  --ifm-color-primary-light: var(--rf-accent-text);
+  --ifm-color-primary-lighter: var(--rf-accent-text-hover);
+  --ifm-color-primary-lightest: var(--rf-accent-text-hover);
+  --ifm-link-color: var(--rf-accent-text);
+  --ifm-link-hover-color: var(--rf-accent-text-hover);
+  --ifm-background-color: var(--rf-bg);
+  --ifm-background-surface-color: var(--rf-surface);
+  --ifm-color-content: var(--rf-text);
+  --ifm-color-content-secondary: var(--rf-text-2);
+  --ifm-font-color-base: var(--rf-text);
+  --ifm-font-color-secondary: var(--rf-text-2);
+  --ifm-heading-color: var(--rf-text);
+  --ifm-color-emphasis-100: var(--rf-surface-2);
+  --ifm-color-emphasis-200: var(--rf-border);
+  --ifm-color-emphasis-300: var(--rf-border-control);
+  --ifm-color-emphasis-600: var(--rf-text-muted);
+  --ifm-color-emphasis-700: var(--rf-text-2);
+  --ifm-color-emphasis-800: var(--rf-text-emph);
+  --ifm-hr-background-color: var(--rf-border);
+  --ifm-font-family-base: var(--rf-font-sans);
+  --ifm-font-family-monospace: var(--rf-font-mono);
+  --ifm-heading-font-family: var(--rf-font-sans);
+  --ifm-font-size-base: 100%;
+  --ifm-line-height-base: 1.65;
+  --ifm-heading-font-weight: 750;
+  --ifm-global-radius: var(--rf-radius-md);
+  --ifm-global-shadow-lw: none;
+  --ifm-global-shadow-md: none;
+  --ifm-navbar-height: var(--rf-nav-h);
+  --ifm-navbar-padding-vertical: 0;
+  --ifm-navbar-padding-horizontal: 0;
+  --ifm-navbar-shadow: none;
+  --ifm-navbar-background-color: var(--rf-bg-deep);
+  --ifm-navbar-link-color: var(--rf-text-2);
+  --ifm-navbar-link-hover-color: var(--rf-text-strong);
+  --ifm-navbar-search-input-background-color: var(--rf-surface-inset);
+  --ifm-navbar-search-input-color: var(--rf-text);
+  --ifm-navbar-search-input-placeholder-color: var(--rf-text-muted);
+  --ifm-dropdown-background-color: var(--rf-surface);
+  --ifm-dropdown-link-color: var(--rf-text-2);
+  --ifm-dropdown-hover-background-color: var(--rf-surface-2);
+  --ifm-menu-color: var(--rf-text-2);
+  --ifm-menu-color-active: var(--rf-text-strong);
+  --ifm-menu-color-background-active: var(--rf-accent-tint);
+  --ifm-menu-color-background-hover: var(--rf-surface-2);
+  --ifm-toc-border-color: var(--rf-border);
+  --ifm-table-border-color: var(--rf-border);
+  --ifm-table-stripe-background: transparent;
+  --ifm-code-font-size: 88%;
+  --ifm-code-background: var(--rf-inline-code-bg);
+  --ifm-code-border-radius: 5px;
+  --ifm-footer-background-color: var(--rf-bg-deep);
+  --docusaurus-highlighted-code-line-bg: var(--rf-accent-tint-strong);
+  --search-local-modal-background: var(--rf-surface-inset);
+  --search-local-modal-shadow: var(--rf-shadow-modal);
+  --search-local-hit-background: var(--rf-surface);
+  --search-local-hit-shadow: none;
+  --search-local-hit-color: var(--rf-text);
+  --search-local-muted-color: var(--rf-text-muted);
+  --search-local-highlight-color: var(--rf-surface-selected);
+  --search-local-input-active-border-color: var(--rf-focus);
+}
+
+html:root {
+  --doc-sidebar-width: 16rem;
+  scroll-padding-top: calc(var(--ifm-navbar-height) + 1.5rem);
+}
+
+body {
+  background: var(--rf-bg);
+  color: var(--rf-text);
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--rf-accent-tint-border);
+}
+
+:focus-visible {
+  outline: 2px solid var(--rf-focus);
+  outline-offset: 2px;
+}
+
+a,
+button,
+input,
+select,
+textarea,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--rf-font-mono);
+}
+
+.main-wrapper {
+  background: transparent;
+}
+
+/* A link inside a sentence is underlined, so colour is never the only thing that marks it. */
+main p a:not(.button) {
+  text-decoration: underline;
+  text-decoration-color: var(--rf-accent-tint-border);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.17em;
+}
+
+main p a:not(.button):hover {
+  text-decoration-color: currentcolor;
+}
+
+/* The first focusable element on every page: hidden until focused, then a primary button. */
+[class*='skipToContent'] {
+  border: 1px solid var(--rf-accent-border);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-accent);
+  color: var(--rf-on-accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+[class*='skipToContent']:focus {
+  min-height: 44px;
+  padding: 12px 18px;
+  box-shadow: none;
+  color: var(--rf-on-accent);
+}
+
+/* Buttons. Infima's .button stays the class name so Markdown and theme pages share them. */
+.button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: var(--rf-radius-md);
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.button--lg {
+  padding: 0 20px;
+  font-size: 15px;
+}
+
+.button--primary,
+.button--primary:hover,
+.button--primary:focus-visible {
+  border: 1px solid var(--rf-accent-border);
+  background: var(--rf-accent);
+  color: var(--rf-on-accent);
+}
+
+.button--primary:hover {
+  background: var(--rf-accent-hover);
+}
+
+.button.button--secondary:not(.button--outline) {
+  border: 1px solid var(--rf-border-strong);
+  background: var(--rf-surface);
+  color: var(--rf-text);
+}
+
+.button.button--secondary:not(.button--outline):hover {
+  border-color: var(--rf-border-hover);
+  background: var(--rf-surface-active);
+  color: var(--rf-text);
+}
+
+/* The locale dropdown in the navbar */
+.dropdown__menu {
+  min-width: 11rem;
+  padding: 6px;
+  border: 1px solid var(--rf-border-control);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-surface);
+  box-shadow: var(--rf-shadow-modal);
+}
+
+.dropdown__link {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: var(--rf-radius-sm);
+  color: var(--rf-text-2);
+  font-size: 14px;
+}
+
+.dropdown__link:hover {
+  background: var(--rf-surface-2);
+  color: var(--rf-text-strong);
+}
+
+.dropdown__link--active,
+.dropdown__link--active:hover {
+  background: var(--rf-accent-tint);
+  color: var(--rf-text-strong);
+  font-weight: 600;
+}
+
+/* Documentation content */
+.theme-doc-markdown {
+  color: var(--rf-text);
+  overflow-wrap: anywhere;
+}
+
+.theme-doc-markdown > :first-child {
+  margin-top: 0;
+}
+
+.theme-doc-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.theme-doc-markdown h1 {
+  margin: 0 0 1.5rem;
+  font-size: clamp(34px, 4vw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+/* The paragraph under an article's title (and its meta row) is the lead. */
+.theme-doc-markdown > h1 + p,
+.theme-doc-markdown > h1 + [class*='docMeta'] + p {
+  max-width: none;
+  margin-bottom: 8px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--rf-border);
+  color: var(--rf-text-2);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.theme-doc-markdown h2 {
+  margin: 3.5rem 0 1rem;
+  padding-top: 0.5rem;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.theme-doc-markdown h3 {
+  margin: 2.5rem 0 0.75rem;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.theme-doc-markdown h4,
+.theme-doc-markdown h5,
+.theme-doc-markdown h6 {
+  margin: 2rem 0 0.75rem;
+  font-weight: 700;
+}
+
+/* A screenshot in a guide sits on its own line, framed like the cards around it. */
+.theme-doc-markdown p > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius-lg);
+}
+
+.theme-doc-markdown p,
+.theme-doc-markdown li {
+  color: var(--rf-text-2);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.theme-doc-markdown p {
+  margin-bottom: 1.25rem;
+}
+
+.theme-doc-markdown > p,
+.theme-doc-markdown > ul,
+.theme-doc-markdown > ol {
+  max-width: 72ch;
+}
+
+.theme-doc-markdown li + li {
+  margin-top: 0.35rem;
+}
+
+.theme-doc-markdown strong {
+  color: var(--rf-text);
+}
+
+.theme-doc-markdown a:not(.hash-link) {
+  color: var(--rf-accent-text);
+  font-weight: 550;
+  text-decoration: underline;
+  text-decoration-color: var(--rf-accent-tint-border);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.17em;
+}
+
+.theme-doc-markdown a:not(.hash-link):hover {
+  color: var(--rf-accent-text-hover);
+  text-decoration-color: currentcolor;
+}
+
+/* The meta row under an article's title is navigation, not prose. */
+.theme-doc-markdown [class*='docMeta'] a {
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.hash-link {
+  display: inline-block;
+  min-width: 24px;
+  color: var(--rf-accent-text);
+  text-align: center;
+}
+
+.theme-doc-markdown :not(pre) > code {
+  padding: 2px 6px;
+  border: 1px solid var(--rf-border);
+  background: var(--rf-inline-code-bg);
+  color: var(--rf-inline-code-text);
+}
+
+.theme-code-block {
+  overflow: hidden;
+  margin-block: 1.4rem;
+  border: 1px solid var(--rf-code-border);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-code-bg);
+  box-shadow: none;
+}
+
+.theme-code-block pre {
+  --ifm-pre-padding: 16px;
+
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.theme-doc-markdown blockquote {
+  margin: 1.5rem 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rf-accent-tint-border);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-accent-tint);
+  color: var(--rf-text-2);
+}
+
+.theme-doc-markdown blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.theme-doc-markdown table {
+  display: block;
+  width: 100%;
+  margin-block: 1.5rem;
+  overflow-x: auto;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius-lg);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--rf-surface);
+}
+
+.theme-doc-markdown thead {
+  background: var(--rf-surface-inset);
+}
+
+.theme-doc-markdown tr {
+  background: transparent;
+}
+
+.theme-doc-markdown th,
+.theme-doc-markdown td {
+  padding: 12px 14px;
+  border: 0;
+  border-right: 1px solid var(--rf-border);
+  border-bottom: 1px solid var(--rf-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.theme-doc-markdown tr > :last-child {
+  border-right: 0;
+}
+
+.theme-doc-markdown tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.theme-doc-markdown th {
+  color: var(--rf-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.theme-doc-markdown td {
+  color: var(--rf-text-2);
+  font-size: 14px;
+}
+
+.theme-doc-markdown details {
+  margin-block: 1.25rem;
+  padding: 0 1rem 1rem;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-surface);
+}
+
+.theme-doc-markdown details > summary {
+  min-height: 2.75rem;
+  color: var(--rf-text);
+  font-weight: 700;
+}
+
+.theme-admonition {
+  border: 1px solid var(--rf-border);
+  border-left-width: 4px;
+  border-radius: var(--rf-radius-lg);
+  box-shadow: none;
+}
+
+/* Search results page */
+[class*='mainWrapper'] > .container.margin-vert--lg {
+  width: min(100%, 68rem);
+  padding-block: clamp(1.5rem, 4vw, 3rem);
+}
+
+[class*='searchQueryInput'] {
+  min-height: 3rem;
+  border: 1px solid var(--rf-border-strong) !important;
+  border-radius: var(--rf-radius-xl) !important;
+  background: var(--rf-surface-inset) !important;
+  color: var(--rf-text) !important;
+}
+
+[class*='searchQueryInput']:focus {
+  border-color: var(--rf-focus) !important;
+  outline: none;
+}
+
+article[class*='searchResultItem_'] {
+  padding: 1.25rem 0 !important;
+  border-bottom: 1px solid var(--rf-border);
+}
+
+article[class*='searchResultItem_'] h2 {
+  margin-bottom: 0.35rem;
+  font-size: 1.12rem;
+  line-height: 1.4;
+}
+
+article[class*='searchResultItem_'] p:last-child {
+  margin-bottom: 0;
+}
+
+article[class*='searchResultItem_'] mark {
+  padding: 0.05em 0.12em;
+  border-radius: 0.2rem;
+  background: var(--rf-accent-tint-strong);
+  color: var(--rf-text);
+}
+
+/* The theme toggle shows the theme on screen: a sun or a moon, never the system icon. */
+html[data-theme-choice='system'] button [class*='systemToggleIcon'] {
+  display: none;
+}
+
+html[data-theme-choice='system'][data-theme='light'] button [class*='lightToggleIcon'],
+html[data-theme-choice='system'][data-theme='dark'] button [class*='darkToggleIcon'] {
+  display: initial;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  [aria-current='page'] {
+    outline: 2px solid CanvasText;
+  }
+}

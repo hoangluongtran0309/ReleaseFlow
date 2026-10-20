@@ -1,0 +1,66 @@
+{
+  "link.title.Documentation": {
+    "message": "Tài liệu",
+    "description": "The title of the footer links column with title=Documentation in the footer"
+  },
+  "link.title.Community": {
+    "message": "Cộng đồng",
+    "description": "The title of the footer links column with title=Community in the footer"
+  },
+  "link.title.Project": {
+    "message": "Dự án",
+    "description": "The title of the footer links column with title=Project in the footer"
+  },
+  "link.item.label.Getting started": {
+    "message": "Bắt đầu",
+    "description": "The label of footer link with label=Getting started linking to /docs/getting-started"
+  },
+  "link.item.label.Guides": {
+    "message": "Hướng dẫn",
+    "description": "The label of footer link with label=Guides linking to /docs/workspace"
+  },
+  "link.item.label.REST API": {
+    "message": "REST API",
+    "description": "The label of footer link with label=REST API linking to /docs/api"
+  },
+  "link.item.label.Configuration": {
+    "message": "Cấu hình",
+    "description": "The label of footer link with label=Configuration linking to /docs/configuration"
+  },
+  "link.item.label.Discussions": {
+    "message": "Thảo luận",
+    "description": "The label of footer link with label=Discussions linking to https://github.com/hoangluongtran0309/ReleaseFlow/discussions"
+  },
+  "link.item.label.Issues": {
+    "message": "Issues",
+    "description": "The label of footer link with label=Issues linking to https://github.com/hoangluongtran0309/ReleaseFlow/issues/new/choose"
+  },
+  "link.item.label.Contributing": {
+    "message": "Đóng góp",
+    "description": "The label of footer link with label=Contributing linking to https://github.com/hoangluongtran0309/ReleaseFlow/blob/main/CONTRIBUTING.md"
+  },
+  "link.item.label.Code of conduct": {
+    "message": "Quy tắc ứng xử",
+    "description": "The label of footer link with label=Code of conduct linking to https://github.com/hoangluongtran0309/ReleaseFlow/blob/main/CODE_OF_CONDUCT.md"
+  },
+  "link.item.label.Changelog": {
+    "message": "Changelog",
+    "description": "The label of footer link with label=Changelog linking to https://github.com/hoangluongtran0309/ReleaseFlow/blob/main/CHANGELOG.md"
+  },
+  "link.item.label.Releases": {
+    "message": "Bản phát hành",
+    "description": "The label of footer link with label=Releases linking to https://github.com/hoangluongtran0309/ReleaseFlow/releases"
+  },
+  "link.item.label.Security policy": {
+    "message": "Chính sách bảo mật",
+    "description": "The label of footer link with label=Security policy linking to https://github.com/hoangluongtran0309/ReleaseFlow/blob/main/SECURITY.md"
+  },
+  "link.item.label.GitHub": {
+    "message": "GitHub",
+    "description": "The label of footer link with label=GitHub linking to https://github.com/hoangluongtran0309/ReleaseFlow"
+  },
+  "copyright": {
+    "message": "Bản quyền 2026 Luong Tran Chu Hoang. Phát hành theo Apache License 2.0.",
+    "description": "The footer copyright"
+  }
+}
