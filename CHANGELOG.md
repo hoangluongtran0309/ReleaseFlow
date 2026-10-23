@@ -12,6 +12,11 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Change Inbox filters wrap onto another row when the page is narrow, rather than
+  shrinking until the arrow covers their text.
+
 ## [1.0.0] - 2026-10-20
 
 ### Added
