@@ -145,10 +145,9 @@ và ghi cookie, mà cookie được ưu tiên hơn tài khoản, nên thay đổ
 
 ![Chọn English trong menu tài khoản: trang đổi sang tiếng Anh ngay](assets/workspace/w-6-language-picker.webp)
 
-Bước tài khoản đọc ngôn ngữ mà session có lúc bắt đầu, không phải tài khoản ở thời điểm hiện
-tại. Một lựa chọn được thực hiện ở trình duyệt khác, hoặc qua API, chỉ tới được một session
-đang đăng nhập sẵn khi session đó đăng nhập lại; trước lúc ấy, session giữ cookie của chính
-nó, hoặc nếu không có cookie thì giữ ngôn ngữ nó có lúc bắt đầu.
+Bước tài khoản đọc tài khoản ở thời điểm hiện tại, nên một lựa chọn được thực hiện ở trình
+duyệt khác, hoặc qua API, tới được mọi session của người đó ngay ở yêu cầu kế tiếp, trừ khi
+cookie của chính session đó hoặc một `?lang=` nói khác.
 
 ```text
 GET /api/me/ui-locale                  (any member)

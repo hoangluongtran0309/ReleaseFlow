@@ -15,6 +15,8 @@ import java.time.Duration;
 import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * Picks the language a request is answered in, in this order: a {@code ?lang=} query
@@ -28,9 +30,10 @@ import java.util.Optional;
  * account. Only a GET reads it, because reading a parameter of a POST would consume a
  * form-encoded body that a signed webhook still has to verify.
  *
- * <p>The account's choice is read from the principal the session already holds, so
- * resolving a locale costs no query. A change writes the cookie as well, and the cookie
- * outranks the account, so the person sees their new language at once.
+ * <p>The account's choice is read as it is now, one column by primary key, and only when
+ * neither the parameter nor the cookie has answered. So a choice made in one browser, or
+ * through the API, reaches every other session of that person on its next request. A
+ * change writes the cookie as well, which spares the browser that made it the lookup.
  *
  * <p>Public changelog pages resolve the same way. They reach only the first, third and
  * fourth step, which keeps anonymous reading anonymous: no session is created and no
@@ -45,9 +48,11 @@ public class UiLocaleResolver implements LocaleResolver {
     private static final String RESOLVED_ATTRIBUTE = UiLocaleResolver.class.getName() + ".RESOLVED";
 
     private final UiLanguages languages;
+    private final Function<UUID, Optional<String>> savedLocale;
 
-    public UiLocaleResolver(UiLanguages languages) {
+    public UiLocaleResolver(UiLanguages languages, Function<UUID, Optional<String>> savedLocale) {
         this.languages = languages;
+        this.savedLocale = savedLocale;
     }
 
     @Override
@@ -118,7 +123,7 @@ public class UiLocaleResolver implements LocaleResolver {
         if (authentication == null || !(authentication.getPrincipal() instanceof ReleaseFlowPrincipal principal)) {
             return Optional.empty();
         }
-        return languages.narrow(principal.uiLocale());
+        return savedLocale.apply(principal.userId()).flatMap(languages::narrow);
     }
 
     private Optional<Locale> fromAcceptLanguage(HttpServletRequest request) {
