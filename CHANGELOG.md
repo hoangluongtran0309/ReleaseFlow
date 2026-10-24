@@ -16,6 +16,9 @@ section into the version's entry, and the GitHub release is written from it.
 
 - The Change Inbox filters wrap onto another row when the page is narrow, rather than
   shrinking until the arrow covers their text.
+- A language chosen for an account, in another browser or through the API, reaches that
+  person's other signed-in sessions on their next page instead of at their next sign-in
+  ([ADR-0034](docs/adr/0034-account-language-per-request.md)).
 
 ## [1.0.0] - 2026-10-20
 

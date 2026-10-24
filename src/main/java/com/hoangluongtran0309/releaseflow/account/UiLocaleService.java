@@ -41,6 +41,12 @@ public class UiLocaleService {
         return Optional.of(chosen);
     }
 
+    /** The language saved on the account as it is now, or empty when the browser decides. */
+    @Transactional(readOnly = true)
+    public Optional<String> savedLocale(UUID userId) {
+        return appUserRepository.findUiLocaleById(userId);
+    }
+
     public UiLocaleSettings settings(String uiLocale) {
         return new UiLocaleSettings(uiLocale, options());
     }

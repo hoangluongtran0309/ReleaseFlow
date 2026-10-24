@@ -36,13 +36,14 @@ they describe.
 | [0024](0024-notion-and-confluence-actions.md) | Notion and Confluence actions | Accepted | 2026-09-21 | |
 | [0025](0025-teams-and-zendesk-actions.md) | Microsoft Teams and Zendesk actions | Accepted | 2026-09-21 | Amends [0020](0020-automation-rules-and-runs.md) and [0022](0022-public-changelog.md) |
 | [0026](0026-deployment-observability.md) | Deployment observability | Accepted | 2026-09-21 | Amends [0007](0007-ci-and-container-supply-chain.md) |
-| [0027](0027-ui-localization.md) | UI localization | Accepted | 2026-09-22 | |
+| [0027](0027-ui-localization.md) | UI localization | Accepted | 2026-09-22 | Amended by [0034](0034-account-language-per-request.md) (the account's language read on each request) |
 | [0028](0028-parity-ui-and-browser-tests.md) | A dashboard, error pages, and a browser test suite | Accepted | 2026-09-22 | Amends [0003](0003-frontend-toolchain.md) |
 | [0029](0029-one-module-and-the-apache-licence.md) | One module, and the Apache licence | Accepted | 2026-09-22 | |
 | [0030](0030-release-automation.md) | Release automation | Accepted | 2026-10-10 | Amends [CONTRIBUTING.md](../../CONTRIBUTING.md) |
 | [0031](0031-quickstart-bundle.md) | Quickstart bundle | Accepted | 2026-10-02 | Builds on [0030](0030-release-automation.md) |
 | [0032](0032-documentation-site.md) | Documentation site | Accepted | 2026-10-12 | Builds on [0007](0007-ci-and-container-supply-chain.md) and [0030](0030-release-automation.md) |
 | [0033](0033-change-exclusion.md) | Excluding a change from releases | Accepted | 2026-10-17 | Builds on [0010](0010-release-review-lifecycle.md) |
+| [0034](0034-account-language-per-request.md) | The account's interface language is read on each request | Accepted | 2026-10-23 | Amends [0027](0027-ui-localization.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)

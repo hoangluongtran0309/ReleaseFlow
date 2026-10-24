@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.configuration;
 
+import com.hoangluongtran0309.releaseflow.account.UiLocaleService;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,8 +15,8 @@ class LocalizationConfiguration implements WebMvcConfigurer {
 
     private final UiLocaleResolver localeResolver;
 
-    LocalizationConfiguration(UiLanguages languages) {
-        this.localeResolver = new UiLocaleResolver(languages);
+    LocalizationConfiguration(UiLanguages languages, UiLocaleService uiLocaleService) {
+        this.localeResolver = new UiLocaleResolver(languages, uiLocaleService::savedLocale);
     }
 
     /** Named {@code localeResolver}, which is what Spring MVC looks the resolver up by. */

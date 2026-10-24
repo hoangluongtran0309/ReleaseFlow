@@ -164,7 +164,7 @@ Prometheus on `http://127.0.0.1:9090`. See [Operations](docs/operations.md).
 | [Operations](docs/operations.md) | The demo stack, health and metrics, the container image, published artifacts |
 | [Architecture](docs/architecture.md) | How the application is built, and the invariants it keeps |
 | [Implementation status](docs/implementation-status.md) | What is implemented, by slice, and what is deliberately deferred |
-| [Decision records](docs/adr/README.md) | ADR-0001 to ADR-0033 |
+| [Decision records](docs/adr/README.md) | ADR-0001 to ADR-0034 |
 
 ## Feedback and contributing
 
