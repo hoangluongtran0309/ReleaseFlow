@@ -1027,7 +1027,14 @@ escaped, link targets are sanitized and marked
 
 Labels come from `messages/release-note{,_vi}.properties`, chosen by the note's
 language with an English fallback, and counts use `java.text` choice formats.
-Without a summary, what changed is the escaped pull request title.
+Without a summary, what changed is the escaped pull request title. Summary and
+narrative text keeps its Markdown, but `ReleaseNoteMarkdown.escapeRawHtml`
+backslash-escapes the `<` of whatever a CommonMark parser reads as raw HTML (an
+inline tag, or every tag of an HTML block), re-parsing until none is left, so a
+placeholder such as `<id>` shows on GitHub as it does on the release page. Code,
+autolinks, emphasis, links, and a bare `<` are left alone, the result is idempotent,
+and this happens only as the note is written: the stored text, and what is sent to
+translation, keep what the AI or a person wrote.
 
 `ReleaseService` uses it as follows:
 

@@ -92,17 +92,21 @@ final class ReleaseNoteDigest {
 
     /**
      * What one change says to one audience. Without a summary, what changed is the pull
-     * request title, escaped because it is untrusted text.
+     * request title, escaped because it is untrusted text. Summary and narrative text keep
+     * their Markdown, but any raw HTML in it is escaped here, as the note is written, so a
+     * placeholder such as {@code <id>} reads the same on GitHub as on the release page.
+     * The stored text, and what is sent for translation, stay as they were written.
      */
     static AudienceItem item(ChangeView change, String audienceCode) {
         NeutralSummary summary = change.neutralSummary();
+        String narrative = ReleaseNoteMarkdown.escapeRawHtml(change.narrative(audienceCode));
         if (summary == null) {
             return new AudienceItem(
                     ReleaseNoteMarkdown.escape(ReleaseNotePreview.displayTitle(change.title())),
                     "",
                     "",
                     "",
-                    change.narrative(audienceCode),
+                    narrative,
                     change.reference(),
                     change.pullRequestNumber(),
                     change.url(),
@@ -110,11 +114,11 @@ final class ReleaseNoteDigest {
             );
         }
         return new AudienceItem(
-                summary.whatChanged(),
-                summary.whyChanged(),
-                summary.technicalDetail(),
-                summary.migrationStep(),
-                change.narrative(audienceCode),
+                ReleaseNoteMarkdown.escapeRawHtml(summary.whatChanged()),
+                ReleaseNoteMarkdown.escapeRawHtml(summary.whyChanged()),
+                ReleaseNoteMarkdown.escapeRawHtml(summary.technicalDetail()),
+                ReleaseNoteMarkdown.escapeRawHtml(summary.migrationStep()),
+                narrative,
                 change.reference(),
                 change.pullRequestNumber(),
                 change.url(),

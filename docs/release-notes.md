@@ -28,7 +28,9 @@ Markdown with the variables `whatChanged`, `whyChanged`, `technicalDetail`,
 `migrationStep`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and
 `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
 `url`, escaped like any other tracker text, as they were read when the change was recorded
-([Linked Jira issues](sources.md#linked-jira-issues)). `reference` is how the change's source
+([Linked Jira issues](sources.md#linked-jira-issues)). The four summary values and
+`narrative` keep their Markdown, but any raw HTML in them is escaped, so a placeholder
+such as `<id>` shows as written wherever the note is read. `reference` is how the change's source
 names it: `#12` for a GitHub pull request, `!12` for a GitLab merge request, and the
 issue key, such as `APP-12` or `ENG-12`, for Jira and Linear; `pullRequestNumber` is
 the bare number whatever the source. A section such as
