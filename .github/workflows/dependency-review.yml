@@ -26,6 +26,3 @@ jobs:
         with:
           fail-on-severity: high
           fail-on-scopes: runtime, development, unknown
-          # Advisories no release fixes yet, each with its reason in scripts/ci/audit-website.sh,
-          # which fails once npm stops reporting one so it is removed here too.
-          allow-ghsas: GHSA-vfj7-8cjw-p6xm
