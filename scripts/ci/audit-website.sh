@@ -7,12 +7,8 @@
 #   ./scripts/ci/audit-website.sh
 set -euo pipefail
 
-# GHSA-vfj7-8cjw-p6xm: braces <= 3.0.3 overflows the stack on deeply nested brace patterns,
-# and no release fixes it. Only the build's own glob patterns reach braces, and what it builds
-# is a static site, so nothing an attacker writes is ever expanded.
-readonly ALLOWED=(
-  GHSA-vfj7-8cjw-p6xm
-)
+# None at present.
+readonly ALLOWED=()
 
 cd "$(dirname "$0")/../../website"
 
