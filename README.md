@@ -198,3 +198,6 @@ There is no open-core or enterprise split: templates, automation, and distributi
 sit beside every other capability, under the same licence as the rest.
 
 Copyright 2026 Luong Tran Chu Hoang.
+
+ReleaseFlow was developed privately before 1.0.0. Its public history starts at the 1.0.0
+release; earlier development history was not kept.
