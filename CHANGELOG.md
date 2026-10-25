@@ -22,6 +22,8 @@ section into the version's entry, and the GitHub release is written from it.
 - A placeholder such as `<id>` in a change's summary or narrative is escaped in the
   release note, so GitHub and other Markdown readers show it instead of dropping it as an
   HTML tag, as the release page already did.
+- A Microsoft Teams message carries the note as plain text, as intended, so escaped text
+  such as `<id>` or `*bold*` no longer shows its backslash there.
 
 ## [1.0.0] - 2026-10-20
 

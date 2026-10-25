@@ -1275,7 +1275,9 @@ No outbound client follows a redirect, and a redirect is never a delivery.
   wherever it pointed.
 - **Microsoft Teams** posts through a Workflows callback whose URL is its secret and
   carries its own signature, checked against the Workflows shape again before every
-  delivery, with 28 KiB measured on the written request rather than the message.
+  delivery, with 28 KiB measured on the written request rather than the message. The
+  note is sent as plain text: `TeamsText` drops its Markdown, so what the note escaped
+  (`\<id>`, `\*bold\*`) reads as written, without the backslash.
 - **Zendesk** makes two calls: a short-lived client-credentials token, then a Help
   Center article from the same `MarkdownHtml` output, bounded at 1,000,000 bytes.
   Because nothing is published until the second call, every way the first can fail is

@@ -362,6 +362,8 @@ class AutomationActionIntegrationTest extends AutomationIntegrationTestBase {
                 .isEqualTo("/powerautomate/automations/direct/workflows/2f1a6c/triggers/manual/paths/invoke");
         assertThat(request.query()).contains("sig=uT8k_signature-value");
         assertThat(request.body()).contains("Release 1.4.0");
+        // Plain text, as ADR-0025 says: the note's Markdown heading is not sent as such.
+        assertThat(request.body()).doesNotContain("# Release");
     }
 
     @Test

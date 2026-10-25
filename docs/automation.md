@@ -50,7 +50,7 @@ Eight kinds of action exist:
 | Public changelog | Nothing | Publishes the note on your own changelog page and RSS feed |
 | Notion | The parent page's id and an integration token | Files the note as a child page titled `Release <version>`, up to 450,000 bytes |
 | Confluence | A Cloud site, the account's email, a numeric space id, an optional parent page, and an API token | Creates a page titled `Release <version>` in that space, up to 2,000,000 bytes |
-| Microsoft Teams | The Workflows callback URL, which is the action's secret | Posts the note into the chat or channel the flow targets, up to 28 KiB of request |
+| Microsoft Teams | The Workflows callback URL, which is the action's secret | Posts the note as plain text into the chat or channel the flow targets, up to 28 KiB of request |
 | Zendesk | A subdomain, an OAuth client ID and secret, a numeric section, and an optional user segment | Publishes the note as a Help Center article in the action's language, up to 1,000,000 bytes |
 
 ![A rule that runs when a release is published, with nine actions in order; the Atlassian site and the Notion page are covered](assets/automation/a-2-rule-editor.webp)
