@@ -24,6 +24,8 @@ section into the version's entry, and the GitHub release is written from it.
   HTML tag, as the release page already did.
 - A Microsoft Teams message carries the note as plain text, as intended, so escaped text
   such as `<id>` or `*bold*` no longer shows its backslash there.
+- A screen reader announces the account menu button with the name it shows, as well as
+  what it does, so a person who speaks to it by what they see can open it.
 
 ## [1.0.0] - 2026-10-20
 
