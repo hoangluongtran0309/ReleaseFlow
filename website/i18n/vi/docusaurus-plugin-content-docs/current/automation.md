@@ -48,7 +48,7 @@ Có tám loại action:
 | Changelog công khai | Không cần gì | Publish release note trên trang changelog và RSS feed của chính bạn |
 | Notion | ID của trang cha và một integration token | Tạo release note thành một trang con có tiêu đề `Release <version>`, tối đa 450.000 byte |
 | Confluence | Một site Cloud, email của tài khoản, ID số của space, trang cha không bắt buộc, và một API token | Tạo một trang có tiêu đề `Release <version>` trong space đó, tối đa 2.000.000 byte |
-| Microsoft Teams | URL callback của Workflows, cũng là secret của action | Đăng release note vào chat hoặc channel mà flow nhắm tới, request tối đa 28 KiB |
+| Microsoft Teams | URL callback của Workflows, cũng là secret của action | Đăng release note dưới dạng văn bản thường vào chat hoặc channel mà flow nhắm tới, request tối đa 28 KiB |
 | Zendesk | Một subdomain, client ID và secret OAuth, ID số của section, và user segment không bắt buộc | Publish release note thành một bài viết Help Center bằng ngôn ngữ của action, tối đa 1.000.000 byte |
 
 ![Một rule chạy khi release được publish, với chín action theo thứ tự; site Atlassian và trang Notion đã được che](assets/automation/a-2-rule-editor.webp)
