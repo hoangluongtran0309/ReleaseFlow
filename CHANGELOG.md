@@ -19,6 +19,9 @@ section into the version's entry, and the GitHub release is written from it.
 - A language chosen for an account, in another browser or through the API, reaches that
   person's other signed-in sessions on their next page instead of at their next sign-in
   ([ADR-0034](docs/adr/0034-account-language-per-request.md)).
+- A placeholder such as `<id>` in a change's summary or narrative is escaped in the
+  release note, so GitHub and other Markdown readers show it instead of dropping it as an
+  HTML tag, as the release page already did.
 
 ## [1.0.0] - 2026-10-20
 
