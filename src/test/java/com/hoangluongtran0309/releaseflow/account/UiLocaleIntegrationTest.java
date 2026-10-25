@@ -145,6 +145,31 @@ class UiLocaleIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    void aChoiceMadeInOneSessionReachesTheOthersOnTheirNextRequest() throws Exception {
+        MockHttpSession laptop = registerAndLogin("owner@example.com", "owner-password");
+        MockHttpSession phone = login("owner@example.com", "owner-password");
+        mockMvc.perform(get("/").session(phone))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Workspace overview")));
+
+        mockMvc.perform(put("/api/me/ui-locale").session(laptop).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"uiLocale\":\"vi\"}"))
+                .andExpect(status().isOk());
+
+        // The phone has no cookie and never signed in again.
+        mockMvc.perform(get("/").session(phone))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Tổng quan không gian làm việc")));
+
+        mockMvc.perform(put("/api/me/ui-locale").session(laptop).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"uiLocale\":null}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/").session(phone))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Workspace overview")));
+    }
+
+    @Test
     void aLanguageThisDeploymentDoesNotShipIsRefusedWithAStableCode() throws Exception {
         MockHttpSession session = registerAndLogin("owner@example.com", "owner-password");
 

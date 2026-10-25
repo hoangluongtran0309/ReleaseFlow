@@ -164,7 +164,7 @@ Prometheus on `http://127.0.0.1:9090`. See [Operations](docs/operations.md).
 | [Operations](docs/operations.md) | The demo stack, health and metrics, the container image, published artifacts |
 | [Architecture](docs/architecture.md) | How the application is built, and the invariants it keeps |
 | [Implementation status](docs/implementation-status.md) | What is implemented, by slice, and what is deliberately deferred |
-| [Decision records](docs/adr/README.md) | ADR-0001 to ADR-0033 |
+| [Decision records](docs/adr/README.md) | ADR-0001 to ADR-0034 |
 
 ## Feedback and contributing
 
@@ -198,3 +198,6 @@ There is no open-core or enterprise split: templates, automation, and distributi
 sit beside every other capability, under the same licence as the rest.
 
 Copyright 2026 Luong Tran Chu Hoang.
+
+ReleaseFlow was developed privately before 1.0.0. Its public history starts at the 1.0.0
+release; earlier development history was not kept.

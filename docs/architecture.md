@@ -1027,7 +1027,14 @@ escaped, link targets are sanitized and marked
 
 Labels come from `messages/release-note{,_vi}.properties`, chosen by the note's
 language with an English fallback, and counts use `java.text` choice formats.
-Without a summary, what changed is the escaped pull request title.
+Without a summary, what changed is the escaped pull request title. Summary and
+narrative text keeps its Markdown, but `ReleaseNoteMarkdown.escapeRawHtml`
+backslash-escapes the `<` of whatever a CommonMark parser reads as raw HTML (an
+inline tag, or every tag of an HTML block), re-parsing until none is left, so a
+placeholder such as `<id>` shows on GitHub as it does on the release page. Code,
+autolinks, emphasis, links, and a bare `<` are left alone, the result is idempotent,
+and this happens only as the note is written: the stored text, and what is sent to
+translation, keep what the AI or a person wrote.
 
 `ReleaseService` uses it as follows:
 
@@ -1268,7 +1275,9 @@ No outbound client follows a redirect, and a redirect is never a delivery.
   wherever it pointed.
 - **Microsoft Teams** posts through a Workflows callback whose URL is its secret and
   carries its own signature, checked against the Workflows shape again before every
-  delivery, with 28 KiB measured on the written request rather than the message.
+  delivery, with 28 KiB measured on the written request rather than the message. The
+  note is sent as plain text: `TeamsText` drops its Markdown, so what the note escaped
+  (`\<id>`, `\*bold\*`) reads as written, without the backslash.
 - **Zendesk** makes two calls: a short-lived client-credentials token, then a Help
   Center article from the same `MarkdownHtml` output, bounded at 1,000,000 bytes.
   Because nothing is published until the second call, every way the first can fail is
@@ -1488,9 +1497,12 @@ language this deployment ships and caching the result on the request. Only a GET
 the parameter, so a form-encoded body a signed webhook has to verify is never consumed.
 `UiLanguageParameterInterceptor` keeps a supported `?lang=` in the cookie, never on the
 account; an unsupported one is ignored. It is not registered on `/changelog/**`, whose
-pages are cached publicly, so there the parameter changes only that page. The account's choice comes from the snapshot
-`ReleaseFlowPrincipal` took when the session began, so resolving a locale costs no
-query; a change writes the cookie too, and the cookie outranks the account.
+pages are cached publicly, so there the parameter changes only that page. The account's choice is read as it is now,
+one column by primary key through `UiLocaleService`, and only when neither the parameter
+nor the cookie answered; Spring MVC resolves the locale only when something asks for it,
+and the resolver keeps its answer on the request
+([ADR-0034](adr/0034-account-language-per-request.md)). A change writes the cookie too,
+and the cookie outranks the account.
 
 `UiLocaleService` saves the choice, `UiLocaleApiController` answers
 `GET|PUT /api/me/ui-locale`, and `UiLocalePageController` backs the picker in the

@@ -56,6 +56,12 @@ class SlackMrkdwnTest {
     }
 
     @Test
+    void showsAnEscapedPlaceholderAsText() {
+        assertThat(SlackMrkdwn.render("Stored under BACKUP_DIR/\\<target-id>/."))
+                .isEqualTo("Stored under BACKUP_DIR/&lt;target-id&gt;/.");
+    }
+
+    @Test
     void writesAnAutolinkAsTheAddressAlone() {
         assertThat(SlackMrkdwn.render("See <https://example.com/changelog>."))
                 .isEqualTo("See <https://example.com/changelog>.");

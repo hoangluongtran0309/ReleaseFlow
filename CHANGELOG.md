@@ -12,6 +12,23 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-25
+
+### Fixed
+
+- The Change Inbox filters wrap onto another row when the page is narrow, rather than
+  shrinking until the arrow covers their text.
+- A language chosen for an account, in another browser or through the API, reaches that
+  person's other signed-in sessions on their next page instead of at their next sign-in
+  ([ADR-0034](docs/adr/0034-account-language-per-request.md)).
+- A placeholder such as `<id>` in a change's summary or narrative is escaped in the
+  release note, so GitHub and other Markdown readers show it instead of dropping it as an
+  HTML tag, as the release page already did.
+- A Microsoft Teams message carries the note as plain text, as intended, so escaped text
+  such as `<id>` or `*bold*` no longer shows its backslash there.
+- A screen reader announces the account menu button with the name it shows, as well as
+  what it does, so a person who speaks to it by what they see can open it.
+
 ## [1.0.0] - 2026-10-20
 
 ### Added
@@ -68,5 +85,6 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.0

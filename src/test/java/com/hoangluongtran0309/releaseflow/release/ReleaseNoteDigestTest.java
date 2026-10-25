@@ -11,9 +11,15 @@ import com.hoangluongtran0309.releaseflow.change.ProcessingStatus;
 import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 import com.hoangluongtran0309.releaseflow.source.SourceType;
 import com.hoangluongtran0309.releaseflow.support.TestCategories;
+import org.commonmark.node.AbstractVisitor;
+import org.commonmark.node.HtmlBlock;
+import org.commonmark.node.HtmlInline;
+import org.commonmark.node.Text;
+import org.commonmark.parser.Parser;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -194,6 +200,39 @@ class ReleaseNoteDigestTest {
     }
 
     @Test
+    void escapesRawHtmlInSummaryAndNarrativeSoAPlaceholderStaysVisible() {
+        NeutralSummary summary = new NeutralSummary(
+                "Backups are stored under BACKUP_DIR/<target-id>/<execution-id>/.",
+                "<details>Paths were flat.</details>",
+                "Run `dbvault verify --backup-id <id>`.",
+                "Nothing.");
+        ChangeView change = change(1, "feat: layout", TestCategories.FEATURE, false, 1, summary,
+                Map.of("operator", "Watch <target-id> directories."));
+        String template = "- {{whatChanged}}\n\n{{whyChanged}}\n\n{{technicalDetail}}{{#narrative}} — {{.}}{{/narrative}}";
+
+        String note = ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "operator", "en");
+
+        assertThat(note)
+                .contains("- Backups are stored under BACKUP_DIR/\\<target-id>/\\<execution-id>/.")
+                .contains("\\<details>Paths were flat.\\</details>")
+                .contains("Run `dbvault verify --backup-id <id>`.")
+                .contains("— Watch \\<target-id> directories.");
+        assertThat(rawHtml(note)).isEmpty();
+        assertThat(text(note)).contains("BACKUP_DIR/<target-id>/<execution-id>/", "Watch <target-id> directories.");
+    }
+
+    @Test
+    void escapesRawHtmlInTheNarrativeOfAChangeWithoutASummary() {
+        ChangeView change = change(1, "feat: layout", TestCategories.FEATURE, false, 1, null,
+                Map.of("operator", "Watch <target-id> directories."));
+
+        String note = ReleaseNoteDigest.render("1.0.0", null, List.of(change), TEMPLATE, "operator", "en");
+
+        assertThat(note).contains("- layout — Watch \\<target-id> directories.");
+        assertThat(rawHtml(note)).isEmpty();
+    }
+
+    @Test
     void demotesHeadingsInsideItemsButNotInCode() {
         assertThat(ReleaseNoteDigest.demoteHeadings("## What changed\ntext\n### Detail\n##### five\n#tag\n```\n# code\n```\n# top"))
                 .isEqualTo("#### What changed\ntext\n##### Detail\n###### five\n#tag\n```\n# code\n```\n### top");
@@ -208,6 +247,35 @@ class ReleaseNoteDigestTest {
     void refusesAReleaseWithoutChanges() {
         assertThatThrownBy(() -> ReleaseNoteDigest.render("1.0.0", null, List.of(), TEMPLATE, "operator", "en"))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** The raw HTML a CommonMark reader, GitHub's among them, would find in the note. */
+    private static List<String> rawHtml(String markdown) {
+        List<String> html = new ArrayList<>();
+        Parser.builder().build().parse(markdown).accept(new AbstractVisitor() {
+            @Override
+            public void visit(HtmlInline node) {
+                html.add(node.getLiteral());
+            }
+
+            @Override
+            public void visit(HtmlBlock node) {
+                html.add(node.getLiteral());
+            }
+        });
+        return html;
+    }
+
+    /** The text the note shows, without its markup. */
+    private static String text(String markdown) {
+        StringBuilder text = new StringBuilder();
+        Parser.builder().build().parse(markdown).accept(new AbstractVisitor() {
+            @Override
+            public void visit(Text node) {
+                text.append(node.getLiteral());
+            }
+        });
+        return text.toString();
     }
 
     private static ChangeView change(

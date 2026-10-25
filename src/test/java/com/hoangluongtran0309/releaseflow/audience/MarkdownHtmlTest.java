@@ -22,6 +22,12 @@ class MarkdownHtmlTest {
     }
 
     @Test
+    void showsAnEscapedPlaceholderAsText() {
+        assertThat(MarkdownHtml.render("Stored under BACKUP_DIR/\\<target-id>/."))
+                .isEqualTo("<p>Stored under BACKUP_DIR/&lt;target-id&gt;/.</p>\n");
+    }
+
+    @Test
     void neutralizesUnsafeLinksAndMarksLinksAsExternal() {
         assertThat(MarkdownHtml.render("[click](javascript:alert(1)) and [docs](https://example.com)"))
                 .doesNotContain("javascript:")

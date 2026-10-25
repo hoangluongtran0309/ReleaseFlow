@@ -26,7 +26,9 @@ các biến `whatChanged`, `whyChanged`, `technicalDetail`, `migrationStep`, `na
 `reference`, `pullRequestNumber`, `pullRequestUrl` và `linkedIssues` — một danh sách mà mỗi phần
 tử có `key`, `title`, `type`, `status` và `url`, được escape như mọi văn bản khác lấy từ công cụ
 theo dõi issue, đúng như khi được đọc lúc thay đổi được ghi nhận
-([Issue Jira liên kết](sources.md#linked-jira-issues)). `reference` là cách nguồn của thay đổi
+([Issue Jira liên kết](sources.md#linked-jira-issues)). Bốn giá trị của bản tóm tắt và
+`narrative` giữ nguyên Markdown, nhưng mọi HTML thô trong đó đều được escape, nên một
+placeholder như `<id>` hiện đúng như đã viết ở mọi nơi note được đọc. `reference` là cách nguồn của thay đổi
 gọi tên nó: `#12` cho pull request GitHub,
 `!12` cho merge request GitLab, và key của issue, như `APP-12` hay `ENG-12`, cho Jira và Linear;
 `pullRequestNumber` là con số trần, bất kể nguồn nào. Một section như

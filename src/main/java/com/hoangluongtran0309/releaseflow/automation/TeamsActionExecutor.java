@@ -86,7 +86,7 @@ class TeamsActionExecutor implements RuleActionExecutor {
         final byte[] payload;
         try {
             payload = objectMapper.writeValueAsBytes(Map.of(
-                    "text", "Release " + command.releaseVersion() + "\n" + command.noteContent()));
+                    "text", "Release " + command.releaseVersion() + "\n" + TeamsText.render(command.noteContent())));
         } catch (JacksonException exception) {
             log.warn("Could not write the Teams message for release {}.", command.releaseId());
             return ActionResult.failed(REJECTED);

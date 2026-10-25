@@ -32,8 +32,8 @@ public class UiLocaleApiController {
     }
 
     /**
-     * Saves the choice on the account and writes the language cookie, so the next request
-     * is answered in it even though the session still holds the older principal.
+     * Saves the choice on the account and writes the language cookie. Every other session of
+     * the same person reads the account on its next request.
      */
     @PutMapping
     UiLocaleSettings change(

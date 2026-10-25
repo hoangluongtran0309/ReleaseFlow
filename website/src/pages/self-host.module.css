@@ -24,10 +24,15 @@
   gap: 40px;
 }
 
-.dashboard {
+.dashboard,
+.quickstartVideo > figure {
   width: 100%;
   max-width: 960px;
   margin-inline: auto;
+}
+
+.quickstartVideo {
+  margin-top: 48px;
 }
 
 .splitTop {

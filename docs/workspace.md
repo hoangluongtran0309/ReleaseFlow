@@ -150,10 +150,9 @@ was.
 
 ![Choosing Tiếng Việt in the account menu: the page switches to Vietnamese at once](assets/workspace/w-6-language-picker.webp)
 
-The account step reads the language a session started with, not the account as it
-is now. A choice made in another browser, or through the API, reaches a session
-that was already signed in only when it signs in again; until then that session
-keeps its own cookie or, without one, the language it began with.
+The account step reads the account as it is now, so a choice made in another
+browser, or through the API, reaches every session of that person on its next
+request, unless that session's own cookie or a `?lang=` says otherwise.
 
 ```text
 GET /api/me/ui-locale                  (any member)

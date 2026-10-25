@@ -25,7 +25,7 @@
     </section>
 
     <th:block th:if="${hasProjects}">
-        <form class="surface-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto] lg:items-end"
+        <form class="surface-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] lg:items-end"
               th:action="@{/changes}" method="get" th:aria-label="#{ui.changes.filterLabel}" aria-label="Filter changes" novalidate>
             <label class="form-control"><span class="label-text font-medium" th:text="#{ui.changes.project}">Project</span>
                 <select name="project" class="select select-bordered w-full">

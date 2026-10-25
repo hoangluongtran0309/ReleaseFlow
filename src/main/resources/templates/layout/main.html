@@ -62,12 +62,14 @@
             </button>
             <div class="relative" th:if="${viewer != null}" x-data="userMenu()" @click.outside="close(false)"
                  @focusout="closeOnFocusOut($event)" @keydown.escape.stop.prevent="close(true)">
+                <!--/* The name is the visible text plus a hidden phrase, so what a person sees is
+                     part of what a screen reader announces (WCAG 2.5.3). */-->
                 <button x-ref="trigger" type="button" class="btn btn-ghost gap-2 px-2" @click="toggle"
-                        aria-controls="user-menu" :aria-expanded="open.toString()" aria-expanded="false"
-                        th:aria-label="#{ui.layout.openUserMenu}" aria-label="Open user menu">
+                        aria-controls="user-menu" :aria-expanded="open.toString()" aria-expanded="false">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700"
-                          th:text="${viewer.initial}">A</span>
+                          aria-hidden="true" th:text="${viewer.initial}">A</span>
                     <span class="hidden max-w-40 truncate text-sm md:block" th:text="${viewer.displayName}">Owner</span>
+                    <span class="sr-only" th:text="#{ui.layout.openUserMenu}">Open user menu</span>
                 </button>
                 <div id="user-menu" x-show="open" x-transition.origin.top.right x-cloak
                      class="theme-surface theme-border absolute right-0 top-[calc(100%+1.25rem)] z-50 w-64 rounded-box border p-2 shadow-xl">

@@ -366,8 +366,9 @@ where it first appears; ADRs are linked from the slice they record.
     entry to a primary subtag, and refuses a list that names no usable language;
   - `UiLocaleResolver`, which picks a request's language from a `?lang=` on a GET, then
     the `releaseflow_lang` cookie, then `app_users.ui_locale`, then `Accept-Language`,
-    then the first configured language, narrowing each step and reading the account from
-    the session's principal so resolving a locale costs no query, with
+    then the first configured language, narrowing each step and reading the account's
+    column as it is now, so a choice reaches every session of that person on its next
+    request ([ADR-0034](adr/0034-account-language-per-request.md)), with
     `UiLanguageParameterInterceptor` keeping a supported `?lang=` in the cookie, never on
     the account, everywhere except the publicly cached changelog;
   - `GET|PUT /api/me/ui-locale` and a picker in the user menu; a change saves the account
@@ -470,8 +471,8 @@ where it first appears; ADRs are linked from the slice they record.
   Operations, and the REST API are translated, keeping each English anchor, while the
   architecture, the implementation status, and the decision records fall back to English.
   Screenshots and animations of a sample project illustrate the guides in both languages,
-  and the landing, Product, and Self-host pages carry screenshots, a captioned walkthrough
-  video, and the Grafana dashboard. Links, anchors, Markdown file links, and images fail
+  and the landing, Product, and Self-host pages carry screenshots, captioned recordings of a
+  release and of the quickstart, and the Grafana dashboard. Links, anchors, Markdown file links, and images fail
   the build; a link to a file
   beside `docs/` points at it on `main`. A `Docs` workflow builds it on every pull request
   and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
