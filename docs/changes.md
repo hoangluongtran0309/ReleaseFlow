@@ -145,6 +145,13 @@ neutral summary is what changed (one sentence), why, technical detail, a migrati
 step with its kind, and limitations: what the change deliberately does not do yet.
 A missing narrative is simply left out.
 
+A **dependency update**, a change whose author is `dependabot[bot]` or `renovate[bot]`
+or whose head branch starts with `dependabot/` or `renovate/`, reaches the AI without what
+it quotes from upstream: its `<details>` and `<blockquote>` elements, Markdown blockquotes,
+and its "Release notes", "Changelog", and "Commits" sections are left out, so only what is
+bumped, and from which version to which, remains. The change itself keeps its whole
+description. It is breaking, or has a migration step, only when its own words say so.
+
 The AI is told to state only what the evidence supports, in every field: no
 consequence the change does not describe (a crash, an outage, a blocked startup),
 no place in the product the change or the Project context does not name, nothing
@@ -166,10 +173,17 @@ A kind that does not match its step is corrected rather than rejected, since the
 answer is asked for only once: `none` with a step becomes `recommended`, and any
 other kind without a step becomes `none`, and a step whose kind is missing is
 `UNSPECIFIED`. The change then gets a **Migration kind corrected** review trigger, so a
-person checks the step. A missing limitations
-field is empty. The Change Inbox shows the summary and narratives under each change,
-and the changes API returns them as `neutralSummary` and `audienceNarratives`
-with `contentLanguage` and `aiProvider`. A summary written by a person on a
+person checks the step.
+
+Limitations are only what the change's own text says it deliberately does not do yet.
+A sentence the AI writes there about its input instead, such as "Rollback steps are not
+provided" or "The version is not specified", is dropped, and a missing limitations field
+is empty. Every request asks for temperature `0`, so the same change varies as little as
+the model allows (see [Configuration](configuration.md#ai)).
+
+The Change Inbox shows the summary and narratives under each change, and the changes
+API returns them as `neutralSummary` and `audienceNarratives` with `contentLanguage`
+and `aiProvider`. A summary written by a person on a
 release page is never replaced by a later AI answer.
 
 ![A change's neutral summary, followed by one narrative for each audience](assets/changes/c-5-summary.webp)

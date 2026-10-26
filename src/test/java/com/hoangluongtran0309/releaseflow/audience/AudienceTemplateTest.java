@@ -58,8 +58,8 @@ class AudienceTemplateTest {
                 {{#migrationUnspecified}}Migration: {{migrationStep}}{{/migrationUnspecified}}\
                 {{#limitations}} Not yet: {{.}}{{/limitations}} ({{migrationKind}})""";
 
-        assertThat(AudienceTemplate.render(template, migration("Re-save each target.", "required", "Only MongoDB.")))
-                .isEqualTo("Required: Re-save each target. Not yet: Only MongoDB. (required)");
+        assertThat(AudienceTemplate.render(template, migration("Rename EXPORT_DIR to EXPORT_PATH.", "required", "Only MongoDB.")))
+                .isEqualTo("Required: Rename EXPORT_DIR to EXPORT_PATH. Not yet: Only MongoDB. (required)");
         assertThat(AudienceTemplate.render(template, migration("No direct action is required.", "unspecified", "")))
                 .isEqualTo("Migration: No direct action is required. (unspecified)");
         // A step whose writer named no kind is unspecified, and no step has no kind at all.
@@ -70,17 +70,17 @@ class AudienceTemplateTest {
     @Test
     void theShippedPresetsNeverPresentAnUnspecifiedStepAsRequired() {
         AudienceItem unspecified = migration("No direct action is required; credentials migrate on update.", "unspecified", "");
-        AudienceItem required = migration("Re-save each target.", "required", "");
+        AudienceItem required = migration("Rename EXPORT_DIR to EXPORT_PATH.", "required", "");
 
         AudiencePresets.forLanguage("en").forEach(preset -> {
             assertThat(AudienceTemplate.render(preset.templateBody(), unspecified)).doesNotContain("Required step");
-            assertThat(AudienceTemplate.render(preset.templateBody(), required)).contains("  - Required step: Re-save each target.");
+            assertThat(AudienceTemplate.render(preset.templateBody(), required)).contains("  - Required step: Rename EXPORT_DIR to EXPORT_PATH.");
         });
         assertThat(AudienceTemplate.render(AudiencePresets.find(AudiencePresets.OPERATOR, "en").orElseThrow().templateBody(),
                 unspecified)).contains("  - Migration: No direct action is required");
         // End users read a step only when they cannot do without it.
         assertThat(AudienceTemplate.render(AudiencePresets.find(AudiencePresets.END_USER, "en").orElseThrow().templateBody(),
-                migration("Re-save each target.", "recommended", ""))).doesNotContain("Re-save");
+                migration("Rename EXPORT_DIR to EXPORT_PATH.", "recommended", ""))).doesNotContain("EXPORT_PATH");
     }
 
     private static AudienceItem migration(String step, String kind, String limitations) {

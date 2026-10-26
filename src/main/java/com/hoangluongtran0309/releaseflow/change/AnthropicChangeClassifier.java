@@ -69,6 +69,7 @@ final class AnthropicChangeClassifier implements AiChangeClassifier, AutoCloseab
         MessageCreateParams params = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(MAX_TOKENS)
+                .temperature(AiClassificationPrompt.TEMPERATURE)
                 .system(AiClassificationPrompt.SYSTEM)
                 .addUserMessage(AiClassificationPrompt.userMessage(request, objectMapper))
                 .outputConfig(OutputConfig.builder()

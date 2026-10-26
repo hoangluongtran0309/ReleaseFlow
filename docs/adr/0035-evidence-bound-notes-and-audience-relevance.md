@@ -19,8 +19,8 @@ things their evidence does not hold
 - another project's changelog: a Gradle step, quoted by a dependency update, offered to
   a Maven project;
 - code a tracker issue never changed: a Linear issue "added a dependabot.yml file";
-- a required step turned into "no action is required", because the step applied only
-  when each target was next saved;
+- a fact turned into reassurance: "No direct action is required", where the evidence says
+  that existing passwords keep the old scheme until each target is next saved;
 - remarks about the gap itself ("technical specifics are limited in this summary"), and
   an item whose whole text is "fix".
 
@@ -73,6 +73,25 @@ they are decided together and the response contract changes once.
   - writing about what the evidence lacks: a field the input says nothing about is empty.
 - **`what_changed` is one sentence.** It is the bold line of every template that prints
   `whatChanged`, so it has to read as one.
+- **A dependency update reaches the AI without what it quotes.** The first replays showed
+  that the prompt rule alone does not stop a Spring Boot patch bump from getting the Gradle
+  step its quoted release notes describe, once as a step "if it applies to you" and once
+  as a breaking change.
+  - A change is a dependency update when its author is `dependabot[bot]` or
+    `renovate[bot]`, or its head branch starts with `dependabot/` or `renovate/`. A GitLab
+    merge event names whoever merged, not the author, so the branch is what recognizes a
+    Renovate merge request there. The head branch of a GitHub pull request or a GitLab merge
+    request, delivered or imported, is therefore recorded on the change (`head_branch`,
+    Flyway `V31`); [#19](https://github.com/hoangluongtran0309/ReleaseFlow/issues/19)
+    builds on it to find issue keys.
+  - For such a change, the description the AI receives drops `<details>` and
+    `<blockquote>` elements, Markdown blockquotes, and the sections headed "Release notes",
+    "Changelog", or "Commits". The change's own lines, what is bumped and from which version
+    to which, stay. The change keeps its description as delivered; only the AI's copy is
+    trimmed.
+  - The user message says `dependency_update: true`, and the prompt adds that a dependency
+    update is breaking only when the change's own words say so, and has a migration step
+    only when its own words ask for one.
 
 ### What the AI returns
 
@@ -80,8 +99,8 @@ they are decided together and the response contract changes once.
   - **`migration_kind`**, one of:
     - `none`: nothing to do, and `migration_step` is empty;
     - `required`: existing installations stop working, or lose a protection, until the
-      step is done. Re-saving each target so its password moves to its own key is
-      required;
+      step is done, as when a change says that a renamed setting's old name is no longer
+      read;
     - `conditional`: only some installations need it, and the step names the condition;
     - `recommended`: advisable, but nothing breaks without it.
 
@@ -95,9 +114,17 @@ they are decided together and the response contract changes once.
     `unspecified`, since nothing says how much it asks, and adds the same trigger; a
     step with an unknown kind becomes `recommended`. A missing kind with no step is
     simply `none`, since there is nothing to check.
-  - **`limitations`**: what the change deliberately does not do yet, as its evidence
-    states it, such as "certificate validation is enforced only for MongoDB". Otherwise
-    it is empty, and an answer that leaves it out reads as empty too.
+  - **`limitations`**: only what the change's own text says it deliberately does not do
+    yet, such as "certificate validation is enforced only for MongoDB", or that existing
+    passwords keep the old scheme until each target is next saved. That is a fact the
+    note states, not a step: the evidence asks nobody to re-save anything. Otherwise it is
+    empty, and an answer that leaves it out reads as empty too.
+
+    The replays still returned remarks about the input as limitations, so the parser
+    drops, deterministically, every sentence of an AI's limitations that talks about the
+    input rather than the change: "not provided", "not specified", "not detailed", "no
+    information", and their kin in English and Vietnamese. A person's limitations are
+    kept as written.
 - **Summaries recorded before this decision have a fifth kind, `unspecified`**, when
   they have a migration step, and no limitations. Their steps were written as "what to do
   when upgrading" and some say "no direct action is required", so reading them as
@@ -114,13 +141,32 @@ they are decided together and the response contract changes once.
 
 ### A change that cannot stand on its title
 
-- A change with no neutral summary (AI off, failed, or never asked) is written from its
-  title. After the Conventional Commit prefix and issue keys are removed, a title of
-  fewer than three words cannot reach a note: approval answers
-  `409 change_summary_required` and names those changes. The release page marks each one
-  and links its Edit summary. Once a person writes the summary, approval goes ahead.
+- A change whose title, after the Conventional Commit prefix and issue keys are removed,
+  has fewer than three words needs a summary a person wrote, unless its description gave
+  the AI something to work from. An AI summary is enough only when the description has at
+  least ten words, not counting HTML comments such as a pull request template's hints,
+  and the AI did not find the context insufficient. Otherwise the AI can only restate the
+  title: the replays turned "fix", with no description, into "A fix was made in the
+  codebase." With no summary at all, the title is all the note has.
+- Approval answers `409 change_summary_required` and names those changes. The release page
+  marks each one and links its Edit summary. Once a person writes the summary, approval
+  goes ahead.
 - The check is deterministic and never calls AI. A review decision is not enough to
   clear it, because a decision records a judgement, not the words a reader will see.
+
+### A fixed temperature
+
+- No classification request set a temperature, so every provider used its default of
+  1.0, and the same change came back with different answers: one replayed change's
+  migration kind was `recommended` once and `none` twice. Every provider is now asked at
+  temperature `0`, the lowest each accepts, and the value is fixed rather than
+  configurable.
+- The trade-off: it narrows the variance but does not remove it, since none of the three
+  providers guarantees the same answer twice even at `0`, so the replay still scores
+  several samples. What is lost is variety of wording, which a summary of evidence does
+  not need. A model that accepts no temperature but its default, as OpenAI's reasoning
+  models do, refuses every request; each one then becomes a `CLASSIFIER_FALLBACK`, so such
+  a model cannot be used for classification.
 
 ### A narrative per audience
 
@@ -189,6 +235,13 @@ they are decided together and the response contract changes once.
   titles.
 - A note can list no change at all, and every delivery that sends notes must accept one.
 - A malformed migration kind costs a review, never the answer.
+- A dependency update's quoted release notes never reach the AI, whatever they say;
+  something they announce that does affect the project has to be in the change's own words,
+  or added by a person.
+- A short-titled change with an AI summary can still wait for a person when its
+  description was empty or thin.
+- An operator who chose an OpenAI reasoning model for classification has to choose another
+  one.
 - The PR is checked against the dbvault regression fixtures (render and full replay)
   before it is merged; [#18](https://github.com/hoangluongtran0309/ReleaseFlow/issues/18)
   brings that into CI.

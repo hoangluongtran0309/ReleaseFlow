@@ -5,6 +5,8 @@ import com.hoangluongtran0309.releaseflow.change.AiStatus;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.ChangedFileStatus;
 import com.hoangluongtran0309.releaseflow.change.ClassificationSource;
+import com.hoangluongtran0309.releaseflow.change.ContextAssessment;
+import com.hoangluongtran0309.releaseflow.change.ContextStatus;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.change.ProcessingStatus;
 import com.hoangluongtran0309.releaseflow.support.TestCategories;
@@ -89,16 +91,53 @@ class ReleaseNotePreviewTest {
         ChangeView change = change(1, title, TestCategories.FIX, false, 1);
 
         assertThat(ReleaseNotePreview.needsSummary(change)).isEqualTo(needed);
+        // Without a description, an AI summary only restates the title, so it changes nothing.
         assertThat(ReleaseNotePreview.needsSummary(change.withContent(
-                new NeutralSummary("Fixes a typo in the backup guide.", "", "", ""), Map.of(), "en"))).isFalse();
+                new NeutralSummary("Fixes a typo in the backup guide.", "", "", ""), Map.of(), "en"))).isEqualTo(needed);
     }
 
     private static ChangeView change(int number, String title, CategoryRef category, boolean breaking, int minute) {
+        return change(number, title, category, breaking, minute, null, null, null, null);
+    }
+
+    // An AI can only restate a bare title it was given nothing else about (ADR-0035).
+    @ParameterizedTest
+    @CsvSource(delimiterString = "|", nullValues = "null", value = {
+            "null                                                         | 90 | false | true",
+            "'<!-- Describe your change. -->'                             | 90 | false | true",
+            "Sizes now read as 1.2 MB instead of a raw count of bytes.     | 90 | false | false",
+            "Sizes now read as 1.2 MB instead of a raw count of bytes.     | 30 | false | true",
+            "null                                                         | 90 | true  | false"
+    })
+    void anAiSummaryOfABareTitleNeedsADescriptionToWorkFrom(String description, int score, boolean byPerson, boolean needed) {
+        ContextAssessment context = new ContextAssessment(score,
+                score < 60 ? ContextStatus.INSUFFICIENT : ContextStatus.SUFFICIENT, List.of());
+        ChangeView change = change(28, "fix", TestCategories.FIX, false, 1, description,
+                new NeutralSummary("A fix was made in the codebase.", "", "", ""),
+                byPerson ? Instant.parse("2026-10-20T08:00:00Z") : null, context);
+
+        assertThat(ReleaseNotePreview.needsSummary(change)).isEqualTo(needed);
+        // A title long enough to stand alone needs nothing more, whatever the AI had.
+        assertThat(ReleaseNotePreview.needsSummary(change(29, "fix: show readable sizes", TestCategories.FIX, false, 1,
+                description, null, null, context))).isFalse();
+    }
+
+    private static ChangeView change(
+            int number,
+            String title,
+            CategoryRef category,
+            boolean breaking,
+            int minute,
+            String description,
+            NeutralSummary summary,
+            Instant summaryEditedAt,
+            ContextAssessment context
+    ) {
         return new ChangeView(
                 UUID.randomUUID(),
                 number,
                 title,
-                null,
+                description,
                 "mai-dev",
                 List.of(),
                 "main",
@@ -125,13 +164,13 @@ class ReleaseNotePreviewTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                null,
+                summary,
                 null,
                 null,
                 Map.of(),
-                null,
-                null,
-                null,
+                summaryEditedAt == null ? null : "Mai Tran",
+                summaryEditedAt,
+                context,
                 null,
                 null,
                 null,

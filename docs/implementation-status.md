@@ -478,7 +478,7 @@ where it first appears; ADRs are linked from the slice they record.
   and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
   dependencies at high severity, allowing only listed advisories that no release fixes.
 
-### Notes bound to their evidence (V30)
+### Notes bound to their evidence (V30–V31)
 
 - Notes bound to their evidence, the #15 part of
   [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md), with Flyway `V30`:
@@ -496,8 +496,15 @@ where it first appears; ADRs are linked from the slice they record.
   - a kind that does not match its step corrected rather than rejected, and a step
     without a kind read as `unspecified`, both with a `MIGRATION_KIND_MISMATCH`
     review trigger;
-  - approval refused with `409 change_summary_required` while a change has no summary
-    and a title of fewer than three words.
+  - approval refused with `409 change_summary_required` while a change with a title
+    of fewer than three words has no summary a person wrote, and too little
+    description (under ten words, or a context the AI found insufficient) for the AI's;
+  - dependency updates, known by a bot author or a `dependabot/` or `renovate/` head
+    branch (stored since Flyway `V31`), sent to the AI without their quoted release
+    notes, changelog, and commits, and breaking only when their own words say so;
+  - AI limitations kept to what the change says it does not do yet, with sentences
+    about the input dropped by a deterministic filter;
+  - every classification request at a fixed temperature of `0`.
 
 ## In progress
 

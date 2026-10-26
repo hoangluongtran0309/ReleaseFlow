@@ -14,7 +14,7 @@ trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, and Project
 context slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V30,
+Spring Boot application, PostgreSQL/Flyway V1-V31,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -166,8 +166,12 @@ changing behavior.
 - An AI answer is never rejected over its migration kind: a kind that does not
   match its step is corrected and adds `MIGRATION_KIND_MISMATCH`. A step whose
   writer named no kind is `UNSPECIFIED`, and nothing presents it as required.
-- A change with no summary and a title of fewer than three words cannot reach a
-  note: approval waits for a person to write its summary.
+- A change with a title of fewer than three words reaches a note only with a
+  summary a person wrote, or one the AI wrote from a description of at least ten
+  words whose context it did not find insufficient; approval waits otherwise.
+- A dependency update's quoted upstream notes never reach the AI; it is breaking
+  only when its own words say so. An AI limitation about the input itself is
+  dropped. Every classification request uses the same fixed temperature.
 - Applied Flyway migrations are immutable; add the next version for schema changes.
 - Published Release Notes are immutable snapshots.
 - Categories come from the Organization's catalog, and a change keeps a

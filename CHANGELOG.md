@@ -32,6 +32,15 @@ section into the version's entry, and the GitHub release is written from it.
   fewer than three words, such as "fix"; the release page marks it and asks for a summary.
 - A migration kind the AI got wrong is corrected and sent to review, rather than costing
   the whole answer.
+- A dependency update from Dependabot or Renovate reaches the AI without the release
+  notes, changelog, and commits it quotes, so another project's upgrade steps no longer
+  become this project's; it is breaking only when its own words say so.
+- A change with a title like "fix" and an empty or very short description waits for a
+  person's summary even when the AI wrote one, since the AI could only restate the title.
+- Limitations that only remark on what the change did not explain are dropped.
+- Every AI classification request uses temperature 0, so the same change varies less from
+  one request to the next. A model that accepts only its default temperature, such as an
+  OpenAI reasoning model, can no longer classify changes.
 
 ## [1.0.1] - 2026-10-25
 

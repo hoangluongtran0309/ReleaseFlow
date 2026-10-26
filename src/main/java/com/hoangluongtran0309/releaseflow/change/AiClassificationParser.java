@@ -20,7 +20,8 @@ import java.util.Optional;
  * audiences are read, and a missing or empty one is left out. A category suggestion
  * is kept only with an Unknown answer and a valid code that is not already listed. A
  * migration kind that does not match the step is corrected rather than rejected, and
- * the answer records that it was; a missing limitations field is empty (ADR-0035).
+ * the answer records that it was; a missing limitations field is empty, and a limitation
+ * about the input rather than the change is dropped (ADR-0035).
  */
 final class AiClassificationParser {
 
@@ -90,7 +91,7 @@ final class AiClassificationParser {
                         text(core, "technical_detail"),
                         migrationStep,
                         migrationKind,
-                        optionalText(core, "limitations")
+                        Limitations.stated(optionalText(core, "limitations"))
                 ),
                 narratives(result.path("narratives"), request.audienceCodes()),
                 category.isUnknown() ? suggestion(result.path("suggested_category"), request) : null,

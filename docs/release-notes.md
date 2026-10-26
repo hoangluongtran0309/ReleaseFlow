@@ -180,11 +180,13 @@ A release moves through four steps, shown at the top of its page:
    another one. Approving and editing record the reviewer on the change itself,
    exactly like a review in the Change Inbox, with an optional note. An Unknown
    change must be edited. **Approve release** becomes available once every
-   change has a decision. A change with no summary whose title is fewer than
-   three words, once its Conventional Commit prefix and issue keys are removed
-   (`fix`, `update deps`), is marked **Needs a summary**: a title that short
-   cannot stand alone in a note, so approval waits until a person writes its
-   summary.
+   change has a decision. A change whose title is fewer than three words, once
+   its Conventional Commit prefix and issue keys are removed (`fix`,
+   `update deps`), is marked **Needs a summary** unless a person wrote its
+   summary, or the AI wrote one from a description of at least ten words (HTML
+   comments not counted) whose context it did not find insufficient. A title that
+   short cannot stand alone in a note, and an AI given nothing else can only
+   restate it, so approval waits until a person writes the summary.
 3. **Approved.** The approver and time are recorded, and a release note is
    written for every audience in every release note language from its
    template (see [Release note languages](#release-note-languages)). Check each
@@ -276,7 +278,7 @@ of the Project's changes belongs to. Errors:
 | The operation does not fit the release's status | `409 release_status_conflict` |
 | Review requested or approval attempted with no changes | `409 release_empty` |
 | Approval attempted before every change has a decision | `409 release_review_incomplete` |
-| Approval attempted while a change has no summary and a title of fewer than three words; `detail` names them | `409 change_summary_required` |
+| Approval attempted while a change with a title of fewer than three words has no summary a person wrote, and too little description for the AI's; `detail` names them | `409 change_summary_required` |
 | `APPROVE` sent with a classification other than the change's current one | `409 classification_changed` |
 | `unknown` or an unsupported category in a decision | `400 invalid_change_review` |
 | `APPROVE` of an Unknown change, whatever category it names: approving keeps the current classification, so an Unknown change takes `EDIT` with a category | `400 invalid_change_review` |

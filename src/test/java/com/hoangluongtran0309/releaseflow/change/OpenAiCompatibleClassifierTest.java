@@ -67,6 +67,8 @@ class OpenAiCompatibleClassifierTest {
         JsonNode body = OBJECT_MAPPER.readTree(recorded.body());
         assertThat(body.path("model").stringValue()).isEqualTo("test-model");
         assertThat(body.path("store").booleanValue()).isFalse();
+        assertThat(body.path("temperature").isNumber()).isTrue();
+        assertThat(body.path("temperature").doubleValue()).isZero();
         assertThat(body.path("response_format").path("type").stringValue()).isEqualTo("json_schema");
         JsonNode schema = body.path("response_format").path("json_schema");
         assertThat(schema.path("strict").booleanValue()).isTrue();
@@ -90,6 +92,7 @@ class OpenAiCompatibleClassifierTest {
         assertThat(user.path("categories").path(0).path("group").stringValue()).isEqualTo("documentation");
         assertThat(user.path("project_context").isNull()).isTrue();
         assertThat(user.path("change").path("kind").stringValue()).isEqualTo("code_change");
+        assertThat(user.path("change").path("dependency_update").booleanValue()).isFalse();
         assertThat(user.path("change").path("title").stringValue()).isEqualTo("Tidy exporter");
         assertThat(user.path("change").path("labels").path(0).stringValue()).isEqualTo("good first issue");
         assertThat(user.path("change").path("description").stringValue()).hasSize(4000).endsWith("…");
@@ -226,7 +229,8 @@ class OpenAiCompatibleClassifierTest {
                 List.of(new AudienceBrief("operator", "Rollback and monitoring."), new AudienceBrief("end_user", "")),
                 60,
                 false,
-                ""
+                "",
+                false
         );
     }
 }

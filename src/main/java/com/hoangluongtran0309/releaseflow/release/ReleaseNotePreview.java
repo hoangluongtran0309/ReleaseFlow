@@ -26,6 +26,10 @@ final class ReleaseNotePreview {
     private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{N}]+");
     // A change written from its title alone needs at least this many words of it (ADR-0035).
     static final int TITLE_WORDS = 3;
+    // A description shorter than this gives an AI summary of a short title nothing to say.
+    static final int DESCRIPTION_WORDS = 10;
+    // A pull request template's hints, which nobody wrote about the change.
+    private static final Pattern HTML_COMMENT = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
     private static final Map<CategoryGroup, String> SECTION_TITLES = new LinkedHashMap<>();
 
     static {
@@ -64,15 +68,27 @@ final class ReleaseNotePreview {
     }
 
     /**
-     * Whether a change has no summary and a title too short to stand alone in a note, such
-     * as "fix" or "update deps". It is decided from the title alone and never asks the AI.
+     * Whether a person has to write a change's summary before it reaches a note: its title,
+     * such as "fix" or "update deps", is too short to stand alone, and nothing better stands
+     * in for it. A summary a person wrote does. One the AI wrote does only when the
+     * description gave it something to work from: at least {@value #DESCRIPTION_WORDS}
+     * words, and a context the AI did not find insufficient. Otherwise the AI could only
+     * restate the title ("A fix was made in the codebase."). It never asks the AI.
      */
     static boolean needsSummary(ChangeView change) {
-        if (change.neutralSummary() != null) {
+        if (words(REFERENCE.matcher(displayTitle(change.title())).replaceAll(" ")) >= TITLE_WORDS
+                || change.summaryEditedAt() != null) {
             return false;
         }
-        String words = REFERENCE.matcher(displayTitle(change.title())).replaceAll(" ");
-        return WORD.matcher(words).results().count() < TITLE_WORDS;
+        if (change.neutralSummary() == null) {
+            return true;
+        }
+        String description = change.description() == null ? "" : HTML_COMMENT.matcher(change.description()).replaceAll(" ");
+        return words(description) < DESCRIPTION_WORDS || change.context() != null && change.context().insufficient();
+    }
+
+    private static long words(String text) {
+        return WORD.matcher(text).results().count();
     }
 
     static String displayTitle(String title) {

@@ -426,24 +426,24 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.detail", not(containsString("#29"))));
         mockMvc.perform(get("/projects/{p}/releases/{r}", projectId, releaseId).session(owner.session()))
                 .andExpect(content().string(containsString(">Needs a summary</a>")))
-                .andExpect(content().string(containsString("Its title is too short to stand alone in a note.")));
+                .andExpect(content().string(containsString("Its title is too short to stand alone in a note, and its description gives too little")));
 
         summary(owner, projectId, releaseId, bare, """
-                {"whatChanged":"Each target's password is encrypted with its own key.","migrationStep":"Re-save each target.",
+                {"whatChanged":"Exports are written to EXPORT_PATH.","migrationStep":"Rename EXPORT_DIR to EXPORT_PATH.",
                  "migrationKind":"NONE"}""")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("validation_failed"));
         summary(owner, projectId, releaseId, bare, """
-                {"whatChanged":"Each target's password is encrypted with its own key.","migrationStep":"Re-save each target.",
-                 "migrationKind":"REQUIRED","limitations":"Targets move to their own key only when saved."}""")
+                {"whatChanged":"Exports are written to EXPORT_PATH.","migrationStep":"Rename EXPORT_DIR to EXPORT_PATH.",
+                 "migrationKind":"REQUIRED","limitations":"Imports still read from IMPORT_DIR."}""")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 28)].neutralSummary.migrationKind")
                         .value(contains("REQUIRED")));
 
         approveRemaining(owner, projectId, releaseId)
                 .andExpect(jsonPath("$.notes[2].content", containsString(
-                        "  - Limitations: Targets move to their own key only when saved.\n"
-                                + "  - Required step: Re-save each target.\n")));
+                        "  - Limitations: Imports still read from IMPORT_DIR.\n"
+                                + "  - Required step: Rename EXPORT_DIR to EXPORT_PATH.\n")));
     }
 
     @Test

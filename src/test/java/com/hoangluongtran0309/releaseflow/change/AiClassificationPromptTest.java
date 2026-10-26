@@ -38,14 +38,17 @@ class AiClassificationPromptTest {
                 .contains("For a tracker_issue, never name files, code, or configuration it changed")
                 .contains("describes that dependency")
                 .contains("Never write about what the evidence lacks")
-                .contains("in one sentence");
+                .contains("in one sentence")
+                .contains("A dependency update is breaking only when the change's own words say so")
+                .contains("only what the change's own text says it deliberately does not do yet");
+        assertThat(AiClassificationPrompt.TEMPERATURE).isZero();
     }
 
     private static AiClassificationRequest request(SourceType type, String context) {
         AiClassificationRequest base = OpenAiCompatibleClassifierTest.request("Done.", null, "en");
         return new AiClassificationRequest(base.changeId(), base.title(), base.description(), base.labels(),
                 base.targetBranch(), base.linkedIssues(), base.outputLanguage(), base.lockedCategory(), base.categories(),
-                base.audiences(), base.contextThreshold(), type != null && type.isIssueTracker(), context);
+                base.audiences(), base.contextThreshold(), type != null && type.isIssueTracker(), context, false);
     }
 
     private static JsonNode userMessage(AiClassificationRequest request) {

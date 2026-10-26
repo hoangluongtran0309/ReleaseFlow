@@ -134,7 +134,7 @@ class AiClassificationParserTest {
 
     @Test
     void keepsAMigrationKindThatMatchesItsStepAndTheLimitations() {
-        AiClassification answer = parser.parse(core("\"Re-save each target.\"", "\"required\"",
+        AiClassification answer = parser.parse(core("\"Rename EXPORT_DIR to EXPORT_PATH.\"", "\"required\"",
                 "\"Validation is enforced only for MongoDB.\""), REQUEST);
 
         assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.REQUIRED);
@@ -145,10 +145,10 @@ class AiClassificationParserTest {
     // One slip must not cost the category, the summary, and every narrative (ADR-0035).
     @ParameterizedTest
     @CsvSource(delimiterString = "|", value = {
-            "'\"Re-save each target.\"' | '\"none\"'        | RECOMMENDED | none",
-            "'\"Re-save each target.\"' | '\"unspecified\"' | RECOMMENDED | unspecified",
-            "'\"Re-save each target.\"' | '\"optional\"'    | RECOMMENDED | optional",
-            "'\"Re-save each target.\"' | null              | UNSPECIFIED | ''",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"none\"'        | RECOMMENDED | none",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"unspecified\"' | RECOMMENDED | unspecified",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"optional\"'    | RECOMMENDED | optional",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | null              | UNSPECIFIED | ''",
             "'\"\"'                      | '\"required\"'    | NONE        | required",
             "'\"\"'                      | '\"conditional\"' | NONE        | conditional"
     })
@@ -166,13 +166,24 @@ class AiClassificationParserTest {
         AiClassification answer = parser.parse("""
                 {"category":"fix","breaking_change":false,"needs_human_review":false,
                  "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Keys per target.",
-                 "why_changed":"","technical_detail":"","migration_step":"Re-save each target."}}
+                 "why_changed":"","technical_detail":"","migration_step":"Rename EXPORT_DIR to EXPORT_PATH."}}
                 """, REQUEST);
 
         assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.UNSPECIFIED);
         assertThat(answer.correctedMigrationKind()).isEmpty();
         assertThat(ReviewTrigger.migrationKindMismatch(answer.correctedMigrationKind()))
                 .isEqualTo(new ReviewTrigger(ReviewTriggerType.MIGRATION_KIND_MISMATCH, null));
+    }
+
+    @Test
+    void dropsTheLimitationsThatAreAboutTheInput() {
+        AiClassification answer = parser.parse(core("\"\"", "\"none\"",
+                "\"Validation is enforced only for MongoDB. Rollback steps are not provided.\""), REQUEST);
+        AiClassification remarksOnly = parser.parse(core("\"\"", "\"none\"",
+                "\"Technical specifics are not detailed.\""), REQUEST);
+
+        assertThat(answer.summary().limitations()).isEqualTo("Validation is enforced only for MongoDB.");
+        assertThat(remarksOnly.summary().limitations()).isEmpty();
     }
 
     @Test

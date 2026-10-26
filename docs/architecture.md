@@ -141,7 +141,7 @@ changes
   pull_request_number (the provider's own number: a pull request, a merge
     request, a Linear issue, or the number in a Jira key)
   title, description, author_login (null when the source names no creator), labels (text[])
-  target_branch + merge_commit_sha (a code host's change only), merged_at, url
+  target_branch + merge_commit_sha (a code host's change only), head_branch (V31, a code host's change only, when named), merged_at, url
   delivery_id (the delivery that recorded the change, when the provider named one)
   received_at
   processing_status (PROCESSING | COMPLETED)
@@ -773,9 +773,21 @@ never rejects an answer over the kind: `none` with a step becomes `recommended`,
 any other kind (or none at all) without a step becomes `none`, a step with an
 unknown kind becomes `recommended` and one with no kind `unspecified`, and the answer records what the AI returned
 so `ChangeAiMerge` adds a `MIGRATION_KIND_MISMATCH` trigger. A missing
-`limitations` reads as empty. `NeutralSummary` stores both;
+`limitations` reads as empty, and `Limitations.stated` drops every sentence of it that
+talks about the input ("not provided", "not specified", "no information", and their kin
+in English and Vietnamese) rather than the change. `NeutralSummary` stores both;
 a summary stored before them reads its step as `UNSPECIFIED` (`MigrationKind`),
 which no template or label treats as required.
+
+A dependency update is recognized by `DependencyUpdates` from the author
+(`dependabot[bot]`, `renovate[bot]`) or the head branch (`dependabot/`, `renovate/`),
+which `MergedPullRequest` reads from GitHub's `head.ref` and GitLab's `source_branch`, in
+deliveries and imports alike, and `changes.head_branch` keeps (Flyway `V31`; only a code
+host's change has one). `AiClassificationRequest.of` sends such a change's description
+without its `<details>` and `<blockquote>` elements, Markdown blockquotes, and "Release
+notes", "Changelog", and "Commits" sections, and marks it `dependency_update`; the stored
+description is untouched. Both providers send `AiClassificationPrompt.TEMPERATURE`, a fixed
+`0`.
 
 ### Project context
 
@@ -1080,8 +1092,10 @@ translation, keep what the AI or a person wrote.
   release row is flushed as approved (see
   [Release note languages and translation](#release-note-languages-and-translation)). A render failure aborts approval with
   `409 release_note_render_failed`. Before that, `ReleaseNotePreview.needsSummary`
-  finds every change with no neutral summary whose title, without its Conventional
-  Commit prefix, issue keys, and `#n` or `!n`, has fewer than three words, and
+  finds every change whose title, without its Conventional Commit prefix, issue keys,
+  and `#n` or `!n`, has fewer than three words, and that has neither a summary a person
+  wrote nor an AI summary of a description of at least ten words (HTML comments not
+  counted) with a context the AI did not find insufficient, and
   approval answers `409 change_summary_required` naming their references (ADR-0035).
   The release page marks them **Needs a summary** and opens their **Edit summary**.
 - **Editing a note** is allowed only while approved. It stores the text and the

@@ -136,6 +136,13 @@ từng audience, tất cả viết bằng ngôn ngữ đầu ra. Bản tóm tắ
 câu), vì sao, chi tiết kỹ thuật, bước chuyển đổi kèm loại của nó, và giới hạn: những gì thay đổi
 cố ý chưa làm. Narrative nào thiếu thì đơn giản là bỏ qua.
 
+Một **dependency update**, tức thay đổi có tác giả là `dependabot[bot]` hoặc `renovate[bot]`,
+hoặc có head branch bắt đầu bằng `dependabot/` hay `renovate/`, được gửi cho AI mà không kèm
+những gì nó trích từ upstream: các phần tử `<details>` và `<blockquote>`, blockquote Markdown, và
+các mục "Release notes", "Changelog", "Commits" đều bị bỏ, chỉ còn lại thứ được nâng phiên bản
+và từ phiên bản nào lên phiên bản nào. Bản thân thay đổi vẫn giữ nguyên mô tả. Nó chỉ phá vỡ
+tương thích, hoặc có bước chuyển đổi, khi chính lời của nó nói vậy.
+
 AI được yêu cầu chỉ nói điều có trong bằng chứng, ở mọi trường: không nêu hậu quả mà thay đổi
 không mô tả (crash, ngừng dịch vụ, không khởi động được), không nêu vị trí trong sản phẩm mà
 thay đổi hay ngữ cảnh Project không nhắc tới, không lấy changelog của một dependency được trích
@@ -155,8 +162,15 @@ Một bước chuyển đổi có loại:
 Loại không khớp với bước sẽ được chỉnh lại chứ không bị loại bỏ, vì mỗi thay đổi chỉ được hỏi
 AI một lần: `none` mà có bước thì thành `recommended`, loại khác mà không có bước thì thành
 `none`, còn bước không có loại thì là `UNSPECIFIED`. Thay đổi đó khi ấy có trigger review
-**Đã chỉnh loại bước chuyển đổi**, để một người kiểm lại bước này. Trường giới hạn bị thiếu thì coi là trống. Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, và API
-thay đổi trả về chúng dưới dạng `neutralSummary` và `audienceNarratives` kèm
+**Đã chỉnh loại bước chuyển đổi**, để một người kiểm lại bước này.
+
+Giới hạn chỉ là những gì chính nội dung của thay đổi nói rằng nó cố ý chưa làm. Câu mà AI viết
+vào đó để nói về dữ liệu đầu vào, như "Rollback steps are not provided" hay "The version is not
+specified", sẽ bị bỏ, và trường giới hạn bị thiếu thì coi là trống. Mọi request đều dùng
+temperature `0`, để cùng một thay đổi dao động ít nhất trong khả năng của model (xem
+[Cấu hình](configuration.md#ai)).
+
+Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, và API thay đổi trả về chúng dưới dạng `neutralSummary` và `audienceNarratives` kèm
 `contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
 giờ bị câu trả lời AI sau đó thay thế.
 

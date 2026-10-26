@@ -262,7 +262,7 @@
                                     <summary class="cursor-pointer text-sm font-semibold text-indigo-700" th:text="#{ui.release.editSummary}">Edit summary</summary>
                                     <p class="mt-2 text-xs text-slate-500">
                                         <th:block th:if="${summary == null and !titleOnly}" th:text="#{ui.release.noSummaryYet}">This change has no summary yet.</th:block>
-                                        <th:block th:if="${titleOnly}" th:text="#{ui.release.needsSummaryHint}">Its title is too short to stand alone in a note.</th:block>
+                                        <th:block th:if="${titleOnly}" th:text="#{ui.release.needsSummaryHint}">Its title is too short to stand alone in a note, and its description gives too little to summarize.</th:block>
                                         <th:block th:if="${change.summaryEditorName != null}" th:text="#{ui.release.lastWrittenBy(${change.summaryEditorName})}">Last written by Mai Tran.</th:block>
                                         <th:block th:if="${approved}" th:text="#{ui.release.savingUpdatesNotes}">Saving updates the release notes.</th:block>
                                     </p>

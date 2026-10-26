@@ -168,10 +168,12 @@ Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
    tương thích của nó, **Sửa phân loại** sửa lại chúng, và **Từ chối** bỏ thay đổi khỏi release
    để nó dùng được cho release khác. Duyệt và sửa đều ghi người review lên chính thay đổi, giống
    hệt một lần review trong Hộp thay đổi, kèm ghi chú không bắt buộc. Thay đổi Unknown bắt buộc
-   phải sửa. **Duyệt release** dùng được khi mọi thay đổi đã có quyết định. Một thay đổi chưa có
-   bản tóm tắt mà tiêu đề, sau khi bỏ tiền tố Conventional Commit và key issue, còn dưới ba từ
-   (`fix`, `update deps`) được đánh dấu **Cần viết tóm tắt**: tiêu đề ngắn như vậy không tự đứng
-   được trong note, nên việc duyệt phải chờ một người viết tóm tắt cho nó.
+   phải sửa. **Duyệt release** dùng được khi mọi thay đổi đã có quyết định. Một thay đổi mà tiêu
+   đề, sau khi bỏ tiền tố Conventional Commit và key issue, còn dưới ba từ (`fix`, `update deps`)
+   được đánh dấu **Cần viết tóm tắt**, trừ khi tóm tắt do người viết, hoặc AI viết nó từ một mô tả
+   có ít nhất mười từ (không tính chú thích HTML) mà AI không đánh giá là thiếu ngữ cảnh. Tiêu đề
+   ngắn như vậy không tự đứng được trong note, và AI không có gì khác thì chỉ nhắc lại được tiêu
+   đề, nên việc duyệt phải chờ một người viết tóm tắt.
 3. **Đã duyệt.** Người duyệt và thời điểm được ghi lại, và một release note được viết từ
    template cho mỗi audience ở mỗi ngôn ngữ release note (xem
    [Ngôn ngữ release note](#release-note-languages)). Kiểm tra tab của từng release note, sửa
@@ -256,7 +258,7 @@ phiên bản và trạng thái) mà mỗi thay đổi của Project thuộc về
 | Thao tác không phù hợp với trạng thái của release | `409 release_status_conflict` |
 | Yêu cầu review hoặc duyệt khi không có thay đổi nào | `409 release_empty` |
 | Duyệt trước khi mọi thay đổi có quyết định | `409 release_review_incomplete` |
-| Duyệt trong khi một thay đổi chưa có bản tóm tắt và tiêu đề dưới ba từ; `detail` nêu tên các thay đổi đó | `409 change_summary_required` |
+| Duyệt trong khi một thay đổi có tiêu đề dưới ba từ chưa có tóm tắt do người viết, và mô tả quá ít cho tóm tắt của AI; `detail` nêu tên các thay đổi đó | `409 change_summary_required` |
 | Gửi `APPROVE` với phân loại khác phân loại hiện tại của thay đổi | `409 classification_changed` |
 | `unknown` hoặc một category không được hỗ trợ trong quyết định | `400 invalid_change_review` |
 | `APPROVE` một thay đổi Unknown, dù có nêu category nào: approve giữ nguyên phân loại hiện tại, nên thay đổi Unknown phải dùng `EDIT` kèm một category | `400 invalid_change_review` |

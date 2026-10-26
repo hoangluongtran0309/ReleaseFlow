@@ -21,6 +21,8 @@ import java.util.stream.Stream;
  *     than merged code
  * @param projectContext what the Project's administrators wrote about the product, or
  *     empty
+ * @param dependencyUpdate whether a bot opened the change to bump a dependency; its
+ *     description is then only its own text, without what it quotes from upstream
  */
 record AiClassificationRequest(
         UUID changeId,
@@ -35,7 +37,8 @@ record AiClassificationRequest(
         List<AudienceBrief> audiences,
         int contextThreshold,
         boolean trackerIssue,
-        String projectContext
+        String projectContext,
+        boolean dependencyUpdate
 ) {
 
     AiClassificationRequest {
@@ -60,10 +63,11 @@ record AiClassificationRequest(
             SourceType sourceType,
             String projectContext
     ) {
+        boolean dependencyUpdate = DependencyUpdates.isDependencyUpdate(pullRequest);
         return new AiClassificationRequest(
                 changeId,
                 pullRequest.title(),
-                pullRequest.description(),
+                dependencyUpdate ? DependencyUpdates.ownText(pullRequest.description()) : pullRequest.description(),
                 pullRequest.labels(),
                 pullRequest.targetBranch(),
                 linkedIssues,
@@ -73,7 +77,8 @@ record AiClassificationRequest(
                 audiences,
                 contextThreshold,
                 sourceType != null && sourceType.isIssueTracker(),
-                projectContext
+                projectContext,
+                dependencyUpdate
         );
     }
 
