@@ -29,12 +29,27 @@ class ChangeAiMergeTest {
     }
 
     @Test
+    void aCorrectedMigrationKindAddsATriggerSoAPersonChecksTheStep() {
+        ChangeAiMerge.ClassifiedChange merged = merge(
+                rules(TestCategories.FIX, false, List.of()),
+                answer(new AiClassification(TestCategories.FIX, false, false, SUMMARY, Map.of(), null, 90, List.of(), "none"))
+        );
+
+        assertThat(merged.classification().category()).isEqualTo(TestCategories.FIX);
+        assertThat(merged.classification().needsReview()).isTrue();
+        assertThat(merged.classification().triggers()).containsExactly(ReviewTrigger.migrationKindMismatch("none"));
+        assertThat(ReviewTrigger.migrationKindMismatch("").detail()).isNull();
+        assertThat(ReviewTrigger.migrationKindMismatch("none").messageKey())
+                .isEqualTo("ui.reviewTrigger.MIGRATION_KIND_MISMATCH.detailed");
+    }
+
+    @Test
     void aProposedCategoryKeepsTheChangeUnknownAndAddsATrigger() {
         CategorySuggestionDraft draft = new CategorySuggestionDraft("SECURITY", "Security", CategoryGroup.FIX, "None fits.");
 
         ChangeAiMerge.ClassifiedChange merged = merge(
                 rules(TestCategories.UNKNOWN, false, List.of()),
-                answer(new AiClassification(TestCategories.UNKNOWN, false, false, SUMMARY, Map.of(), draft, 90, List.of()))
+                answer(new AiClassification(TestCategories.UNKNOWN, false, false, SUMMARY, Map.of(), draft, 90, List.of(), null))
         );
 
         assertThat(merged.classification().category()).isEqualTo(TestCategories.UNKNOWN);
@@ -86,7 +101,7 @@ class ChangeAiMergeTest {
 
         ChangeAiMerge.ClassifiedChange merged = merge(
                 rules(TestCategories.FEATURE, false, List.of()),
-                answer(new AiClassification(TestCategories.UNKNOWN, false, false, SUMMARY, Map.of(), draft, 90, List.of()))
+                answer(new AiClassification(TestCategories.UNKNOWN, false, false, SUMMARY, Map.of(), draft, 90, List.of(), null))
         );
 
         assertThat(merged.classification().category()).isEqualTo(TestCategories.FEATURE);
@@ -189,7 +204,7 @@ class ChangeAiMergeTest {
     }
 
     private static AiOutcome succeeded(CategoryRef category, boolean breaking, boolean needsReview) {
-        return answer(new AiClassification(category, breaking, needsReview, SUMMARY, Map.of(), null, 90, List.of()));
+        return answer(new AiClassification(category, breaking, needsReview, SUMMARY, Map.of(), null, 90, List.of(), null));
     }
 
     private static ChangeAiMerge.ClassifiedChange merge(ChangeClassification rules, AiOutcome ai) {

@@ -404,6 +404,10 @@
                 <a class="link text-sm" th:href="@{/projects/{projectId}/sensitive-paths(projectId=${project.id})}"
                    th:text="#{ui.projects.sensitivePaths}">Sensitive paths</a>
                 <span class="text-xs text-slate-500" th:text="#{ui.projects.sensitivePathsHint}">— files whose changes always need review</span>
+                <br>
+                <a class="link text-sm" th:href="@{/projects/{projectId}/context(projectId=${project.id})}"
+                   th:text="#{ui.projects.context}">Project context</a>
+                <span class="text-xs text-slate-500" th:text="#{ui.projects.contextHint}">— what the AI should know about the product</span>
             </div>
         </article>
     </div>

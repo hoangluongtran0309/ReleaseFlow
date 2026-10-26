@@ -73,6 +73,7 @@ import com.hoangluongtran0309.releaseflow.release.ChangeNotReleasableException;
 import com.hoangluongtran0309.releaseflow.release.ClassificationChangedException;
 import com.hoangluongtran0309.releaseflow.release.InvalidReleaseScheduleException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseApiController;
+import com.hoangluongtran0309.releaseflow.release.ChangeSummaryRequiredException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseEmptyException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNotFoundException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteNotFoundException;
@@ -249,6 +250,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ReleaseReviewIncompleteException.class)
     ResponseEntity<ProblemDetail> releaseReviewIncomplete(ReleaseReviewIncompleteException exception) {
         return localized(HttpStatus.CONFLICT, "release_review_incomplete", exception);
+    }
+
+    @ExceptionHandler(ChangeSummaryRequiredException.class)
+    ResponseEntity<ProblemDetail> changeSummaryRequired(ChangeSummaryRequiredException exception) {
+        return localized(HttpStatus.CONFLICT, "change_summary_required", exception);
     }
 
     @ExceptionHandler(ClassificationChangedException.class)

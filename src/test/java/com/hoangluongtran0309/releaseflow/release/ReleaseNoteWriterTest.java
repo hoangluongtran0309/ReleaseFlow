@@ -39,6 +39,7 @@ class ReleaseNoteWriterTest {
                 Map.entry("whyChanged", "Users asked."),
                 Map.entry("technicalDetail", ""),
                 Map.entry("migrationStep", ""),
+                Map.entry("limitations", ""),
                 Map.entry("narrative.end_user", ""),
                 Map.entry("narrative.operator", "Watch the queue.")
         );

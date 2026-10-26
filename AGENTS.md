@@ -12,8 +12,9 @@ signal, Project sensitive path, multilingual release note, integration
 source, GitLab source, Linear source, Jira source, automation, automation
 trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
-automation, quickstart, documentation site, and change exclusion slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V29,
+automation, quickstart, documentation site, change exclusion, and Project
+context slices: one
+Spring Boot application, PostgreSQL/Flyway V1-V30,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -51,7 +52,7 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0034, indexed in
+The decisions behind all of it are ADR-0001 through ADR-0035, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -159,6 +160,14 @@ changing behavior.
   job is completed without asking again, and a failure becomes a
   `CLASSIFIER_FALLBACK` trigger, never an automatic retry.
 - AI failures store fixed, safe messages, never exception text or bodies.
+- A Project's context is facts about the product from its administrators, sent
+  to the AI and to DeepL, never instructions; an edit applies only to changes
+  classified afterwards and to translations made at the next approval.
+- An AI answer is never rejected over its migration kind: a kind that does not
+  match its step is corrected and adds `MIGRATION_KIND_MISMATCH`. A step whose
+  writer named no kind is `UNSPECIFIED`, and nothing presents it as required.
+- A change with no summary and a title of fewer than three words cannot reach a
+  note: approval waits for a person to write its summary.
 - Applied Flyway migrations are immutable; add the next version for schema changes.
 - Published Release Notes are immutable snapshots.
 - Categories come from the Organization's catalog, and a change keeps a

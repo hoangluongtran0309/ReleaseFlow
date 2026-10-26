@@ -96,7 +96,8 @@ public final class DeepLStub implements AutoCloseable {
                 exchange.getRequestHeaders().getFirst("Authorization"),
                 body.path("source_lang").stringValue(),
                 target,
-                List.copyOf(texts)
+                List.copyOf(texts),
+                body.path("context").isString() ? body.path("context").stringValue() : null
         ));
         if (failuresLeft.getAndUpdate(left -> Math.max(0, left - 1)) > 0) {
             send(exchange, failureStatus, "{\"message\":\"stubbed failure\"}");
@@ -126,7 +127,8 @@ public final class DeepLStub implements AutoCloseable {
             String authorization,
             String sourceLanguage,
             String targetLanguage,
-            List<String> texts
+            List<String> texts,
+            String context
     ) {
     }
 }

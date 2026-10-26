@@ -75,7 +75,9 @@ public final class OpenAiStub implements AutoCloseable {
                         "what_changed", "Rotates the signing keys.",
                         "why_changed", "",
                         "technical_detail", "",
-                        "migration_step", ""
+                        "migration_step", "",
+                        "migration_kind", "none",
+                        "limitations", ""
                 ),
                 "suggested_category", Map.of("code", code, "display_name", name, "group", group, "rationale", rationale),
                 "context_sufficiency", Map.of("score", 80, "reasons", List.of()),
@@ -120,7 +122,9 @@ public final class OpenAiStub implements AutoCloseable {
                         "what_changed", summary,
                         "why_changed", "Requested by users.",
                         "technical_detail", "Handled in the exporter.",
-                        "migration_step", ""
+                        "migration_step", "",
+                        "migration_kind", "none",
+                        "limitations", ""
                 ),
                 "context_sufficiency", Map.of("score", 90, "reasons", List.of()),
                 "narratives", narratives

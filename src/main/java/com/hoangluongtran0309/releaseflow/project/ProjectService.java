@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.project;
 
+import com.hoangluongtran0309.releaseflow.account.ReleaseFlowPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,12 +42,37 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public ProjectView get(UUID organizationId, UUID projectId) {
-        Project project = projectRepository.findByIdAndOrganizationId(projectId, organizationId)
-                .orElseThrow(ProjectNotFoundException::new);
+        Project project = find(organizationId, projectId);
         return toView(
                 project,
                 sourceRepository.findAllByOrganizationIdAndProjectIdOrderByCreatedAtAscIdAsc(organizationId, projectId)
         );
+    }
+
+    /**
+     * What a Project's administrators wrote about its product, or empty. The AI receives
+     * it with every change it classifies, and DeepL with every translation (ADR-0035).
+     */
+    @Transactional(readOnly = true)
+    public String context(UUID organizationId, UUID projectId) {
+        return find(organizationId, projectId).getContext();
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectContextView contextView(UUID organizationId, UUID projectId) {
+        return contextView(find(organizationId, projectId));
+    }
+
+    // Changes already classified keep what the AI wrote; nothing is classified again.
+    @Transactional
+    public ProjectContextView replaceContext(
+            ReleaseFlowPrincipal administrator,
+            UUID projectId,
+            ProjectContextRequest request
+    ) {
+        Project project = find(administrator.organizationId(), projectId);
+        project.replaceContext(request.getContext(), administrator.userId(), administrator.displayName(), clock.instant());
+        return contextView(projectRepository.saveAndFlush(project));
     }
 
     @Transactional(readOnly = true)
@@ -67,6 +93,20 @@ public class ProjectService {
         return projects.stream()
                 .map(project -> toView(project, sourcesByProject.getOrDefault(project.getId(), List.of())))
                 .toList();
+    }
+
+    private Project find(UUID organizationId, UUID projectId) {
+        return projectRepository.findByIdAndOrganizationId(projectId, organizationId)
+                .orElseThrow(ProjectNotFoundException::new);
+    }
+
+    private static ProjectContextView contextView(Project project) {
+        return new ProjectContextView(
+                project.getId(),
+                project.getContext(),
+                project.getContextUpdaterName(),
+                project.getContextUpdatedAt()
+        );
     }
 
     private static ProjectView toView(Project project, List<IntegrationSource> sources) {

@@ -3,6 +3,7 @@ package com.hoangluongtran0309.releaseflow.release;
 import com.hoangluongtran0309.releaseflow.audience.AudienceItem;
 import com.hoangluongtran0309.releaseflow.audience.AudienceTemplate;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
+import com.hoangluongtran0309.releaseflow.change.MigrationKind;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 
@@ -106,6 +107,8 @@ final class ReleaseNoteDigest {
                     "",
                     "",
                     "",
+                    "",
+                    "",
                     narrative,
                     change.reference(),
                     change.pullRequestNumber(),
@@ -118,6 +121,8 @@ final class ReleaseNoteDigest {
                 ReleaseNoteMarkdown.escapeRawHtml(summary.whyChanged()),
                 ReleaseNoteMarkdown.escapeRawHtml(summary.technicalDetail()),
                 ReleaseNoteMarkdown.escapeRawHtml(summary.migrationStep()),
+                summary.migrationKind() == MigrationKind.NONE ? "" : summary.migrationKind().value(),
+                ReleaseNoteMarkdown.escapeRawHtml(summary.limitations()),
                 narrative,
                 change.reference(),
                 change.pullRequestNumber(),

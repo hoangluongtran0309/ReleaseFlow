@@ -13,7 +13,8 @@ import java.util.List;
  * rules left it Unknown and nothing else requires a person. A category the AI proposed
  * instead of choosing one keeps the change Unknown and adds a trigger until an
  * administrator decides the proposal. Insufficient context adds a trigger too; context
- * is assessed only when the AI answered.
+ * is assessed only when the AI answered. So does a migration kind the parser had to
+ * correct (ADR-0035), so a person checks the step.
  */
 final class ChangeAiMerge {
 
@@ -49,6 +50,10 @@ final class ChangeAiMerge {
         if (suggestion != null) {
             triggers.add(ReviewTrigger.categorySuggestion(suggestion.code()));
             reasons.add("AI proposed a new category \"" + suggestion.code() + "\"");
+        }
+        if (answer.correctedMigrationKind() != null) {
+            triggers.add(ReviewTrigger.migrationKindMismatch(answer.correctedMigrationKind()));
+            reasons.add("AI migration kind did not match its step and was corrected");
         }
         if (context != null && context.insufficient()) {
             triggers.add(ReviewTrigger.contextInsufficient(context.reasons()));

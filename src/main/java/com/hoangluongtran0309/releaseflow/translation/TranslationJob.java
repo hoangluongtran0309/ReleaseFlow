@@ -52,6 +52,10 @@ class TranslationJob {
     @Column(nullable = false, columnDefinition = "jsonb", updatable = false)
     private Map<String, String> input;
 
+    // The Project's context the job was asked with; part of its input hash.
+    @Column(nullable = false, length = 2000, updatable = false)
+    private String context = "";
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, String> output;
@@ -90,6 +94,7 @@ class TranslationJob {
             String targetLanguage,
             String inputHash,
             Map<String, String> input,
+            String context,
             Instant createdAt
     ) {
         this.id = UUID.randomUUID();
@@ -101,6 +106,7 @@ class TranslationJob {
         this.targetLanguage = targetLanguage;
         this.inputHash = inputHash;
         this.input = new LinkedHashMap<>(input);
+        this.context = context;
         this.status = Status.PENDING;
         this.attempts = 0;
         this.nextAttemptAt = createdAt;
@@ -182,6 +188,10 @@ class TranslationJob {
 
     Map<String, String> getInput() {
         return Map.copyOf(input);
+    }
+
+    String getContext() {
+        return context;
     }
 
     Status getStatus() {

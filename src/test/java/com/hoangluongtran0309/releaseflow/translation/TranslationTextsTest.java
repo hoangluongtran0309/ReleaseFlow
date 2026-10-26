@@ -21,10 +21,24 @@ class TranslationTextsTest {
         reordered.put("whyChanged", "Users asked.");
         reordered.put("whatChanged", "Tables export as CSV.");
 
-        String hash = TranslationTexts.inputHash("en", first);
-        assertThat(hash).hasSize(64).isEqualTo(TranslationTexts.inputHash("en", reordered));
-        assertThat(TranslationTexts.inputHash("de", first)).isNotEqualTo(hash);
-        assertThat(TranslationTexts.inputHash("en", Map.of("whatChanged", "Tables export as TSV."))).isNotEqualTo(hash);
+        String hash = TranslationTexts.inputHash("en", first, "");
+        assertThat(hash).hasSize(64).isEqualTo(TranslationTexts.inputHash("en", reordered, ""));
+        assertThat(TranslationTexts.inputHash("de", first, "")).isNotEqualTo(hash);
+        assertThat(TranslationTexts.inputHash("en", Map.of("whatChanged", "Tables export as TSV."), "")).isNotEqualTo(hash);
+    }
+
+    @Test
+    void aProjectContextIsPartOfTheInputAndOfTheCachedText() {
+        Map<String, String> texts = Map.of("whatChanged", "The whole console is in Vietnamese.");
+        String withoutContext = TranslationTexts.inputHash("en", texts, "");
+
+        assertThat(TranslationTexts.inputHash("en", texts, "The console is the web UI; the CLI stays English."))
+                .isNotEqualTo(withoutContext)
+                .isNotEqualTo(TranslationTexts.inputHash("en", texts, "The CLI is a client."));
+        // Without a context, a text is found as it was before contexts existed.
+        assertThat(TranslationTexts.textHash("Done.", ""))
+                .isEqualTo("ed251864987c367e9641fbdc89c1d83e9bf0fa2e3eecef8f301c79f619bfac81")
+                .isNotEqualTo(TranslationTexts.textHash("Done.", "The CLI is a client."));
     }
 
     @Test

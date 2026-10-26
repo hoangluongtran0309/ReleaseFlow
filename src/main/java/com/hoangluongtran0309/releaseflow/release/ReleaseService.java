@@ -360,6 +360,13 @@ public class ReleaseService {
         if (decided != changes.size() || changes.stream().anyMatch(ChangeView::needsReview)) {
             throw new ReleaseReviewIncompleteException();
         }
+        List<String> titleOnly = changes.stream()
+                .filter(ReleaseNotePreview::needsSummary)
+                .map(ChangeView::reference)
+                .toList();
+        if (!titleOnly.isEmpty()) {
+            throw new ChangeSummaryRequiredException(titleOnly);
+        }
         Instant now = clock.instant();
         List<AudienceReleaseNote> notes = writeNotes(release, changes, now);
         release.approve(approver.userId(), approver.displayName(), now);

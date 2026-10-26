@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
+<head>
+    <title th:text="#{ui.projectContext.title}">Project context</title>
+</head>
+<body>
+<p layout:fragment="page-title" th:text="#{ui.projectContext.title}">Project context</p>
+<div layout:fragment="content">
+    <header class="page-header">
+        <div>
+            <p class="page-eyebrow">
+                <a class="link" th:href="@{/projects}" th:text="#{ui.projectContext.projects}">Projects</a>
+                <span th:if="${project != null}" th:text="|/ ${project.name}|">/ Project</span>
+            </p>
+            <h1 class="page-heading" th:text="#{ui.projectContext.title}">Project context</h1>
+            <p class="page-subtitle" th:text="#{ui.projectContext.subtitle}">
+                What the AI and the translator should know about this product before they write about its changes.
+            </p>
+        </div>
+    </header>
+
+    <div class="mb-6" th:if="${pageNotice != null}" th:insert="~{fragments/alert :: notice(${pageNotice})}"></div>
+
+    <section class="surface-card p-6" id="project-context">
+        <h2 class="section-heading" th:text="#{ui.projectContext.heading}">About the product</h2>
+        <p class="section-copy" th:text="#{ui.projectContext.copy}">
+            Say what is a client and what is a server, where settings live, how people reach features, and what stays in English by design.
+        </p>
+        <p class="section-copy" th:if="${context.updatedAt != null}">
+            <span th:text="#{ui.projectContext.lastChangedBefore}">Last changed by</span>
+            <span th:text="${context.updatedBy}">Mai</span>
+            <span th:text="#{ui.projectContext.lastChangedOn}">on</span>
+            <time th:datetime="${context.updatedAt}"
+                  th:text="|${#temporals.format(context.updatedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">15 Sep 2026, 10:02 UTC</time><span
+                    th:text="#{ui.projectContext.lastChangedAfter}">. Changes already classified keep what the AI wrote.</span>
+        </p>
+
+        <form class="mt-5 grid gap-3" th:if="${viewer.admin}" method="post" th:object="${contextForm}"
+              th:action="@{/projects/{projectId}/context(projectId=${context.projectId})}" novalidate>
+            <label class="form-control">
+                <span class="label-text font-medium" th:text="#{ui.projectContext.field}">Context</span>
+                <textarea th:field="*{context}" rows="10" th:maxlength="${contextLimit}"
+                          class="textarea textarea-bordered w-full text-sm" th:errorclass="textarea-error"
+                          th:attr="aria-invalid=${#fields.hasErrors('context')} ? 'true' : null,aria-describedby=${#fields.hasErrors('context')} ? 'context-error' : 'context-hint'"></textarea>
+                <span id="context-hint" class="mt-1 text-xs text-slate-500"
+                      th:text="#{ui.projectContext.hint(${contextLimit})}">At most 2000 characters. It applies to changes classified from now on.</span>
+                <span th:replace="~{fragments/form :: fieldError('context', 'context-error')}"></span>
+            </label>
+            <button type="submit" class="btn btn-primary w-full sm:w-auto" th:text="#{ui.projectContext.save}">Save context</button>
+        </form>
+
+        <div th:unless="${viewer.admin}">
+            <p class="section-copy" th:if="${#strings.isEmpty(context.context)}" th:text="#{ui.projectContext.none}">No context has been written.</p>
+            <p class="mt-4 whitespace-pre-line text-sm [overflow-wrap:anywhere]" th:unless="${#strings.isEmpty(context.context)}"
+               th:text="${context.context}">The CLI is a client of the server.</p>
+            <p class="mt-4 text-xs text-slate-500" th:text="#{ui.projectContext.adminOnly}">Only organization administrators can change it.</p>
+        </div>
+    </section>
+</div>
+</body>
+</html>

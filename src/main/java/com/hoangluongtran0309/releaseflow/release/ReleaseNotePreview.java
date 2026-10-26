@@ -21,6 +21,11 @@ final class ReleaseNotePreview {
             "^(feat|fix|perf|docs|refactor|chore|ci|build|test)(\\([^)]*\\))?!?:\\s*",
             Pattern.CASE_INSENSITIVE
     );
+    // What a title-only item may not count as its words: issue keys and #12 or !12.
+    private static final Pattern REFERENCE = Pattern.compile("\\b[A-Z][A-Z0-9]+-\\d+\\b|[#!]\\d+");
+    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{N}]+");
+    // A change written from its title alone needs at least this many words of it (ADR-0035).
+    static final int TITLE_WORDS = 3;
     private static final Map<CategoryGroup, String> SECTION_TITLES = new LinkedHashMap<>();
 
     static {
@@ -56,6 +61,18 @@ final class ReleaseNotePreview {
             }
         });
         return List.copyOf(sections);
+    }
+
+    /**
+     * Whether a change has no summary and a title too short to stand alone in a note, such
+     * as "fix" or "update deps". It is decided from the title alone and never asks the AI.
+     */
+    static boolean needsSummary(ChangeView change) {
+        if (change.neutralSummary() != null) {
+            return false;
+        }
+        String words = REFERENCE.matcher(displayTitle(change.title())).replaceAll(" ");
+        return WORD.matcher(words).results().count() < TITLE_WORDS;
     }
 
     static String displayTitle(String title) {

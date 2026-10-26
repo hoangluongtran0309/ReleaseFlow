@@ -156,6 +156,11 @@ public class SecurityConfiguration {
                         // Members read a Project's sensitive paths; administrators add to them.
                         .requestMatchers(HttpMethod.PUT, "/api/projects/*/sensitive-paths")
                         .hasRole("ADMIN")
+                        // Members read a Project's context; administrators write it.
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/*/context")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/projects/*/context")
+                        .hasRole("ADMIN")
                         // Saying a change never ships decides what every later release offers.
                         .requestMatchers("/api/projects/*/changes/*/exclusion", "/projects/*/changes/*/exclusion",
                                 "/projects/*/changes/*/exclusion/delete")

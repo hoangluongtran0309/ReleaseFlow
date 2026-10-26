@@ -143,6 +143,8 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision` | member |
 | `GET /api/projects/{projectId}/sensitive-paths` | member |
 | `PUT /api/projects/{projectId}/sensitive-paths` | admin |
+| `GET /api/projects/{projectId}/context` | member |
+| `PUT /api/projects/{projectId}/context` | admin |
 | `GET /api/categories` | member |
 | `POST /api/categories` | admin |
 | `PUT /api/categories/{categoryId}`, `DELETE /api/categories/{categoryId}` | admin |
@@ -239,5 +241,5 @@ Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
 | Audiences | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
 | Releases | `400` | `invalid_release_schedule` |
 | Releases | `404` | `release_not_found`, `release_note_not_found` |
-| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
+| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
 | Automation | `400`, `404`, `409` | See [Automation](automation.md#rest) |

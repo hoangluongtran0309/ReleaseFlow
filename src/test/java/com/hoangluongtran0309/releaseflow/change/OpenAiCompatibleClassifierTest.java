@@ -56,7 +56,8 @@ class OpenAiCompatibleClassifierTest {
                 Map.of(),
                 null,
                 90,
-                List.of()
+                List.of(),
+                null
         ));
         OpenAiStub.RecordedRequest recorded = stub.requests().getFirst();
         assertThat(recorded.method()).isEqualTo("POST");
@@ -70,7 +71,7 @@ class OpenAiCompatibleClassifierTest {
         JsonNode schema = body.path("response_format").path("json_schema");
         assertThat(schema.path("strict").booleanValue()).isTrue();
         assertThat(schema.path("schema").path("properties").path("category").path("enum").size()).isEqualTo(6);
-        assertThat(schema.path("schema").path("properties").path("neutral_core").path("required").size()).isEqualTo(4);
+        assertThat(schema.path("schema").path("properties").path("neutral_core").path("required").size()).isEqualTo(6);
         assertThat(schema.path("schema").path("properties").path("context_sufficiency").path("required").toString())
                 .isEqualTo("[\"score\",\"reasons\"]");
         assertThat(schema.path("schema").path("required").toString()).contains("\"context_sufficiency\"");
@@ -87,9 +88,11 @@ class OpenAiCompatibleClassifierTest {
         assertThat(user.path("categories").size()).isEqualTo(6);
         assertThat(user.path("categories").path(0).path("code").stringValue()).isEqualTo("DOCUMENTATION");
         assertThat(user.path("categories").path(0).path("group").stringValue()).isEqualTo("documentation");
-        assertThat(user.path("pull_request").path("title").stringValue()).isEqualTo("Tidy exporter");
-        assertThat(user.path("pull_request").path("labels").path(0).stringValue()).isEqualTo("good first issue");
-        assertThat(user.path("pull_request").path("description").stringValue()).hasSize(4000).endsWith("…");
+        assertThat(user.path("project_context").isNull()).isTrue();
+        assertThat(user.path("change").path("kind").stringValue()).isEqualTo("code_change");
+        assertThat(user.path("change").path("title").stringValue()).isEqualTo("Tidy exporter");
+        assertThat(user.path("change").path("labels").path(0).stringValue()).isEqualTo("good first issue");
+        assertThat(user.path("change").path("description").stringValue()).hasSize(4000).endsWith("…");
         assertThat(user.path("audiences").path(0).path("code").stringValue()).isEqualTo("operator");
         assertThat(user.path("audiences").path(0).path("intent").stringValue()).isEqualTo("Rollback and monitoring.");
         assertThat(user.path("audiences").path(1).path("intent").stringValue()).contains("No specific intent");
@@ -221,7 +224,9 @@ class OpenAiCompatibleClassifierTest {
                 lockedCategory,
                 TestCategories.CATALOG,
                 List.of(new AudienceBrief("operator", "Rollback and monitoring."), new AudienceBrief("end_user", "")),
-                60
+                60,
+                false,
+                ""
         );
     }
 }

@@ -30,16 +30,33 @@ final class TranslationTexts {
         return kept;
     }
 
-    /** SHA-256 of the source language and the texts sorted by key, so equal input hashes equally. */
-    static String inputHash(String sourceLanguage, Map<String, String> texts) {
+    /**
+     * SHA-256 of the source language, the texts sorted by key, and the context, so equal
+     * input hashes equally. Without a context it is the hash of the input alone, as it was
+     * before contexts existed.
+     */
+    static String inputHash(String sourceLanguage, Map<String, String> texts, String context) {
         Map<String, Object> canonical = new TreeMap<>();
         canonical.put("source", sourceLanguage);
         canonical.put("texts", new TreeMap<>(texts));
+        if (!context.isBlank()) {
+            canonical.put("context", context);
+        }
         return sha256(CANONICAL.writeValueAsString(canonical));
     }
 
-    static String textHash(String text) {
-        return sha256(text);
+    /**
+     * What a cached translation is found by. A text translated with a context is cached
+     * apart from the same text translated with another, or with none.
+     */
+    static String textHash(String text, String context) {
+        if (context.isBlank()) {
+            return sha256(text);
+        }
+        Map<String, String> canonical = new TreeMap<>();
+        canonical.put("context", context);
+        canonical.put("text", text);
+        return sha256(CANONICAL.writeValueAsString(canonical));
     }
 
     /** Two tags with the same primary language, such as {@code vi} and {@code vi-VN}, need no translation. */

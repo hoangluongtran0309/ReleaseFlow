@@ -5,6 +5,7 @@ import com.hoangluongtran0309.releaseflow.change.AiStatus;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.ChangedFileStatus;
 import com.hoangluongtran0309.releaseflow.change.ClassificationSource;
+import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.change.ProcessingStatus;
 import com.hoangluongtran0309.releaseflow.support.TestCategories;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,26 @@ class ReleaseNotePreviewTest {
     })
     void removesOnlyConventionalCommitPrefixes(String title, String expected) {
         assertThat(ReleaseNotePreview.displayTitle(title)).isEqualTo(expected);
+    }
+
+    // A title is all a note has of a change without a summary (ADR-0035).
+    @ParameterizedTest
+    @CsvSource(delimiterString = "|", value = {
+            "fix                                   | true",
+            "fix: typo                             | true",
+            "update deps                           | true",
+            "chore(deps): bump DBV-12 #28 !9       | true",
+            "Backup scheduling OPS-7               | true",
+            "feat: add table export                | false",
+            "Fix login redirect                    | false",
+            "Toàn bộ console tiếng Việt            | false"
+    })
+    void aChangeWithoutASummaryNeedsOneWhenItsTitleHasFewerThanThreeWords(String title, boolean needed) {
+        ChangeView change = change(1, title, TestCategories.FIX, false, 1);
+
+        assertThat(ReleaseNotePreview.needsSummary(change)).isEqualTo(needed);
+        assertThat(ReleaseNotePreview.needsSummary(change.withContent(
+                new NeutralSummary("Fixes a typo in the backup guide.", "", "", ""), Map.of(), "en"))).isFalse();
     }
 
     private static ChangeView change(int number, String title, CategoryRef category, boolean breaking, int minute) {

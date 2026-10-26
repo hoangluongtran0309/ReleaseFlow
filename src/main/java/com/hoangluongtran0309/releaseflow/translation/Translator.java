@@ -8,9 +8,11 @@ import java.util.List;
 interface Translator {
 
     /**
+     * @param context what the Project's administrators say about the product, which
+     *     guides the translation and is not itself translated; empty for none
      * @return one translation per text, in the same order
      */
-    List<String> translate(List<String> texts, String sourceLanguage, String targetLanguage)
+    List<String> translate(List<String> texts, String sourceLanguage, String targetLanguage, String context)
             throws TranslationException;
 
     static void requireNoTransaction() {

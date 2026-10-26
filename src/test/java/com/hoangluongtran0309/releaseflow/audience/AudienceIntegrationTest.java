@@ -182,7 +182,7 @@ class AudienceIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("Vận hành"))
                 .andExpect(jsonPath("$.communicationIntent", containsString("operational risk")))
-                .andExpect(jsonPath("$.templateBody", containsString("  - Cách chuyển đổi: {{.}}")));
+                .andExpect(jsonPath("$.templateBody", containsString("  - Cách chuyển đổi: {{migrationStep}}")));
 
         UUID custom = UUID.fromString(JsonPath.read(create(admin, "board", "Board", "", TEMPLATE)
                 .andReturn().getResponse().getContentAsString(), "$.id"));

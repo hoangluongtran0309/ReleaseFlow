@@ -12,9 +12,9 @@ trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu 
 
 | Mã | Viết cho | Template |
 | --- | --- | --- |
-| `operator` | rủi ro vận hành, cách rollback, những gì cần theo dõi | thay đổi gì kèm liên kết pull request và narrative, rồi vì sao, chi tiết và bước migrate |
+| `operator` | rủi ro vận hành, cách rollback, những gì cần theo dõi | thay đổi gì kèm liên kết pull request và narrative, rồi vì sao, chi tiết, giới hạn, và bước chuyển đổi dưới nhãn theo loại của nó |
 | `contributor` | chi tiết triển khai và thay đổi mã nguồn | như operator, nhưng là chi tiết triển khai thay cho chi tiết chung |
-| `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | chỉ thay đổi gì và narrative |
+| `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | thay đổi gì và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc |
 
 ![Trang Audiences: ba preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
 
@@ -22,12 +22,17 @@ Một audience có một **mã** (chữ thường, chữ số và dấu gạch d
 sau khi tạo), một **tên hiển thị**, một **ý định truyền đạt** mà AI làm theo khi viết narrative
 cho audience đó, và một **template**. Template là
 [Mustache](https://mustache.github.io/mustache.5.html) và dựng một thay đổi thành Markdown với
-các biến `whatChanged`, `whyChanged`, `technicalDetail`, `migrationStep`, `narrative`,
-`reference`, `pullRequestNumber`, `pullRequestUrl` và `linkedIssues` — một danh sách mà mỗi phần
+các biến `whatChanged`, `whyChanged`, `technicalDetail`, `migrationStep`, `migrationKind`,
+`limitations`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl` và
+`linkedIssues` — một danh sách mà mỗi phần
 tử có `key`, `title`, `type`, `status` và `url`, được escape như mọi văn bản khác lấy từ công cụ
 theo dõi issue, đúng như khi được đọc lúc thay đổi được ghi nhận
-([Issue Jira liên kết](sources.md#linked-jira-issues)). Bốn giá trị của bản tóm tắt và
-`narrative` giữ nguyên Markdown, nhưng mọi HTML thô trong đó đều được escape, nên một
+([Issue Jira liên kết](sources.md#linked-jira-issues)). `migrationKind` là `required`,
+`conditional`, `recommended`, hoặc `unspecified` cho bước được ghi trước khi có loại, và để trống
+khi không có bước (xem [Phân loại bằng AI](changes.md#ai-classification-and-summaries)). Vì
+Mustache không so sánh được giá trị, các section `migrationRequired`, `migrationConditional`,
+`migrationRecommended` và `migrationUnspecified` mỗi cái đúng với một loại. Các giá trị của bản
+tóm tắt và `narrative` giữ nguyên Markdown, nhưng mọi HTML thô trong đó đều được escape, nên một
 placeholder như `<id>` hiện đúng như đã viết ở mọi nơi note được đọc. `reference` là cách nguồn của thay đổi
 gọi tên nó: `#12` cho pull request GitHub,
 `!12` cho merge request GitLab, và key của issue, như `APP-12` hay `ENG-12`, cho Jira và Linear;
@@ -36,7 +41,11 @@ gọi tên nó: `#12` cho pull request GitHub,
 mẫu. Template được kiểm tra khi lưu: nó phải biên dịch được, chỉ dùng các biến trên, và dùng
 `{{narrative}}` thay vì gọi tên một audience khác.
 
-Các template chi tiết đi kèm liên kết một thay đổi bằng `[{{reference}}]({{pullRequestUrl}})`.
+Các template chi tiết đi kèm liên kết một thay đổi bằng `[{{reference}}]({{pullRequestUrl}})`,
+và ghi nhãn bước chuyển đổi theo loại của nó: **Bước bắt buộc**, **Nếu áp dụng cho bạn**,
+**Bước khuyến nghị**, hoặc nhãn trung tính **Cách chuyển đổi** cho bước không ghi rõ loại, nên một
+bước không ai gọi là bắt buộc sẽ không bao giờ được trình bày như vậy. Audience tạo trước khi có
+các template này vẫn giữ template của mình cho tới khi preset được đặt lại.
 
 ![Sửa template của một audience rồi lưu lại](assets/release-notes/rn-2-template.webp)
 
@@ -108,6 +117,11 @@ quay về nháp rồi được duyệt lại. Bị giới hạn tốc độ, l�
 tối đa năm lần với khoảng chờ tăng dần; mọi lỗi khác là lỗi cuối cùng. Tiêu đề pull request dùng
 thay cho bản tóm tắt bị thiếu thì không được dịch.
 
+DeepL cũng nhận [ngữ cảnh](changes.md#project-context) của Project làm `context`, phần này giúp
+dịch đúng hơn và không bị dịch hay tính phí. Bản dịch được cache theo cả ngữ cảnh: sửa ngữ cảnh
+thì lần duyệt tiếp theo sẽ dịch lại, còn khi ngữ cảnh không đổi thì cùng một văn bản vẫn không
+bao giờ bị gửi hai lần.
+
 **Tóm tắt** của chính release, dòng nằm dưới tiêu đề của release note, cũng được dịch theo cách
 đó. Tóm tắt do người viết, bằng ngôn ngữ đầu ra của Organization, nên release note bằng ngôn
 ngữ đó in nguyên văn, còn release note bằng mọi ngôn ngữ khác chờ bản dịch như nội dung của một
@@ -154,7 +168,10 @@ Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
    tương thích của nó, **Sửa phân loại** sửa lại chúng, và **Từ chối** bỏ thay đổi khỏi release
    để nó dùng được cho release khác. Duyệt và sửa đều ghi người review lên chính thay đổi, giống
    hệt một lần review trong Hộp thay đổi, kèm ghi chú không bắt buộc. Thay đổi Unknown bắt buộc
-   phải sửa. **Duyệt release** dùng được khi mọi thay đổi đã có quyết định.
+   phải sửa. **Duyệt release** dùng được khi mọi thay đổi đã có quyết định. Một thay đổi chưa có
+   bản tóm tắt mà tiêu đề, sau khi bỏ tiền tố Conventional Commit và key issue, còn dưới ba từ
+   (`fix`, `update deps`) được đánh dấu **Cần viết tóm tắt**: tiêu đề ngắn như vậy không tự đứng
+   được trong note, nên việc duyệt phải chờ một người viết tóm tắt cho nó.
 3. **Đã duyệt.** Người duyệt và thời điểm được ghi lại, và một release note được viết từ
    template cho mỗi audience ở mỗi ngôn ngữ release note (xem
    [Ngôn ngữ release note](#release-note-languages)). Kiểm tra tab của từng release note, sửa
@@ -186,8 +203,11 @@ tiếng Anh hoặc tiếng Việt, theo ngôn ngữ đầu ra.
 ![Các note của một release, mỗi audience và ngôn ngữ một note; note operator đã được sửa tay và được đánh dấu là viết tay](assets/release-notes/rn-7-manual-note.webp)
 
 Trong lúc review và sau khi duyệt, **Sửa tóm tắt** trên tab Review cho phép một người viết hoặc
-sửa bản tóm tắt của một thay đổi và narrative của từng audience. Việc này dùng được dù AI đã
-viết hay chưa. Thay đổi ghi lại người đã viết, và các release note của một release đã duyệt mà
+sửa bản tóm tắt của một thay đổi, gồm cả loại bước chuyển đổi và giới hạn, và narrative của
+từng audience. Việc này dùng được dù AI đã viết hay chưa. Request không nêu `migrationKind`,
+như bên gọi viết trước khi có trường này gửi, sẽ ghi `UNSPECIFIED` khi có bước và `NONE` khi không
+có; loại không khớp với bước (`NONE` mà có bước, loại khác mà không có) trả về
+`400 validation_failed`. Thay đổi ghi lại người đã viết, và các release note của một release đã duyệt mà
 vẫn theo template sẽ được dựng lại. Release note phản ánh các thay đổi tại thời điểm duyệt: để
 lấy một phân loại được sửa sau đó trong Hộp thay đổi, đưa release về nháp rồi duyệt lại. Xem
 [ADR-0010](adr/0010-release-review-lifecycle.md) và
@@ -213,7 +233,8 @@ POST   /api/projects/{projectId}/releases/{releaseId}/return-to-draft
 POST   /api/projects/{projectId}/releases/{releaseId}/publish
 POST   /api/projects/{projectId}/releases/{releaseId}/translations/retry
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/summary
-                                                                         {"whatChanged", "whyChanged", "technicalDetail", "migrationStep", "narratives": {"<code>": "..."}}
+                                                                         {"whatChanged", "whyChanged", "technicalDetail", "migrationStep",
+                                                                          "migrationKind", "limitations", "narratives": {"<code>": "..."}}
 GET    /api/projects/{projectId}/releases/{releaseId}/note-previews
 GET    /api/projects/{projectId}/releases/{releaseId}/notes
 PUT    /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}     {"content"}
@@ -235,6 +256,7 @@ phiên bản và trạng thái) mà mỗi thay đổi của Project thuộc về
 | Thao tác không phù hợp với trạng thái của release | `409 release_status_conflict` |
 | Yêu cầu review hoặc duyệt khi không có thay đổi nào | `409 release_empty` |
 | Duyệt trước khi mọi thay đổi có quyết định | `409 release_review_incomplete` |
+| Duyệt trong khi một thay đổi chưa có bản tóm tắt và tiêu đề dưới ba từ; `detail` nêu tên các thay đổi đó | `409 change_summary_required` |
 | Gửi `APPROVE` với phân loại khác phân loại hiện tại của thay đổi | `409 classification_changed` |
 | `unknown` hoặc một category không được hỗ trợ trong quyết định | `400 invalid_change_review` |
 | `APPROVE` một thay đổi Unknown, dù có nêu category nào: approve giữ nguyên phân loại hiện tại, nên thay đổi Unknown phải dùng `EDIT` kèm một category | `400 invalid_change_review` |

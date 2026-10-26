@@ -142,6 +142,8 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision` | thành viên |
 | `GET /api/projects/{projectId}/sensitive-paths` | thành viên |
 | `PUT /api/projects/{projectId}/sensitive-paths` | quản trị viên |
+| `GET /api/projects/{projectId}/context` | thành viên |
+| `PUT /api/projects/{projectId}/context` | quản trị viên |
 | `GET /api/categories` | thành viên |
 | `POST /api/categories` | quản trị viên |
 | `PUT /api/categories/{categoryId}`, `DELETE /api/categories/{categoryId}` | quản trị viên |
@@ -238,5 +240,5 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Audience | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
 | Release | `400` | `invalid_release_schedule` |
 | Release | `404` | `release_not_found`, `release_note_not_found` |
-| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
+| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
 | Automation | `400`, `404`, `409` | Xem [Automation](automation.md#rest) |

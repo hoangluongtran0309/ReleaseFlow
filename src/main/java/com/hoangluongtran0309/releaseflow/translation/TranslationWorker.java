@@ -94,7 +94,7 @@ class TranslationWorker {
         Optional<Claim> claim = transactionTemplate.execute(status -> jobRepository.lockNextDue(now).map(job -> {
             job.claim(now);
             return new Claim(job.getId(), job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(),
-                    job.getInput(), cached(job), job.getAttempts(), now);
+                    job.getInput(), job.getContext(), cached(job), job.getAttempts(), now);
         }));
         if (claim.isEmpty()) {
             return false;
@@ -115,7 +115,8 @@ class TranslationWorker {
         Map<String, String> fresh = new HashMap<>();
         try {
             if (!missing.isEmpty()) {
-                List<String> translated = translator.get().translate(missing, claim.sourceLanguage(), claim.targetLanguage());
+                List<String> translated = translator.get().translate(
+                        missing, claim.sourceLanguage(), claim.targetLanguage(), claim.context());
                 for (int index = 0; index < missing.size(); index++) {
                     fresh.put(missing.get(index), translated.get(index));
                 }
@@ -136,7 +137,8 @@ class TranslationWorker {
             job.succeed(output, at);
             fresh.forEach((text, translation) -> {
                 TranslationCacheEntry.Key key = new TranslationCacheEntry.Key(
-                        claim.organizationId(), claim.sourceLanguage(), claim.targetLanguage(), TranslationTexts.textHash(text)
+                        claim.organizationId(), claim.sourceLanguage(), claim.targetLanguage(),
+                        TranslationTexts.textHash(text, claim.context())
                 );
                 if (!cacheRepository.existsById(key)) {
                     cacheRepository.save(new TranslationCacheEntry(key, translation, at));
@@ -176,7 +178,7 @@ class TranslationWorker {
     private Map<String, String> cached(TranslationJob job) {
         Map<String, String> byHash = job.getInput().values().stream()
                 .distinct()
-                .collect(Collectors.toMap(TranslationTexts::textHash, text -> text));
+                .collect(Collectors.toMap(text -> TranslationTexts.textHash(text, job.getContext()), text -> text));
         Map<String, String> cached = new HashMap<>();
         cacheRepository.findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
                         job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(), byHash.keySet())
@@ -199,6 +201,7 @@ class TranslationWorker {
             String sourceLanguage,
             String targetLanguage,
             Map<String, String> input,
+            String context,
             Map<String, String> cached,
             int attempt,
             Instant claimedAt

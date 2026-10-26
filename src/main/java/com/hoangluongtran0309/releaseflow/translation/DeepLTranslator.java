@@ -23,7 +23,8 @@ import java.util.Locale;
 /**
  * DeepL's {@code POST /v2/translate}. Texts are sent in batches that stay under DeepL's
  * request limits, and a response that does not return one translation per text is
- * rejected. The API key is never logged.
+ * rejected. A Project's context goes in {@code context}, which DeepL neither translates
+ * nor bills. The API key is never logged.
  */
 final class DeepLTranslator implements Translator {
 
@@ -62,12 +63,12 @@ final class DeepLTranslator implements Translator {
     }
 
     @Override
-    public List<String> translate(List<String> texts, String sourceLanguage, String targetLanguage)
+    public List<String> translate(List<String> texts, String sourceLanguage, String targetLanguage, String context)
             throws TranslationException {
         Translator.requireNoTransaction();
         List<String> translations = new ArrayList<>(texts.size());
         for (List<String> batch : batches(texts)) {
-            translations.addAll(translateBatch(batch, sourceCode(sourceLanguage), targetCode(targetLanguage)));
+            translations.addAll(translateBatch(batch, sourceCode(sourceLanguage), targetCode(targetLanguage), context));
         }
         return translations;
     }
@@ -113,11 +114,15 @@ final class DeepLTranslator implements Translator {
         };
     }
 
-    private List<String> translateBatch(List<String> batch, String source, String target) throws TranslationException {
+    private List<String> translateBatch(List<String> batch, String source, String target, String context)
+            throws TranslationException {
         ObjectNode body = objectMapper.createObjectNode();
         batch.forEach(body.putArray("text")::add);
         body.put("source_lang", source);
         body.put("target_lang", target);
+        if (context != null && !context.isBlank()) {
+            body.put("context", context);
+        }
         String response;
         try {
             response = restClient.post()

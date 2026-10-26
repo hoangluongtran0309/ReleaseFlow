@@ -39,7 +39,8 @@ class AiClassificationParserTest {
                 Map.of(),
                 null,
                 90,
-                List.of()
+                List.of(),
+                null
         ));
     }
 
@@ -129,6 +130,68 @@ class AiClassificationParserTest {
                  "neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""}}
                 """.formatted(context), REQUEST))
                 .isInstanceOf(AiClassificationException.class);
+    }
+
+    @Test
+    void keepsAMigrationKindThatMatchesItsStepAndTheLimitations() {
+        AiClassification answer = parser.parse(core("\"Re-save each target.\"", "\"required\"",
+                "\"Validation is enforced only for MongoDB.\""), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.REQUIRED);
+        assertThat(answer.summary().limitations()).isEqualTo("Validation is enforced only for MongoDB.");
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    // One slip must not cost the category, the summary, and every narrative (ADR-0035).
+    @ParameterizedTest
+    @CsvSource(delimiterString = "|", value = {
+            "'\"Re-save each target.\"' | '\"none\"'        | RECOMMENDED | none",
+            "'\"Re-save each target.\"' | '\"unspecified\"' | RECOMMENDED | unspecified",
+            "'\"Re-save each target.\"' | '\"optional\"'    | RECOMMENDED | optional",
+            "'\"Re-save each target.\"' | null              | UNSPECIFIED | ''",
+            "'\"\"'                      | '\"required\"'    | NONE        | required",
+            "'\"\"'                      | '\"conditional\"' | NONE        | conditional"
+    })
+    void correctsAMigrationKindThatDoesNotMatchItsStep(String step, String kind, MigrationKind expected, String returned) {
+        AiClassification answer = parser.parse(core(step, kind, "\"\""), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(expected);
+        assertThat(answer.correctedMigrationKind()).isEqualTo(returned);
+    }
+
+    // Nothing says how much the step asks, so it is never presented as required, and a
+    // person checks it.
+    @Test
+    void aStepWithoutAKindIsUnspecifiedAndCorrected() {
+        AiClassification answer = parser.parse("""
+                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Keys per target.",
+                 "why_changed":"","technical_detail":"","migration_step":"Re-save each target."}}
+                """, REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.UNSPECIFIED);
+        assertThat(answer.correctedMigrationKind()).isEmpty();
+        assertThat(ReviewTrigger.migrationKindMismatch(answer.correctedMigrationKind()))
+                .isEqualTo(new ReviewTrigger(ReviewTriggerType.MIGRATION_KIND_MISMATCH, null));
+    }
+
+    @Test
+    void anAnswerWithoutAKindOrLimitationsForAnEmptyStepNeedsNoCorrection() {
+        AiClassification answer = parser.parse("""
+                {"category":"fix","breaking_change":false,"needs_human_review":false,%s}
+                """.formatted(SUMMARY), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.summary().limitations()).isEmpty();
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    private static String core(String step, String kind, String limitations) {
+        return """
+                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Keys per target.",
+                 "why_changed":"","technical_detail":"","migration_step":%s,"migration_kind":%s,"limitations":%s}}
+                """.formatted(step, kind, limitations);
     }
 
     @Test

@@ -27,6 +27,7 @@ class ReleaseNoteWriter {
     static final String WHY_CHANGED = "whyChanged";
     static final String TECHNICAL_DETAIL = "technicalDetail";
     static final String MIGRATION_STEP = "migrationStep";
+    static final String LIMITATIONS = "limitations";
     static final String NARRATIVE = "narrative.";
     static final String RELEASE_SUMMARY = "releaseSummary";
 
@@ -90,16 +91,21 @@ class ReleaseNoteWriter {
         texts.put(WHY_CHANGED, summary.whyChanged());
         texts.put(TECHNICAL_DETAIL, summary.technicalDetail());
         texts.put(MIGRATION_STEP, summary.migrationStep());
+        // Blank texts are never sent, so a summary without limitations hashes as it did before.
+        texts.put(LIMITATIONS, summary.limitations());
         change.audienceNarratives().forEach((code, narrative) -> texts.put(NARRATIVE + code, narrative == null ? "" : narrative));
         return texts;
     }
 
+    // The migration kind is not text: the translation keeps the source's.
     static ChangeView translated(ChangeView change, Map<String, String> texts, String language) {
         NeutralSummary summary = new NeutralSummary(
                 texts.get(WHAT_CHANGED),
                 texts.get(WHY_CHANGED),
                 texts.get(TECHNICAL_DETAIL),
-                texts.get(MIGRATION_STEP)
+                texts.get(MIGRATION_STEP),
+                change.neutralSummary().migrationKind(),
+                texts.getOrDefault(LIMITATIONS, "")
         );
         Map<String, String> narratives = new LinkedHashMap<>();
         texts.forEach((key, text) -> {
