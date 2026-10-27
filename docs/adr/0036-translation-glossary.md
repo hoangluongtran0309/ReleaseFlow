@@ -1,6 +1,6 @@
 # ADR-0036: An Organization glossary for translated notes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-27
 - Amends: [ADR-0015](0015-multilingual-release-notes.md), for what a translation is
   asked with, the identity of its job and cache, and the release page
