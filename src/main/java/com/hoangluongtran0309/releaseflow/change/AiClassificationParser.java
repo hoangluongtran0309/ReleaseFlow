@@ -20,8 +20,9 @@ import java.util.Optional;
  * audiences are read, and a missing or empty one is left out. A category suggestion
  * is kept only with an Unknown answer and a valid code that is not already listed. A
  * migration kind that does not match the step is corrected rather than rejected, and
- * the answer records that it was; a missing limitations field is empty, and a limitation
- * about the input rather than the change is dropped (ADR-0035).
+ * the answer records that it was; a step that only says nothing needs doing is no step. A
+ * missing limitations field is empty, and a limitation about the input or the change's
+ * scope rather than what it does not do yet is dropped (ADR-0035).
  */
 final class AiClassificationParser {
 
@@ -70,7 +71,7 @@ final class AiClassificationParser {
         if (!context.isObject() || !context.path("score").isNumber()) {
             throw invalid();
         }
-        String migrationStep = text(core, "migration_step");
+        String migrationStep = MigrationSteps.stated(text(core, "migration_step"));
         JsonNode returnedKind = core.path("migration_kind");
         Optional<MigrationKind> stated = statedKind(returnedKind);
         // none with a step becomes recommended; any other kind without one, none. A step

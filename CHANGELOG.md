@@ -37,7 +37,10 @@ section into the version's entry, and the GitHub release is written from it.
   become this project's; it is breaking only when its own words say so.
 - A change with a title like "fix" and an empty or very short description waits for a
   person's summary even when the AI wrote one, since the AI could only restate the title.
-- Limitations that only remark on what the change did not explain are dropped.
+- Limitations that only remark on what the change did not explain, or only say what the
+  change does not affect, are dropped.
+- An AI migration step that only says nothing needs doing, such as "No immediate action
+  is required", is dropped, so the change has no step rather than a recommended one.
 - Every AI classification request uses temperature 0, so the same change varies less from
   one request to the next. A model that accepts only its default temperature, such as an
   OpenAI reasoning model, can no longer classify changes.

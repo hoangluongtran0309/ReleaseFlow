@@ -9,7 +9,9 @@ import java.util.regex.Pattern;
  * Keeps an AI's limitations to what a change says it deliberately does not do yet
  * (ADR-0035). A sentence about the input itself — that something was "not provided" or
  * "not specified" — says nothing about the change, so it is dropped, whatever the prompt
- * asked. Only an AI answer is filtered: a person's words stay as written.
+ * asked. So is a sentence that only states the change's scope — that it "does not
+ * affect" something or "only affects" another — since scope is what an audience's
+ * relevance decides. Only an AI answer is filtered: a person's words stay as written.
  */
 final class Limitations {
 
@@ -24,18 +26,33 @@ final class Limitations {
                     + "|không được (cung cấp|nêu|mô tả|nói rõ)|không nêu rõ|chưa được nêu|không có thông tin|không rõ",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
+    private static final Pattern ONLY_SCOPE = Pattern.compile(
+            "\\b(does not|doesn't|do not|don't|did not|didn't|will not|won't) (affect|impact|change|alter|touch)\\b"
+                    + "|\\b(has|have|had) no (impact|effect) on\\b|^no (impact|effect) on\\b"
+                    + "|\\b(only affects|only impacts|affects only|impacts only)\\b"
+                    + "|\\b(is|are|was|were) not affected\\b|^no\\b.*\\b(is|are|was|were) affected\\b"
+                    + "|^no (specific |other )?(changes|modifications)\\b"
+                    + "|\\bonly\\b[^.;]*\\b(is|are|was|were|has been|have been|has|have)"
+                    + " (changed|altered|updated|modified|introduced|touched|affected)\\b"
+                    + "|^no other\\b.*\\b(changed|affected)\\b"
+                    + "|\\b(is|are) unchanged\\b|\\bremains? as before\\b"
+                    + "|không ảnh hưởng|chỉ ảnh hưởng|không tác động",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+    );
     private static final Pattern SENTENCE_END = Pattern.compile("(?<=[.!?])\\s+");
     private static final Pattern LIST_MARKER = Pattern.compile("^\\s*([-*+]|\\d+[.)])\\s*$");
+    private static final Pattern LIST_ITEM = Pattern.compile("^([-*+]|\\d+[.)])\\s+");
 
     private Limitations() {
     }
 
-    /** The limitations without any sentence about the input; empty when nothing is left. */
+    /** The limitations without any sentence about the input or the scope; empty when nothing is left. */
     static String stated(String limitations) {
         List<String> lines = new ArrayList<>();
         for (String line : limitations.split("\n", -1)) {
             String kept = String.join(" ", Arrays.stream(SENTENCE_END.split(line))
-                    .filter(sentence -> !ABOUT_THE_INPUT.matcher(sentence).find())
+                    .filter(sentence -> !ABOUT_THE_INPUT.matcher(sentence).find()
+                            && !ONLY_SCOPE.matcher(LIST_ITEM.matcher(sentence.strip()).replaceFirst("")).find())
                     .toList());
             if (!kept.isBlank() && !LIST_MARKER.matcher(kept).matches()) {
                 lines.add(kept.stripTrailing());

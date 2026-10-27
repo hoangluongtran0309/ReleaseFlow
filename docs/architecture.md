@@ -772,10 +772,15 @@ evidence. `neutral_core` gains `migration_kind` and `limitations`. The parser
 never rejects an answer over the kind: `none` with a step becomes `recommended`,
 any other kind (or none at all) without a step becomes `none`, a step with an
 unknown kind becomes `recommended` and one with no kind `unspecified`, and the answer records what the AI returned
-so `ChangeAiMerge` adds a `MIGRATION_KIND_MISMATCH` trigger. A missing
+so `ChangeAiMerge` adds a `MIGRATION_KIND_MISMATCH` trigger. Before the kind is read,
+`MigrationSteps.stated` empties a step that only says nothing needs doing ("No
+immediate action is required", "No migration required") unless the verdict is
+qualified or another clause still asks something, so its kind becomes `none`. A missing
 `limitations` reads as empty, and `Limitations.stated` drops every sentence of it that
 talks about the input ("not provided", "not specified", "no information", and their kin
-in English and Vietnamese) rather than the change. `NeutralSummary` stores both;
+in English and Vietnamese) or only states the change's scope ("does not affect", "has
+no impact on", "only affects") rather than what the change does not do yet. Both read
+only the answer, so the request, and replays recorded from it, are unchanged. `NeutralSummary` stores both;
 a summary stored before them reads its step as `UNSPECIFIED` (`MigrationKind`),
 which no template or label treats as required.
 

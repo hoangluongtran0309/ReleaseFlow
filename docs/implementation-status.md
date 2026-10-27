@@ -503,7 +503,9 @@ where it first appears; ADRs are linked from the slice they record.
     branch (stored since Flyway `V31`), sent to the AI without their quoted release
     notes, changelog, and commits, and breaking only when their own words say so;
   - AI limitations kept to what the change says it does not do yet, with sentences
-    about the input dropped by a deterministic filter;
+    about the input or only about the change's scope dropped by a deterministic filter;
+  - an AI migration step that only says nothing needs doing dropped, so its kind is
+    `none`;
   - every classification request at a fixed temperature of `0`.
 
 ## In progress

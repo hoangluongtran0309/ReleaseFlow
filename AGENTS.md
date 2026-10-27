@@ -165,13 +165,16 @@ changing behavior.
   classified afterwards and to translations made at the next approval.
 - An AI answer is never rejected over its migration kind: a kind that does not
   match its step is corrected and adds `MIGRATION_KIND_MISMATCH`. A step whose
-  writer named no kind is `UNSPECIFIED`, and nothing presents it as required.
+  writer named no kind is `UNSPECIFIED`, and nothing presents it as required. An
+  AI step that only says nothing needs doing is dropped, and its kind is `none`.
 - A change with a title of fewer than three words reaches a note only with a
   summary a person wrote, or one the AI wrote from a description of at least ten
   words whose context it did not find insufficient; approval waits otherwise.
 - A dependency update's quoted upstream notes never reach the AI; it is breaking
-  only when its own words say so. An AI limitation about the input itself is
-  dropped. Every classification request uses the same fixed temperature.
+  only when its own words say so. An AI limitation about the input itself, or
+  one that only states the change's scope, is dropped; these filters read the
+  answer and never change the request. Every classification request uses the
+  same fixed temperature.
 - Applied Flyway migrations are immutable; add the next version for schema changes.
 - Published Release Notes are immutable snapshots.
 - Categories come from the Organization's catalog, and a change keeps a

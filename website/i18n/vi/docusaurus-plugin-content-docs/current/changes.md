@@ -162,11 +162,17 @@ Một bước chuyển đổi có loại:
 Loại không khớp với bước sẽ được chỉnh lại chứ không bị loại bỏ, vì mỗi thay đổi chỉ được hỏi
 AI một lần: `none` mà có bước thì thành `recommended`, loại khác mà không có bước thì thành
 `none`, còn bước không có loại thì là `UNSPECIFIED`. Thay đổi đó khi ấy có trigger review
-**Đã chỉnh loại bước chuyển đổi**, để một người kiểm lại bước này.
+**Đã chỉnh loại bước chuyển đổi**, để một người kiểm lại bước này. Bước do AI viết mà chỉ nói
+rằng không cần làm gì, như "No immediate action is required" hay "No migration required", sẽ
+bị bỏ trước, nên loại là `NONE`; bước vẫn yêu cầu điều gì đó ("No action is required unless you
+enable verification", "Rename the setting; no further action is required") thì được giữ.
 
 Giới hạn chỉ là những gì chính nội dung của thay đổi nói rằng nó cố ý chưa làm. Câu mà AI viết
 vào đó để nói về dữ liệu đầu vào, như "Rollback steps are not provided" hay "The version is not
-specified", sẽ bị bỏ, và trường giới hạn bị thiếu thì coi là trống. Mọi request đều dùng
+specified", sẽ bị bỏ, và câu chỉ nói phạm vi của thay đổi, như "This does not affect the CLI"
+hay "It only affects the CI environment", cũng vậy, vì mức liên quan của từng đối tượng đọc đã
+cho biết thay đổi quan trọng với ai. Giới hạn như "Certificate validation is enforced only for
+MongoDB" được giữ, và trường giới hạn bị thiếu thì coi là trống. Mọi request đều dùng
 temperature `0`, để cùng một thay đổi dao động ít nhất trong khả năng của model (xem
 [Cấu hình](configuration.md#ai)).
 

@@ -173,12 +173,18 @@ A kind that does not match its step is corrected rather than rejected, since the
 answer is asked for only once: `none` with a step becomes `recommended`, and any
 other kind without a step becomes `none`, and a step whose kind is missing is
 `UNSPECIFIED`. The change then gets a **Migration kind corrected** review trigger, so a
-person checks the step.
+person checks the step. A step the AI writes that only says nothing needs doing, such as
+"No immediate action is required" or "No migration required", is dropped first, so the
+kind is `NONE`; one that still asks something ("No action is required unless you enable
+verification", "Rename the setting; no further action is required") is kept.
 
 Limitations are only what the change's own text says it deliberately does not do yet.
 A sentence the AI writes there about its input instead, such as "Rollback steps are not
-provided" or "The version is not specified", is dropped, and a missing limitations field
-is empty. Every request asks for temperature `0`, so the same change varies as little as
+provided" or "The version is not specified", is dropped, and so is one that only states
+the change's scope, such as "This does not affect the CLI" or "It only affects the CI
+environment", since an audience's relevance already says who the change matters to. A
+limitation such as "Certificate validation is enforced only for MongoDB" is kept, and a
+missing limitations field is empty. Every request asks for temperature `0`, so the same change varies as little as
 the model allows (see [Configuration](configuration.md#ai)).
 
 The Change Inbox shows the summary and narratives under each change, and the changes

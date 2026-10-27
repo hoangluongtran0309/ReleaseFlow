@@ -186,6 +186,41 @@ class AiClassificationParserTest {
         assertThat(remarksOnly.summary().limitations()).isEmpty();
     }
 
+    // A step that only says nothing needs doing is no step, so none stays none and its fact
+    // stays in the limitations the AI wrote.
+    @Test
+    void dropsAStepThatOnlySaysNothingNeedsDoing() {
+        AiClassification answer = parser.parse(core(
+                "\"No immediate action is required; existing passwords are migrated to per-target keys when edited.\"",
+                "\"none\"",
+                "\"Existing passwords keep the master key until each target is next saved.\""), REQUEST);
+
+        assertThat(answer.summary().migrationStep()).isEmpty();
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.summary().limitations()).isEqualTo("Existing passwords keep the master key until each target is next saved.");
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    @Test
+    void aKindForAStepThatSaysNothingNeedsDoingIsCorrectedToNone() {
+        AiClassification answer = parser.parse(core("\"No migration required.\"", "\"recommended\"", "\"\""), REQUEST);
+
+        assertThat(answer.summary().migrationStep()).isEmpty();
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.correctedMigrationKind()).isEqualTo("recommended");
+    }
+
+    @Test
+    void dropsTheLimitationsThatOnlyStateTheScope() {
+        AiClassification answer = parser.parse(core("\"\"", "\"none\"",
+                "\"Certificate validation is enforced only for MongoDB. The change has no impact on PostgreSQL targets.\""), REQUEST);
+        AiClassification scopeOnly = parser.parse(core("\"\"", "\"none\"",
+                "\"It only affects the CI environment.\""), REQUEST);
+
+        assertThat(answer.summary().limitations()).isEqualTo("Certificate validation is enforced only for MongoDB.");
+        assertThat(scopeOnly.summary().limitations()).isEmpty();
+    }
+
     @Test
     void anAnswerWithoutAKindOrLimitationsForAnEmptyStepNeedsNoCorrection() {
         AiClassification answer = parser.parse("""

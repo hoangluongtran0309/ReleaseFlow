@@ -114,6 +114,17 @@ they are decided together and the response contract changes once.
     `unspecified`, since nothing says how much it asks, and adds the same trigger; a
     step with an unknown kind becomes `recommended`. A missing kind with no step is
     simply `none`, since there is nothing to check.
+
+    A step that only says nothing needs doing — "No immediate action is required", "No
+    migration required", "Nothing to do" — is no step, so the parser drops it before the
+    kind is read, and the kind becomes `none`. Read as a step, `none` would become
+    `recommended`, the wrong direction. A fact written beside that verdict, such as that
+    existing passwords move to the new key when edited, belongs in `limitations`, where
+    the replays already put it. A step is kept when the verdict is qualified ("unless",
+    "if", "for most installations"), follows something to do ("no further action"), or
+    sits beside a clause that still asks something ("must", "should", or an imperative
+    such as "Rename"). A kind other than `none` for a dropped step is corrected like any
+    kind for no step.
   - **`limitations`**: only what the change's own text says it deliberately does not do
     yet, such as "certificate validation is enforced only for MongoDB", or that existing
     passwords keep the old scheme until each target is next saved. That is a fact the
@@ -123,8 +134,16 @@ they are decided together and the response contract changes once.
     The replays still returned remarks about the input as limitations, so the parser
     drops, deterministically, every sentence of an AI's limitations that talks about the
     input rather than the change: "not provided", "not specified", "not detailed", "no
-    information", and their kin in English and Vietnamese. A person's limitations are
-    kept as written.
+    information", and their kin in English and Vietnamese. It drops, the same way, every
+    sentence that only states the change's scope: "does not affect…", "has no impact
+    on…", "only affects the CI environment", "only the tests were changed", "is
+    unchanged". Scope is what an audience's relevance decides (below), not something the
+    change does not do yet. A sentence that names where a real limitation applies, such as
+    "certificate validation is enforced only for MongoDB", is kept. A person's limitations
+    are kept as written.
+
+    Both filters work on the answer alone: the prompt and everything else sent to the
+    provider are unchanged, so recorded replays of the request stay valid.
 - **Summaries recorded before this decision have a fifth kind, `unspecified`**, when
   they have a migration step, and no limitations. Their steps were written as "what to do
   when upgrading" and some say "no direct action is required", so reading them as
