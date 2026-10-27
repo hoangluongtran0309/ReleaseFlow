@@ -27,6 +27,12 @@ class LimitationsTest {
             "The pull request does not mention which databases are affected.",
             "Whether existing schedules migrate is unclear.",
             "No details on error handling.",
+            "No detail about the retry policy.",
+            "No mention of multi-user support or role-based access.",
+            "The change makes no mention of Windows.",
+            "It does not mention whether existing schedules migrate.",
+            "Support for other databases is not mentioned.",
+            "Không đề cập đến hỗ trợ nhiều người dùng.",
             "Phạm vi ảnh hưởng không được nêu rõ.",
             "Không có thông tin về cách rollback."
     })

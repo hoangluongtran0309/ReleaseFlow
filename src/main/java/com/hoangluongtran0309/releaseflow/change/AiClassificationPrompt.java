@@ -64,7 +64,10 @@ final class AiClassificationPrompt {
               limitations (only what the change's own text says it deliberately does not do yet, such as a part left for a later change; never what the evidence leaves out; an empty string otherwise).
             - suggested_category: an object with code, display_name, group, and rationale. Fill it only when the change is clear but no listed category fits: then return category UNKNOWN, propose one new category (code in UPPER_SNAKE_CASE, a short display name, the closest group, and why none of the listed categories fits), and set needs_human_review to true. Otherwise return empty strings and the group other.
             - context_sufficiency: an object with score (an integer from 0 to 100) and reasons (a few short upper-snake-case codes for missing source evidence, such as NO_PROBLEM_STATEMENT). Score how much evidence the pull request gives about what changed and why, not how well it is written.
-            - narratives: an object with one string for each audience listed in the user message, keyed by the audience's code. Each string explains this same change to that audience in one or two sentences, following the audience's intent.
+            - narratives: an object with one entry for each audience listed in the user message, keyed by the audience's code. Each entry explains this same change to that audience, following the audience's intent, with three strings:
+              relevance (none when this reader would neither notice nor need the change, as the audience's intent describes; brief when its headline is enough; full when the reader needs the detail),
+              headline (this reader's lead for the change: one line of at most 20 words, without links),
+              body (one or two sentences for this reader; an empty string when relevance is none).
 
             Rules:
             - If you are unsure whether the change is breaking, set breaking_change and needs_human_review to true.
@@ -81,8 +84,8 @@ final class AiClassificationPrompt {
               - A migration step is required only when the evidence says installations cannot do without it. Never write that nothing needs to be done when the evidence describes a step.
               - Never write about what the evidence lacks, such as details that are not given or a summary that is limited. Leave the field empty instead.
             - neutral_core states the facts once. The narratives express the same facts for different readers: they differ in the kind of information they keep, not merely in wording, and never add facts the evidence does not support.
-            - The keys of narratives are exactly the audience codes given. Never invent, omit, or translate a code. When nothing useful can be said to an audience, return an empty string for it.
-            - Write every neutral_core value and every narrative in the language named by output_language. The field names, audience codes, and category values are identifiers; never translate them.
+            - The keys of narratives are exactly the audience codes given. Never invent, omit, or translate a code. When nothing useful can be said to an audience, return relevance none with an empty headline and body.
+            - Write every neutral_core value and every narrative headline and body in the language named by output_language. The field names, audience codes, relevance values, and category values are identifiers; never translate them.
             """;
 
     private static final String BASE_SCHEMA = """
@@ -140,6 +143,19 @@ final class AiClassificationPrompt {
             }
             """;
 
+    private static final String NARRATIVE_SCHEMA = """
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["relevance", "headline", "body"],
+              "properties": {
+                "relevance": {"type": "string", "enum": ["none", "brief", "full"]},
+                "headline": {"type": "string"},
+                "body": {"type": "string"}
+              }
+            }
+            """;
+
     private AiClassificationPrompt() {
     }
 
@@ -148,7 +164,10 @@ final class AiClassificationPrompt {
         return SYSTEM.replace("{dependency_rule}", request.dependencyUpdate() ? DEPENDENCY_RULE : "");
     }
 
-    /** The response schema: the category codes to choose from, and one required narrative per audience code. */
+    /**
+     * The response schema: the category codes to choose from, and one required narrative per
+     * audience code, each with a relevance, a headline, and a body (ADR-0035).
+     */
     static ObjectNode responseSchema(AiClassificationRequest request, ObjectMapper objectMapper) {
         ObjectNode schema = (ObjectNode) objectMapper.readTree(BASE_SCHEMA);
         ArrayNode categories = (ArrayNode) schema.path("properties").path("category").path("enum");
@@ -159,7 +178,7 @@ final class AiClassificationPrompt {
         ObjectNode properties = (ObjectNode) narratives.path("properties");
         for (String code : audienceCodes) {
             required.add(code);
-            properties.putObject(code).put("type", "string");
+            properties.set(code, objectMapper.readTree(NARRATIVE_SCHEMA));
         }
         return schema;
     }

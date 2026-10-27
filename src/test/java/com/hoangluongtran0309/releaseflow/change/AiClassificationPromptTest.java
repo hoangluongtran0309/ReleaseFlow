@@ -72,6 +72,23 @@ class AiClassificationPromptTest {
         }
     }
 
+    @Test
+    void asksEachAudienceOfTheRequestForARelevanceAHeadlineAndABody() {
+        AiClassificationRequest request = request(SourceType.GITHUB, "");
+        JsonNode narratives = AiClassificationPrompt.responseSchema(request, OBJECT_MAPPER)
+                .path("properties").path("narratives");
+
+        assertThat(narratives.path("required")).isEqualTo(OBJECT_MAPPER.valueToTree(request.audienceCodes()));
+        for (String code : request.audienceCodes()) {
+            assertThat(narratives.path("properties").path(code).path("required").toString())
+                    .isEqualTo("[\"relevance\",\"headline\",\"body\"]");
+        }
+        assertThat(AiClassificationPrompt.system(request))
+                .contains("relevance (none when this reader would neither notice nor need the change")
+                .contains("one line of at most 20 words, without links")
+                .contains("return relevance none with an empty headline and body");
+    }
+
     private static AiClassificationRequest request(SourceType type, String context) {
         return request(type, context, false);
     }

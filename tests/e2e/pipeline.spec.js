@@ -146,3 +146,74 @@ test('an administrator excludes a change from releases and includes it again', a
   await page.getByRole('button', { name: /include in releases again|đưa trở lại vào release/i }).click();
   await expect(page.locator('li[id^="change-"] .badge', { hasText: /excluded from releases|đã loại khỏi release/i })).toHaveCount(0);
 });
+
+// ADR-0035: a person tells each audience how much a change concerns it, and the notes
+// follow. Run in both languages; the projects run it in both themes.
+test('edit summary sets a relevance, a headline, and a body for each audience', async ({ page, context, request, baseURL }) => {
+  for (const language of ['en', 'vi']) {
+    await context.addCookies([{ name: 'releaseflow_lang', value: language, url: baseURL }]);
+    await registerAndSignIn(page);
+    const project = await projectWithMergedPullRequest(page, request, {
+      title: 'feat: add table export',
+      body: 'Exports any table as a CSV file, for the people who asked for spreadsheets.',
+    });
+    // The release offers the change once the worker has finished processing it.
+    await expect(async () => {
+      await page.goto(`/changes?project=${project.id}`);
+      await expect(page.locator('li[id^="change-"] summary', { hasText: /exclude from releases|loại khỏi release/i }))
+        .toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 20_000 });
+
+    await page.goto(`/releases?project=${project.id}`);
+    await page.getByLabel(/^version|phiên bản/i).fill('1.0.0');
+    await page.getByRole('button', { name: /create release|tạo release/i }).click();
+    await expect(page.locator('h1.page-heading')).toHaveText('1.0.0');
+    await page.getByRole('button', { name: /^(add all available|thêm tất cả)$/i }).click();
+    await page.getByRole('button', { name: /^(request review|yêu cầu review)$/i }).click();
+
+    const details = page.locator('details[id^="summary-"]');
+    if (!(await details.evaluate((element) => element.open))) {
+      await details.locator('summary').first().click();
+    }
+    const form = page.getByRole('form', { name: /edit change summary|sửa tóm tắt thay đổi/i });
+    // Audiences are named in the Organization's output language, not the interface's.
+    const endUser = form.getByRole('group', { name: /^(for|cho) (end user|người dùng cuối)$/i });
+    const operator = form.getByRole('group', { name: /^(for|cho) (operator|vận hành)$/i });
+    // By accessible name: a label's text also holds the options and the hint it wraps.
+    await endUser.getByRole('combobox', { name: /^(relevance|mức liên quan)$/i }).selectOption('NONE');
+    await operator.getByRole('combobox', { name: /^(relevance|mức liên quan)$/i }).selectOption('BRIEF');
+    await operator.getByRole('textbox', { name: /^(headline|dòng tiêu đề)$/i }).fill('Exports queue in the background.');
+    await operator.getByRole('textbox', { name: /^(narrative|diễn giải)$/i }).fill('Watch the export queue.');
+    await expectNoAccessibilityViolations(page, `edit summary (${language})`);
+    await form.getByRole('button', { name: /save summary|lưu tóm tắt/i }).click();
+
+    // The previews follow at once: the end user's note says nothing concerns it, and the
+    // operator's leads with the headline.
+    await page.getByRole('radio', { name: /^(end user|người dùng cuối)$/i }).check();
+    await expect(page.locator('#preview-end_user'))
+      .toContainText(/nothing in this release concerns this audience|không có thay đổi nào liên quan tới nhóm đọc này/i);
+    await page.getByRole('radio', { name: /^(operator|vận hành)$/i }).check();
+    await expect(page.locator('#preview-operator strong')).toHaveText('Exports queue in the background.');
+    await expectNoAccessibilityViolations(page, `release page after editing the summary (${language})`);
+  }
+});
+
+test('the audience editor offers the headline and the brief section, and previews them', async ({ page, context, baseURL }) => {
+  await registerAndSignIn(page);
+  for (const language of ['en', 'vi']) {
+    await context.addCookies([{ name: 'releaseflow_lang', value: language, url: baseURL }]);
+    // Registration seeds the support audience with the other presets.
+    await page.goto('/audiences');
+    await page.locator('#audience-list a', { hasText: 'support' }).click();
+    const variables = page.getByRole('group', { name: /insert a variable|chèn một biến/i });
+    for (const variable of ['headline', 'relevance', 'brief']) {
+      await expect(variables.getByRole('button', { name: `{{${variable}}}`, exact: true })).toBeVisible();
+    }
+
+    await page.locator('#templateBody').fill('- **{{headline}}** ({{relevance}}){{^brief}} — {{narrative}}{{/brief}}');
+    await page.getByRole('button', { name: /^(preview|xem thử)$/i }).click();
+    await expect(page.locator('#audience-preview pre')).toContainText(
+      "- **Review each audience's note before publishing.** (full) — Release managers can review");
+    await expectNoAccessibilityViolations(page, `audience editor (${language})`);
+  }
+});

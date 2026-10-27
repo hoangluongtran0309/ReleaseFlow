@@ -2,9 +2,11 @@ package com.hoangluongtran0309.releaseflow.release;
 
 import com.hoangluongtran0309.releaseflow.audience.AudienceItem;
 import com.hoangluongtran0309.releaseflow.audience.AudienceTemplate;
+import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.MigrationKind;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
+import com.hoangluongtran0309.releaseflow.change.Relevance;
 import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 
 import java.text.MessageFormat;
@@ -22,6 +24,11 @@ import java.util.ResourceBundle;
  * written by the audience's template. It is a pure function of its input and never
  * calls AI. Labels follow the note's language (English or Vietnamese, otherwise
  * English).
+ *
+ * <p>The note shows only the changes that concern its audience (ADR-0035): one whose
+ * relevance for it is none is left out, unless it is breaking, and then it reads as
+ * brief. Counts and the warning describe what the note shows. An audience left with
+ * nothing still gets a note, which says so.
  */
 final class ReleaseNoteDigest {
 
@@ -63,13 +70,18 @@ final class ReleaseNoteDigest {
             throw new IllegalArgumentException("A release note needs at least one change.");
         }
         Labels labels = new Labels(languageTag);
-        Map<Section, List<ChangeView>> sections = sections(changes);
+        Map<Section, List<ChangeView>> sections = sections(changes.stream()
+                .filter(change -> concerns(change, audienceCode))
+                .toList());
 
         StringBuilder note = new StringBuilder("# ")
                 .append(labels.format("title", ReleaseNoteMarkdown.escape(version)))
                 .append("\n\n");
         if (summary != null && !summary.isBlank()) {
             note.append(ReleaseNoteMarkdown.escape(summary.strip())).append("\n\n");
+        }
+        if (sections.isEmpty()) {
+            return note.append(labels.raw("nothingForAudience")).append('\n').toString();
         }
         note.append("## ").append(labels.raw("whatsNew")).append("\n\n").append(overview(sections, labels)).append('\n');
         sections.forEach((section, items) -> {
@@ -80,6 +92,19 @@ final class ReleaseNoteDigest {
             note.append('\n');
         });
         return note.toString().strip() + "\n";
+    }
+
+    /** Whether a change is in the audience's note: a breaking change always is, and any other unless it is none for it. */
+    static boolean concerns(ChangeView change, String audienceCode) {
+        return change.breaking() || relevance(change, audienceCode) != Relevance.NONE;
+    }
+
+    // A change with no narrative for the audience (no AI, a failure, an audience added
+    // later) is full, and a breaking change that is none for it reads as brief.
+    static Relevance relevance(ChangeView change, String audienceCode) {
+        AudienceNarrative narrative = change.audienceNarrative(audienceCode);
+        Relevance relevance = narrative == null ? Relevance.FULL : narrative.relevance();
+        return relevance == Relevance.NONE && change.breaking() ? Relevance.BRIEF : relevance;
     }
 
     // Breaking changes first, then the other kinds in a fixed order; empty sections are left out.
@@ -100,7 +125,10 @@ final class ReleaseNoteDigest {
      */
     static AudienceItem item(ChangeView change, String audienceCode) {
         NeutralSummary summary = change.neutralSummary();
+        AudienceNarrative written = change.audienceNarrative(audienceCode);
         String narrative = ReleaseNoteMarkdown.escapeRawHtml(change.narrative(audienceCode));
+        String headline = written == null ? "" : ReleaseNoteMarkdown.escapeRawHtml(written.headline());
+        String relevance = relevance(change, audienceCode) == Relevance.BRIEF ? AudienceItem.BRIEF : AudienceItem.FULL;
         if (summary == null) {
             return new AudienceItem(
                     ReleaseNoteMarkdown.escape(ReleaseNotePreview.displayTitle(change.title())),
@@ -110,6 +138,8 @@ final class ReleaseNoteDigest {
                     "",
                     "",
                     narrative,
+                    headline,
+                    relevance,
                     change.reference(),
                     change.pullRequestNumber(),
                     change.url(),
@@ -124,6 +154,8 @@ final class ReleaseNoteDigest {
                 summary.migrationKind() == MigrationKind.NONE ? "" : summary.migrationKind().value(),
                 ReleaseNoteMarkdown.escapeRawHtml(summary.limitations()),
                 narrative,
+                headline,
+                relevance,
                 change.reference(),
                 change.pullRequestNumber(),
                 change.url(),

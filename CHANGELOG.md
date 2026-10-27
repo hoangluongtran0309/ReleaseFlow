@@ -21,8 +21,30 @@ section into the version's entry, and the GitHub release is written from it.
 - A change's summary records how much its migration step asks — required, only if it
   applies, or recommended — and what the change deliberately does not do yet. The shipped
   templates label a step by its kind, and Edit summary sets both.
+- Each audience's note shows only the changes that concern it. The AI says, for every
+  audience, whether a change is not for it, worth a headline, or worth the detail, and
+  writes a one-line headline beside its narrative. A breaking change is in every note,
+  counts and the breaking warning describe what the note shows, and an audience that
+  nothing concerns gets a note saying so. Templates gain `headline`, `relevance`, and the
+  `brief` section, and Edit summary sets all three for each audience
+  ([ADR-0035](docs/adr/0035-evidence-bound-notes-and-audience-relevance.md)).
+- A fourth shipped audience, Support: what customers may ask about, what to tell them,
+  and whether a step is required or only advisable. New Organizations start with it; an
+  existing one can add an audience coded `support` and reset it to the preset.
+
+- A change returned by the API has `audienceNarrativeDetails`: each audience's
+  narrative as `relevance`, `headline`, and `body`. `audienceNarratives` stays a map of
+  audience code to narrative text, and Edit summary accepts either an object or a plain
+  string for each audience, so existing clients keep working.
 
 ### Changed
+
+- The shipped templates lead with each audience's headline, keep their detail lines out
+  of a brief change, and always print a required step. Audiences created before keep
+  their templates until they are reset to the preset.
+- The shipped intents say when a change does not concern their audience, and the
+  operator intent asks for something to watch after deploying only when the change or the
+  Project context names it.
 
 - The AI is told to state only what a change's evidence supports in every field: no
   invented consequences or places in the product, no steps taken from a dependency's

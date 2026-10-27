@@ -7,32 +7,40 @@ note cho mỗi audience ở mỗi ngôn ngữ release note; khi release được
 ## Audience {#audiences}
 
 Mỗi release đã duyệt có một release note cho mỗi **audience**. Quản trị viên quản lý audience ở
-trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu với ba audience mẫu,
+trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu với bốn audience mẫu,
 được đặt tên theo ngôn ngữ đầu ra của nó (tiếng Anh hoặc tiếng Việt):
 
 | Mã | Viết cho | Template |
 | --- | --- | --- |
-| `operator` | rủi ro vận hành, cách rollback, những gì cần theo dõi | thay đổi gì kèm liên kết pull request và narrative, rồi vì sao, chi tiết, giới hạn, và bước chuyển đổi dưới nhãn theo loại của nó |
+| `operator` | rủi ro vận hành, cách rollback, và cách sản phẩm được triển khai và chạy | dòng tiêu đề kèm liên kết pull request và narrative, rồi vì sao, chi tiết, giới hạn, và bước chuyển đổi dưới nhãn theo loại của nó |
 | `contributor` | chi tiết triển khai và thay đổi mã nguồn | như operator, nhưng là chi tiết triển khai thay cho chi tiết chung |
-| `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | thay đổi gì và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc |
+| `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | dòng tiêu đề và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc |
+| `support` | những gì khách hàng có thể hỏi, và nên trả lời họ thế nào | dòng tiêu đề kèm liên kết và narrative, bước chuyển đổi dưới nhãn theo loại của nó, và giới hạn |
 
 ![Trang Audiences: ba preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
 
 Một audience có một **mã** (chữ thường, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái; cố định
 sau khi tạo), một **tên hiển thị**, một **ý định truyền đạt** mà AI làm theo khi viết narrative
-cho audience đó, và một **template**. Template là
+cho audience đó, và một **template**. Ý định của mỗi audience mẫu kết thúc bằng câu nói khi nào
+một thay đổi không liên quan tới audience đó: với người dùng cuối, đó là các thay đổi về build,
+CI, dependency, test và nội bộ mà họ không thấy được. Ý định của operator chỉ yêu cầu nêu điều cần
+theo dõi sau khi triển khai khi chính thay đổi hoặc [ngữ cảnh Project](changes.md#project-context)
+nêu ra. Template là
 [Mustache](https://mustache.github.io/mustache.5.html) và dựng một thay đổi thành Markdown với
 các biến `whatChanged`, `whyChanged`, `technicalDetail`, `migrationStep`, `migrationKind`,
-`limitations`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl` và
-`linkedIssues` — một danh sách mà mỗi phần
+`limitations`, `narrative`, `headline`, `relevance`, `brief`, `reference`, `pullRequestNumber`,
+`pullRequestUrl` và `linkedIssues` — một danh sách mà mỗi phần
 tử có `key`, `title`, `type`, `status` và `url`, được escape như mọi văn bản khác lấy từ công cụ
 theo dõi issue, đúng như khi được đọc lúc thay đổi được ghi nhận
 ([Issue Jira liên kết](sources.md#linked-jira-issues)). `migrationKind` là `required`,
 `conditional`, `recommended`, hoặc `unspecified` cho bước được ghi trước khi có loại, và để trống
 khi không có bước (xem [Phân loại bằng AI](changes.md#ai-classification-and-summaries)). Vì
 Mustache không so sánh được giá trị, các section `migrationRequired`, `migrationConditional`,
-`migrationRecommended` và `migrationUnspecified` mỗi cái đúng với một loại. Các giá trị của bản
-tóm tắt và `narrative` giữ nguyên Markdown, nhưng mọi HTML thô trong đó đều được escape, nên một
+`migrationRecommended` và `migrationUnspecified` mỗi cái đúng với một loại. `headline` là dòng
+tiêu đề một dòng của audience, hoặc `whatChanged` khi không có, nên luôn có giá trị; `relevance` là
+`brief` hoặc `full`, và section `brief` đúng với một thay đổi chỉ cần nêu ngắn gọn (xem
+[Mỗi audience đọc gì](#what-each-audience-reads)). Các giá trị của bản tóm tắt, `headline` và
+`narrative` giữ nguyên Markdown, nhưng mọi HTML thô trong đó đều được escape, nên một
 placeholder như `<id>` hiện đúng như đã viết ở mọi nơi note được đọc. `reference` là cách nguồn của thay đổi
 gọi tên nó: `#12` cho pull request GitHub,
 `!12` cho merge request GitLab, và key của issue, như `APP-12` hay `ENG-12`, cho Jira và Linear;
@@ -41,11 +49,33 @@ gọi tên nó: `#12` cho pull request GitHub,
 mẫu. Template được kiểm tra khi lưu: nó phải biên dịch được, chỉ dùng các biến trên, và dùng
 `{{narrative}}` thay vì gọi tên một audience khác.
 
-Các template chi tiết đi kèm liên kết một thay đổi bằng `[{{reference}}]({{pullRequestUrl}})`,
-và ghi nhãn bước chuyển đổi theo loại của nó: **Bước bắt buộc**, **Nếu áp dụng cho bạn**,
-**Bước khuyến nghị**, hoặc nhãn trung tính **Cách chuyển đổi** cho bước không ghi rõ loại, nên một
-bước không ai gọi là bắt buộc sẽ không bao giờ được trình bày như vậy. Audience tạo trước khi có
-các template này vẫn giữ template của mình cho tới khi preset được đặt lại.
+Các template đi kèm mở đầu bằng `**{{headline}}**`, và các template chi tiết liên kết một thay
+đổi bằng `[{{reference}}]({{pullRequestUrl}})`. Chúng ghi nhãn bước chuyển đổi theo loại của nó:
+**Bước bắt buộc**, **Nếu áp dụng cho bạn**, **Bước khuyến nghị**, hoặc nhãn trung tính **Cách
+chuyển đổi** cho bước không ghi rõ loại, nên một bước không ai gọi là bắt buộc sẽ không bao giờ
+được trình bày như vậy. Các dòng chi tiết nằm trong `{{^brief}}`, nên một thay đổi ngắn gọn vẫn giữ
+dòng tiêu đề, narrative, và bước bắt buộc, vốn luôn được in dù mức liên quan là gì. Audience tạo
+trước khi có các template này vẫn giữ template của mình cho tới khi preset được đặt lại, và một
+Organization tạo trước khi có preset `support` có thể thêm audience mã `support` rồi đặt lại nó về
+preset.
+
+### Mỗi audience đọc gì {#what-each-audience-reads}
+
+Với từng audience, AI cho biết thay đổi liên quan tới audience đó tới mức nào: `none` (người đọc
+này sẽ không nhận ra và cũng không cần nó), `brief` (chỉ dòng tiêu đề là đủ), hoặc `full`. AI cũng
+viết một **dòng tiêu đề**, một dòng tối đa 20 từ, bên cạnh narrative. Dòng tiêu đề dài hơn, kéo
+qua nhiều dòng, hoặc nhận xét về bằng chứng còn thiếu sẽ bị bỏ, và mọi câu trong narrative nhận
+xét như vậy ("not provided", "not specified") cũng bị bỏ. Mức liên quan không xác định được coi là
+`full`.
+
+Release note bỏ qua một thay đổi có mức `none` với audience của nó, trừ khi thay đổi đó phá vỡ
+tương thích: thay đổi phá vỡ tương thích có mặt trong mọi note, và `none` trên nó được coi là
+`brief`. Thay đổi không có narrative cho audience (không có AI, AI lỗi, hoặc audience được thêm
+sau) được đưa vào đầy đủ. Các con số và cảnh báo phá vỡ tương thích mô tả đúng những gì note hiển
+thị. Audience không liên quan tới bất cứ thay đổi nào trong release vẫn có note của mình: tiêu đề,
+tóm tắt release, và một dòng nói rằng release này không có gì liên quan tới họ. Việc duyệt vẫn viết
+một note cho mỗi audience và ngôn ngữ, và một hành động automation giao note đó như mọi note khác.
+Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 ![Sửa template của một audience rồi lưu lại](assets/release-notes/rn-2-template.webp)
 
@@ -90,8 +120,8 @@ chọn tối đa năm **ngôn ngữ release note** ở đầu trang Audience, ho
 `PUT /api/organization/release-languages` với `{"targetLanguages": ["en", "vi"]}`; mọi thành
 viên đọc được chúng bằng `GET`. Tag được chuẩn hoá và bỏ phần lặp; danh sách rỗng, nhiều hơn năm
 ngôn ngữ, hoặc tag không hợp lệ trả về `400 invalid_release_languages`. Khi đó duyệt một
-release sẽ viết một release note cho mỗi audience và mỗi ngôn ngữ, nên ba audience bằng tiếng
-Anh và tiếng Việt cho ra sáu release note.
+release sẽ viết một release note cho mỗi audience và mỗi ngôn ngữ, nên bốn audience bằng tiếng
+Anh và tiếng Việt cho ra tám release note.
 
 Mỗi audience có template riêng cho từng ngôn ngữ release note mà ngôn ngữ đầu ra không bao phủ,
 được tạo khi thêm ngôn ngữ hoặc thêm audience: một audience mẫu bắt đầu từ template đi kèm của
@@ -100,8 +130,8 @@ chính của nó. Sửa chúng trong mục **Template theo ngôn ngữ** trên t
 `PUT /api/audiences/{audienceId}/templates/{language}`. Đặt lại một audience mẫu cũng đặt lại
 các template này.
 
-Bản tóm tắt và narrative của một thay đổi được viết bằng ngôn ngữ mà AI (hoặc người viết) đã
-dùng. Với một release note bằng ngôn ngữ khác, chúng được dịch bằng
+Bản tóm tắt, dòng tiêu đề và narrative của một thay đổi được viết bằng ngôn ngữ mà AI (hoặc người
+viết) đã dùng; mức liên quan không phải văn bản nên không bao giờ được dịch. Với một release note bằng ngôn ngữ khác, chúng được dịch bằng
 [DeepL](https://developers.deepl.com/docs) sau khi duyệt, không bao giờ trong lúc duyệt:
 
 ```sh
@@ -205,8 +235,13 @@ tiếng Anh hoặc tiếng Việt, theo ngôn ngữ đầu ra.
 ![Các note của một release, mỗi audience và ngôn ngữ một note; note operator đã được sửa tay và được đánh dấu là viết tay](assets/release-notes/rn-7-manual-note.webp)
 
 Trong lúc review và sau khi duyệt, **Sửa tóm tắt** trên tab Review cho phép một người viết hoặc
-sửa bản tóm tắt của một thay đổi, gồm cả loại bước chuyển đổi và giới hạn, và narrative của
-từng audience. Việc này dùng được dù AI đã viết hay chưa. Request không nêu `migrationKind`,
+sửa bản tóm tắt của một thay đổi, gồm cả loại bước chuyển đổi và giới hạn, và mức liên quan,
+dòng tiêu đề, narrative của từng audience. Việc này dùng được dù AI đã viết hay chưa, và AI không
+bao giờ thay thế điều một người đã chọn. Qua API, narrative của mỗi audience là
+`{"relevance": "NONE" | "BRIEF" | "FULL", "headline", "body"}` hoặc, như bên gọi viết trước khi có
+mức liên quan gửi, một chuỗi trơn, tức narrative đầy đủ không có dòng tiêu đề. Narrative `FULL` mà
+không có cả dòng tiêu đề lẫn nội dung sẽ không được giữ, vì nó không nói gì hơn việc không có
+narrative; mức liên quan không xác định trả về `400 malformed_request`. Request không nêu `migrationKind`,
 như bên gọi viết trước khi có trường này gửi, sẽ ghi `UNSPECIFIED` khi có bước và `NONE` khi không
 có; loại không khớp với bước (`NONE` mà có bước, loại khác mà không có) trả về
 `400 validation_failed`. Thay đổi ghi lại người đã viết, và các release note của một release đã duyệt mà
@@ -236,7 +271,8 @@ POST   /api/projects/{projectId}/releases/{releaseId}/publish
 POST   /api/projects/{projectId}/releases/{releaseId}/translations/retry
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/summary
                                                                          {"whatChanged", "whyChanged", "technicalDetail", "migrationStep",
-                                                                          "migrationKind", "limitations", "narratives": {"<code>": "..."}}
+                                                                          "migrationKind", "limitations",
+                                                                          "narratives": {"<code>": {"relevance", "headline", "body"} or "..."}}
 GET    /api/projects/{projectId}/releases/{releaseId}/note-previews
 GET    /api/projects/{projectId}/releases/{releaseId}/notes
 PUT    /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}     {"content"}

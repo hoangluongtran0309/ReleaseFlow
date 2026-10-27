@@ -14,7 +14,7 @@ trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, and Project
 context slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V31,
+Spring Boot application, PostgreSQL/Flyway V1-V32,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -188,6 +188,12 @@ changing behavior.
 - An Organization always has at least one audience. Rendering a release note
   never calls AI; notes are written at approval from a snapshot of each
   audience's template and are frozen at publication.
+- A relevance only leaves a change out of an audience's note when it is `none`
+  and the change is not breaking: a breaking change is in every note, and a
+  change with no narrative for the audience is included. An audience nothing
+  concerns still gets its note, and counts describe what a note shows. A
+  relevance is never translated, and one a person chose is never replaced by
+  the AI.
 - A summary or narrative written by a person is never replaced by the AI, and a
   note a person edited never follows its template again.
 - Approval never calls a translation provider: it only records translation

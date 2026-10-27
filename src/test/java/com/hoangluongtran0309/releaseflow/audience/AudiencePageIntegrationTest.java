@@ -64,9 +64,11 @@ class AudiencePageIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("audiences"))
                 .andExpect(content().string(containsString("href=\"/audiences\"")))
-                .andExpect(content().string(matchesPattern("(?s).*id=\"audience-list\".*Contributor.*End user.*Operator.*")))
-                .andExpect(content().string(containsString("3 of 20 audiences")))
+                .andExpect(content().string(matchesPattern("(?s).*id=\"audience-list\".*Contributor.*End user.*Operator.*Support.*")))
+                .andExpect(content().string(containsString("4 of 20 audiences")))
                 .andExpect(content().string(containsString("data-variable=\"narrative\"")))
+                .andExpect(content().string(containsString("data-variable=\"headline\"")))
+                .andExpect(content().string(containsString("data-variable=\"brief\"")))
                 .andExpect(content().string(containsString("x-data=\"audienceEditor()\"")))
                 .andExpect(content().string(containsString("Reset to preset")));
 
@@ -143,7 +145,8 @@ class AudiencePageIntegrationTest extends PostgreSqlIntegrationTest {
     @Test
     void theNewAudienceActionIsARealDisabledControlAtTheLimit() throws Exception {
         Admin admin = registerAndLogin();
-        for (int index = 3; index < AudienceService.MAX_AUDIENCES; index++) {
+        // Registration seeds the four presets.
+        for (int index = 4; index < AudienceService.MAX_AUDIENCES; index++) {
             NewAudienceRequest request = new NewAudienceRequest();
             request.setCode("audience_" + index);
             request.setDisplayName("Audience " + index);

@@ -143,7 +143,11 @@ fits), a breaking flag, whether a person should review it, a **neutral summary**
 and a **narrative** for each audience, all written in the output language. The
 neutral summary is what changed (one sentence), why, technical detail, a migration
 step with its kind, and limitations: what the change deliberately does not do yet.
-A missing narrative is simply left out.
+Each audience's narrative has a relevance (`none`, `brief`, or `full`), a one-line
+headline, and a body; a release note leaves out a change that is `none` for its audience
+unless the change is breaking (see
+[What each audience reads](release-notes.md#what-each-audience-reads)). A missing or
+empty narrative is simply left out.
 
 A **dependency update**, a change whose author is `dependabot[bot]` or `renovate[bot]`
 or whose head branch starts with `dependabot/` or `renovate/`, reaches the AI without what
@@ -189,9 +193,11 @@ limitation such as "Certificate validation is enforced only for MongoDB" is kept
 missing limitations field is empty. Every request asks for temperature `0`, so the same change varies as little as
 the model allows (see [Configuration](configuration.md#ai)).
 
-The Change Inbox shows the summary and narratives under each change, and the changes
-API returns them as `neutralSummary` and `audienceNarratives` with `contentLanguage`
-and `aiProvider`. A summary written by a person on a
+The Change Inbox shows the summary and narratives under each change, each narrative
+with its relevance and headline, and the changes API returns them as `neutralSummary`,
+`audienceNarratives` (each audience's narrative text, keyed by audience code), and
+`audienceNarrativeDetails` (an object per audience code with `relevance`, `headline`, and
+`body`), with `contentLanguage` and `aiProvider`. A summary written by a person on a
 release page is never replaced by a later AI answer.
 
 ![A change's neutral summary, followed by one narrative for each audience](assets/changes/c-5-summary.webp)

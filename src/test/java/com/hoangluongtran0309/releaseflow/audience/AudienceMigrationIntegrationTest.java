@@ -121,8 +121,17 @@ class AudienceMigrationIntegrationTest extends PostgreSqlIntegrationTest {
         );
     }
 
-    // V13 seeded the templates of its time, before the `reference` variable, migration
-    // kinds, and limitations existed; names and intents are still the shipped ones.
+    // V13 seeded the templates and intents of its time, before the `reference` variable,
+    // migration kinds, limitations, and relevance existed, and only the first three
+    // audiences; names are still the shipped ones.
+    private static final Map<String, String> V13_INTENTS = Map.of(
+            AudiencePresets.OPERATOR, "Focus on operational risk, rollback, and what to watch after deploy. "
+                    + "Keep concrete numbers and failure modes.",
+            AudiencePresets.CONTRIBUTOR, "Focus on implementation detail and what other developers must change "
+                    + "in their own code. Technical vocabulary is expected.",
+            AudiencePresets.END_USER, "Plain language, no jargon and no technical metrics. "
+                    + "Say only what the person will notice while using the product."
+    );
     private static final String V13_DETAILED = """
             - **{{whatChanged}}** ([#{{pullRequestNumber}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
             {{#whyChanged}}
@@ -151,8 +160,9 @@ class AudienceMigrationIntegrationTest extends PostgreSqlIntegrationTest {
                 AudiencePresets.END_USER, V13_PLAIN
         );
         return AudiencePresets.forLanguage(language).stream()
+                .filter(preset -> templates.containsKey(preset.code()))
                 .map(preset -> new AudiencePresets.Preset(preset.code(), preset.displayName(),
-                        preset.communicationIntent(), templates.get(preset.code())))
+                        V13_INTENTS.get(preset.code()), templates.get(preset.code())))
                 .sorted((left, right) -> left.code().compareTo(right.code()))
                 .toList();
     }

@@ -88,8 +88,12 @@ Một trạng thái mà không endpoint nào tự trả, chẳng hạn một `4x
 
 ReleaseFlow chưa phát hành phiên bản nào. Phiên bản tuân theo Semantic Versioning, và một thay
 đổi không tương thích ở một endpoint được ghi là `BREAKING CHANGE`, làm tăng phiên bản major
-(xem [Releasing](../CONTRIBUTING.md#releasing)). `code` của một lỗi không bao giờ thay đổi. API
-không có tiền tố phiên bản và không có tài liệu OpenAPI; trang này và các hướng dẫn chính là
+(xem [Releasing](../CONTRIBUTING.md#releasing)). `code` của một lỗi không bao giờ thay đổi. Một
+bản phát hành minor chỉ thêm vào phản hồi: trường mới nằm bên cạnh trường mà bên gọi đang đọc
+chứ không đổi hình dạng của nó. Ví dụ, một thay đổi vẫn giữ `audienceNarratives` là map từ mã
+audience tới nội dung narrative, còn `audienceNarrativeDetails` bên cạnh cho biết `relevance`,
+`headline` và `body` của từng narrative ([Mỗi audience đọc gì](release-notes.md#what-each-audience-reads));
+Sửa tóm tắt nhận cả hai dạng trong `narratives`. API không có tiền tố phiên bản và không có tài liệu OpenAPI; trang này và các hướng dẫn chính là
 phần mô tả của nó. Chỉ `GET /api/automation/runs` có phân trang; mọi danh sách khác, kể cả
 Change Inbox, trả về toàn bộ trong một lần.
 

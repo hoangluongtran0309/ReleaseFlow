@@ -8,33 +8,40 @@ are frozen.
 
 Every approved release gets one release note per **audience**. Administrators
 manage audiences on the **Audiences** page or through `/api/audiences`. Each
-Organization starts with three presets, named in its output language
+Organization starts with four presets, named in its output language
 (English or Vietnamese):
 
 | Code | Writes for | Template |
 | --- | --- | --- |
-| `operator` | operational risk, rollback, what to watch | what changed with the pull request link and narrative, then why, detail, limitations, and the migration step under its kind |
+| `operator` | operational risk, rollback, and how the product is deployed and run | the headline with the pull request link and narrative, then why, detail, limitations, and the migration step under its kind |
 | `contributor` | implementation detail and code changes | as operator, with implementation instead of detail |
-| `end_user` | plain language, what people notice | what changed and the narrative, and a migration step only when it is required |
+| `end_user` | plain language, what people notice | the headline and the narrative, and a migration step only when it is required |
+| `support` | what customers may ask about, and what to tell them | the headline with the link and narrative, the migration step under its kind, and limitations |
 
 ![The Audiences page: the three presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
 
 An audience has a **code** (lowercase letters, digits, and underscores,
 starting with a letter; fixed once created), a **display name**, a
 **communication intent** that the AI follows when it writes the audience's
-narrative, and a **template**. Templates are
+narrative, and a **template**. Each preset's intent ends by saying when a change is
+none of its audience's concern: for end users, build, CI, dependency, test, and internal
+changes they cannot see. The operator intent asks for something to watch after deploying
+only when the change or the [Project context](changes.md#project-context) names one. Templates are
 [Mustache](https://mustache.github.io/mustache.5.html) and render one change as
 Markdown with the variables `whatChanged`, `whyChanged`, `technicalDetail`,
-`migrationStep`, `migrationKind`, `limitations`, `narrative`, `reference`,
-`pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
+`migrationStep`, `migrationKind`, `limitations`, `narrative`, `headline`, `relevance`,
+`brief`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
 `url`, escaped like any other tracker text, as they were read when the change was recorded
 ([Linked Jira issues](sources.md#linked-jira-issues)). `migrationKind` is `required`,
 `conditional`, `recommended`, or `unspecified` for a step recorded before kinds
 existed, and is empty without a step (see
 [AI classification](changes.md#ai-classification-and-summaries)). Since Mustache cannot
 compare values, the sections `migrationRequired`, `migrationConditional`,
-`migrationRecommended`, and `migrationUnspecified` are each true for one kind. The
-summary values and `narrative` keep their Markdown, but any raw HTML in them is escaped, so a placeholder
+`migrationRecommended`, and `migrationUnspecified` are each true for one kind.
+`headline` is the audience's one-line headline, or `whatChanged` when it has none, so it
+always has a value; `relevance` is `brief` or `full`, and the section `brief` is true for
+a brief change (see [What each audience reads](#what-each-audience-reads)). The
+summary values, `headline`, and `narrative` keep their Markdown, but any raw HTML in them is escaped, so a placeholder
 such as `<id>` shows as written wherever the note is read. `reference` is how the change's source
 names it: `#12` for a GitHub pull request, `!12` for a GitLab merge request, and the
 issue key, such as `APP-12` or `ENG-12`, for Jira and Linear; `pullRequestNumber` is
@@ -43,11 +50,34 @@ the bare number whatever the source. A section such as
 it is saved: it must compile, use only these variables, and use `{{narrative}}`
 rather than naming another audience.
 
-The shipped detailed templates link a change as `[{{reference}}]({{pullRequestUrl}})`,
-and label a migration step by its kind: **Required step**, **If it applies to you**,
-**Recommended step**, or the neutral **Migration** for an unspecified one, so a step
-nobody called required is never presented as one. Audiences created before these
-templates keep their own until a preset is reset.
+The shipped templates lead with `**{{headline}}**`, and the detailed ones link a change
+as `[{{reference}}]({{pullRequestUrl}})`. They label a migration step by its kind:
+**Required step**, **If it applies to you**, **Recommended step**, or the neutral
+**Migration** for an unspecified one, so a step nobody called required is never
+presented as one. Their detail lines sit inside `{{^brief}}`, so a brief change keeps its
+headline, its narrative, and a required step, which is printed whatever the relevance.
+Audiences created before these templates keep their own until a preset is reset, and an
+Organization created before the `support` preset can add an audience coded `support` and
+reset it to the preset.
+
+### What each audience reads
+
+For each audience, the AI says how much a change concerns it: `none` (this reader would
+neither notice nor need it), `brief` (its headline is enough), or `full`. It also writes a
+**headline**, one line of at most 20 words, beside the narrative. A headline that is
+longer, runs over several lines, or remarks on missing evidence is dropped, and so is any
+sentence of a narrative that remarks on it ("not provided", "not specified"). An unknown
+relevance reads as `full`.
+
+A note leaves out a change that is `none` for its audience, unless the change is
+breaking: a breaking change is in every note, and `none` on it reads as `brief`. A change
+with no narrative for the audience (no AI, a failure, or an audience added later) is
+included in full. The counts and the breaking-change warning describe what the note
+shows. An audience that nothing in the release concerns still gets its note: the title,
+the release summary, and one line saying that nothing in the release concerns it.
+Approval still writes one note per audience and language, and an automation action
+delivers that note like any other. See
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 ![Editing an audience's template and saving it](assets/release-notes/rn-2-template.webp)
 
@@ -94,8 +124,8 @@ the Audiences page, or with `PUT /api/organization/release-languages` and
 `{"targetLanguages": ["en", "vi"]}`; every member can read them with `GET`.
 Tags are canonicalized and repeats dropped; an empty list, more than five, or
 an invalid tag returns `400 invalid_release_languages`. Approving a release
-then writes one note per audience and language, so three audiences in English
-and Vietnamese make six notes.
+then writes one note per audience and language, so four audiences in English
+and Vietnamese make eight notes.
 
 Each audience has its own template for every release note language that the
 output language does not cover, created when the language or the audience is
@@ -105,8 +135,8 @@ template. Edit them under **Language templates** on the audience's page or
 with `PUT /api/audiences/{audienceId}/templates/{language}`. Resetting a shipped
 audience resets these templates too.
 
-A change's summary and narratives are written in the language the AI (or a
-person) used. For a note in another language they are translated with
+A change's summary, headlines, and narratives are written in the language the AI (or a
+person) used; a relevance is not text and is never translated. For a note in another language they are translated with
 [DeepL](https://developers.deepl.com/docs) after approval, never inside it:
 
 ```sh
@@ -222,8 +252,13 @@ the output language.
 
 During review and after approval, **Edit summary** on the Review tab lets a
 person write or correct a change's summary, including its migration kind and
-limitations, and each audience's narrative. This works whether or not the AI
-wrote one. A request that names no `migrationKind`, as callers written before it
+limitations, and each audience's relevance, headline, and narrative. This works whether
+or not the AI wrote one, and the AI never replaces what a person chose. Through the API,
+each audience's narrative is `{"relevance": "NONE" | "BRIEF" | "FULL", "headline", "body"}`
+or, as callers written before relevance existed send, a plain string, which is a full
+narrative without a headline. A full narrative with neither headline nor body is not
+kept, since it says no more than having none; an unknown relevance returns
+`400 malformed_request`. A request that names no `migrationKind`, as callers written before it
 existed send, records `UNSPECIFIED` for a step and `NONE` without one; a kind that
 does not match the step (`NONE` with a step, any other without) returns
 `400 validation_failed`. The change records who wrote it, and the
@@ -254,7 +289,8 @@ POST   /api/projects/{projectId}/releases/{releaseId}/publish
 POST   /api/projects/{projectId}/releases/{releaseId}/translations/retry
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/summary
                                                                          {"whatChanged", "whyChanged", "technicalDetail", "migrationStep",
-                                                                          "migrationKind", "limitations", "narratives": {"<code>": "..."}}
+                                                                          "migrationKind", "limitations",
+                                                                          "narratives": {"<code>": {"relevance", "headline", "body"} or "..."}}
 GET    /api/projects/{projectId}/releases/{releaseId}/note-previews
 GET    /api/projects/{projectId}/releases/{releaseId}/notes
 PUT    /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}     {"content"}

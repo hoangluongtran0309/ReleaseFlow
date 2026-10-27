@@ -316,12 +316,31 @@
                                                       th:text="${summaryFailing} ? *{limitations} : (${summary != null} ? ${summary.limitations} : '')"></textarea>
                                             <th:block th:if="${summaryFailing}"><th:block th:replace="~{fragments/form :: fieldError('limitations', |summary-${change.id}-limitations-error|)}"></th:block></th:block>
                                         </label>
-                                        <label class="form-control" th:each="audience : ${audiences}">
-                                            <span class="label-text font-medium" th:text="#{ui.release.narrativeFor(${audience.displayName})}">For Operator</span>
-                                            <textarea th:name="|narratives[${audience.code}]|" rows="2" maxlength="2000"
-                                                      class="textarea textarea-bordered textarea-sm w-full"
-                                                      th:text="${summaryFailing} ? ${summaryRequest.narratives.get(audience.code)} : ${change.narrative(audience.code)}"></textarea>
-                                        </label>
+                                        <fieldset class="grid gap-2 rounded-box border border-base-300 p-3" th:each="audience : ${audiences}"
+                                                  th:with="written=${summaryFailing} ? ${summaryRequest.narratives.get(audience.code)} : ${change.audienceNarrative(audience.code)},
+                                                           fieldId=|summary-${change.id}-${audience.code}|">
+                                            <legend class="px-1 text-sm font-medium" th:text="#{ui.release.narrativeFor(${audience.displayName})}">For Operator</legend>
+                                            <label class="form-control"><span class="label-text" th:text="#{ui.release.relevance}">Relevance</span>
+                                                <select th:name="|narratives[${audience.code}].relevance|" class="select select-bordered select-sm w-full sm:max-w-xs">
+                                                    <option th:each="relevance : ${relevances}" th:value="${relevance.name()}"
+                                                            th:selected="${written != null ? written.relevance == relevance : relevance.name() == 'FULL'}"
+                                                            th:text="#{|ui.enum.relevance.${relevance.name()}|}">Full</option>
+                                                </select>
+                                            </label>
+                                            <div class="form-control">
+                                                <label class="label-text" th:for="|${fieldId}-headline|" th:text="#{ui.release.headline}">Headline</label>
+                                                <input type="text" th:id="|${fieldId}-headline|" th:name="|narratives[${audience.code}].headline|" maxlength="2000"
+                                                       class="input input-bordered input-sm w-full" th:attr="aria-describedby=|${fieldId}-headline-hint|"
+                                                       th:value="${written != null ? written.headline : ''}">
+                                                <span class="mt-1 text-xs text-slate-500" th:id="|${fieldId}-headline-hint|"
+                                                      th:text="#{ui.release.headlineHint}">Leave it empty to use what changed.</span>
+                                            </div>
+                                            <label class="form-control"><span class="label-text" th:text="#{ui.release.narrativeBody}">Narrative</span>
+                                                <textarea th:name="|narratives[${audience.code}].body|" rows="2" maxlength="2000"
+                                                          class="textarea textarea-bordered textarea-sm w-full"
+                                                          th:text="${written != null ? written.body : ''}"></textarea>
+                                            </label>
+                                        </fieldset>
                                         <div><button type="submit" class="btn btn-primary btn-sm" th:text="#{ui.release.saveSummary}">Save summary</button></div>
                                     </form>
                                 </details>

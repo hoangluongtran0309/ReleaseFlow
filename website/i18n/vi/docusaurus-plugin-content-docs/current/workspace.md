@@ -13,7 +13,7 @@ CSRF token (xem [REST API](api.md#sessions-and-csrf)); `outputLanguage` không b
 mặc định là tiếng Anh. Mỗi địa chỉ email chỉ thuộc về một tài khoản trên toàn bộ hệ thống
 triển khai, nên đăng ký lại cùng một email sẽ trả về `409 email_already_registered`.
 Việc đăng ký cũng tạo sẵn [danh mục category](changes.md#categories) của Organization,
-ba [audience](release-notes.md#audiences) mẫu, và địa chỉ changelog công khai.
+bốn [audience](release-notes.md#audiences) mẫu, và địa chỉ changelog công khai.
 
 ![Điền form đăng ký, rồi đăng nhập vào Organization vừa tạo](assets/workspace/w-1-register.webp)
 
