@@ -33,22 +33,54 @@ class AiClassificationPromptTest {
 
     @Test
     void forbidsWhatTheEvidenceDoesNotSupportInEveryField() {
-        assertThat(AiClassificationPrompt.SYSTEM)
+        assertThat(AiClassificationPrompt.system(request(SourceType.GITHUB, "")))
                 .contains("Every field, narratives included, states only what the evidence supports")
                 .contains("For a tracker_issue, never name files, code, or configuration it changed")
                 .contains("describes that dependency")
                 .contains("Never write about what the evidence lacks")
                 .contains("in one sentence")
-                .contains("A dependency update is breaking only when the change's own words say so")
-                .contains("only what the change's own text says it deliberately does not do yet");
+                .contains("only what the change's own text says it deliberately does not do yet")
+                .doesNotContain("{dependency_rule}");
         assertThat(AiClassificationPrompt.TEMPERATURE).isZero();
     }
 
+    // Read by every change, the dependency rule stopped dbvault-cli !5, which dropped the
+    // unversioned API paths, from being marked breaking.
+    @Test
+    void carriesTheDependencyRuleOnlyForADependencyUpdate() {
+        String ordinary = AiClassificationPrompt.system(request(SourceType.GITLAB, "", false));
+        String dependencyUpdate = AiClassificationPrompt.system(request(SourceType.GITHUB, "", true));
+
+        assertThat(ordinary)
+                .doesNotContain(AiClassificationPrompt.DEPENDENCY_RULE)
+                .doesNotContain("dependency update: it is breaking only when");
+        assertThat(dependencyUpdate).contains(AiClassificationPrompt.DEPENDENCY_RULE);
+        assertThat(userMessage(request(SourceType.GITLAB, "", false)).path("change").path("dependency_update").booleanValue())
+                .isFalse();
+        assertThat(userMessage(request(SourceType.GITHUB, "", true)).path("change").path("dependency_update").booleanValue())
+                .isTrue();
+    }
+
+    @Test
+    void putsTheRuleForAnUnsureBreakingChangeFirst() {
+        for (boolean dependencyUpdate : new boolean[] {false, true}) {
+            String system = AiClassificationPrompt.system(request(SourceType.GITHUB, "", dependencyUpdate));
+            String rules = system.substring(system.indexOf("Rules:\n"));
+
+            assertThat(rules).startsWith("Rules:\n- If you are unsure whether the change is breaking,"
+                    + " set breaking_change and needs_human_review to true.\n");
+        }
+    }
+
     private static AiClassificationRequest request(SourceType type, String context) {
+        return request(type, context, false);
+    }
+
+    private static AiClassificationRequest request(SourceType type, String context, boolean dependencyUpdate) {
         AiClassificationRequest base = OpenAiCompatibleClassifierTest.request("Done.", null, "en");
         return new AiClassificationRequest(base.changeId(), base.title(), base.description(), base.labels(),
                 base.targetBranch(), base.linkedIssues(), base.outputLanguage(), base.lockedCategory(), base.categories(),
-                base.audiences(), base.contextThreshold(), type != null && type.isIssueTracker(), context, false);
+                base.audiences(), base.contextThreshold(), type != null && type.isIssueTracker(), context, dependencyUpdate);
     }
 
     private static JsonNode userMessage(AiClassificationRequest request) {

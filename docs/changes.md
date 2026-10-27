@@ -150,7 +150,9 @@ or whose head branch starts with `dependabot/` or `renovate/`, reaches the AI wi
 it quotes from upstream: its `<details>` and `<blockquote>` elements, Markdown blockquotes,
 and its "Release notes", "Changelog", and "Commits" sections are left out, so only what is
 bumped, and from which version to which, remains. The change itself keeps its whole
-description. It is breaking, or has a migration step, only when its own words say so.
+description. It is breaking, or has a migration step, only when its own words say so;
+the AI is told this only for a dependency update, so any other change it is unsure about
+is still marked breaking and sent to review.
 
 The AI is told to state only what the evidence supports, in every field: no
 consequence the change does not describe (a crash, an outage, a blocked startup),

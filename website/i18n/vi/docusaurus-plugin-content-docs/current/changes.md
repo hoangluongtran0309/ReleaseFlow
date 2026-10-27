@@ -141,7 +141,9 @@ hoặc có head branch bắt đầu bằng `dependabot/` hay `renovate/`, đư�
 những gì nó trích từ upstream: các phần tử `<details>` và `<blockquote>`, blockquote Markdown, và
 các mục "Release notes", "Changelog", "Commits" đều bị bỏ, chỉ còn lại thứ được nâng phiên bản
 và từ phiên bản nào lên phiên bản nào. Bản thân thay đổi vẫn giữ nguyên mô tả. Nó chỉ phá vỡ
-tương thích, hoặc có bước chuyển đổi, khi chính lời của nó nói vậy.
+tương thích, hoặc có bước chuyển đổi, khi chính lời của nó nói vậy; AI chỉ được dặn điều này
+với một dependency update, nên thay đổi khác mà AI không chắc vẫn bị đánh dấu phá vỡ tương thích
+và được đưa đi review.
 
 AI được yêu cầu chỉ nói điều có trong bằng chứng, ở mọi trường: không nêu hậu quả mà thay đổi
 không mô tả (crash, ngừng dịch vụ, không khởi động được), không nêu vị trí trong sản phẩm mà

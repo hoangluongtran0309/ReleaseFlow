@@ -34,7 +34,8 @@ section into the version's entry, and the GitHub release is written from it.
   the whole answer.
 - A dependency update from Dependabot or Renovate reaches the AI without the release
   notes, changelog, and commits it quotes, so another project's upgrade steps no longer
-  become this project's; it is breaking only when its own words say so.
+  become this project's; it is breaking only when its own words say so. Only a dependency
+  update is told that, so the AI still marks an ordinary change breaking when it is unsure.
 - A change with a title like "fix" and an empty or very short description waits for a
   person's summary even when the AI wrote one, since the AI could only restate the title.
 - Limitations that only remark on what the change did not explain, or only say what the

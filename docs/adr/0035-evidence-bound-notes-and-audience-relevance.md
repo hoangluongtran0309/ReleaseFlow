@@ -89,9 +89,16 @@ they are decided together and the response contract changes once.
     "Changelog", or "Commits". The change's own lines, what is bumped and from which version
     to which, stay. The change keeps its description as delivered; only the AI's copy is
     trimmed.
-  - The user message says `dependency_update: true`, and the prompt adds that a dependency
-    update is breaking only when the change's own words say so, and has a migration step
-    only when its own words ask for one.
+  - The user message says `dependency_update: true`, and only then does the prompt add
+    that this change is breaking only when its own words say so, and has a migration step
+    only when its own words ask for one. Sent with every change, that sentence was read as
+    a rule for all of them: in all three replays the AI stopped marking dbvault-cli !5
+    breaking, though it made the CLI drop the unversioned API paths and require a 0.3
+    server. The system prompt is therefore built per request, and every other change
+    gets `dependency_update: false` and no such rule.
+  - The first of the breaking rules, for every change, stays "if you are unsure whether
+    the change is breaking, set `breaking_change` and `needs_human_review` to true"; the
+    dependency rule, when sent, comes after it.
 
 ### What the AI returns
 

@@ -171,7 +171,8 @@ changing behavior.
   summary a person wrote, or one the AI wrote from a description of at least ten
   words whose context it did not find insufficient; approval waits otherwise.
 - A dependency update's quoted upstream notes never reach the AI; it is breaking
-  only when its own words say so. An AI limitation about the input itself, or
+  only when its own words say so, and the prompt says that only to a dependency
+  update. "If unsure, it is breaking and needs review" is the first breaking rule. An AI limitation about the input itself, or
   one that only states the change's scope, is dropped; these filters read the
   answer and never change the request. Every classification request uses the
   same fixed temperature.

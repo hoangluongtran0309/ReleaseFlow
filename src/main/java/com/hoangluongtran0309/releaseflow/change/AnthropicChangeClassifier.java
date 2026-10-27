@@ -70,7 +70,7 @@ final class AnthropicChangeClassifier implements AiChangeClassifier, AutoCloseab
                 .model(model)
                 .maxTokens(MAX_TOKENS)
                 .temperature(AiClassificationPrompt.TEMPERATURE)
-                .system(AiClassificationPrompt.SYSTEM)
+                .system(AiClassificationPrompt.system(request))
                 .addUserMessage(AiClassificationPrompt.userMessage(request, objectMapper))
                 .outputConfig(OutputConfig.builder()
                         .format(JsonOutputFormat.builder().schema(schema(request)).build())

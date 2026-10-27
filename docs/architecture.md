@@ -791,7 +791,10 @@ deliveries and imports alike, and `changes.head_branch` keeps (Flyway `V31`; onl
 host's change has one). `AiClassificationRequest.of` sends such a change's description
 without its `<details>` and `<blockquote>` elements, Markdown blockquotes, and "Release
 notes", "Changelog", and "Commits" sections, and marks it `dependency_update`; the stored
-description is untouched. Both providers send `AiClassificationPrompt.TEMPERATURE`, a fixed
+description is untouched. `AiClassificationPrompt.system` adds `DEPENDENCY_RULE` (breaking,
+or a migration step, only when the change's own words say so) to the instructions only for
+such a change, after the first rule: when unsure whether a change is breaking, set
+`breaking_change` and `needs_human_review`. Both providers send `AiClassificationPrompt.TEMPERATURE`, a fixed
 `0`.
 
 ### Project context

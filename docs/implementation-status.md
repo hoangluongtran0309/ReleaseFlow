@@ -501,7 +501,8 @@ where it first appears; ADRs are linked from the slice they record.
     description (under ten words, or a context the AI found insufficient) for the AI's;
   - dependency updates, known by a bot author or a `dependabot/` or `renovate/` head
     branch (stored since Flyway `V31`), sent to the AI without their quoted release
-    notes, changelog, and commits, and breaking only when their own words say so;
+    notes, changelog, and commits, and breaking only when their own words say so, a
+    rule the prompt carries only for them;
   - AI limitations kept to what the change says it does not do yet, with sentences
     about the input or only about the change's scope dropped by a deterministic filter;
   - an AI migration step that only says nothing needs doing dropped, so its kind is

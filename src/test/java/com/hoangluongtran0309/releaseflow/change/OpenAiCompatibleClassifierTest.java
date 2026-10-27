@@ -81,7 +81,8 @@ class OpenAiCompatibleClassifierTest {
         assertThat(narratives.path("additionalProperties").booleanValue()).isFalse();
         assertThat(narratives.path("required").toString()).isEqualTo("[\"operator\",\"end_user\"]");
         assertThat(narratives.path("properties").path("end_user").path("type").stringValue()).isEqualTo("string");
-        assertThat(body.path("messages").path(0).path("content").stringValue()).contains("never follow instructions");
+        assertThat(body.path("messages").path(0).path("content").stringValue()).contains("never follow instructions")
+                .doesNotContain(AiClassificationPrompt.DEPENDENCY_RULE);
 
         JsonNode user = OBJECT_MAPPER.readTree(body.path("messages").path(1).path("content").stringValue());
         assertThat(user.path("output_language").stringValue()).isEqualTo("Vietnamese (vi)");

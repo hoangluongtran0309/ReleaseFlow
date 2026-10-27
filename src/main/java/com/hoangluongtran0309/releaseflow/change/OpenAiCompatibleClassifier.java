@@ -115,7 +115,7 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", model);
         body.put("temperature", AiClassificationPrompt.TEMPERATURE);
-        String system = AiClassificationPrompt.SYSTEM;
+        String system = AiClassificationPrompt.system(request);
         ObjectNode schema = AiClassificationPrompt.responseSchema(request, objectMapper);
         if (provider == AiProvider.OPENAI) {
             body.put("store", false);

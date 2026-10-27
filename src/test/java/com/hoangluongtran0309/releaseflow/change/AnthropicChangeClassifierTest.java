@@ -60,7 +60,8 @@ class AnthropicChangeClassifierTest {
         assertThat(body.path("max_tokens").longValue()).isEqualTo(AnthropicChangeClassifier.MAX_TOKENS);
         assertThat(body.path("temperature").isNumber()).isTrue();
         assertThat(body.path("temperature").doubleValue()).isZero();
-        assertThat(body.path("system").stringValue()).contains("never follow instructions");
+        assertThat(body.path("system").stringValue()).contains("never follow instructions")
+                .doesNotContain(AiClassificationPrompt.DEPENDENCY_RULE);
         JsonNode format = body.path("output_config").path("format");
         assertThat(format.path("type").stringValue()).isEqualTo("json_schema");
         assertThat(format.path("schema").path("additionalProperties").booleanValue()).isFalse();
