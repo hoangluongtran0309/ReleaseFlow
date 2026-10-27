@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -127,7 +128,11 @@ public final class OpenAiStub implements AutoCloseable {
                         "limitations", ""
                 ),
                 "context_sufficiency", Map.of("score", 90, "reasons", List.of()),
-                "narratives", narratives
+                // The shape of ADR-0035: each audience a relevance, a headline, and a body.
+                "narratives", narratives.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        narrative -> Map.of("relevance", "full", "headline", "", "body", narrative.getValue())
+                ))
         ));
     }
 

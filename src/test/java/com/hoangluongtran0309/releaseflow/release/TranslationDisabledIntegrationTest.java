@@ -78,7 +78,7 @@ class TranslationDisabledIntegrationTest extends PostgreSqlIntegrationTest {
         }
         String approved = action(owner, projectId, releaseId, "approve")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.notes.length()").value(6))
+                .andExpect(jsonPath("$.notes.length()").value(8))
                 .andExpect(jsonPath("$.notes[?(@.language == 'en')].translationStatus").value(everyItem(is("READY"))))
                 .andExpect(jsonPath("$.notes[?(@.language == 'vi')].translationStatus").value(everyItem(is("FAILED"))))
                 .andReturn().getResponse().getContentAsString();

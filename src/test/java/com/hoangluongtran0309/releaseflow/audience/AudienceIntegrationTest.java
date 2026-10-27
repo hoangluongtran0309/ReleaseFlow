@@ -67,15 +67,18 @@ class AudienceIntegrationTest extends PostgreSqlIntegrationTest {
 
         mockMvc.perform(get("/api/audiences").session(english.session()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].code").value(contains("contributor", "end_user", "operator")))
-                .andExpect(jsonPath("$[*].displayName").value(contains("Contributor", "End user", "Operator")))
+                .andExpect(jsonPath("$[*].code").value(contains("contributor", "end_user", "operator", "support")))
+                .andExpect(jsonPath("$[*].displayName").value(contains("Contributor", "End user", "Operator", "Support")))
                 .andExpect(jsonPath("$[0].preset").value(true))
                 .andExpect(jsonPath("$[0].communicationIntent", containsString("implementation detail")))
-                .andExpect(jsonPath("$[2].templateBody", containsString("  - Detail: {{.}}")));
+                .andExpect(jsonPath("$[2].templateBody", containsString("  - Detail: {{.}}")))
+                .andExpect(jsonPath("$[3].preset").value(true))
+                .andExpect(jsonPath("$[3].communicationIntent", containsString("what to tell them")));
         mockMvc.perform(get("/api/audiences").session(vietnamese.session()))
-                .andExpect(jsonPath("$[*].displayName").value(contains("Lập trình viên", "Người dùng cuối", "Vận hành")))
-                .andExpect(jsonPath("$[2].templateBody", containsString("  - Lý do: {{.}}")))
-                .andExpect(jsonPath("$[2].communicationIntent", containsString("operational risk")));
+                // Listed by display name, so the Vietnamese order differs.
+                .andExpect(jsonPath("$[*].displayName").value(contains("Hỗ trợ", "Lập trình viên", "Người dùng cuối", "Vận hành")))
+                .andExpect(jsonPath("$[3].templateBody", containsString("  - Lý do: {{.}}")))
+                .andExpect(jsonPath("$[3].communicationIntent", containsString("operational risk")));
     }
 
     @Test
@@ -139,7 +142,8 @@ class AudienceIntegrationTest extends PostgreSqlIntegrationTest {
     @Test
     void limitsTheNumberOfAudiencesAndKeepsTheLastOne() throws Exception {
         Admin admin = registerAndLogin("owner@example.com", "en");
-        for (int index = 4; index <= AudienceService.MAX_AUDIENCES; index++) {
+        // Registration seeds the four presets.
+        for (int index = 5; index <= AudienceService.MAX_AUDIENCES; index++) {
             create(admin, "audience_" + index, "Audience " + index, "", TEMPLATE).andExpect(status().isCreated());
         }
         create(admin, "one_too_many", "Too many", "", TEMPLATE)

@@ -751,10 +751,15 @@ All three share `AiClassificationPrompt` (instructions, response schema, and
 the user JSON) and `AiClassificationParser`, which rejects an incomplete or
 mistyped answer as a whole. The request names the Organization's audiences
 (code and communication intent, from `AudienceService.briefs`), and the
-response schema is built for each request with one required narrative string
-per audience code, which OpenAI strict mode and Anthropic Structured Outputs
-enforce. The parser reads only the requested codes; a missing, empty, or
-mistyped narrative is left out without failing the answer. Every provider refuses to run inside a transaction
+response schema is built for each request with one required narrative object
+per audience code (`relevance` of `none`, `brief`, or `full`, a `headline`, and a
+`body`; ADR-0035), which OpenAI strict mode and Anthropic Structured Outputs
+enforce. The parser reads only the requested codes; a missing or mistyped
+narrative is left out without failing the answer, an unknown relevance reads as
+`full`, a headline over 20 words or several lines is dropped, `Limitations`
+drops a headline, or a sentence of a body, that remarks on the input, and a
+plain string is a full body. A narrative that says no more than having none
+(`AudienceNarrative.saysNothing`: full, with neither headline nor body) is left out. Every provider refuses to run inside a transaction
 and turns timeouts, HTTP errors, refusals, truncation, and invalid JSON into a
 fixed message that never contains a key or a response body. See
 [ADR-0009](adr/0009-automatic-ai-classification.md), which supersedes
@@ -1048,23 +1053,30 @@ action runs each hold a foreign key to the audience; before deleting,
 last word, and a violation of any of the three found by the delete itself is
 reported the same way. An archived rule's actions are not removed to make room,
 because run history has to keep naming what it delivered to.
-`AudiencePresets` holds the three shipped audiences, with names and template
-labels from `messages/audience-presets{,_vi}.properties`. V13 seeded the values
-of its time for Organizations that existed before, which keep their templates until
-a preset is reset; a migration test compares them with those values. The shipped
-detailed templates label a migration step by its kind through the
-`migration<Kind>` sections, keeping the neutral label for `unspecified`, and the
-end-user one prints a step only when it is required.
+`AudiencePresets` holds the four shipped audiences (`operator`, `contributor`,
+`end_user`, and `support`), with names and template labels from
+`messages/audience-presets{,_vi}.properties`. Registration seeds all four. V13
+seeded the first three, with the values of its time, for Organizations that existed
+before, which keep their templates and intents until a preset is reset, and can add
+`support` themselves; a migration test compares them with those values. Each intent
+ends by saying when a change is `none` for its audience, and the operator intent
+names something to watch only when the change or the Project context does. The
+shipped templates lead with `**{{headline}}**`, label a migration step by its kind
+through the `migration<Kind>` sections, keeping the neutral label for
+`unspecified`, keep their detail lines inside `{{^brief}}`, and print a required
+step outside it; the end-user one prints a step only when it is required.
 
 `AudienceTemplate` wraps JMustache in standards mode with strict sections,
 empty strings as false, and no escaping, because the output is Markdown. It
 validates a template on save by compiling it and rendering sample values, and
 renders one `AudienceItem` (`whatChanged`, `whyChanged`, `technicalDetail`,
-`migrationStep`, `migrationKind`, `limitations`, `narrative`, `reference`,
-`pullRequestNumber`, `pullRequestUrl`, `linkedIssues`), whose context adds one
-boolean section per migration kind (`migrationRequired`, `migrationConditional`,
-`migrationRecommended`, `migrationUnspecified`), since Mustache cannot compare
-values. `audience` cannot see `MigrationKind`, so the kind arrives as its value. `reference` comes from `ChangeView.reference()`: `#n` for GitHub, `!n`
+`migrationStep`, `migrationKind`, `limitations`, `narrative`, `headline`,
+`relevance`, `reference`, `pullRequestNumber`, `pullRequestUrl`, `linkedIssues`),
+whose context adds one boolean section per migration kind (`migrationRequired`,
+`migrationConditional`, `migrationRecommended`, `migrationUnspecified`) and
+`brief`, since Mustache cannot compare values. `headline` falls back to
+`whatChanged`, so it always has a value, and `relevance` is `brief` or `full`.
+`audience` cannot see `MigrationKind` or `Relevance`, so each arrives as its value. `reference` comes from `ChangeView.reference()`: `#n` for GitHub, `!n`
 for GitLab, and for Jira and Linear the issue key read from the issue address
 ReleaseFlow stored, falling back to `#n`. The Change Inbox and release pages show the
 same label.
@@ -1072,14 +1084,22 @@ same label.
 escaped, link targets are sanitized and marked
 `rel="nofollow noopener noreferrer"`, and images become links.
 
-`ReleaseNoteDigest` is a pure function that writes one audience's note:
+`ReleaseNoteDigest` is a pure function that writes one audience's note from the
+changes that concern it (`concerns`): every breaking change, and every other
+change whose `AudienceNarrative` for the audience is not `NONE`. A change with no
+narrative for the audience is `FULL`, and `NONE` on a breaking change reads as
+`BRIEF` (ADR-0035). The note has:
 
 - the title and the escaped release summary;
-- "What's New", with a count per section joined by the bundle's list pattern,
-  and a breaking warning;
+- "What's New", with a count per section of what the note shows, joined by the
+  bundle's list pattern, and a breaking warning;
 - sections by category group in the order breaking (the flag), features,
   fixes, performance, documentation, maintenance, other, each item rendered by
   the template and its headings demoted two levels outside fenced code.
+
+When nothing concerns the audience, the note is the title, the summary, and the
+bundle's `nothingForAudience` line; approval still writes it, and an automation
+action delivers it like any other.
 
 Labels come from `messages/release-note{,_vi}.properties`, chosen by the note's
 language with an English fallback, and counts use `java.text` choice formats.
@@ -1110,8 +1130,17 @@ translation, keep what the AI or a person wrote.
   editor and turns off `auto_rerender`.
 - **Editing a summary** is allowed during review or after approval, for a
   change of the release. It calls `ChangeSummaryService.edit`, which keeps
-  narratives only for current audience codes, and then renders every automatic
-  note again from its stored template.
+  narratives only for current audience codes, and only those that say more than
+  having none, and then renders every automatic note again from its stored
+  template. `ChangeSummaryRequest.Narrative` binds `narratives[<code>].relevance`,
+  `.headline`, and `.body` from the page, and from JSON either that object or a
+  plain string (a delegating `@JsonCreator`), which is a full body. A person's
+  headline is collapsed onto one line.
+- **Storage.** `changes.audience_narratives` holds one `AudienceNarrative` object
+  per audience code; Flyway `V32` rewrote each string stored before as
+  `{"relevance": "FULL", "headline": "", "body": <string>}`. `ChangeView` returns them
+  as `audienceNarrativeDetails`, and keeps `audienceNarratives` as audience code to body
+  so REST clients written before keep working.
 - **Returning to draft** deletes the notes.
 - **Publishing** requires notes (`409 release_notes_missing`).
 - **Previews** render the current changes with the current templates and store
@@ -1165,7 +1194,10 @@ ADR-0015 writes a note per audience and **release note language**; see
 - **Notes.** `ReleaseNoteWriter` localizes the release's changes for one
   language: a summarized change in another language is replaced by
   `ChangeView.withContent` with its translated summary and narratives once
-  ready, and keeps its own text otherwise. The release's own summary goes through
+  ready, and keeps its own text otherwise. A narrative's body and headline are
+  the texts `narrative.<code>` and `headline.<code>`; its relevance is kept from
+  the source. A blank headline is not sent, so a narrative without one hashes as
+  it did before headlines existed. The release's own summary goes through
   `TranslationService.ensureForRelease`, a job whose `release_id` is set, from the
   Organization's output language; the note prints the translation and the release
   keeps what was typed. The note takes the worst state of its changes and its summary

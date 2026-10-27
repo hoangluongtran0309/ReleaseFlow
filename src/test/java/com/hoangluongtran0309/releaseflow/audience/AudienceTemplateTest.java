@@ -21,6 +21,8 @@ class AudienceTemplateTest {
             "",
             "",
             "Download data from any table.",
+            "",
+            null,
             "#12",
             12,
             "https://github.com/acme/app/pull/12",
@@ -83,8 +85,73 @@ class AudienceTemplateTest {
                 migration("Rename EXPORT_DIR to EXPORT_PATH.", "recommended", ""))).doesNotContain("EXPORT_PATH");
     }
 
+    // ADR-0035: a bold headline, the detail lines only for a full change, and a required
+    // step whatever the relevance.
+    @Test
+    void theShippedPresetsLeadWithTheHeadlineAndKeepABriefChangeShort() {
+        AudienceItem full = relevant(AudienceItem.FULL);
+        AudienceItem brief = relevant(AudienceItem.BRIEF);
+        String operator = AudiencePresets.find(AudiencePresets.OPERATOR, "en").orElseThrow().templateBody();
+
+        assertThat(AudienceTemplate.render(operator, full)).isEqualTo("""
+                - **Exports queue in the background.** ([#25](https://github.com/acme/app/pull/25)) — Watch the queue.
+                  - Why: Large exports timed out.
+                  - Detail: Rows stream in pages.
+                  - Limitations: Only CSV for now.
+                  - Required step: Set EXPORT_QUEUE=on.
+                """);
+        assertThat(AudienceTemplate.render(operator, brief)).isEqualTo("""
+                - **Exports queue in the background.** ([#25](https://github.com/acme/app/pull/25)) — Watch the queue.
+                  - Required step: Set EXPORT_QUEUE=on.
+                """);
+        for (String language : List.of("en", "vi")) {
+            AudiencePresets.forLanguage(language).forEach(preset -> {
+                String fullNote = AudienceTemplate.render(preset.templateBody(), full);
+                String briefNote = AudienceTemplate.render(preset.templateBody(), brief);
+                assertThat(fullNote).as(preset.code()).startsWith("- **Exports queue in the background.**");
+                assertThat(briefNote).as(preset.code()).contains("Set EXPORT_QUEUE=on.")
+                        .doesNotContain("Large exports timed out.", "Rows stream in pages.", "Only CSV for now.");
+            });
+        }
+        // Without a headline, what changed leads, as before.
+        assertThat(AudienceTemplate.render(operator, migration("", "", ""))).startsWith("- **Keys per target.**");
+    }
+
+    @Test
+    void theSupportPresetSaysWhetherAStepIsRequiredOrOnlyAdvisable() {
+        String support = AudiencePresets.find(AudiencePresets.SUPPORT, "en").orElseThrow().templateBody();
+
+        assertThat(AudienceTemplate.render(support, migration("Re-save each target.", "recommended", "Only MySQL.")))
+                .isEqualTo("""
+                        - **Keys per target.** ([#25](https://github.com/acme/app/pull/25))
+                          - Recommended step: Re-save each target.
+                          - Limitations: Only MySQL.
+                        """);
+        assertThat(AudienceTemplate.render(support, migration("Rename EXPORT_DIR.", "required", "")))
+                .contains("  - Required step: Rename EXPORT_DIR.");
+    }
+
+    @Test
+    void registrationSeedsFourPresetsWhoseIntentsSayWhenAChangeIsNone() {
+        assertThat(AudiencePresets.forLanguage("en").stream().map(AudiencePresets.Preset::code))
+                .containsExactly("operator", "contributor", "end_user", "support");
+        assertThat(AudiencePresets.find(AudiencePresets.SUPPORT, "vi").orElseThrow().displayName()).isEqualTo("Hỗ trợ");
+        AudiencePresets.forLanguage("en").forEach(preset -> assertThat(preset.communicationIntent())
+                .as(preset.code()).containsPattern("A change is none for [a-z ]+ (only )?when"));
+        // Asked for what to watch in general, the AI invented advice nobody gave.
+        assertThat(AudiencePresets.OPERATOR_INTENT)
+                .doesNotContain("what to watch after deploy.")
+                .contains("only when the change or the project context names it");
+    }
+
+    private static AudienceItem relevant(String relevance) {
+        return new AudienceItem("Exports no longer time out.", "Large exports timed out.", "Rows stream in pages.",
+                "Set EXPORT_QUEUE=on.", "required", "Only CSV for now.", "Watch the queue.",
+                "Exports queue in the background.", relevance, "#25", 25, "https://github.com/acme/app/pull/25", List.of());
+    }
+
     private static AudienceItem migration(String step, String kind, String limitations) {
-        return new AudienceItem("Keys per target.", "", "", step, kind, limitations, "", "#25", 25,
+        return new AudienceItem("Keys per target.", "", "", step, kind, limitations, "", "", null, "#25", 25,
                 "https://github.com/acme/app/pull/25", List.of());
     }
 
@@ -160,7 +227,7 @@ class AudienceTemplateTest {
     @Test
     void listsTheIssuesAChangeMentionsAndLeavesTheSectionOutWithoutThem() {
         String template = "- {{whatChanged}}{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}";
-        AudienceItem linked = new AudienceItem("Export.", "", "", "", "", "", "", "#12", 12, "https://github.com/acme/app/pull/12",
+        AudienceItem linked = new AudienceItem("Export.", "", "", "", "", "", "", "", null, "#12", 12, "https://github.com/acme/app/pull/12",
                 List.of(
                         new LinkedIssue("APP-7", "Export tables", "never shown", "Story", "Done",
                                 "https://acme.atlassian.net/browse/APP-7"),
@@ -182,7 +249,7 @@ class AudienceTemplateTest {
 
     @Test
     void theShippedDetailedPresetsNameAChangeTheWayItsSourceDoes() {
-        AudienceItem mergeRequest = new AudienceItem(ITEM.whatChanged(), "", "", "", "", "", "", "!2", 2,
+        AudienceItem mergeRequest = new AudienceItem(ITEM.whatChanged(), "", "", "", "", "", "", "", null, "!2", 2,
                 "https://gitlab.com/acme/app/-/merge_requests/2", List.of());
 
         AudiencePresets.forLanguage("en").stream()
@@ -194,7 +261,7 @@ class AudienceTemplateTest {
     @Test
     void theShippedPresetsIgnoreLinkedIssues() {
         AudienceItem linked = new AudienceItem(ITEM.whatChanged(), ITEM.whyChanged(), ITEM.technicalDetail(),
-                ITEM.migrationStep(), ITEM.migrationKind(), ITEM.limitations(), ITEM.narrative(), ITEM.reference(), ITEM.pullRequestNumber(), ITEM.pullRequestUrl(),
+                ITEM.migrationStep(), ITEM.migrationKind(), ITEM.limitations(), ITEM.narrative(), ITEM.headline(), ITEM.relevance(), ITEM.reference(), ITEM.pullRequestNumber(), ITEM.pullRequestUrl(),
                 List.of(new LinkedIssue("APP-7", "Export tables", "", "Story", "Done",
                         "https://acme.atlassian.net/browse/APP-7")));
 

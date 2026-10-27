@@ -3,11 +3,13 @@ package com.hoangluongtran0309.releaseflow.release;
 import com.hoangluongtran0309.releaseflow.category.CategoryGroup;
 import com.hoangluongtran0309.releaseflow.category.CategoryRef;
 import com.hoangluongtran0309.releaseflow.change.AiStatus;
+import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.ChangedFileStatus;
 import com.hoangluongtran0309.releaseflow.change.ClassificationSource;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.change.ProcessingStatus;
+import com.hoangluongtran0309.releaseflow.change.Relevance;
 import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 import com.hoangluongtran0309.releaseflow.source.SourceType;
 import com.hoangluongtran0309.releaseflow.support.TestCategories;
@@ -82,6 +84,83 @@ class ReleaseNoteDigestTest {
                 """);
     }
 
+    // ADR-0035: a note shows what concerns its audience, and counts what it shows.
+    @Test
+    void selectsAndCountsTheChangesOfEachAudience() {
+        AudienceNarrative notForEndUsers = new AudienceNarrative(Relevance.NONE, "", "");
+        List<ChangeView> changes = List.of(
+                change(1, "feat: add export", TestCategories.FEATURE, false, 1, null,
+                        Map.of("end_user", AudienceNarrative.of("Download any table."))),
+                change(2, "fix: retry the CI cache", TestCategories.FIX, false, 2, null,
+                        Map.of("end_user", notForEndUsers, "operator", new AudienceNarrative(Relevance.FULL, "", "CI only."))),
+                change(3, "chore: bump plugin", TestCategories.MAINTENANCE, false, 3, null, Map.of("end_user", notForEndUsers)),
+                // No narrative for an audience means it is included, as before ADR-0035.
+                change(4, "fix: trim input", TestCategories.FIX, false, 4, null, Map.of())
+        );
+
+        String endUser = ReleaseNoteDigest.render("1.1.0", null, changes, TEMPLATE, "end_user", "en");
+        String operator = ReleaseNoteDigest.render("1.1.0", null, changes, TEMPLATE, "operator", "en");
+
+        assertThat(endUser)
+                .contains("This release includes 2 changes: 1 new feature and 1 bug fix.")
+                .contains("- add export — Download any table.", "- trim input")
+                .doesNotContain("retry the CI cache", "bump plugin", "Maintenance");
+        assertThat(operator)
+                .contains("This release includes 4 changes: 1 new feature, 2 bug fixes, and 1 maintenance change.")
+                .contains("- retry the CI cache — CI only.", "- bump plugin");
+    }
+
+    @Test
+    void neverLeavesOutABreakingChangeAndReadsNoneOnItAsBrief() {
+        List<ChangeView> changes = List.of(
+                change(1, "feat!: drop the v1 API", TestCategories.FEATURE, true, 1, null,
+                        Map.of("end_user", new AudienceNarrative(Relevance.NONE, "", ""))),
+                change(2, "fix: retry the CI cache", TestCategories.FIX, false, 2, null,
+                        Map.of("end_user", new AudienceNarrative(Relevance.NONE, "", "")))
+        );
+        String template = "- {{headline}} ({{relevance}}){{^brief}} — details{{/brief}}";
+
+        assertThat(ReleaseNoteDigest.render("2.0.0", null, changes, template, "end_user", "en"))
+                .contains("This release includes 1 change: 1 breaking change.")
+                .contains("> ⚠️ 1 breaking change requires action before upgrading.")
+                .contains("- drop the v1 API (brief)")
+                .doesNotContain("details", "retry the CI cache");
+    }
+
+    @Test
+    void writesANoteForAnAudienceLeftWithNothing() {
+        List<ChangeView> changes = List.of(
+                change(1, "chore: bump plugin", TestCategories.MAINTENANCE, false, 1, null,
+                        Map.of("end_user", new AudienceNarrative(Relevance.NONE, "", "")))
+        );
+
+        assertThat(ReleaseNoteDigest.render("1.0.1", "  Housekeeping.  ", changes, TEMPLATE, "end_user", "en")).isEqualTo("""
+                # Release 1.0.1
+
+                Housekeeping.
+
+                Nothing in this release concerns this audience.
+                """);
+        assertThat(ReleaseNoteDigest.render("1.0.1", null, changes, TEMPLATE, "end_user", "vi"))
+                .isEqualTo("# Bản phát hành 1.0.1\n\nBản phát hành này không có thay đổi nào liên quan tới nhóm đọc này.\n");
+    }
+
+    @Test
+    void givesTemplatesTheHeadlineOrWhatChangedAndTheRelevance() {
+        NeutralSummary summary = new NeutralSummary("Tables export as CSV.", "", "", "");
+        ChangeView change = change(1, "feat: add export", TestCategories.FEATURE, false, 1, summary, Map.of(
+                "operator", new AudienceNarrative(Relevance.BRIEF, "Exports run <async>.", "Watch the queue."),
+                "end_user", AudienceNarrative.of("Download any table.")));
+        String template = "- **{{headline}}** {{relevance}}{{#brief}} brief{{/brief}}{{#narrative}} — {{.}}{{/narrative}}";
+
+        assertThat(ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "operator", "en"))
+                .contains("- **Exports run \\<async>.** brief brief — Watch the queue.");
+        assertThat(ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "end_user", "en"))
+                .contains("- **Tables export as CSV.** full — Download any table.");
+        assertThat(ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "contributor", "en"))
+                .contains("- **Tables export as CSV.** full");
+    }
+
     @Test
     void sectionsCustomCategoriesByTheirGroup() {
         CategoryRef security = new CategoryRef("SECURITY", "Security", CategoryGroup.FIX);
@@ -145,7 +224,7 @@ class ReleaseNoteDigestTest {
     void usesTheSummaryAndTheAudiencesOwnNarrative() {
         NeutralSummary summary = new NeutralSummary("Tables export as CSV.", "Users asked.", "Streams rows.", "Nothing.");
         ChangeView change = change(1, "feat: add export", TestCategories.FEATURE, false, 1, summary,
-                Map.of("operator", "Watch the export queue.", "end_user", "Download any table."));
+                Map.of("operator", AudienceNarrative.of("Watch the export queue."), "end_user", AudienceNarrative.of("Download any table.")));
         String template = "- {{whatChanged}} ({{whyChanged}}; {{technicalDetail}}; {{migrationStep}}){{#narrative}} — {{.}}{{/narrative}}";
 
         assertThat(ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "end_user", "en"))
@@ -207,7 +286,7 @@ class ReleaseNoteDigestTest {
                 "Run `dbvault verify --backup-id <id>`.",
                 "Nothing.");
         ChangeView change = change(1, "feat: layout", TestCategories.FEATURE, false, 1, summary,
-                Map.of("operator", "Watch <target-id> directories."));
+                Map.of("operator", AudienceNarrative.of("Watch <target-id> directories.")));
         String template = "- {{whatChanged}}\n\n{{whyChanged}}\n\n{{technicalDetail}}{{#narrative}} — {{.}}{{/narrative}}";
 
         String note = ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "operator", "en");
@@ -224,7 +303,7 @@ class ReleaseNoteDigestTest {
     @Test
     void escapesRawHtmlInTheNarrativeOfAChangeWithoutASummary() {
         ChangeView change = change(1, "feat: layout", TestCategories.FEATURE, false, 1, null,
-                Map.of("operator", "Watch <target-id> directories."));
+                Map.of("operator", AudienceNarrative.of("Watch <target-id> directories.")));
 
         String note = ReleaseNoteDigest.render("1.0.0", null, List.of(change), TEMPLATE, "operator", "en");
 
@@ -285,7 +364,7 @@ class ReleaseNoteDigestTest {
             boolean breaking,
             int minute,
             NeutralSummary summary,
-            Map<String, String> narratives
+            Map<String, AudienceNarrative> narratives
     ) {
         return change(number, title, category, breaking, minute, summary, narratives, List.of());
     }
@@ -297,7 +376,7 @@ class ReleaseNoteDigestTest {
             boolean breaking,
             int minute,
             NeutralSummary summary,
-            Map<String, String> narratives,
+            Map<String, AudienceNarrative> narratives,
             List<LinkedIssue> linkedIssues
     ) {
         return change(number, title, category, breaking, minute, summary, narratives, linkedIssues,
@@ -311,7 +390,7 @@ class ReleaseNoteDigestTest {
             boolean breaking,
             int minute,
             NeutralSummary summary,
-            Map<String, String> narratives,
+            Map<String, AudienceNarrative> narratives,
             List<LinkedIssue> linkedIssues,
             String url,
             SourceType sourceType

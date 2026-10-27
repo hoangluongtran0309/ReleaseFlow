@@ -8,6 +8,7 @@ import com.hoangluongtran0309.releaseflow.change.ChangeExcludedException;
 import com.hoangluongtran0309.releaseflow.change.ChangeProcessingException;
 import com.hoangluongtran0309.releaseflow.change.ChangeSummaryRequest;
 import com.hoangluongtran0309.releaseflow.change.MigrationKind;
+import com.hoangluongtran0309.releaseflow.change.Relevance;
 import com.hoangluongtran0309.releaseflow.change.InvalidChangeReviewException;
 import com.hoangluongtran0309.releaseflow.overview.OverviewService;
 import com.hoangluongtran0309.releaseflow.overview.SelectedProject;
@@ -496,6 +497,7 @@ public class ReleasePageController {
                 .toList());
         model.addAttribute("audiences", audienceService.list(principal.organizationId()));
         model.addAttribute("migrationKinds", MigrationKind.values());
+        model.addAttribute("relevances", Relevance.values());
         model.addAttribute("language", outputLanguageService.outputLanguage(principal.organizationId()).tag());
         model.addAttribute("notePreviews", notePreviews(principal, projectId, release, model));
         model.addAttribute("availableChanges", release.status() == ReleaseStatus.DRAFT

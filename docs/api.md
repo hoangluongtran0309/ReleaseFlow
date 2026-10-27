@@ -90,8 +90,13 @@ A status no endpoint gives itself, such as a `4xx` from the server container, is
 ReleaseFlow has not published a release yet. Versions follow Semantic Versioning, and an
 incompatible change to an endpoint is recorded as a `BREAKING CHANGE` that raises the
 major version (see [Releasing](../CONTRIBUTING.md#releasing)). An error's `code` never
-changes. The API has no version prefix and no OpenAPI document; this page and the guides
-are its description. Only `GET /api/automation/runs` is paged; every other list,
+changes. A minor release only adds to a response: a new field goes beside the one clients
+already read rather than changing its shape. A change, for example, keeps
+`audienceNarratives` as a map from audience code to narrative text, and
+`audienceNarrativeDetails` beside it gives each narrative's `relevance`, `headline`, and
+`body` ([What each audience reads](release-notes.md#what-each-audience-reads)); Edit
+summary accepts either shape in `narratives`. The API has no version prefix and no
+OpenAPI document; this page and the guides are its description. Only `GET /api/automation/runs` is paged; every other list,
 the Change Inbox included, returns everything at once.
 
 ## Endpoints

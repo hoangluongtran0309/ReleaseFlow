@@ -86,7 +86,7 @@ class ReleaseLanguageIntegrationTest extends PostgreSqlIntegrationTest {
         List<String> operatorVi = JsonPath.read(audiences, "$[?(@.code == 'operator')].templateVariants.vi");
         List<String> endUserVi = JsonPath.read(audiences, "$[?(@.code == 'end_user')].templateVariants.vi");
         assertThat(operatorVi.getFirst()).contains("  - Lý do: {{.}}");
-        assertThat(endUserVi.getFirst()).startsWith("- **{{whatChanged}}**");
+        assertThat(endUserVi.getFirst()).startsWith("- **{{headline}}**");
         List<Object> noEnglish = JsonPath.read(audiences, "$[?(@.code == 'operator')].templateVariants.en");
         assertThat(noEnglish).as("the main template already covers English").isEmpty();
 

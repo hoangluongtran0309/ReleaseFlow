@@ -313,18 +313,18 @@ class ChangeAiProcessingIntegrationTest extends PostgreSqlIntegrationTest {
 
         OpenAiStub.RecordedRequest request = OPENAI.requests().getFirst();
         JsonNode user = userMessage(request);
-        assertThat(List.of(0, 1, 2, 3).stream().map(index -> user.path("audiences").path(index).path("code").stringValue()))
-                .containsExactly("contributor", "end_user", "leadership", "operator");
+        assertThat(List.of(0, 1, 2, 3, 4).stream().map(index -> user.path("audiences").path(index).path("code").stringValue()))
+                .containsExactly("contributor", "end_user", "leadership", "operator", "support");
         assertThat(user.path("audiences").path(2).path("intent").stringValue()).isEqualTo("Business impact only.");
         assertThat(OBJECT_MAPPER.readTree(request.body())
                 .path("response_format").path("json_schema").path("schema").path("properties").path("narratives")
                 .path("required").toString())
-                .isEqualTo("[\"contributor\",\"end_user\",\"leadership\",\"operator\"]");
+                .isEqualTo("[\"contributor\",\"end_user\",\"leadership\",\"operator\",\"support\"]");
 
         Change change = onlyChange();
         assertThat(change.getAudienceNarratives()).containsOnly(
-                Map.entry("leadership", "Customers asked for exports most."),
-                Map.entry("operator", "Watch the export queue.")
+                Map.entry("leadership", AudienceNarrative.of("Customers asked for exports most.")),
+                Map.entry("operator", AudienceNarrative.of("Watch the export queue."))
         );
         mockMvc.perform(get("/changes").param("project", repository.projectId().toString()).session(repository.session()))
                 .andExpect(content().string(containsString("For Leadership")))
@@ -362,6 +362,7 @@ class ChangeAiProcessingIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.aiStatus").value("SUCCEEDED"))
                 .andExpect(jsonPath("$.neutralSummary.whatChanged").value("Written by a person."))
                 .andExpect(jsonPath("$.audienceNarratives.operator").value("By hand."))
+                .andExpect(jsonPath("$.audienceNarrativeDetails.operator.body").value("By hand."))
                 .andExpect(jsonPath("$.summaryEditorName").value("Owner"));
     }
 

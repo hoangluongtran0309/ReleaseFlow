@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.change;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hoangluongtran0309.releaseflow.category.CategoryGroup;
 import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 import com.hoangluongtran0309.releaseflow.category.CategoryRef;
@@ -49,7 +50,7 @@ public record ChangeView(
         NeutralSummary neutralSummary,
         String contentLanguage,
         AiProvider aiProvider,
-        Map<String, String> audienceNarratives,
+        Map<String, AudienceNarrative> audienceNarrativeDetails,
         String summaryEditorName,
         Instant summaryEditedAt,
         ContextAssessment context,
@@ -65,19 +66,36 @@ public record ChangeView(
 
     public ChangeView {
         // Sorted by audience code so pages list narratives in a stable order.
-        audienceNarratives = audienceNarratives == null
+        audienceNarrativeDetails = audienceNarrativeDetails == null
                 ? Map.of()
-                : Collections.unmodifiableMap(new TreeMap<>(audienceNarratives));
+                : Collections.unmodifiableMap(new TreeMap<>(audienceNarrativeDetails));
         linkedIssues = linkedIssues == null ? List.of() : List.copyOf(linkedIssues);
     }
 
-    /** What this change says to one audience, or an empty string. */
+    /**
+     * Each audience's narrative body, keyed by audience code, as the API returned narratives
+     * before ADR-0035; {@code audienceNarrativeDetails} adds the relevance and headline.
+     */
+    @JsonProperty("audienceNarratives")
+    public Map<String, String> audienceNarratives() {
+        Map<String, String> bodies = new TreeMap<>();
+        audienceNarrativeDetails.forEach((code, narrative) -> bodies.put(code, narrative.body()));
+        return Collections.unmodifiableMap(bodies);
+    }
+
+    /** The body of what this change says to one audience, or an empty string. */
     public String narrative(String audienceCode) {
-        return audienceNarratives.getOrDefault(audienceCode, "");
+        AudienceNarrative narrative = audienceNarrativeDetails.get(audienceCode);
+        return narrative == null ? "" : narrative.body();
+    }
+
+    /** What this change says to one audience, or null when it has no narrative for it. */
+    public AudienceNarrative audienceNarrative(String audienceCode) {
+        return audienceNarrativeDetails.get(audienceCode);
     }
 
     /** The same change with its summary and narratives written in another language. */
-    public ChangeView withContent(NeutralSummary summary, Map<String, String> narratives, String language) {
+    public ChangeView withContent(NeutralSummary summary, Map<String, AudienceNarrative> narratives, String language) {
         return new ChangeView(id, pullRequestNumber, title, description, authorLogin, labels, targetBranch, mergeCommitSha,
                 mergedAt, url, category, categoryName, categoryGroup, breaking, needsReview, reasons,
                 classificationSource, aiStatus, aiModel, aiFailure, aiEligible, reviewedBy, reviewerName, reviewedAt,

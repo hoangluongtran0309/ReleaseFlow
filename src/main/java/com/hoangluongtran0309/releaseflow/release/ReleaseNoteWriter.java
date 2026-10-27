@@ -1,6 +1,7 @@
 package com.hoangluongtran0309.releaseflow.release;
 
 import com.hoangluongtran0309.releaseflow.account.OutputLanguageService;
+import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.translation.TranslationService;
@@ -29,6 +30,7 @@ class ReleaseNoteWriter {
     static final String MIGRATION_STEP = "migrationStep";
     static final String LIMITATIONS = "limitations";
     static final String NARRATIVE = "narrative.";
+    static final String HEADLINE = "headline.";
     static final String RELEASE_SUMMARY = "releaseSummary";
 
     private final TranslationService translationService;
@@ -83,7 +85,7 @@ class ReleaseNoteWriter {
         return new Localized(localized, summary, status);
     }
 
-    /** The texts of a change that are translated: its summary fields and each audience's narrative. */
+    /** The texts of a change that are translated: its summary fields and each audience's headline and body. */
     static Map<String, String> texts(ChangeView change) {
         NeutralSummary summary = change.neutralSummary();
         Map<String, String> texts = new LinkedHashMap<>();
@@ -93,11 +95,15 @@ class ReleaseNoteWriter {
         texts.put(MIGRATION_STEP, summary.migrationStep());
         // Blank texts are never sent, so a summary without limitations hashes as it did before.
         texts.put(LIMITATIONS, summary.limitations());
-        change.audienceNarratives().forEach((code, narrative) -> texts.put(NARRATIVE + code, narrative == null ? "" : narrative));
+        change.audienceNarrativeDetails().forEach((code, narrative) -> {
+            texts.put(NARRATIVE + code, narrative.body());
+            // Blank, so not sent, for a narrative without one: its translation hashes as before.
+            texts.put(HEADLINE + code, narrative.headline());
+        });
         return texts;
     }
 
-    // The migration kind is not text: the translation keeps the source's.
+    // Neither the migration kind nor a relevance is text: the translation keeps the source's.
     static ChangeView translated(ChangeView change, Map<String, String> texts, String language) {
         NeutralSummary summary = new NeutralSummary(
                 texts.get(WHAT_CHANGED),
@@ -107,12 +113,12 @@ class ReleaseNoteWriter {
                 change.neutralSummary().migrationKind(),
                 texts.getOrDefault(LIMITATIONS, "")
         );
-        Map<String, String> narratives = new LinkedHashMap<>();
-        texts.forEach((key, text) -> {
-            if (key.startsWith(NARRATIVE)) {
-                narratives.put(key.substring(NARRATIVE.length()), text);
-            }
-        });
+        Map<String, AudienceNarrative> narratives = new LinkedHashMap<>();
+        change.audienceNarrativeDetails().forEach((code, narrative) -> narratives.put(code, new AudienceNarrative(
+                narrative.relevance(),
+                texts.getOrDefault(HEADLINE + code, ""),
+                texts.getOrDefault(NARRATIVE + code, "")
+        )));
         return change.withContent(summary, narratives, language);
     }
 

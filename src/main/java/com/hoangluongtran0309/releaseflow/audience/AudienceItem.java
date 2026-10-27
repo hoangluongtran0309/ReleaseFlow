@@ -15,6 +15,11 @@ import java.util.Objects;
  * @param migrationKind {@code required}, {@code conditional}, {@code recommended}, or
  *     {@code unspecified} for a step recorded before kinds existed; empty when there is
  *     no step (ADR-0035)
+ * @param narrative the body of what the change says to this audience
+ * @param headline this audience's one-line headline, or {@code whatChanged} when it has
+ *     none, so it always has a value
+ * @param relevance {@code brief} or {@code full}; a change that is {@code none} for the
+ *     audience is not in its note, unless it is breaking, which makes it brief
  */
 public record AudienceItem(
         String whatChanged,
@@ -24,6 +29,8 @@ public record AudienceItem(
         String migrationKind,
         String limitations,
         String narrative,
+        String headline,
+        String relevance,
         String reference,
         int pullRequestNumber,
         String pullRequestUrl,
@@ -43,6 +50,9 @@ public record AudienceItem(
             "migrationUnspecified",
             "limitations",
             "narrative",
+            "headline",
+            "relevance",
+            "brief",
             "reference",
             "pullRequestNumber",
             "pullRequestUrl",
@@ -53,6 +63,8 @@ public record AudienceItem(
     static final String CONDITIONAL = "conditional";
     static final String RECOMMENDED = "recommended";
     static final String UNSPECIFIED = "unspecified";
+    public static final String BRIEF = "brief";
+    public static final String FULL = "full";
 
     static final AudienceItem SAMPLE = new AudienceItem(
             "A safer deployment workflow is now available.",
@@ -62,6 +74,8 @@ public record AudienceItem(
             RECOMMENDED,
             "Notes are written in the Organization's output language only.",
             "Release managers can review audience-specific notes before they are published.",
+            "Review each audience's note before publishing.",
+            FULL,
             "#101",
             101,
             "https://github.com/acme/app/pull/101",
@@ -77,6 +91,8 @@ public record AudienceItem(
         migrationKind = migrationStep.isEmpty() ? "" : Objects.requireNonNullElse(migrationKind, UNSPECIFIED);
         limitations = Objects.requireNonNullElse(limitations, "");
         narrative = Objects.requireNonNullElse(narrative, "");
+        headline = headline == null || headline.isBlank() ? whatChanged : headline;
+        relevance = BRIEF.equals(relevance) ? BRIEF : FULL;
         reference = Objects.requireNonNullElse(reference, "#" + pullRequestNumber);
         pullRequestUrl = Objects.requireNonNullElse(pullRequestUrl, "");
         linkedIssues = linkedIssues == null ? List.of() : List.copyOf(linkedIssues);
@@ -106,6 +122,10 @@ public record AudienceItem(
         context.put("migrationUnspecified", UNSPECIFIED.equals(migrationKind));
         context.put("limitations", limitations);
         context.put("narrative", narrative);
+        context.put("headline", headline);
+        context.put("relevance", relevance);
+        // A section, since Mustache cannot compare values: presets hide detail lines inside {{^brief}}.
+        context.put("brief", BRIEF.equals(relevance));
         // #12 on GitHub, !12 on GitLab, the issue key on Jira and Linear.
         context.put("reference", reference);
         context.put("pullRequestNumber", pullRequestNumber);

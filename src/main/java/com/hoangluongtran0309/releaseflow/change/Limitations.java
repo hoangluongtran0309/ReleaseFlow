@@ -3,6 +3,7 @@ package com.hoangluongtran0309.releaseflow.change;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
@@ -12,6 +13,9 @@ import java.util.regex.Pattern;
  * asked. So is a sentence that only states the change's scope — that it "does not
  * affect" something or "only affects" another — since scope is what an audience's
  * relevance decides. Only an AI answer is filtered: a person's words stay as written.
+ *
+ * <p>An audience's headline and body lose remarks about the input the same way, but keep
+ * what they say about scope: telling a reader a change does not affect them is their job.
  */
 final class Limitations {
 
@@ -48,11 +52,25 @@ final class Limitations {
 
     /** The limitations without any sentence about the input or the scope; empty when nothing is left. */
     static String stated(String limitations) {
+        return kept(limitations, sentence -> isRemarkOnTheInput(sentence)
+                || ONLY_SCOPE.matcher(LIST_ITEM.matcher(sentence.strip()).replaceFirst("")).find());
+    }
+
+    /** The text without any sentence about the input; empty when nothing is left. */
+    static String withoutRemarksOnTheInput(String text) {
+        return kept(text, Limitations::isRemarkOnTheInput);
+    }
+
+    /** Whether the text talks about the input rather than the change, such as "not provided". */
+    static boolean isRemarkOnTheInput(String text) {
+        return ABOUT_THE_INPUT.matcher(text).find();
+    }
+
+    private static String kept(String text, Predicate<String> dropped) {
         List<String> lines = new ArrayList<>();
-        for (String line : limitations.split("\n", -1)) {
+        for (String line : text.split("\n", -1)) {
             String kept = String.join(" ", Arrays.stream(SENTENCE_END.split(line))
-                    .filter(sentence -> !ABOUT_THE_INPUT.matcher(sentence).find()
-                            && !ONLY_SCOPE.matcher(LIST_ITEM.matcher(sentence.strip()).replaceFirst("")).find())
+                    .filter(dropped.negate())
                     .toList());
             if (!kept.isBlank() && !LIST_MARKER.matcher(kept).matches()) {
                 lines.add(kept.stripTrailing());

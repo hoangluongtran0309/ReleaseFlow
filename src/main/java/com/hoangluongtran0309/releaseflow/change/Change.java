@@ -188,7 +188,7 @@ class Change {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "audience_narratives", columnDefinition = "jsonb")
-    private Map<String, String> audienceNarratives;
+    private Map<String, AudienceNarrative> audienceNarratives;
 
     @Column(name = "summary_edited_by")
     private UUID summaryEditedBy;
@@ -493,7 +493,7 @@ class Change {
      */
     void editSummary(
             NeutralSummary summary,
-            Map<String, String> narratives,
+            Map<String, AudienceNarrative> narratives,
             String language,
             UUID editor,
             String name,
@@ -661,7 +661,7 @@ class Change {
         return contentLanguage;
     }
 
-    Map<String, String> getAudienceNarratives() {
+    Map<String, AudienceNarrative> getAudienceNarratives() {
         return audienceNarratives == null ? Map.of() : Map.copyOf(audienceNarratives);
     }
 

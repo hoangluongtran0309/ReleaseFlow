@@ -134,7 +134,10 @@ danh mục (hoặc đề xuất một category mới khi không có cái nào ph
 việc có nên để người review hay không, một **bản tóm tắt trung lập**, và một **narrative** cho
 từng audience, tất cả viết bằng ngôn ngữ đầu ra. Bản tóm tắt trung lập gồm: thay đổi gì (một
 câu), vì sao, chi tiết kỹ thuật, bước chuyển đổi kèm loại của nó, và giới hạn: những gì thay đổi
-cố ý chưa làm. Narrative nào thiếu thì đơn giản là bỏ qua.
+cố ý chưa làm. Narrative của mỗi audience có mức liên quan (`none`, `brief` hoặc `full`), một dòng
+tiêu đề và phần nội dung; release note bỏ qua thay đổi có mức `none` với audience của nó, trừ khi
+thay đổi đó phá vỡ tương thích (xem [Mỗi audience đọc gì](release-notes.md#what-each-audience-reads)).
+Narrative nào thiếu hoặc rỗng thì đơn giản là bỏ qua.
 
 Một **dependency update**, tức thay đổi có tác giả là `dependabot[bot]` hoặc `renovate[bot]`,
 hoặc có head branch bắt đầu bằng `dependabot/` hay `renovate/`, được gửi cho AI mà không kèm
@@ -178,8 +181,11 @@ MongoDB" được giữ, và trường giới hạn bị thiếu thì coi là tr
 temperature `0`, để cùng một thay đổi dao động ít nhất trong khả năng của model (xem
 [Cấu hình](configuration.md#ai)).
 
-Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, và API thay đổi trả về chúng dưới dạng `neutralSummary` và `audienceNarratives` kèm
-`contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
+Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, mỗi narrative kèm mức liên
+quan và dòng tiêu đề, và API thay đổi trả về chúng dưới dạng `neutralSummary`,
+`audienceNarratives` (nội dung narrative của từng audience, theo mã audience) và
+`audienceNarrativeDetails` (mỗi mã audience một object có `relevance`, `headline` và `body`),
+kèm `contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
 giờ bị câu trả lời AI sau đó thay thế.
 
 ![Tóm tắt trung lập của một thay đổi, tiếp theo là một đoạn viết cho từng audience](assets/changes/c-5-summary.webp)

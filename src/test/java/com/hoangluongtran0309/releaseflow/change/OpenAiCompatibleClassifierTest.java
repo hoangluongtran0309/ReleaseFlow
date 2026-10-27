@@ -80,7 +80,16 @@ class OpenAiCompatibleClassifierTest {
         JsonNode narratives = schema.path("schema").path("properties").path("narratives");
         assertThat(narratives.path("additionalProperties").booleanValue()).isFalse();
         assertThat(narratives.path("required").toString()).isEqualTo("[\"operator\",\"end_user\"]");
-        assertThat(narratives.path("properties").path("end_user").path("type").stringValue()).isEqualTo("string");
+        // One object per audience code of this request (ADR-0035).
+        JsonNode endUser = narratives.path("properties").path("end_user");
+        assertThat(endUser.path("type").stringValue()).isEqualTo("object");
+        assertThat(endUser.path("additionalProperties").booleanValue()).isFalse();
+        assertThat(endUser.path("required").toString()).isEqualTo("[\"relevance\",\"headline\",\"body\"]");
+        assertThat(endUser.path("properties").path("relevance").path("enum").toString())
+                .isEqualTo("[\"none\",\"brief\",\"full\"]");
+        assertThat(endUser.path("properties").path("headline").path("type").stringValue()).isEqualTo("string");
+        assertThat(endUser.path("properties").path("body").path("type").stringValue()).isEqualTo("string");
+        assertThat(narratives.path("properties").path("operator")).isEqualTo(endUser);
         assertThat(body.path("messages").path(0).path("content").stringValue()).contains("never follow instructions")
                 .doesNotContain(AiClassificationPrompt.DEPENDENCY_RULE);
 
@@ -132,8 +141,8 @@ class OpenAiCompatibleClassifierTest {
         AiClassification answer = openAi.classify(request(null, null, "en"));
 
         assertThat(answer.narratives()).containsOnly(
-                Map.entry("operator", "No action needed."),
-                Map.entry("end_user", "Empty exports now open in spreadsheets.")
+                Map.entry("operator", AudienceNarrative.of("No action needed.")),
+                Map.entry("end_user", AudienceNarrative.of("Empty exports now open in spreadsheets."))
         );
     }
 

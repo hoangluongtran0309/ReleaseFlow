@@ -93,7 +93,84 @@ class AiClassificationParserTest {
                  "narratives":{"operator":"  Watch the import logs.  ","end_user":"   ","contributor":"Not requested."}}
                 """, REQUEST);
 
-        assertThat(answer.narratives()).containsExactly(Map.entry("operator", "Watch the import logs."));
+        // A plain string, as answers were before ADR-0035, is a full body.
+        assertThat(answer.narratives()).containsExactly(Map.entry("operator", AudienceNarrative.of("Watch the import logs.")));
+    }
+
+    @Test
+    void readsARelevanceAHeadlineAndABodyForEachAudience() {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"brief","headline":"  Exports queue in the background.  ","body":" Watch the queue. "},
+                 "end_user":{"relevance":"none","headline":"","body":""}}"""), REQUEST);
+
+        assertThat(answer.narratives()).containsOnly(
+                Map.entry("operator", new AudienceNarrative(Relevance.BRIEF, "Exports queue in the background.", "Watch the queue.")),
+                // None says something having no narrative would not: the note leaves the change out.
+                Map.entry("end_user", new AudienceNarrative(Relevance.NONE, "", ""))
+        );
+    }
+
+    // One audience's slip must not cost the whole answer (ADR-0035).
+    @ParameterizedTest
+    @ValueSource(strings = {"\"often\"", "\"\"", "null", "3"})
+    void readsAnUnknownOrMissingRelevanceAsFull(String relevance) {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":%s,"headline":"Exports queue.","body":"Watch the queue."}}""".formatted(relevance)), REQUEST);
+
+        assertThat(answer.narratives().get("operator"))
+                .isEqualTo(new AudienceNarrative(Relevance.FULL, "Exports queue.", "Watch the queue."));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone",
+            "Exports queue.\\nWatch the queue.",
+            "Specific queue limits are not detailed.",
+            "The rollback steps are not provided."
+    })
+    void dropsAHeadlineThatIsTooLongOnSeveralLinesOrARemarkOnTheInput(String headline) {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":"%s","body":"Watch the queue."}}""".formatted(headline)), REQUEST);
+
+        assertThat(answer.narratives().get("operator")).isEqualTo(new AudienceNarrative(Relevance.FULL, "", "Watch the queue."));
+    }
+
+    @Test
+    void keepsAHeadlineOfTwentyWords() {
+        String headline = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
+                + "sixteen seventeen eighteen nineteen twenty";
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":"%s","body":""}}""".formatted(headline)), REQUEST);
+
+        assertThat(answer.narratives().get("operator").headline()).isEqualTo(headline);
+    }
+
+    @Test
+    void dropsTheSentencesOfABodyThatRemarkOnTheInput() {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":"","body":"Watch the export queue. Rollback steps are not provided."},
+                 "end_user":{"relevance":"full","headline":"","body":"The exact limits are not specified."}}"""), REQUEST);
+
+        assertThat(answer.narratives().get("operator").body()).isEqualTo("Watch the export queue.");
+        // Left with nothing, and full, it says no more than having no narrative.
+        assertThat(answer.narratives()).doesNotContainKey("end_user");
+    }
+
+    @Test
+    void leavesOutANarrativeThatSaysNothing() {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":" ","body":""},
+                 "end_user":{"relevance":"brief","headline":"","body":""}}"""), REQUEST);
+
+        assertThat(answer.narratives()).containsOnly(Map.entry("end_user", new AudienceNarrative(Relevance.BRIEF, "", "")));
+    }
+
+    private static String withNarratives(String narratives) {
+        return """
+                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""},
+                 "narratives":%s}
+                """.formatted(narratives);
     }
 
     @ParameterizedTest

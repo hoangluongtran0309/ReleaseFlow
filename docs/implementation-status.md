@@ -509,11 +509,33 @@ where it first appears; ADRs are linked from the slice they record.
     `none`;
   - every classification request at a fixed temperature of `0`.
 
+### A note per audience (V32)
+
+- The per-audience part of
+  [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) (#16), with Flyway
+  `V32`:
+  - a narrative per audience of `{relevance, headline, body}`, required for every
+    audience code by the response schema and parsed leniently: an unknown relevance is
+    `full`, a headline over 20 words or several lines, or one that remarks on missing
+    evidence, is dropped, so is each such sentence of a body, and a full narrative with
+    no text is left out;
+  - `V32` rewriting every narrative stored as a string to a full one without a headline;
+  - a note per audience that leaves out a change that is `none` for it unless the change
+    is breaking (`none` then reads as `brief`), counts and warns about what it shows, and
+    says so when nothing concerns its audience;
+  - template variables `headline` (falling back to `whatChanged`) and `relevance`, the
+    `brief` section, and presets that lead with the headline, keep detail lines inside
+    `{{^brief}}`, and always print a required step;
+  - headlines translated as `headline.<code>` beside `narrative.<code>`;
+  - Edit summary, page and API, with a relevance, a headline, and a body per audience,
+    still accepting a plain string;
+  - preset intents that say when a change is `none` for their audience, an operator
+    intent that names something to watch only when the evidence does, and a `support`
+    preset that registration seeds.
+
 ## In progress
 
-- The per-audience part of [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md)
-  (#16) follows in the next pull request: a narrative per audience with a relevance and a
-  headline, and a selection and counts per audience. The ADR is accepted for both parts.
+- Nothing; the next slice starts from the planned work below.
 
 ## Planned
 

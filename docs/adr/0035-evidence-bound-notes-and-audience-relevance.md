@@ -204,8 +204,17 @@ they are decided together and the response contract changes once.
 - The response schema requires one such object per audience code. A malformed narrative
   never makes the whole answer unusable ([ADR-0011](0011-audience-release-notes.md)):
   an unknown relevance reads as `full`, a headline over 20 words or over several lines is
-  dropped, and a narrative with neither headline nor body is left out, as an empty one is
-  today.
+  dropped, and a plain string, as answers were before, is a full body.
+- **An empty narrative is left out only when it says nothing.** A narrative with neither
+  headline nor body is left out when its relevance is `full`, since it then renders
+  exactly as having no narrative. `none` with no text is the natural answer for an
+  audience a change does not concern, and leaving it out would include the change, so it
+  is kept; so is `brief` with no text, which still hides detail lines. Edit summary
+  applies the same rule.
+- **The filters of the neutral summary apply to the narratives.** A headline that remarks
+  on missing evidence ("not detailed", "not provided", "not specified") is dropped, and so
+  is each such sentence of a body, as for limitations. The scope filter does not apply:
+  telling a reader a change does not affect them is a narrative's job.
 - `audience_narratives` stores the objects. A new migration rewrites each stored string
   as `{relevance: full, headline: "", body: <string>}`, so the code reads one shape and
   those changes render as they did.
@@ -239,7 +248,10 @@ they are decided together and the response contract changes once.
   relevance a person chose stands like the rest of a person-written summary: the AI never
   replaces it.
 - **Presets.** Each preset intent ends by saying when a change is `none` for it: for end
-  users, build, CI, dependency, test, and internal changes they cannot see. A fourth
+  users, build, CI, dependency, test, and internal changes they cannot see. The operator
+  intent no longer asks for "what to watch after deploy": asked for in general, the AI
+  advised watching for new dependency pull requests on a change that pins base images.
+  It names something to watch only when the change or the Project context does. A fourth
   preset, `support`, joins the ones registration seeds. It covers what customers may ask
   about, what to tell them, and whether a step is required or only advisable.
   Organizations that existed before can add an audience coded `support` and reset it to

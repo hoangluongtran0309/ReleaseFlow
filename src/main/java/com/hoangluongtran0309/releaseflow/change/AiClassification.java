@@ -12,7 +12,7 @@ import java.util.Objects;
  *
  * @param category a category of the catalog the AI was given
  * @param narratives the change explained for each audience, keyed by audience code;
- *     an audience the AI wrote nothing for is absent
+ *     an audience the AI wrote nothing usable for is absent
  * @param suggestion a new category the AI proposed because none fit, or null; only
  *     present when {@code category} is Unknown
  * @param contextScore how much evidence the pull request gave, from 0 to 100
@@ -26,7 +26,7 @@ record AiClassification(
         boolean breaking,
         boolean needsHumanReview,
         NeutralSummary summary,
-        Map<String, String> narratives,
+        Map<String, AudienceNarrative> narratives,
         CategorySuggestionDraft suggestion,
         int contextScore,
         List<String> contextReasons,

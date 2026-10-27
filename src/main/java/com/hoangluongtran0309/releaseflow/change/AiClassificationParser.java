@@ -18,7 +18,10 @@ import java.util.Optional;
  * is rejected as a whole, and so is a category outside the catalog that was sent;
  * unknown extra fields are ignored. Narratives are optional: only the requested
  * audiences are read, and a missing or empty one is left out. A category suggestion
- * is kept only with an Unknown answer and a valid code that is not already listed. A
+ * is kept only with an Unknown answer and a valid code that is not already listed. An
+ * unknown relevance is full, a headline over 20 words or several lines is dropped, and so
+ * is a headline, or a sentence of a body, that remarks on the input. A narrative that says
+ * nothing more than having none is left out. A
  * migration kind that does not match the step is corrected rather than rejected, and
  * the answer records that it was; a step that only says nothing needs doing is no step. A
  * missing limitations field is empty, and a limitation about the input or the change's
@@ -31,6 +34,7 @@ final class AiClassificationParser {
     static final int CONTEXT_REASON_LIMIT = 5;
     static final int CONTEXT_REASON_LENGTH = 120;
     static final int MIGRATION_KIND_LENGTH = 32;
+    static final int HEADLINE_WORDS = 20;
     static final String INVALID = "The AI returned an invalid classification.";
 
     private final ObjectMapper objectMapper;
@@ -156,15 +160,39 @@ final class AiClassificationParser {
         return value.length() <= limit ? value : value.substring(0, limit - 1) + "…";
     }
 
-    private static Map<String, String> narratives(JsonNode narratives, List<String> audienceCodes) {
-        Map<String, String> result = new LinkedHashMap<>();
+    // One audience's narrative never makes the answer unusable: whatever is malformed in it
+    // is dropped, and a plain string is a body, as narratives were before ADR-0035.
+    private static Map<String, AudienceNarrative> narratives(JsonNode narratives, List<String> audienceCodes) {
+        Map<String, AudienceNarrative> result = new LinkedHashMap<>();
         for (String code : audienceCodes) {
             JsonNode value = narratives.path(code);
-            if (value.isString() && !value.stringValue().isBlank()) {
-                result.put(code, limit(value.stringValue().strip()));
+            AudienceNarrative narrative = null;
+            if (value.isObject()) {
+                narrative = new AudienceNarrative(
+                        Relevance.fromValue(value.path("relevance").asString("")).orElse(Relevance.FULL),
+                        headline(value.path("headline")),
+                        body(value.path("body"))
+                );
+            } else if (value.isString()) {
+                narrative = AudienceNarrative.of(body(value));
+            }
+            if (narrative != null && !narrative.saysNothing()) {
+                result.put(code, narrative);
             }
         }
         return result;
+    }
+
+    private static String headline(JsonNode value) {
+        String headline = value.isString() ? value.stringValue().strip() : "";
+        boolean usable = !headline.contains("\n")
+                && headline.split("\\s+").length <= HEADLINE_WORDS
+                && !Limitations.isRemarkOnTheInput(headline);
+        return usable ? limit(headline) : "";
+    }
+
+    private static String body(JsonNode value) {
+        return value.isString() ? limit(Limitations.withoutRemarksOnTheInput(value.stringValue().strip())) : "";
     }
 
     // A field added to the contract later: an answer without it is still usable.

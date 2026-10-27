@@ -95,7 +95,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
 
         approve(owner, projectId, releaseId)
-                .andExpect(jsonPath("$.notes.length()").value(6))
+                .andExpect(jsonPath("$.notes.length()").value(8))
                 .andExpect(jsonPath("$.notes[?(@.language == 'en')].translationStatus").value(everyItem(is("READY"))))
                 .andExpect(jsonPath("$.notes[?(@.language == 'vi')].translationStatus").value(everyItem(is("PENDING"))))
                 .andExpect(jsonPath("$.notes[?(@.language == 'vi')].content").value(everyItem(containsString(
@@ -110,7 +110,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .as("the database holds publication too")
                 .isInstanceOf(DataIntegrityViolationException.class);
         mockMvc.perform(get(releasePage(projectId, releaseId)).session(owner.session()))
-                .andExpect(content().string(containsString("Translating 3 notes…")))
+                .andExpect(content().string(containsString("Translating 4 notes…")))
                 .andExpect(content().string(containsString("disabled=\"disabled\">Publish 1.4.0</button>")))
                 .andExpect(content().string(containsString("data-poll-url=\"" + releaseApi(projectId, releaseId) + "/notes\"")));
 
@@ -167,7 +167,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         List<String> vietnamese = JsonPath.read(notes, "$[?(@.language == 'vi')].content");
         // A summary is untrusted text in Markdown, so the stand-in's brackets are escaped.
-        assertThat(vietnamese).hasSize(3).allSatisfy(content -> assertThat(content)
+        assertThat(vietnamese).hasSize(4).allSatisfy(content -> assertThat(content)
                 .startsWith("# Bản phát hành 1.4.0\n\n\\[VI\\] Exports and clearer config.\n"));
         List<String> english = JsonPath.read(notes, "$[?(@.language == 'en')].content");
         assertThat(english).allSatisfy(content -> assertThat(content)
@@ -291,7 +291,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes").session(owner.session()))
                 .andExpect(jsonPath("$[?(@.language == 'vi')].translationStatus").value(everyItem(is("FAILED"))));
         mockMvc.perform(get(releasePage(projectId, releaseId)).session(owner.session()))
-                .andExpect(content().string(containsString("3 notes could not be translated.")))
+                .andExpect(content().string(containsString("4 notes could not be translated.")))
                 .andExpect(content().string(containsString("Retry translations")));
         action(owner, projectId, releaseId, "publish").andExpect(status().isConflict());
 
@@ -324,7 +324,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         String notes = mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes").session(owner.session()))
                 .andReturn().getResponse().getContentAsString();
         List<String> failed = JsonPath.read(notes, "$[?(@.translationStatus == 'FAILED')].id");
-        assertThat(failed).hasSize(3);
+        assertThat(failed).hasSize(4);
         for (String noteId : failed) {
             mockMvc.perform(put(releaseApi(projectId, releaseId) + "/notes/{noteId}", noteId)
                             .session(owner.session())

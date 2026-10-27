@@ -6,43 +6,64 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
- * The three audiences every Organization starts with. Display names and the labels in
+ * The four audiences every Organization starts with. Display names and the labels in
  * the templates follow the Organization's output language (English or Vietnamese,
  * otherwise English); the communication intents are instructions for the AI and stay
- * in English. V13 seeded the values of its time for Organizations that existed before;
- * they keep their templates until an administrator resets a preset.
+ * in English, and each ends by saying when a change is none for its audience
+ * (ADR-0035). V13 seeded the values of its time for Organizations that existed before;
+ * they keep their templates until an administrator resets a preset, and can add the
+ * support audience themselves.
  */
 final class AudiencePresets {
 
     static final String OPERATOR = "operator";
     static final String CONTRIBUTOR = "contributor";
     static final String END_USER = "end_user";
+    static final String SUPPORT = "support";
 
-    static final String OPERATOR_INTENT = "Focus on operational risk, rollback, and what to watch after deploy. "
-            + "Keep concrete numbers and failure modes.";
+    // A note names something to watch only when the evidence does: asked for in general,
+    // the AI invented advice nobody gave.
+    static final String OPERATOR_INTENT = "Focus on operational risk, rollback, and what changes in how the product "
+            + "is deployed, configured, or run. Keep concrete numbers and failure modes. Name something to watch "
+            + "after deploying only when the change or the project context names it. "
+            + "A change is none for operators when it changes nothing about deploying, configuring, or running the "
+            + "product, such as a test-only, CI-only, or documentation-only change.";
     static final String CONTRIBUTOR_INTENT = "Focus on implementation detail and what other developers must change "
-            + "in their own code. Technical vocabulary is expected.";
+            + "in their own code. Technical vocabulary is expected. "
+            + "A change is none for contributors only when it touches nothing developers build, test, or call, "
+            + "such as a change to deployment settings alone.";
     static final String END_USER_INTENT = "Plain language, no jargon and no technical metrics. "
-            + "Say only what the person will notice while using the product.";
+            + "Say only what the person will notice while using the product. "
+            + "A change is none for end users when they cannot see it: build, CI, dependency, test, and internal "
+            + "changes.";
+    static final String SUPPORT_INTENT = "Write for the support team: what customers may notice or ask about, "
+            + "what to tell them, and whether a step is required or only advisable. Plain, precise language. "
+            + "A change is none for support when customers cannot notice it: build, CI, dependency, test, and "
+            + "internal changes.";
 
-    // A migration step is labelled by its kind (ADR-0035). One recorded before kinds
-    // existed keeps the neutral label, so it is never presented as required.
-    private static final String MIGRATION_LINES = """
+    // A migration step is labelled by its kind (ADR-0035), and a required one is printed
+    // whatever the relevance. One recorded before kinds existed keeps the neutral label,
+    // so it is never presented as required.
+    private static final String REQUIRED_LINE = """
             {{#migrationRequired}}
-              - %1$s: {{migrationStep}}
+              - %s: {{migrationStep}}
             {{/migrationRequired}}
+            """;
+    private static final String OTHER_MIGRATION_LINES = """
             {{#migrationConditional}}
-              - %2$s: {{migrationStep}}
+              - %1$s: {{migrationStep}}
             {{/migrationConditional}}
             {{#migrationRecommended}}
-              - %3$s: {{migrationStep}}
+              - %2$s: {{migrationStep}}
             {{/migrationRecommended}}
             {{#migrationUnspecified}}
-              - %4$s: {{migrationStep}}
+              - %3$s: {{migrationStep}}
             {{/migrationUnspecified}}
             """;
+    // A brief change keeps its headline and a required step; the detail lines are for full ones.
     private static final String DETAILED_BODY = """
-            - **{{whatChanged}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            - **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            {{^brief}}
             {{#whyChanged}}
               - %s: {{.}}
             {{/whyChanged}}
@@ -52,13 +73,22 @@ final class AudiencePresets {
             {{#limitations}}
               - %s: {{.}}
             {{/limitations}}
-            %s""";
+            {{/brief}}
+            %s{{^brief}}
+            %s{{/brief}}
+            """;
     // End users read a step only when they cannot do without it.
     private static final String PLAIN_BODY = """
-            - **{{whatChanged}}**{{#narrative}} — {{.}}{{/narrative}}
-            {{#migrationRequired}}
-              - %s: {{migrationStep}}
-            {{/migrationRequired}}
+            - **{{headline}}**{{#narrative}} — {{.}}{{/narrative}}
+            %s""";
+    // Support learns whether a step is required or only advisable, and what is not done yet.
+    private static final String SUPPORT_BODY = """
+            - **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            %s{{^brief}}
+            %s{{#limitations}}
+              - %s: {{.}}
+            {{/limitations}}
+            {{/brief}}
             """;
     private static final String BUNDLE = "messages/audience-presets";
 
@@ -76,9 +106,8 @@ final class AudiencePresets {
         );
         String why = labels.getString("label.why");
         String limitations = labels.getString("label.limitations");
-        String required = labels.getString("label.migration.required");
-        String migration = MIGRATION_LINES.formatted(
-                required,
+        String required = REQUIRED_LINE.formatted(labels.getString("label.migration.required"));
+        String otherMigration = OTHER_MIGRATION_LINES.formatted(
                 labels.getString("label.migration.conditional"),
                 labels.getString("label.migration.recommended"),
                 labels.getString("label.migration")
@@ -88,15 +117,22 @@ final class AudiencePresets {
                         OPERATOR,
                         labels.getString("operator.displayName"),
                         OPERATOR_INTENT,
-                        DETAILED_BODY.formatted(why, labels.getString("label.detail"), limitations, migration)
+                        DETAILED_BODY.formatted(why, labels.getString("label.detail"), limitations, required, otherMigration)
                 ),
                 new Preset(
                         CONTRIBUTOR,
                         labels.getString("contributor.displayName"),
                         CONTRIBUTOR_INTENT,
-                        DETAILED_BODY.formatted(why, labels.getString("label.implementation"), limitations, migration)
+                        DETAILED_BODY.formatted(why, labels.getString("label.implementation"), limitations, required,
+                                otherMigration)
                 ),
-                new Preset(END_USER, labels.getString("end_user.displayName"), END_USER_INTENT, PLAIN_BODY.formatted(required))
+                new Preset(END_USER, labels.getString("end_user.displayName"), END_USER_INTENT, PLAIN_BODY.formatted(required)),
+                new Preset(
+                        SUPPORT,
+                        labels.getString("support.displayName"),
+                        SUPPORT_INTENT,
+                        SUPPORT_BODY.formatted(required, otherMigration, limitations)
+                )
         );
     }
 
