@@ -216,11 +216,56 @@ What DeepL documents today (developers.deepl.com, read on 2026-10-27):
   same record of whether the glossary was used. Nothing is added for it, and the release
   page counts it with the rest.
 
+### DeepL's context
+
+- #14 also asks for DeepL's `context`. ADR-0035's Project context meets that request: it
+  is already sent as `context` with every translation of the Project's texts, the release
+  summary included, and is part of the input hash.
+- The change's own text, such as its what-changed sentence in the source language, is not
+  added. It would change every translation request, and so every input hash and cache key,
+  without a measured need: the terms #14 reports are what the glossary fixes, and nothing
+  shows that the change's text would have kept them.
+
+### A fallback for kept terms
+
+If DeepL refuses entries mapped to themselves, kept terms reach DeepL through its tag
+handling instead, and the glossary carries only fixed translations.
+
+- **How.** Each request sends `tag_handling=xml` and `ignore_tags=x`, and each text is
+  sent as XML: `&`, `<`, and `>` escaped, and every occurrence of a kept term wrapped as
+  `<x>console</x>`. DeepL leaves the content of an ignored tag as it is. The answer is
+  read back by removing the tags and unescaping. `split_sentences=1` is sent with it,
+  since tag handling otherwise stops treating a newline as a sentence break, and a
+  multi-line narrative would be translated differently from now.
+- **Matching** is deterministic and done by ReleaseFlow: exact text, case-sensitive, on
+  Unicode word boundaries, longest term first, never inside a term already wrapped. So
+  "image" is wrapped in "image digests" but not in "images" or "imagery", and "container
+  image" wins over "image".
+- **What it gains.** It needs no glossary, so no sync, no wait, and no state in the DeepL
+  account; it works for every language pair DeepL translates and on every plan, an
+  unsupported glossary pair included.
+- **What it costs.** Every text goes through an escape, a matcher, and an unwrap that
+  ReleaseFlow owns, and an answer whose tags do not come back balanced is an
+  `invalid_response`. A wrapped term is frozen exactly as matched: "images" needs its own
+  kept term, and DeepL translates the sentence around a word it cannot read.
+- **Identity.** The kept terms become their own part of the version: the input hash and
+  the cache key include the sorted kept terms whenever there are any, and the pair's fixed
+  translations as decided above. A text with no kept term in it is still sent as XML, so
+  the request does not depend on which terms happen to match.
+- **The release page** then says, per language, whether the fixed translations were
+  applied; kept terms are always applied and need no status.
+
+**If both work, the glossary is the choice.** It is one mechanism for both kinds of
+entry; the text DeepL receives is the text a person or the AI wrote, with no escaping, no
+change to how it is split into sentences, and no markup to parse back; and DeepL applies a
+glossary entry with its own handling of case and inflection, where a tag freezes exactly
+the characters a matcher found. What the glossary costs, a sync and a pair DeepL may not
+serve, is bounded and shown on the release page. The fallback is kept for the case it
+exists for, not used beside the glossary: two ways to keep one term would be two
+behaviors to explain whenever a note reads wrong.
+
 ### Not decided here
 
-- What DeepL's `context` carries stays what ADR-0035 decided, the Project context. Adding
-  the change's own text or the Project's name to it, as #14 also asks, would change the
-  input hash of every translation and is left to its own decision.
 - A glossary per Project. One Organization's products share their vocabulary, and a pair
   of glossaries in one request would need DeepL's `glossary_ids`; nothing has asked for it.
 
@@ -247,4 +292,5 @@ What DeepL documents today (developers.deepl.com, read on 2026-10-27):
   v1.1.0 replay, must show that an `en → vi` dictionary of kept terms (entries mapped to
   themselves) is accepted, and that a translation sent with both `context` and
   `glossary_id` keeps those terms. If DeepL refuses entries mapped to themselves, kept
-  terms need another mechanism and this record is revised before any code depends on it.
+  terms use [the fallback](#a-fallback-for-kept-terms), and this record says so before it
+  is accepted.
