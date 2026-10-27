@@ -72,7 +72,11 @@ See [Changes and review](changes.md).
 ## AI
 
 AI is optional. Choose one provider and give it a key and a model. There is no default
-model; pick one that supports structured JSON output.
+model; pick one that supports structured JSON output and a temperature. Every
+classification request asks for temperature `0`, a fixed value that keeps one change's
+answer as stable as the model allows, so a model that accepts only its default
+temperature, such as an OpenAI reasoning model, fails every request (see
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md)).
 
 | Variable | Default | What it does |
 | --- | --- | --- |

@@ -17,6 +17,9 @@ import java.util.Objects;
  *     present when {@code category} is Unknown
  * @param contextScore how much evidence the pull request gave, from 0 to 100
  * @param contextReasons short codes for missing evidence
+ * @param correctedMigrationKind the kind the AI returned when it did not match the
+ *     migration step and was corrected, empty when it was not a string; null when it
+ *     matched
  */
 record AiClassification(
         CategoryRef category,
@@ -26,7 +29,8 @@ record AiClassification(
         Map<String, String> narratives,
         CategorySuggestionDraft suggestion,
         int contextScore,
-        List<String> contextReasons
+        List<String> contextReasons,
+        String correctedMigrationKind
 ) {
 
     AiClassification {

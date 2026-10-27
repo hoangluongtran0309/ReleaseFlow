@@ -10,6 +10,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -118,12 +121,38 @@ class AudienceMigrationIntegrationTest extends PostgreSqlIntegrationTest {
         );
     }
 
-    // V13 seeded the presets as they were before the `reference` variable existed.
+    // V13 seeded the templates of its time, before the `reference` variable, migration
+    // kinds, and limitations existed; names and intents are still the shipped ones.
+    private static final String V13_DETAILED = """
+            - **{{whatChanged}}** ([#{{pullRequestNumber}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            {{#whyChanged}}
+              - %s: {{.}}
+            {{/whyChanged}}
+            {{#technicalDetail}}
+              - %s: {{.}}
+            {{/technicalDetail}}
+            {{#migrationStep}}
+              - %s: {{.}}
+            {{/migrationStep}}
+            """;
+    private static final String V13_PLAIN = """
+            - **{{whatChanged}}**{{#narrative}} — {{.}}{{/narrative}}
+            """;
+
     private static List<AudiencePresets.Preset> presets(String language) {
+        ResourceBundle labels = ResourceBundle.getBundle("messages/audience-presets", Locale.forLanguageTag(language),
+                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
+        Map<String, String> templates = Map.of(
+                AudiencePresets.OPERATOR, V13_DETAILED.formatted(
+                        labels.getString("label.why"), labels.getString("label.detail"), labels.getString("label.migration")),
+                AudiencePresets.CONTRIBUTOR, V13_DETAILED.formatted(
+                        labels.getString("label.why"), labels.getString("label.implementation"),
+                        labels.getString("label.migration")),
+                AudiencePresets.END_USER, V13_PLAIN
+        );
         return AudiencePresets.forLanguage(language).stream()
                 .map(preset -> new AudiencePresets.Preset(preset.code(), preset.displayName(),
-                        preset.communicationIntent(),
-                        preset.templateBody().replace("[{{reference}}]", "[#{{pullRequestNumber}}]")))
+                        preset.communicationIntent(), templates.get(preset.code())))
                 .sorted((left, right) -> left.code().compareTo(right.code()))
                 .toList();
     }

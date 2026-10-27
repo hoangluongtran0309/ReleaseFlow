@@ -56,6 +56,7 @@ review cũng vậy:
 | Không đủ ngữ cảnh | [Điểm ngữ cảnh](#review-signals) thấp hơn ngưỡng |
 | Có thể trùng với một thay đổi trước đó | Thay đổi trông giống một thay đổi trước đó (xem [Tín hiệu review](#review-signals)) |
 | AI đề xuất một category mới | Không có category nào trong danh mục phù hợp (xem [Category](#categories)) |
+| Đã chỉnh loại bước chuyển đổi | Loại bước chuyển đổi AI trả về không khớp với bước đó, nên ReleaseFlow đã chỉnh lại (xem [Phân loại bằng AI](#ai-classification-and-summaries)) |
 
 ![Một thay đổi Unknown: hai label bug và enhancement mâu thuẫn và nó chạm vào file nhạy cảm, nên nó chờ một người chọn category](assets/changes/c-6-unknown.webp)
 
@@ -122,21 +123,83 @@ chọn một model hỗ trợ đầu ra JSON có cấu trúc. Ứng dụng khôn
 không có nhà cung cấp nào, thay đổi chỉ được phân loại bằng quy tắc.
 
 Khi có nhà cung cấp, worker xử lý thay đổi hỏi AI **một lần** cho mỗi thay đổi mới, sau khi đã
-biết các tệp thay đổi của nó. Nó gửi tiêu đề pull request, nhãn, nhánh đích, tối đa 4000 ký tự
-của mô tả, ngôn ngữ đầu ra của Organization, các [category](#categories) đang hoạt động của
-Organization, category mà quy tắc đã chọn (nếu có), các issue Jira mà thay đổi nhắc tới dưới
-dạng bằng chứng không tin cậy, cùng mã và ý định truyền đạt của từng
-[audience](release-notes.md#audiences). Nó không gửi tác giả, và request tới OpenAI đặt
-`store: false`. Câu trả lời gồm một mã category trong danh mục (hoặc đề xuất một category mới khi
-không có cái nào phù hợp), một cờ phá vỡ tương thích, việc có nên để người review hay không, một
-**bản tóm tắt trung lập** (thay đổi gì, vì sao, chi tiết kỹ thuật, bước migrate), và một
-**narrative** cho từng audience, tất cả viết bằng ngôn ngữ đầu ra. Narrative nào thiếu thì đơn
-giản là bỏ qua. Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, và API
-thay đổi trả về chúng dưới dạng `neutralSummary` và `audienceNarratives` kèm
+biết các tệp thay đổi của nó. Nó gửi tiêu đề, nhãn, nhánh đích, tối đa 4000 ký tự của mô tả,
+và cho biết đó là code đã merge (pull request hoặc merge request) hay một issue mà tracker đã
+hoàn tất (Linear, Jira); kèm theo ngôn ngữ đầu ra của Organization, các
+[category](#categories) đang hoạt động của Organization, category mà quy tắc đã chọn (nếu có),
+các issue Jira mà thay đổi nhắc tới dưới dạng bằng chứng không tin cậy, mã và ý định truyền đạt
+của từng [audience](release-notes.md#audiences), và [ngữ cảnh Project](#project-context). Nó
+không gửi tác giả, và request tới OpenAI đặt `store: false`. Câu trả lời gồm một mã category trong
+danh mục (hoặc đề xuất một category mới khi không có cái nào phù hợp), một cờ phá vỡ tương thích,
+việc có nên để người review hay không, một **bản tóm tắt trung lập**, và một **narrative** cho
+từng audience, tất cả viết bằng ngôn ngữ đầu ra. Bản tóm tắt trung lập gồm: thay đổi gì (một
+câu), vì sao, chi tiết kỹ thuật, bước chuyển đổi kèm loại của nó, và giới hạn: những gì thay đổi
+cố ý chưa làm. Narrative nào thiếu thì đơn giản là bỏ qua.
+
+Một **dependency update**, tức thay đổi có tác giả là `dependabot[bot]` hoặc `renovate[bot]`,
+hoặc có head branch bắt đầu bằng `dependabot/` hay `renovate/`, được gửi cho AI mà không kèm
+những gì nó trích từ upstream: các phần tử `<details>` và `<blockquote>`, blockquote Markdown, và
+các mục "Release notes", "Changelog", "Commits" đều bị bỏ, chỉ còn lại thứ được nâng phiên bản
+và từ phiên bản nào lên phiên bản nào. Bản thân thay đổi vẫn giữ nguyên mô tả. Nó chỉ phá vỡ
+tương thích, hoặc có bước chuyển đổi, khi chính lời của nó nói vậy; AI chỉ được dặn điều này
+với một dependency update, nên thay đổi khác mà AI không chắc vẫn bị đánh dấu phá vỡ tương thích
+và được đưa đi review.
+
+AI được yêu cầu chỉ nói điều có trong bằng chứng, ở mọi trường: không nêu hậu quả mà thay đổi
+không mô tả (crash, ngừng dịch vụ, không khởi động được), không nêu vị trí trong sản phẩm mà
+thay đổi hay ngữ cảnh Project không nhắc tới, không lấy changelog của một dependency được trích
+lại để nói như thay đổi của chính dự án này, không nêu tệp hay code cho một tracker issue mà nội
+dung của nó không nhắc tới, và không bình luận về những gì bằng chứng còn thiếu, chỗ đó để trống.
+
+Một bước chuyển đổi có loại:
+
+| Loại | Ý nghĩa |
+| --- | --- |
+| `REQUIRED` | Bản cài đặt hiện có ngừng hoạt động, hoặc mất một lớp bảo vệ, cho tới khi làm bước này |
+| `CONDITIONAL` | Chỉ một số bản cài đặt cần, và bước này nói rõ là bản nào |
+| `RECOMMENDED` | Nên làm, nhưng không làm cũng không hỏng gì |
+| `NONE` | Không có bước nào |
+| `UNSPECIFIED` | Bước được ghi trước khi có loại, hoặc bởi bên gọi không nêu loại; không bao giờ được coi là bắt buộc |
+
+Loại không khớp với bước sẽ được chỉnh lại chứ không bị loại bỏ, vì mỗi thay đổi chỉ được hỏi
+AI một lần: `none` mà có bước thì thành `recommended`, loại khác mà không có bước thì thành
+`none`, còn bước không có loại thì là `UNSPECIFIED`. Thay đổi đó khi ấy có trigger review
+**Đã chỉnh loại bước chuyển đổi**, để một người kiểm lại bước này. Bước do AI viết mà chỉ nói
+rằng không cần làm gì, như "No immediate action is required" hay "No migration required", sẽ
+bị bỏ trước, nên loại là `NONE`; bước vẫn yêu cầu điều gì đó ("No action is required unless you
+enable verification", "Rename the setting; no further action is required") thì được giữ.
+
+Giới hạn chỉ là những gì chính nội dung của thay đổi nói rằng nó cố ý chưa làm. Câu mà AI viết
+vào đó để nói về dữ liệu đầu vào, như "Rollback steps are not provided" hay "The version is not
+specified", sẽ bị bỏ, và câu chỉ nói phạm vi của thay đổi, như "This does not affect the CLI"
+hay "It only affects the CI environment", cũng vậy, vì mức liên quan của từng đối tượng đọc đã
+cho biết thay đổi quan trọng với ai. Giới hạn như "Certificate validation is enforced only for
+MongoDB" được giữ, và trường giới hạn bị thiếu thì coi là trống. Mọi request đều dùng
+temperature `0`, để cùng một thay đổi dao động ít nhất trong khả năng của model (xem
+[Cấu hình](configuration.md#ai)).
+
+Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, và API thay đổi trả về chúng dưới dạng `neutralSummary` và `audienceNarratives` kèm
 `contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
 giờ bị câu trả lời AI sau đó thay thế.
 
 ![Tóm tắt trung lập của một thay đổi, tiếp theo là một đoạn viết cho từng audience](assets/changes/c-5-summary.webp)
+
+### Ngữ cảnh Project {#project-context}
+
+AI không biết gì về sản phẩm ngoài thay đổi đang được hỏi. **Ngữ cảnh** của một Project cho nó
+biết những điều nó không tự đoán được: phần nào là client và phần nào là server, setting nằm ở
+đâu, người dùng mở tính năng bằng cách nào, và những gì cố ý giữ tiếng Anh. Mở **Ngữ cảnh
+Project** trên thẻ của Project, hoặc gọi `GET /api/projects/{projectId}/context`, trả về
+`context` và người sửa lần cuối. Mọi thành viên đều đọc được; chỉ quản trị viên mới viết, trên
+trang hoặc bằng `PUT /api/projects/{projectId}/context` với `{"context": "..."}`. Đây là văn
+bản thuần, tối đa 2000 ký tự; dài hơn thì trả về `400 validation_failed`, và để trống thì xoá nó.
+
+Mọi request AI cho một thay đổi của Project đều gửi kèm ngữ cảnh này, như thông tin đúng về sản
+phẩm từ quản trị viên, không bao giờ như chỉ dẫn. Một lần sửa áp dụng cho những thay đổi được
+phân loại sau đó, kể cả khi hỏi lại AI; những thay đổi đã phân loại vẫn giữ nội dung AI đã viết.
+Nó cũng là `context` gửi cho DeepL khi dịch nội dung của Project (xem
+[Ngôn ngữ của release note](release-notes.md#release-note-languages)); DeepL không dịch và không
+tính phí phần này. Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 Quy tắc luôn được ưu tiên:
 

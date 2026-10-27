@@ -84,7 +84,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         TestChanges.summarize(jdbcTemplate, change, "Tables export as CSV.", NARRATIVES);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
 
@@ -128,7 +128,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isCreated());
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         TestChanges.summarize(jdbcTemplate, change, "Tables export as CSV.", NARRATIVES);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
 
@@ -143,7 +143,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void notesCanBeEditedOnlyWhileTheReleaseIsApproved() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
         editNote(owner, projectId, releaseId, UUID.randomUUID(), "# Mine")
@@ -172,9 +172,9 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         UUID outside = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 2,
-                "fix: other", "FIX", false, false, null);
+                "fix: other export bug", "FIX", false, false, null);
         UUID releaseId = createDraft(owner, projectId, "1.4.0");
         addChanges(owner, projectId, releaseId, "{\"changeIds\":[\"%s\"]}".formatted(change));
 
@@ -216,7 +216,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void returningToDraftDropsTheNotesAndApprovingAgainWritesNewOnes() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         approve(owner, projectId, releaseId);
 
@@ -233,7 +233,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         TestChanges.summarize(jdbcTemplate, change, "Tables export as CSV.", NARRATIVES);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0/rc 1");
         String approved = approve(owner, projectId, releaseId).andReturn().getResponse().getContentAsString();
@@ -260,7 +260,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void approvedReleasesWithoutNotesCannotBePublished() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         approve(owner, projectId, releaseId);
         jdbcTemplate.update("DELETE FROM release_audience_notes WHERE release_id = ?", releaseId);
@@ -274,7 +274,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void aTemplateThatCannotRenderBlocksApproval() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         // Only a template changed outside the application can fail; saving validates it.
         jdbcTemplate.update("UPDATE audience_definitions SET template_body = '{{userImpact}}' WHERE code = 'end_user'");
@@ -295,7 +295,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void anAudienceWithNotesCannotBeDeleted() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         String approved = approve(owner, projectId, releaseId).andReturn().getResponse().getContentAsString();
         String operator = JsonPath.read(approved, "$.notes[2].audienceId");
@@ -312,7 +312,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         // The note keeps the name and template it was written with.
         mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes").session(owner.session()))
                 .andExpect(jsonPath("$[2].audienceName").value("Operator"))
-                .andExpect(jsonPath("$[2].content", containsString("- **add export** ([#1]")));
+                .andExpect(jsonPath("$[2].content", containsString("- **add table export** ([#1]")));
     }
 
     @Test
@@ -321,7 +321,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner other = registerAndLogin("other@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         String approved = approve(owner, projectId, releaseId).andReturn().getResponse().getContentAsString();
         UUID note = UUID.fromString(JsonPath.read(approved, "$.notes[0].id"));
@@ -368,7 +368,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         String releasePath = "/projects/" + projectId + "/releases/" + releaseId;
         action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
@@ -408,6 +408,88 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT audience_narratives ->> 'end_user' FROM changes WHERE id = ?", String.class, change
         )).isEqualTo("Download any table.");
+    }
+
+    @Test
+    void aChangeWithOnlyAShortTitleWaitsForAPersonToWriteItsSummary() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID bare = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 28, "fix", "FIX", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 29, "feat: add table export", "FEATURE", false, false, null);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
+
+        decideAllAndApprove(owner, projectId, releaseId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("change_summary_required"))
+                .andExpect(jsonPath("$.detail", containsString("#28")))
+                .andExpect(jsonPath("$.detail", not(containsString("#29"))));
+        mockMvc.perform(get("/projects/{p}/releases/{r}", projectId, releaseId).session(owner.session()))
+                .andExpect(content().string(containsString(">Needs a summary</a>")))
+                .andExpect(content().string(containsString("Its title is too short to stand alone in a note, and its description gives too little")));
+
+        summary(owner, projectId, releaseId, bare, """
+                {"whatChanged":"Exports are written to EXPORT_PATH.","migrationStep":"Rename EXPORT_DIR to EXPORT_PATH.",
+                 "migrationKind":"NONE"}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_failed"));
+        summary(owner, projectId, releaseId, bare, """
+                {"whatChanged":"Exports are written to EXPORT_PATH.","migrationStep":"Rename EXPORT_DIR to EXPORT_PATH.",
+                 "migrationKind":"REQUIRED","limitations":"Imports still read from IMPORT_DIR."}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 28)].neutralSummary.migrationKind")
+                        .value(contains("REQUIRED")));
+
+        approveRemaining(owner, projectId, releaseId)
+                .andExpect(jsonPath("$.notes[2].content", containsString(
+                        "  - Limitations: Imports still read from IMPORT_DIR.\n"
+                                + "  - Required step: Rename EXPORT_DIR to EXPORT_PATH.\n")));
+    }
+
+    @Test
+    void aSummaryThatNamesNoMigrationKindKeepsItsStepUnspecified() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
+                "feat: add table export", "FEATURE", false, false, null);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
+
+        summary(owner, projectId, releaseId, change, """
+                {"whatChanged":"Tables export as CSV.","migrationStep":"No direct action is required."}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[0].neutralSummary.migrationKind").value("UNSPECIFIED"))
+                .andExpect(jsonPath("$.changes[0].neutralSummary.limitations").value(""));
+
+        approveRemaining(owner, projectId, releaseId)
+                .andExpect(jsonPath("$.notes[2].content", containsString("  - Migration: No direct action is required.\n")))
+                .andExpect(jsonPath("$.notes[2].content", not(containsString("Required step"))));
+    }
+
+    @Test
+    void aSummaryStoredBeforeMigrationKindsPrintsItsStepUnderTheNeutralLabel() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 25,
+                "fix: derive a key per target", "FIX", false, false, null);
+        TestChanges.summarize(jdbcTemplate, change, "Each target has its own key.", NARRATIVES);
+        jdbcTemplate.update("""
+                UPDATE changes SET neutral_summary = neutral_summary || '{"migrationStep":"No direct action is required."}'
+                WHERE id = ?""", change);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+
+        approve(owner, projectId, releaseId)
+                .andExpect(jsonPath("$.changes[0].neutralSummary.migrationKind").value("UNSPECIFIED"))
+                .andExpect(jsonPath("$.notes[2].content", containsString("  - Migration: No direct action is required.\n")))
+                .andExpect(jsonPath("$.notes[2].content", not(containsString("Required step"))));
+    }
+
+    private ResultActions summary(Owner owner, UUID projectId, UUID releaseId, UUID changeId, String body) throws Exception {
+        return mockMvc.perform(put(releaseApi(projectId, releaseId) + "/changes/{changeId}/summary", changeId)
+                .session(owner.session())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
     }
 
     private ResultActions editNote(Owner owner, UUID projectId, UUID releaseId, UUID noteId, String content) throws Exception {

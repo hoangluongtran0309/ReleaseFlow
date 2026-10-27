@@ -13,9 +13,9 @@ Organization starts with three presets, named in its output language
 
 | Code | Writes for | Template |
 | --- | --- | --- |
-| `operator` | operational risk, rollback, what to watch | what changed with the pull request link and narrative, then why, detail, and migration |
+| `operator` | operational risk, rollback, what to watch | what changed with the pull request link and narrative, then why, detail, limitations, and the migration step under its kind |
 | `contributor` | implementation detail and code changes | as operator, with implementation instead of detail |
-| `end_user` | plain language, what people notice | what changed and the narrative only |
+| `end_user` | plain language, what people notice | what changed and the narrative, and a migration step only when it is required |
 
 ![The Audiences page: the three presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
 
@@ -25,11 +25,16 @@ starting with a letter; fixed once created), a **display name**, a
 narrative, and a **template**. Templates are
 [Mustache](https://mustache.github.io/mustache.5.html) and render one change as
 Markdown with the variables `whatChanged`, `whyChanged`, `technicalDetail`,
-`migrationStep`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and
-`linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
+`migrationStep`, `migrationKind`, `limitations`, `narrative`, `reference`,
+`pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
 `url`, escaped like any other tracker text, as they were read when the change was recorded
-([Linked Jira issues](sources.md#linked-jira-issues)). The four summary values and
-`narrative` keep their Markdown, but any raw HTML in them is escaped, so a placeholder
+([Linked Jira issues](sources.md#linked-jira-issues)). `migrationKind` is `required`,
+`conditional`, `recommended`, or `unspecified` for a step recorded before kinds
+existed, and is empty without a step (see
+[AI classification](changes.md#ai-classification-and-summaries)). Since Mustache cannot
+compare values, the sections `migrationRequired`, `migrationConditional`,
+`migrationRecommended`, and `migrationUnspecified` are each true for one kind. The
+summary values and `narrative` keep their Markdown, but any raw HTML in them is escaped, so a placeholder
 such as `<id>` shows as written wherever the note is read. `reference` is how the change's source
 names it: `#12` for a GitHub pull request, `!12` for a GitLab merge request, and the
 issue key, such as `APP-12` or `ENG-12`, for Jira and Linear; `pullRequestNumber` is
@@ -38,7 +43,11 @@ the bare number whatever the source. A section such as
 it is saved: it must compile, use only these variables, and use `{{narrative}}`
 rather than naming another audience.
 
-The shipped detailed templates link a change as `[{{reference}}]({{pullRequestUrl}})`.
+The shipped detailed templates link a change as `[{{reference}}]({{pullRequestUrl}})`,
+and label a migration step by its kind: **Required step**, **If it applies to you**,
+**Recommended step**, or the neutral **Migration** for an unspecified one, so a step
+nobody called required is never presented as one. Audiences created before these
+templates keep their own until a preset is reset.
 
 ![Editing an audience's template and saving it](assets/release-notes/rn-2-template.webp)
 
@@ -114,6 +123,11 @@ a server error, or a network failure is retried up to five times with growing
 delays; any other failure is final. A pull request title used in place of a
 missing summary is not translated.
 
+DeepL also receives the Project's [context](changes.md#project-context) as its
+`context`, which guides the translation and is neither translated nor billed. It is
+part of what a translation is cached by: editing it translates again at the next
+approval, and an unchanged context still never sends the same text twice.
+
 The release's own **summary**, the line under the note's heading, is translated the
 same way. A person writes it, in the Organization's output language, so a note in that
 language prints it as written and a note in any other language waits for its
@@ -166,7 +180,13 @@ A release moves through four steps, shown at the top of its page:
    another one. Approving and editing record the reviewer on the change itself,
    exactly like a review in the Change Inbox, with an optional note. An Unknown
    change must be edited. **Approve release** becomes available once every
-   change has a decision.
+   change has a decision. A change whose title is fewer than three words, once
+   its Conventional Commit prefix and issue keys are removed (`fix`,
+   `update deps`), is marked **Needs a summary** unless a person wrote its
+   summary, or the AI wrote one from a description of at least ten words (HTML
+   comments not counted) whose context it did not find insufficient. A title that
+   short cannot stand alone in a note, and an AI given nothing else can only
+   restate it, so approval waits until a person writes the summary.
 3. **Approved.** The approver and time are recorded, and a release note is
    written for every audience in every release note language from its
    template (see [Release note languages](#release-note-languages)). Check each
@@ -201,8 +221,12 @@ the output language.
 ![A release's notes, one per audience and language; the operator note was edited by hand and is marked Manual](assets/release-notes/rn-7-manual-note.webp)
 
 During review and after approval, **Edit summary** on the Review tab lets a
-person write or correct a change's summary and each audience's narrative. This
-works whether or not the AI wrote one. The change records who wrote it, and the
+person write or correct a change's summary, including its migration kind and
+limitations, and each audience's narrative. This works whether or not the AI
+wrote one. A request that names no `migrationKind`, as callers written before it
+existed send, records `UNSPECIFIED` for a step and `NONE` without one; a kind that
+does not match the step (`NONE` with a step, any other without) returns
+`400 validation_failed`. The change records who wrote it, and the
 notes of an approved release that still follow their template are rendered
 again. Notes reflect the changes at approval: to pick up a classification
 corrected later in the Change Inbox, return the release to draft and approve it
@@ -229,7 +253,8 @@ POST   /api/projects/{projectId}/releases/{releaseId}/return-to-draft
 POST   /api/projects/{projectId}/releases/{releaseId}/publish
 POST   /api/projects/{projectId}/releases/{releaseId}/translations/retry
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/summary
-                                                                         {"whatChanged", "whyChanged", "technicalDetail", "migrationStep", "narratives": {"<code>": "..."}}
+                                                                         {"whatChanged", "whyChanged", "technicalDetail", "migrationStep",
+                                                                          "migrationKind", "limitations", "narratives": {"<code>": "..."}}
 GET    /api/projects/{projectId}/releases/{releaseId}/note-previews
 GET    /api/projects/{projectId}/releases/{releaseId}/notes
 PUT    /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}     {"content"}
@@ -253,6 +278,7 @@ of the Project's changes belongs to. Errors:
 | The operation does not fit the release's status | `409 release_status_conflict` |
 | Review requested or approval attempted with no changes | `409 release_empty` |
 | Approval attempted before every change has a decision | `409 release_review_incomplete` |
+| Approval attempted while a change with a title of fewer than three words has no summary a person wrote, and too little description for the AI's; `detail` names them | `409 change_summary_required` |
 | `APPROVE` sent with a classification other than the change's current one | `409 classification_changed` |
 | `unknown` or an unsupported category in a decision | `400 invalid_change_review` |
 | `APPROVE` of an Unknown change, whatever category it names: approving keeps the current classification, so an Unknown change takes `EDIT` with a category | `400 invalid_change_review` |

@@ -9,7 +9,9 @@ import java.util.Map;
 
 /**
  * A person's version of a change's neutral summary and of what it says to each
- * audience. Empty fields are allowed except what changed.
+ * audience. Empty fields are allowed except what changed. A request that names no
+ * migration kind, as callers written before ADR-0035 send, records an unspecified one
+ * for a step and none without.
  */
 public class ChangeSummaryRequest {
 
@@ -27,6 +29,11 @@ public class ChangeSummaryRequest {
 
     @Size(max = FIELD_LIMIT, message = "{validation.migrationStep.tooLong}")
     private String migrationStep = "";
+
+    private MigrationKind migrationKind;
+
+    @Size(max = FIELD_LIMIT, message = "{validation.limitations.tooLong}")
+    private String limitations = "";
 
     private Map<String, String> narratives = new LinkedHashMap<>();
 
@@ -62,6 +69,22 @@ public class ChangeSummaryRequest {
         this.migrationStep = clean(migrationStep);
     }
 
+    public MigrationKind getMigrationKind() {
+        return migrationKind;
+    }
+
+    public void setMigrationKind(MigrationKind migrationKind) {
+        this.migrationKind = migrationKind;
+    }
+
+    public String getLimitations() {
+        return limitations;
+    }
+
+    public void setLimitations(String limitations) {
+        this.limitations = clean(limitations);
+    }
+
     public Map<String, String> getNarratives() {
         return narratives;
     }
@@ -78,8 +101,14 @@ public class ChangeSummaryRequest {
         return narratives.values().stream().allMatch(text -> clean(text).length() <= FIELD_LIMIT);
     }
 
+    // Only a step has a kind, and every step has one other than none.
+    @AssertTrue(message = "{validation.migrationKind.mismatch}")
+    public boolean isMigrationKindMatchingStep() {
+        return migrationKind == null || (migrationKind == MigrationKind.NONE) == migrationStep.isEmpty();
+    }
+
     NeutralSummary summary() {
-        return new NeutralSummary(whatChanged, whyChanged, technicalDetail, migrationStep);
+        return new NeutralSummary(whatChanged, whyChanged, technicalDetail, migrationStep, migrationKind, limitations);
     }
 
     // Keeps the narratives of the given audiences that have text. Form binding fills

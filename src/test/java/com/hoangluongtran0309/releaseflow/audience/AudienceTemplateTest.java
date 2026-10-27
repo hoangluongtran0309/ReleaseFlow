@@ -18,6 +18,8 @@ class AudienceTemplateTest {
             "",
             "Streams rows.",
             "",
+            "",
+            "",
             "Download data from any table.",
             "#12",
             12,
@@ -45,6 +47,45 @@ class AudienceTemplateTest {
                   - Detail: Streams rows.
                   - Download data from any table.
                 """);
+    }
+
+    @Test
+    void labelsAMigrationStepByItsKindAndPrintsLimitations() {
+        String template = """
+                {{#migrationRequired}}Required: {{migrationStep}}{{/migrationRequired}}\
+                {{#migrationConditional}}If: {{migrationStep}}{{/migrationConditional}}\
+                {{#migrationRecommended}}Recommended: {{migrationStep}}{{/migrationRecommended}}\
+                {{#migrationUnspecified}}Migration: {{migrationStep}}{{/migrationUnspecified}}\
+                {{#limitations}} Not yet: {{.}}{{/limitations}} ({{migrationKind}})""";
+
+        assertThat(AudienceTemplate.render(template, migration("Rename EXPORT_DIR to EXPORT_PATH.", "required", "Only MongoDB.")))
+                .isEqualTo("Required: Rename EXPORT_DIR to EXPORT_PATH. Not yet: Only MongoDB. (required)");
+        assertThat(AudienceTemplate.render(template, migration("No direct action is required.", "unspecified", "")))
+                .isEqualTo("Migration: No direct action is required. (unspecified)");
+        // A step whose writer named no kind is unspecified, and no step has no kind at all.
+        assertThat(AudienceTemplate.render(template, migration("Set X.", null, ""))).isEqualTo("Migration: Set X. (unspecified)");
+        assertThat(AudienceTemplate.render(template, migration("", "required", ""))).isEqualTo(" ()");
+    }
+
+    @Test
+    void theShippedPresetsNeverPresentAnUnspecifiedStepAsRequired() {
+        AudienceItem unspecified = migration("No direct action is required; credentials migrate on update.", "unspecified", "");
+        AudienceItem required = migration("Rename EXPORT_DIR to EXPORT_PATH.", "required", "");
+
+        AudiencePresets.forLanguage("en").forEach(preset -> {
+            assertThat(AudienceTemplate.render(preset.templateBody(), unspecified)).doesNotContain("Required step");
+            assertThat(AudienceTemplate.render(preset.templateBody(), required)).contains("  - Required step: Rename EXPORT_DIR to EXPORT_PATH.");
+        });
+        assertThat(AudienceTemplate.render(AudiencePresets.find(AudiencePresets.OPERATOR, "en").orElseThrow().templateBody(),
+                unspecified)).contains("  - Migration: No direct action is required");
+        // End users read a step only when they cannot do without it.
+        assertThat(AudienceTemplate.render(AudiencePresets.find(AudiencePresets.END_USER, "en").orElseThrow().templateBody(),
+                migration("Rename EXPORT_DIR to EXPORT_PATH.", "recommended", ""))).doesNotContain("EXPORT_PATH");
+    }
+
+    private static AudienceItem migration(String step, String kind, String limitations) {
+        return new AudienceItem("Keys per target.", "", "", step, kind, limitations, "", "#25", 25,
+                "https://github.com/acme/app/pull/25", List.of());
     }
 
     @Test
@@ -119,7 +160,7 @@ class AudienceTemplateTest {
     @Test
     void listsTheIssuesAChangeMentionsAndLeavesTheSectionOutWithoutThem() {
         String template = "- {{whatChanged}}{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}";
-        AudienceItem linked = new AudienceItem("Export.", "", "", "", "", "#12", 12, "https://github.com/acme/app/pull/12",
+        AudienceItem linked = new AudienceItem("Export.", "", "", "", "", "", "", "#12", 12, "https://github.com/acme/app/pull/12",
                 List.of(
                         new LinkedIssue("APP-7", "Export tables", "never shown", "Story", "Done",
                                 "https://acme.atlassian.net/browse/APP-7"),
@@ -141,7 +182,7 @@ class AudienceTemplateTest {
 
     @Test
     void theShippedDetailedPresetsNameAChangeTheWayItsSourceDoes() {
-        AudienceItem mergeRequest = new AudienceItem(ITEM.whatChanged(), "", "", "", "", "!2", 2,
+        AudienceItem mergeRequest = new AudienceItem(ITEM.whatChanged(), "", "", "", "", "", "", "!2", 2,
                 "https://gitlab.com/acme/app/-/merge_requests/2", List.of());
 
         AudiencePresets.forLanguage("en").stream()
@@ -153,7 +194,7 @@ class AudienceTemplateTest {
     @Test
     void theShippedPresetsIgnoreLinkedIssues() {
         AudienceItem linked = new AudienceItem(ITEM.whatChanged(), ITEM.whyChanged(), ITEM.technicalDetail(),
-                ITEM.migrationStep(), ITEM.narrative(), ITEM.reference(), ITEM.pullRequestNumber(), ITEM.pullRequestUrl(),
+                ITEM.migrationStep(), ITEM.migrationKind(), ITEM.limitations(), ITEM.narrative(), ITEM.reference(), ITEM.pullRequestNumber(), ITEM.pullRequestUrl(),
                 List.of(new LinkedIssue("APP-7", "Export tables", "", "Story", "Done",
                         "https://acme.atlassian.net/browse/APP-7")));
 

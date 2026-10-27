@@ -206,6 +206,44 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    void theProjectsContextReachesDeepLAndAnEditTranslatesAgainAtTheNextApproval() throws Exception {
+        Owner owner = registerWithLanguages("owner@example.com", "en", "vi");
+        UUID projectId = createProject(owner);
+        summarizedChange(owner, projectId, 1, "The whole console is in Vietnamese.");
+        String context = "The console is the web UI. The CLI stays English by design.";
+        mockMvc.perform(put("/api/projects/{projectId}/context", projectId)
+                        .session(owner.session())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"context\":\"%s\"}".formatted(context)))
+                .andExpect(status().isOk());
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        approve(owner, projectId, releaseId);
+
+        assertThat(worker.processOne()).isTrue();
+        assertThat(DEEPL.requests()).singleElement().satisfies(request -> assertThat(request.context()).isEqualTo(context));
+        assertThat(jdbcTemplate.queryForObject("SELECT context FROM translation_jobs", String.class)).isEqualTo(context);
+
+        // Returning to draft and approving again sends nothing while the context is the same...
+        action(owner, projectId, releaseId, "return-to-draft").andExpect(status().isOk());
+        approve(owner, projectId, releaseId);
+        assertThat(worker.processOne()).isFalse();
+
+        // ...and translates again once it changed, since the cache is kept per context.
+        mockMvc.perform(put("/api/projects/{projectId}/context", projectId)
+                        .session(owner.session())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"context\":\"\"}"))
+                .andExpect(status().isOk());
+        action(owner, projectId, releaseId, "return-to-draft").andExpect(status().isOk());
+        approve(owner, projectId, releaseId);
+        assertThat(worker.processOne()).isTrue();
+        assertThat(DEEPL.requests()).hasSize(2);
+        assertThat(DEEPL.requests().getLast().context()).isNull();
+    }
+
+    @Test
     void anEditedSummaryIsTranslatedAgain() throws Exception {
         Owner owner = registerWithLanguages("owner@example.com", "en", "vi");
         UUID projectId = createProject(owner);

@@ -58,6 +58,7 @@ review trigger:
 | Not enough context | The [context score](#review-signals) is below the threshold |
 | Possible duplicate of an earlier change | The change looks like an earlier one (see [Review signals](#review-signals)) |
 | AI proposed a new category | No category of the catalog fits (see [Categories](#categories)) |
+| Migration kind corrected | The AI's migration kind did not match its migration step, so ReleaseFlow corrected it (see [AI classification](#ai-classification-and-summaries)) |
 
 ![An Unknown change: its labels bug and enhancement conflict and it touches sensitive files, so it waits for a person to choose a category](assets/changes/c-6-unknown.webp)
 
@@ -129,21 +130,90 @@ configuration is incomplete; every variable and check is listed under
 rules alone.
 
 With a provider, the change worker asks the AI **once** for every new change,
-after its changed files are known. It sends the pull request title, labels,
-target branch, up to 4000 characters of the description, the Organization's
-output language, the Organization's active [categories](#categories), the
-category the rules chose, if any, the Jira issues it mentions as untrusted evidence, and
-the code and communication intent of each [audience](release-notes.md#audiences). It does not send the
-author, and OpenAI requests set `store: false`. The answer is one category code from the
-catalog (or a proposal for a new category when none fits), a breaking flag, whether a person should review it, a **neutral summary** (what
-changed, why, technical detail, migration step), and a **narrative** for each
-audience, all written in the output language. A missing narrative is simply
-left out. The Change Inbox shows the summary and narratives under each change,
-and the changes API returns them as `neutralSummary` and `audienceNarratives`
-with `contentLanguage` and `aiProvider`. A summary written by a person on a
+after its changed files are known. It sends the change's title, labels,
+target branch, up to 4000 characters of the description, and whether it is
+merged code (a pull or merge request) or an issue a tracker completed (Linear,
+Jira), together with the Organization's output language, the Organization's
+active [categories](#categories), the category the rules chose, if any, the Jira
+issues it mentions as untrusted evidence, the code and communication intent of each
+[audience](release-notes.md#audiences), and the [Project context](#project-context).
+It does not send the author, and OpenAI requests set `store: false`. The answer is
+one category code from the catalog (or a proposal for a new category when none
+fits), a breaking flag, whether a person should review it, a **neutral summary**,
+and a **narrative** for each audience, all written in the output language. The
+neutral summary is what changed (one sentence), why, technical detail, a migration
+step with its kind, and limitations: what the change deliberately does not do yet.
+A missing narrative is simply left out.
+
+A **dependency update**, a change whose author is `dependabot[bot]` or `renovate[bot]`
+or whose head branch starts with `dependabot/` or `renovate/`, reaches the AI without what
+it quotes from upstream: its `<details>` and `<blockquote>` elements, Markdown blockquotes,
+and its "Release notes", "Changelog", and "Commits" sections are left out, so only what is
+bumped, and from which version to which, remains. The change itself keeps its whole
+description. It is breaking, or has a migration step, only when its own words say so;
+the AI is told this only for a dependency update, so any other change it is unsure about
+is still marked breaking and sent to review.
+
+The AI is told to state only what the evidence supports, in every field: no
+consequence the change does not describe (a crash, an outage, a blocked startup),
+no place in the product the change or the Project context does not name, nothing
+from a dependency's quoted changelog presented as this project's own change, no
+files or code for a tracker issue whose text names none, and no remarks about what
+the evidence lacks, where an empty field belongs.
+
+A migration step has a kind:
+
+| Kind | Meaning |
+| --- | --- |
+| `REQUIRED` | Existing installations stop working, or lose a protection, until the step is done |
+| `CONDITIONAL` | Only some installations need it, and the step says which |
+| `RECOMMENDED` | Advisable, but nothing breaks without it |
+| `NONE` | There is no step |
+| `UNSPECIFIED` | A step recorded before kinds existed, or by a caller that named none; never treated as required |
+
+A kind that does not match its step is corrected rather than rejected, since the
+answer is asked for only once: `none` with a step becomes `recommended`, and any
+other kind without a step becomes `none`, and a step whose kind is missing is
+`UNSPECIFIED`. The change then gets a **Migration kind corrected** review trigger, so a
+person checks the step. A step the AI writes that only says nothing needs doing, such as
+"No immediate action is required" or "No migration required", is dropped first, so the
+kind is `NONE`; one that still asks something ("No action is required unless you enable
+verification", "Rename the setting; no further action is required") is kept.
+
+Limitations are only what the change's own text says it deliberately does not do yet.
+A sentence the AI writes there about its input instead, such as "Rollback steps are not
+provided" or "The version is not specified", is dropped, and so is one that only states
+the change's scope, such as "This does not affect the CLI" or "It only affects the CI
+environment", since an audience's relevance already says who the change matters to. A
+limitation such as "Certificate validation is enforced only for MongoDB" is kept, and a
+missing limitations field is empty. Every request asks for temperature `0`, so the same change varies as little as
+the model allows (see [Configuration](configuration.md#ai)).
+
+The Change Inbox shows the summary and narratives under each change, and the changes
+API returns them as `neutralSummary` and `audienceNarratives` with `contentLanguage`
+and `aiProvider`. A summary written by a person on a
 release page is never replaced by a later AI answer.
 
 ![A change's neutral summary, followed by one narrative for each audience](assets/changes/c-5-summary.webp)
+
+### Project context
+
+The AI knows nothing about a product beyond the change in front of it. A
+Project's **context** tells it what it cannot guess: what is a client and what
+is a server, where settings live, how people reach features, and what stays in
+English by design. Follow **Project context** on a Project's card, or call
+`GET /api/projects/{projectId}/context`, which returns the `context` and who
+last changed it. Every member can read it; only administrators write it, on the
+page or with `PUT /api/projects/{projectId}/context` and `{"context": "..."}`.
+It is plain text of at most 2000 characters; longer returns
+`400 validation_failed`, and an empty one clears it.
+
+Every AI request for one of the Project's changes sends it as facts about the
+product from its administrators, never as instructions. An edit applies to
+changes classified afterwards, an AI retry included; changes already classified
+keep what the AI wrote. It is also DeepL's `context` for the Project's
+translations (see [Release note languages](release-notes.md#release-note-languages)), which DeepL neither
+translates nor bills. See [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 The rules always win:
 

@@ -11,13 +11,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Validates an AI answer against the shared contract. Anything missing or mistyped
  * is rejected as a whole, and so is a category outside the catalog that was sent;
  * unknown extra fields are ignored. Narratives are optional: only the requested
  * audiences are read, and a missing or empty one is left out. A category suggestion
- * is kept only with an Unknown answer and a valid code that is not already listed.
+ * is kept only with an Unknown answer and a valid code that is not already listed. A
+ * migration kind that does not match the step is corrected rather than rejected, and
+ * the answer records that it was; a step that only says nothing needs doing is no step. A
+ * missing limitations field is empty, and a limitation about the input or the change's
+ * scope rather than what it does not do yet is dropped (ADR-0035).
  */
 final class AiClassificationParser {
 
@@ -25,6 +30,7 @@ final class AiClassificationParser {
     static final int SUGGESTION_NAME_LIMIT = 120;
     static final int CONTEXT_REASON_LIMIT = 5;
     static final int CONTEXT_REASON_LENGTH = 120;
+    static final int MIGRATION_KIND_LENGTH = 32;
     static final String INVALID = "The AI returned an invalid classification.";
 
     private final ObjectMapper objectMapper;
@@ -65,6 +71,17 @@ final class AiClassificationParser {
         if (!context.isObject() || !context.path("score").isNumber()) {
             throw invalid();
         }
+        String migrationStep = MigrationSteps.stated(text(core, "migration_step"));
+        JsonNode returnedKind = core.path("migration_kind");
+        Optional<MigrationKind> stated = statedKind(returnedKind);
+        // none with a step becomes recommended; any other kind without one, none. A step
+        // whose kind is missing says nothing about how much it asks, so it is unspecified.
+        MigrationKind migrationKind = stated
+                .filter(kind -> (kind == MigrationKind.NONE) == migrationStep.isBlank())
+                .orElse(migrationStep.isBlank() ? MigrationKind.NONE
+                        : returnedKind.isString() ? MigrationKind.RECOMMENDED : MigrationKind.UNSPECIFIED);
+        // A correction a person should check: a step without a usable kind, or a kind for no step.
+        boolean corrected = stated.map(kind -> kind != migrationKind).orElse(!migrationStep.isBlank());
         return new AiClassification(
                 category,
                 breaking.booleanValue(),
@@ -73,13 +90,30 @@ final class AiClassificationParser {
                         whatChanged,
                         text(core, "why_changed"),
                         text(core, "technical_detail"),
-                        text(core, "migration_step")
+                        migrationStep,
+                        migrationKind,
+                        Limitations.stated(optionalText(core, "limitations"))
                 ),
                 narratives(result.path("narratives"), request.audienceCodes()),
                 category.isUnknown() ? suggestion(result.path("suggested_category"), request) : null,
                 (int) Math.clamp(Math.round(context.path("score").doubleValue()), 0, 100),
-                contextReasons(context.path("reasons"))
+                contextReasons(context.path("reasons")),
+                corrected ? returnedKindText(returnedKind) : null
         );
+    }
+
+    // One of the four kinds the AI may return; unspecified is never one of them.
+    private static Optional<MigrationKind> statedKind(JsonNode returned) {
+        return Optional.of(returned)
+                .filter(JsonNode::isString)
+                .flatMap(node -> MigrationKind.fromValue(node.stringValue()))
+                .filter(kind -> kind != MigrationKind.UNSPECIFIED);
+    }
+
+    // What a reviewer is shown about a corrected kind; the AI's own text, cut short.
+    private static String returnedKindText(JsonNode returned) {
+        String text = returned.isString() ? returned.stringValue().strip() : "";
+        return cut(text, MIGRATION_KIND_LENGTH);
     }
 
     private static List<String> contextReasons(JsonNode reasons) {
@@ -131,6 +165,12 @@ final class AiClassificationParser {
             }
         }
         return result;
+    }
+
+    // A field added to the contract later: an answer without it is still usable.
+    private static String optionalText(JsonNode core, String field) {
+        JsonNode value = core.path(field);
+        return value.isString() ? limit(value.stringValue().strip()) : "";
     }
 
     private static String text(JsonNode core, String field) {

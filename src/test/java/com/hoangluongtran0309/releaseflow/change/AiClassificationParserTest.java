@@ -39,7 +39,8 @@ class AiClassificationParserTest {
                 Map.of(),
                 null,
                 90,
-                List.of()
+                List.of(),
+                null
         ));
     }
 
@@ -129,6 +130,114 @@ class AiClassificationParserTest {
                  "neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""}}
                 """.formatted(context), REQUEST))
                 .isInstanceOf(AiClassificationException.class);
+    }
+
+    @Test
+    void keepsAMigrationKindThatMatchesItsStepAndTheLimitations() {
+        AiClassification answer = parser.parse(core("\"Rename EXPORT_DIR to EXPORT_PATH.\"", "\"required\"",
+                "\"Validation is enforced only for MongoDB.\""), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.REQUIRED);
+        assertThat(answer.summary().limitations()).isEqualTo("Validation is enforced only for MongoDB.");
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    // One slip must not cost the category, the summary, and every narrative (ADR-0035).
+    @ParameterizedTest
+    @CsvSource(delimiterString = "|", value = {
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"none\"'        | RECOMMENDED | none",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"unspecified\"' | RECOMMENDED | unspecified",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"optional\"'    | RECOMMENDED | optional",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | null              | UNSPECIFIED | ''",
+            "'\"\"'                      | '\"required\"'    | NONE        | required",
+            "'\"\"'                      | '\"conditional\"' | NONE        | conditional"
+    })
+    void correctsAMigrationKindThatDoesNotMatchItsStep(String step, String kind, MigrationKind expected, String returned) {
+        AiClassification answer = parser.parse(core(step, kind, "\"\""), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(expected);
+        assertThat(answer.correctedMigrationKind()).isEqualTo(returned);
+    }
+
+    // Nothing says how much the step asks, so it is never presented as required, and a
+    // person checks it.
+    @Test
+    void aStepWithoutAKindIsUnspecifiedAndCorrected() {
+        AiClassification answer = parser.parse("""
+                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Keys per target.",
+                 "why_changed":"","technical_detail":"","migration_step":"Rename EXPORT_DIR to EXPORT_PATH."}}
+                """, REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.UNSPECIFIED);
+        assertThat(answer.correctedMigrationKind()).isEmpty();
+        assertThat(ReviewTrigger.migrationKindMismatch(answer.correctedMigrationKind()))
+                .isEqualTo(new ReviewTrigger(ReviewTriggerType.MIGRATION_KIND_MISMATCH, null));
+    }
+
+    @Test
+    void dropsTheLimitationsThatAreAboutTheInput() {
+        AiClassification answer = parser.parse(core("\"\"", "\"none\"",
+                "\"Validation is enforced only for MongoDB. Rollback steps are not provided.\""), REQUEST);
+        AiClassification remarksOnly = parser.parse(core("\"\"", "\"none\"",
+                "\"Technical specifics are not detailed.\""), REQUEST);
+
+        assertThat(answer.summary().limitations()).isEqualTo("Validation is enforced only for MongoDB.");
+        assertThat(remarksOnly.summary().limitations()).isEmpty();
+    }
+
+    // A step that only says nothing needs doing is no step, so none stays none and its fact
+    // stays in the limitations the AI wrote.
+    @Test
+    void dropsAStepThatOnlySaysNothingNeedsDoing() {
+        AiClassification answer = parser.parse(core(
+                "\"No immediate action is required; existing passwords are migrated to per-target keys when edited.\"",
+                "\"none\"",
+                "\"Existing passwords keep the master key until each target is next saved.\""), REQUEST);
+
+        assertThat(answer.summary().migrationStep()).isEmpty();
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.summary().limitations()).isEqualTo("Existing passwords keep the master key until each target is next saved.");
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    @Test
+    void aKindForAStepThatSaysNothingNeedsDoingIsCorrectedToNone() {
+        AiClassification answer = parser.parse(core("\"No migration required.\"", "\"recommended\"", "\"\""), REQUEST);
+
+        assertThat(answer.summary().migrationStep()).isEmpty();
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.correctedMigrationKind()).isEqualTo("recommended");
+    }
+
+    @Test
+    void dropsTheLimitationsThatOnlyStateTheScope() {
+        AiClassification answer = parser.parse(core("\"\"", "\"none\"",
+                "\"Certificate validation is enforced only for MongoDB. The change has no impact on PostgreSQL targets.\""), REQUEST);
+        AiClassification scopeOnly = parser.parse(core("\"\"", "\"none\"",
+                "\"It only affects the CI environment.\""), REQUEST);
+
+        assertThat(answer.summary().limitations()).isEqualTo("Certificate validation is enforced only for MongoDB.");
+        assertThat(scopeOnly.summary().limitations()).isEmpty();
+    }
+
+    @Test
+    void anAnswerWithoutAKindOrLimitationsForAnEmptyStepNeedsNoCorrection() {
+        AiClassification answer = parser.parse("""
+                {"category":"fix","breaking_change":false,"needs_human_review":false,%s}
+                """.formatted(SUMMARY), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.summary().limitations()).isEmpty();
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    private static String core(String step, String kind, String limitations) {
+        return """
+                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Keys per target.",
+                 "why_changed":"","technical_detail":"","migration_step":%s,"migration_kind":%s,"limitations":%s}}
+                """.formatted(step, kind, limitations);
     }
 
     @Test

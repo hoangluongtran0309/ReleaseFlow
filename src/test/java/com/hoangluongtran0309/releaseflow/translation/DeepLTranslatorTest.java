@@ -34,7 +34,7 @@ class DeepLTranslatorTest {
 
     @Test
     void sendsTheTextsWithTheKeyAndLanguageCodes() throws Exception {
-        assertThat(TRANSLATOR.translate(List.of("Tables export as CSV.", "Users asked."), "en", "vi"))
+        assertThat(TRANSLATOR.translate(List.of("Tables export as CSV.", "Users asked."), "en", "vi", ""))
                 .containsExactly("[VI] Tables export as CSV.", "[VI] Users asked.");
 
         assertThat(DEEPL.requests()).singleElement().satisfies(request -> {
@@ -43,6 +43,19 @@ class DeepLTranslatorTest {
             assertThat(request.authorization()).isEqualTo("DeepL-Auth-Key deepl-test-key:fx");
             assertThat(request.sourceLanguage()).isEqualTo("EN");
             assertThat(request.targetLanguage()).isEqualTo("VI");
+            assertThat(request.context()).isNull();
+        });
+    }
+
+    @Test
+    void sendsTheProjectsContextWhichIsNotTranslated() throws Exception {
+        assertThat(TRANSLATOR.translate(List.of("The whole console is in Vietnamese."), "en", "vi",
+                "The console is the web UI. The CLI stays English."))
+                .containsExactly("[VI] The whole console is in Vietnamese.");
+
+        assertThat(DEEPL.requests()).singleElement().satisfies(request -> {
+            assertThat(request.texts()).containsExactly("The whole console is in Vietnamese.");
+            assertThat(request.context()).isEqualTo("The console is the web UI. The CLI stays English.");
         });
     }
 
@@ -73,20 +86,20 @@ class DeepLTranslatorTest {
         assertThat(DeepLTranslator.batches(List.of(large, large, large, "short")))
                 .extracting(List::size).containsExactly(2, 2);
 
-        assertThat(TRANSLATOR.translate(many, "en", "vi")).hasSize(120).last().isEqualTo("[VI] Text 119");
+        assertThat(TRANSLATOR.translate(many, "en", "vi", "")).hasSize(120).last().isEqualTo("[VI] Text 119");
         assertThat(DEEPL.requests()).extracting(request -> request.texts().size()).containsExactly(50, 50, 20);
     }
 
     @Test
     void rateLimitsAndServerErrorsCanBeRetried() {
         DEEPL.fail(429, 1);
-        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi"))
+        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi", ""))
                 .isInstanceOfSatisfying(TranslationException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(TranslationException.RATE_LIMITED);
                     assertThat(exception.retryable()).isTrue();
                 });
         DEEPL.fail(503, 1);
-        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi"))
+        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi", ""))
                 .isInstanceOfSatisfying(TranslationException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(TranslationException.UNAVAILABLE);
                     assertThat(exception.retryable()).isTrue();
@@ -96,13 +109,13 @@ class DeepLTranslatorTest {
     @Test
     void aRejectedKeyOrAnExhaustedQuotaIsNotRetried() {
         DEEPL.fail(403, 1);
-        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi"))
+        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi", ""))
                 .isInstanceOfSatisfying(TranslationException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(TranslationException.REJECTED);
                     assertThat(exception.retryable()).isFalse();
                 });
         DEEPL.fail(456, 1);
-        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi"))
+        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a"), "en", "vi", ""))
                 .isInstanceOfSatisfying(TranslationException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(TranslationException.QUOTA_EXCEEDED);
                     assertThat(exception.retryable()).isFalse();
@@ -113,7 +126,7 @@ class DeepLTranslatorTest {
     void aResponseWithTheWrongNumberOfTranslationsIsRejected() {
         DEEPL.dropOneTranslation();
 
-        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a", "b"), "en", "vi"))
+        assertThatThrownBy(() -> TRANSLATOR.translate(List.of("a", "b"), "en", "vi", ""))
                 .isInstanceOfSatisfying(TranslationException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(TranslationException.INVALID_RESPONSE);
                     assertThat(exception.retryable()).isFalse();
@@ -125,7 +138,7 @@ class DeepLTranslatorTest {
         DeepLTranslator unreachable = new DeepLTranslator("key", "http://127.0.0.1:1", Duration.ofSeconds(1),
                 new ObjectMapper());
 
-        assertThatThrownBy(() -> unreachable.translate(List.of("a"), "en", "vi"))
+        assertThatThrownBy(() -> unreachable.translate(List.of("a"), "en", "vi", ""))
                 .isInstanceOfSatisfying(TranslationException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(TranslationException.UNAVAILABLE);
                     assertThat(exception.retryable()).isTrue();

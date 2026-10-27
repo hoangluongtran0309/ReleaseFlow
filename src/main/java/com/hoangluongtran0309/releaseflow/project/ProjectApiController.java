@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-// Members read Projects and their sources; connecting a source and setting its token
-// are administrator only, by URL rule.
+// Members read Projects, their sources, and their context; connecting a source, setting
+// its token, and writing the context are administrator only, by URL rule.
 @RestController
 @RequestMapping("/api/projects")
 public class ProjectApiController {
@@ -43,6 +43,20 @@ public class ProjectApiController {
     ) {
         ProjectView created = projectService.create(principal.organizationId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/{projectId}/context")
+    ProjectContextView context(@AuthenticationPrincipal ReleaseFlowPrincipal principal, @PathVariable UUID projectId) {
+        return projectService.contextView(principal.organizationId(), projectId);
+    }
+
+    @PutMapping("/{projectId}/context")
+    ProjectContextView replaceContext(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @Valid @RequestBody ProjectContextRequest request
+    ) {
+        return projectService.replaceContext(principal, projectId, request);
     }
 
     @GetMapping("/{projectId}/sources")

@@ -12,6 +12,40 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+### Added
+
+- A Project context: what administrators say about the product (what is a client and
+  what a server, where settings live, what stays in English by design). The AI receives
+  it with every change it classifies, and DeepL as context for the Project's
+  translations ([ADR-0035](docs/adr/0035-evidence-bound-notes-and-audience-relevance.md)).
+- A change's summary records how much its migration step asks — required, only if it
+  applies, or recommended — and what the change deliberately does not do yet. The shipped
+  templates label a step by its kind, and Edit summary sets both.
+
+### Changed
+
+- The AI is told to state only what a change's evidence supports in every field: no
+  invented consequences or places in the product, no steps taken from a dependency's
+  changelog, no files for a tracker issue that names none, and no remarks about missing
+  detail. A tracker issue is sent as one rather than as a pull request.
+- A release cannot be approved while one of its changes has no summary and a title of
+  fewer than three words, such as "fix"; the release page marks it and asks for a summary.
+- A migration kind the AI got wrong is corrected and sent to review, rather than costing
+  the whole answer.
+- A dependency update from Dependabot or Renovate reaches the AI without the release
+  notes, changelog, and commits it quotes, so another project's upgrade steps no longer
+  become this project's; it is breaking only when its own words say so. Only a dependency
+  update is told that, so the AI still marks an ordinary change breaking when it is unsure.
+- A change with a title like "fix" and an empty or very short description waits for a
+  person's summary even when the AI wrote one, since the AI could only restate the title.
+- Limitations that only remark on what the change did not explain, or only say what the
+  change does not affect, are dropped.
+- An AI migration step that only says nothing needs doing, such as "No immediate action
+  is required", is dropped, so the change has no step rather than a recommended one.
+- Every AI classification request uses temperature 0, so the same change varies less from
+  one request to the next. A model that accepts only its default temperature, such as an
+  OpenAI reasoning model, can no longer classify changes.
+
 ## [1.0.1] - 2026-10-25
 
 ### Fixed

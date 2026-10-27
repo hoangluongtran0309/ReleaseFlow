@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.translation;
 
+import com.hoangluongtran0309.releaseflow.project.ProjectService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +15,8 @@ import java.util.stream.Collectors;
 
 /**
  * Translations of change content, and of a release's own summary, one job per change or
- * release, target language, and input. It
+ * release, target language, and input. The Project's context is part of the input
+ * (ADR-0035), so editing it translates again at the next approval. It
  * only reads and writes the database and never calls a provider, so it is safe inside
  * the transaction that approves a release: the worker picks new jobs up after commit.
  */
@@ -26,17 +28,20 @@ public class TranslationService {
     private final TranslationJobRepository jobRepository;
     private final TranslationCacheRepository cacheRepository;
     private final TranslationProvider provider;
+    private final ProjectService projectService;
     private final Clock clock;
 
     TranslationService(
             TranslationJobRepository jobRepository,
             TranslationCacheRepository cacheRepository,
             TranslationProvider provider,
+            ProjectService projectService,
             Clock clock
     ) {
         this.jobRepository = jobRepository;
         this.cacheRepository = cacheRepository;
         this.provider = provider;
+        this.projectService = projectService;
         this.clock = clock;
     }
 
@@ -112,16 +117,19 @@ public class TranslationService {
         if (input.isEmpty() || TranslationTexts.sameLanguage(sourceLanguage, targetLanguage)) {
             return TranslationState.ready(texts);
         }
-        String hash = TranslationTexts.inputHash(sourceLanguage, input);
+        String context = projectService.context(subject.organizationId(), subject.projectId());
+        String hash = TranslationTexts.inputHash(sourceLanguage, input, context);
         TranslationJob job = find(subject, targetLanguage, hash)
-                .orElseGet(() -> jobRepository.saveAndFlush(newJob(subject, sourceLanguage, targetLanguage, hash, input)));
+                .orElseGet(() -> jobRepository.saveAndFlush(
+                        newJob(subject, sourceLanguage, targetLanguage, hash, input, context)));
         return merge(texts, job.state());
     }
 
     private TranslationState retry(Subject subject, String sourceLanguage, String targetLanguage, Map<String, String> texts) {
         Map<String, String> input = TranslationTexts.nonBlank(texts);
         if (provider.isEnabled() && !input.isEmpty() && !TranslationTexts.sameLanguage(sourceLanguage, targetLanguage)) {
-            find(subject, targetLanguage, TranslationTexts.inputHash(sourceLanguage, input))
+            String context = projectService.context(subject.organizationId(), subject.projectId());
+            find(subject, targetLanguage, TranslationTexts.inputHash(sourceLanguage, input, context))
                     .filter(job -> job.getOrganizationId().equals(subject.organizationId()))
                     .ifPresent(job -> {
                         job.restart(now());
@@ -142,14 +150,15 @@ public class TranslationService {
             String sourceLanguage,
             String targetLanguage,
             String hash,
-            Map<String, String> input
+            Map<String, String> input,
+            String context
     ) {
         Instant now = now();
         TranslationJob job = new TranslationJob(
                 subject.organizationId(), subject.projectId(), subject.changeId(), subject.releaseId(),
-                sourceLanguage, targetLanguage, hash, input, now
+                sourceLanguage, targetLanguage, hash, input, context, now
         );
-        Optional<Map<String, String>> cached = cached(subject.organizationId(), sourceLanguage, targetLanguage, input);
+        Optional<Map<String, String>> cached = cached(subject.organizationId(), sourceLanguage, targetLanguage, input, context);
         if (cached.isPresent()) {
             job.succeed(cached.get(), now);
         } else if (!provider.isEnabled()) {
@@ -163,20 +172,21 @@ public class TranslationService {
             UUID organizationId,
             String sourceLanguage,
             String targetLanguage,
-            Map<String, String> input
+            Map<String, String> input,
+            String context
     ) {
         Map<String, String> byHash = cacheRepository
                 .findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
                         organizationId,
                         sourceLanguage,
                         targetLanguage,
-                        input.values().stream().map(TranslationTexts::textHash).collect(Collectors.toSet())
+                        input.values().stream().map(text -> TranslationTexts.textHash(text, context)).collect(Collectors.toSet())
                 )
                 .stream()
                 .collect(Collectors.toMap(TranslationCacheEntry::getTextHash, TranslationCacheEntry::getTranslatedText));
         Map<String, String> translated = new LinkedHashMap<>();
         for (Map.Entry<String, String> text : input.entrySet()) {
-            String hit = byHash.get(TranslationTexts.textHash(text.getValue()));
+            String hit = byHash.get(TranslationTexts.textHash(text.getValue(), context));
             if (hit == null) {
                 return Optional.empty();
             }

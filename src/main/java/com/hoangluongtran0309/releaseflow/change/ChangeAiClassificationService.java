@@ -7,6 +7,8 @@ import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.category.CategoryRef;
 import com.hoangluongtran0309.releaseflow.category.CategoryService;
 import com.hoangluongtran0309.releaseflow.category.CategorySuggestionService;
+import com.hoangluongtran0309.releaseflow.project.ProjectService;
+import com.hoangluongtran0309.releaseflow.source.SourceType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -28,6 +30,7 @@ class ChangeAiClassificationService {
     private final ProjectSensitivePathService sensitivePaths;
     private final OutputLanguageService outputLanguageService;
     private final AudienceService audienceService;
+    private final ProjectService projectService;
     private final CategoryService categoryService;
     private final CategorySuggestionService suggestionService;
     private final ClassificationSettings settings;
@@ -40,6 +43,7 @@ class ChangeAiClassificationService {
             ProjectSensitivePathService sensitivePaths,
             OutputLanguageService outputLanguageService,
             AudienceService audienceService,
+            ProjectService projectService,
             CategoryService categoryService,
             CategorySuggestionService suggestionService,
             ClassificationSettings settings,
@@ -51,6 +55,7 @@ class ChangeAiClassificationService {
         this.sensitivePaths = sensitivePaths;
         this.outputLanguageService = outputLanguageService;
         this.audienceService = audienceService;
+        this.projectService = projectService;
         this.categoryService = categoryService;
         this.suggestionService = suggestionService;
         this.settings = settings;
@@ -77,6 +82,7 @@ class ChangeAiClassificationService {
             LinkedContext linked = current.recordedLinkedContext();
             return new Snapshot(
                     pullRequest,
+                    current.getSourceType(),
                     linked,
                     ChangeClassifier.classify(pullRequest, current.recordedFiles(), linked,
                             sensitivePaths.forProject(organizationId, projectId), catalog),
@@ -86,6 +92,7 @@ class ChangeAiClassificationService {
         AiChangeClassifier ai = aiClassifiers.active().orElseThrow(AiClassificationUnavailableException::new);
         OutputLanguage language = outputLanguageService.outputLanguage(organizationId);
         List<AudienceBrief> audiences = audienceService.briefs(organizationId);
+        String projectContext = projectService.context(organizationId, projectId);
 
         AiOutcome outcome;
         try {
@@ -93,7 +100,8 @@ class ChangeAiClassificationService {
                     ai,
                     ai.classify(AiClassificationRequest.of(changeId, snapshot.pullRequest(),
                             snapshot.linkedContext().issues(), language,
-                            snapshot.rules().category(), snapshot.catalog(), audiences, settings.contextThreshold())),
+                            snapshot.rules().category(), snapshot.catalog(), audiences, settings.contextThreshold(),
+                            snapshot.sourceType(), projectContext)),
                     language
             );
         } catch (AiClassificationException exception) {
@@ -127,6 +135,7 @@ class ChangeAiClassificationService {
 
     private record Snapshot(
             MergedPullRequest pullRequest,
+            SourceType sourceType,
             LinkedContext linkedContext,
             ChangeClassification rules,
             List<CategoryRef> catalog

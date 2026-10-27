@@ -47,6 +47,13 @@ public record ReleaseView(
         return decisions.stream().filter(decision -> decision.changeId().equals(changeId)).findFirst().orElse(null);
     }
 
+    /** Whether a person has to write a change's summary before the release is approved. */
+    public boolean needsSummary(UUID changeId) {
+        return changes.stream()
+                .filter(change -> change.id().equals(changeId))
+                .anyMatch(ReleaseNotePreview::needsSummary);
+    }
+
     public boolean breaking() {
         return changes.stream().anyMatch(ChangeView::breaking);
     }

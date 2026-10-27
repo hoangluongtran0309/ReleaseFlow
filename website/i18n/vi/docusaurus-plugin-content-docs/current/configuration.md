@@ -72,7 +72,11 @@ Xem [Thay đổi và review](changes.md).
 ## AI {#ai}
 
 AI không bắt buộc. Chọn một nhà cung cấp và cung cấp key cùng model. Không có model mặc định;
-chọn một model hỗ trợ đầu ra JSON có cấu trúc.
+chọn một model hỗ trợ đầu ra JSON có cấu trúc và nhận tham số temperature. Mọi request phân loại
+đều dùng temperature `0`, một giá trị cố định giúp câu trả lời cho cùng một thay đổi ổn định nhất
+trong khả năng của model, nên model chỉ nhận temperature mặc định, như model suy luận của OpenAI,
+sẽ thất bại ở mọi request (xem
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md)).
 
 | Biến | Mặc định | Tác dụng |
 | --- | --- | --- |

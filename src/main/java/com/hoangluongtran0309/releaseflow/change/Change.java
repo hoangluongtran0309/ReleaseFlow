@@ -57,6 +57,10 @@ class Change {
     @Column(name = "target_branch", length = 255)
     private String targetBranch;
 
+    // The branch a code host's change was merged from, when its source named one (V31).
+    @Column(name = "head_branch", length = 255, updatable = false)
+    private String headBranch;
+
     @Column(name = "merge_commit_sha", length = 64)
     private String mergeCommitSha;
 
@@ -238,6 +242,7 @@ class Change {
         change.authorLogin = pullRequest.authorLogin();
         change.labels = pullRequest.labels().toArray(String[]::new);
         change.targetBranch = pullRequest.targetBranch();
+        change.headBranch = pullRequest.headBranch();
         change.mergeCommitSha = pullRequest.mergeCommitSha();
         change.mergedAt = pullRequest.mergedAt();
         change.url = pullRequest.url();
@@ -254,6 +259,10 @@ class Change {
         return change;
     }
 
+    String getHeadBranch() {
+        return headBranch;
+    }
+
     MergedPullRequest pullRequest() {
         return new MergedPullRequest(
                 externalId,
@@ -265,7 +274,8 @@ class Change {
                 targetBranch,
                 mergeCommitSha,
                 mergedAt,
-                url
+                url,
+                headBranch
         );
     }
 

@@ -478,9 +478,42 @@ where it first appears; ADRs are linked from the slice they record.
   and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
   dependencies at high severity, allowing only listed advisories that no release fixes.
 
+### Notes bound to their evidence (V30–V31)
+
+- Notes bound to their evidence, the #15 part of
+  [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md), with Flyway `V30`:
+  - a Project context that administrators write on its own page and through
+    `GET`/`PUT /api/projects/{projectId}/context`, sent with every AI request for the
+    Project's changes and to DeepL as `context`, and part of the translation hash and
+    cache;
+  - an AI request that says whether the change is merged code or a tracker issue, and
+    instructions that forbid consequences, product locations, tracker-issue files, a
+    dependency's quoted changelog, and remarks about missing evidence in every field;
+  - a migration kind (`required`, `conditional`, `recommended`, `none`, or
+    `unspecified` for steps recorded before) and limitations in the neutral summary,
+    in Edit summary, translations, and templates, with presets that label a step by
+    its kind;
+  - a kind that does not match its step corrected rather than rejected, and a step
+    without a kind read as `unspecified`, both with a `MIGRATION_KIND_MISMATCH`
+    review trigger;
+  - approval refused with `409 change_summary_required` while a change with a title
+    of fewer than three words has no summary a person wrote, and too little
+    description (under ten words, or a context the AI found insufficient) for the AI's;
+  - dependency updates, known by a bot author or a `dependabot/` or `renovate/` head
+    branch (stored since Flyway `V31`), sent to the AI without their quoted release
+    notes, changelog, and commits, and breaking only when their own words say so, a
+    rule the prompt carries only for them;
+  - AI limitations kept to what the change says it does not do yet, with sentences
+    about the input or only about the change's scope dropped by a deterministic filter;
+  - an AI migration step that only says nothing needs doing dropped, so its kind is
+    `none`;
+  - every classification request at a fixed temperature of `0`.
+
 ## In progress
 
-- Nothing.
+- The per-audience part of [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md)
+  (#16) follows in the next pull request: a narrative per audience with a relevance and a
+  headline, and a selection and counts per audience. The ADR is accepted for both parts.
 
 ## Planned
 

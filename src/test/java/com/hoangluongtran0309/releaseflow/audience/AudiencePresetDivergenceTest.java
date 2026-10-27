@@ -54,6 +54,8 @@ class AudiencePresetDivergenceTest {
                 "Exports of big tables failed after 30 seconds.",
                 "Rows are streamed in pages of 1000 through a queue.",
                 "Set EXPORT_QUEUE_ENABLED=true before upgrading.",
+                "required",
+                "",
                 narrative,
                 "#42",
                 42,

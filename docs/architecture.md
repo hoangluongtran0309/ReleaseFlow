@@ -103,6 +103,7 @@ projects
   organization_id (FK -> organizations.id)
   name
   created_at
+  context (V30, at most 2000 characters), context_updated_by (composite FK -> app_users), context_updater_name, context_updated_at
 
 project_sensitive_paths (V16)
   project_id (PK; composite FK with organization_id -> projects, ON DELETE CASCADE)
@@ -140,7 +141,7 @@ changes
   pull_request_number (the provider's own number: a pull request, a merge
     request, a Linear issue, or the number in a Jira key)
   title, description, author_login (null when the source names no creator), labels (text[])
-  target_branch + merge_commit_sha (a code host's change only), merged_at, url
+  target_branch + merge_commit_sha (a code host's change only), head_branch (V31, a code host's change only, when named), merged_at, url
   delivery_id (the delivery that recorded the change, when the provider named one)
   received_at
   processing_status (PROCESSING | COMPLETED)
@@ -152,7 +153,7 @@ changes
   ai_provider, ai_model, ai_failure, ai_attempted_at
   reviewed_by (composite FK with organization_id -> app_users), reviewer_name, reviewed_at
   excluded_by (V29, composite FK -> app_users), excluder_name, excluded_at, exclusion_reason (all or none)
-  neutral_summary (jsonb), content_language, audience_narratives (jsonb, keyed by audience code)
+  neutral_summary (jsonb; migrationKind and limitations since ADR-0035), content_language, audience_narratives (jsonb, keyed by audience code)
   summary_edited_by (composite FK with organization_id -> app_users), summary_editor_name, summary_edited_at
   context_score (0-100), context_status (SUFFICIENT | INSUFFICIENT), context_reasons (jsonb); null when not assessed
   linked_context_status (NOT_SUPPORTED | NOT_CONFIGURED | NOT_FOUND | PARTIAL | UNAVAILABLE | COLLECTED; null before V21)
@@ -212,12 +213,12 @@ translation_jobs (V17, V28)
   id (UUID PK); change_id composite FK -> changes, ON DELETE CASCADE
   release_id (V28) composite FK -> releases, ON DELETE CASCADE; exactly one of the two
   source_language, target_language, input_hash; change_id or release_id + target_language + input_hash unique
-  input (jsonb), output (jsonb, exactly when SUCCEEDED)
+  input (jsonb), context (V30, the Project's context it was asked with), output (jsonb, exactly when SUCCEEDED)
   status (PENDING | RUNNING | SUCCEEDED | FAILED), attempts, next_attempt_at, claimed_at
   last_error, created_at, completed_at
 
 translation_cache (V17)
-  organization_id + source_language + target_language + text_hash (PK)
+  organization_id + source_language + target_language + text_hash (PK; the hash covers the context, if any)
   translated_text, created_at
 
 releases
@@ -678,6 +679,7 @@ network I/O itself.
 | No file list | The files could not be listed | `CHANGED_FILES_UNAVAILABLE` review trigger |
 | Sensitive word | The source has no files at all, and the title or description contains `breaking change`, `migration`, `security`, `auth`, `credential`, `password`, or `encryption` | One `SENSITIVE_KEYWORD` review trigger per match |
 | Linked issues | Commits could not be read, or Jira would not show a mentioned issue | `LINKED_CONTEXT_UNAVAILABLE` review trigger |
+| Migration kind | The AI's migration kind did not match its step, and the parser corrected it | `MIGRATION_KIND_MISMATCH` review trigger, added by `ChangeAiMerge` |
 
 A source that cannot report files at all is not a source whose files failed to
 arrive. `ChangedFileStatus.NOT_SUPPORTED` says so, and the keyword scan stands in
@@ -757,6 +759,54 @@ and turns timeouts, HTTP errors, refusals, truncation, and invalid JSON into a
 fixed message that never contains a key or a response body. See
 [ADR-0009](adr/0009-automatic-ai-classification.md), which supersedes
 [ADR-0004](adr/0004-openai-classification-as-reviewed-suggestion.md).
+
+ADR-0035 binds the answer to its evidence. The user JSON names the item `change`,
+with `kind` set to `tracker_issue` when its source is Linear or Jira
+(`SourceType.isIssueTracker`) and `code_change` otherwise, and carries the
+Project's context as `project_context`, or null. The worker and a retry read
+it through `ProjectService.context` before the call, outside any transaction.
+The instructions forbid, in every field, consequences, product locations, and
+tracker-issue files the evidence does not state, a dependency's quoted
+changelog presented as this project's change, and remarks about missing
+evidence. `neutral_core` gains `migration_kind` and `limitations`. The parser
+never rejects an answer over the kind: `none` with a step becomes `recommended`,
+any other kind (or none at all) without a step becomes `none`, a step with an
+unknown kind becomes `recommended` and one with no kind `unspecified`, and the answer records what the AI returned
+so `ChangeAiMerge` adds a `MIGRATION_KIND_MISMATCH` trigger. Before the kind is read,
+`MigrationSteps.stated` empties a step that only says nothing needs doing ("No
+immediate action is required", "No migration required") unless the verdict is
+qualified or another clause still asks something, so its kind becomes `none`. A missing
+`limitations` reads as empty, and `Limitations.stated` drops every sentence of it that
+talks about the input ("not provided", "not specified", "no information", and their kin
+in English and Vietnamese) or only states the change's scope ("does not affect", "has
+no impact on", "only affects") rather than what the change does not do yet. Both read
+only the answer, so the request, and replays recorded from it, are unchanged. `NeutralSummary` stores both;
+a summary stored before them reads its step as `UNSPECIFIED` (`MigrationKind`),
+which no template or label treats as required.
+
+A dependency update is recognized by `DependencyUpdates` from the author
+(`dependabot[bot]`, `renovate[bot]`) or the head branch (`dependabot/`, `renovate/`),
+which `MergedPullRequest` reads from GitHub's `head.ref` and GitLab's `source_branch`, in
+deliveries and imports alike, and `changes.head_branch` keeps (Flyway `V31`; only a code
+host's change has one). `AiClassificationRequest.of` sends such a change's description
+without its `<details>` and `<blockquote>` elements, Markdown blockquotes, and "Release
+notes", "Changelog", and "Commits" sections, and marks it `dependency_update`; the stored
+description is untouched. `AiClassificationPrompt.system` adds `DEPENDENCY_RULE` (breaking,
+or a migration step, only when the change's own words say so) to the instructions only for
+such a change, after the first rule: when unsure whether a change is breaking, set
+`breaking_change` and `needs_human_review`. Both providers send `AiClassificationPrompt.TEMPERATURE`, a fixed
+`0`.
+
+### Project context
+
+`projects.context` (Flyway `V30`, at most 2000 characters, with who changed it
+last and when) is written by administrators through
+`PUT /api/projects/{projectId}/context` and the page
+`/projects/{projectId}/context`, both limited to administrators by URL rule in
+`SecurityConfiguration`; members read it with `GET`. `ProjectService` owns it, so
+`change` and `translation` read it through `ProjectService.context` with the
+principal's or the job's Organization ID. Nothing is classified again when it
+changes.
 
 The change worker calls the AI automatically (see Change processing).
 `ChangeAiMerge` combines the rules with the answer:
@@ -999,16 +1049,22 @@ last word, and a violation of any of the three found by the delete itself is
 reported the same way. An archived rule's actions are not removed to make room,
 because run history has to keep naming what it delivered to.
 `AudiencePresets` holds the three shipped audiences, with names and template
-labels from `messages/audience-presets{,_vi}.properties`. V13 seeds the same
-values for Organizations that existed before, and a migration test compares
-them.
+labels from `messages/audience-presets{,_vi}.properties`. V13 seeded the values
+of its time for Organizations that existed before, which keep their templates until
+a preset is reset; a migration test compares them with those values. The shipped
+detailed templates label a migration step by its kind through the
+`migration<Kind>` sections, keeping the neutral label for `unspecified`, and the
+end-user one prints a step only when it is required.
 
 `AudienceTemplate` wraps JMustache in standards mode with strict sections,
 empty strings as false, and no escaping, because the output is Markdown. It
 validates a template on save by compiling it and rendering sample values, and
 renders one `AudienceItem` (`whatChanged`, `whyChanged`, `technicalDetail`,
-`migrationStep`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl`,
-`linkedIssues`). `reference` comes from `ChangeView.reference()`: `#n` for GitHub, `!n`
+`migrationStep`, `migrationKind`, `limitations`, `narrative`, `reference`,
+`pullRequestNumber`, `pullRequestUrl`, `linkedIssues`), whose context adds one
+boolean section per migration kind (`migrationRequired`, `migrationConditional`,
+`migrationRecommended`, `migrationUnspecified`), since Mustache cannot compare
+values. `audience` cannot see `MigrationKind`, so the kind arrives as its value. `reference` comes from `ChangeView.reference()`: `#n` for GitHub, `!n`
 for GitLab, and for Jira and Linear the issue key read from the issue address
 ReleaseFlow stored, falling back to `#n`. The Change Inbox and release pages show the
 same label.
@@ -1043,7 +1099,13 @@ translation, keep what the AI or a person wrote.
   template for that language, and the language, and inserts the notes after the
   release row is flushed as approved (see
   [Release note languages and translation](#release-note-languages-and-translation)). A render failure aborts approval with
-  `409 release_note_render_failed`.
+  `409 release_note_render_failed`. Before that, `ReleaseNotePreview.needsSummary`
+  finds every change whose title, without its Conventional Commit prefix, issue keys,
+  and `#n` or `!n`, has fewer than three words, and that has neither a summary a person
+  wrote nor an AI summary of a description of at least ten words (HTML comments not
+  counted) with a context the AI did not find insufficient, and
+  approval answers `409 change_summary_required` naming their references (ADR-0035).
+  The release page marks them **Needs a summary** and opens their **Edit summary**.
 - **Editing a note** is allowed only while approved. It stores the text and the
   editor and turns off `auto_rerender`.
 - **Editing a summary** is allowed during review or after approval, for a
@@ -1077,18 +1139,22 @@ ADR-0015 writes a note per audience and **release note language**; see
   missing variants for every target language whose primary language differs
   from the output language: the shipped template in that language for a preset,
   a copy of the main template otherwise.
-- **Jobs.** The `translation` package depends on no other domain package.
+- **Jobs.** The `translation` package depends on no other domain package but
+  `project`, for the Project's context (ADR-0035).
   `TranslationService.ensure` touches only the database, so approval can call it
   in its transaction. It returns the texts at once when the source and target
   share a primary language or all are blank, returns the existing job's state
-  for the same change, target, and `input_hash` (SHA-256 of the source language
-  and the texts sorted by key), and otherwise creates a `translation_jobs` row:
+  for the same change, target, and `input_hash` (SHA-256 of the source language,
+  the texts sorted by key, and the Project's context when there is one), and
+  otherwise creates a `translation_jobs` row that keeps that context
+  (`translation_jobs.context`, Flyway `V30`):
   `SUCCEEDED` when every text is in `translation_cache`, `FAILED`
   (`translation_disabled`) without a provider, and `PENDING` otherwise.
 - **Worker.** `TranslationWorker` runs every second. It claims one due job with
   `FOR UPDATE SKIP LOCKED`, looks its texts up in the cache, and sends only the
   missing ones to `DeepLTranslator` outside any transaction: `POST
-  /v2/translate` with `DeepL-Auth-Key`, batches of at most 50 texts and 120 KiB,
+  /v2/translate` with `DeepL-Auth-Key`, the job's context as `context` when it has
+  one, batches of at most 50 texts and 120 KiB,
   source as the primary language and English or Portuguese targets with a
   region. A 429, a 5xx, or a network failure is retried up to five attempts with
   `min(300, 2^attempt)` seconds of backoff; 403, 456, other 4xx, and a response
