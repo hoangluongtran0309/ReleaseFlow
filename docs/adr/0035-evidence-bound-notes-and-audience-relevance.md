@@ -141,13 +141,13 @@ they are decided together and the response contract changes once.
     The replays still returned remarks about the input as limitations, so the parser
     drops, deterministically, every sentence of an AI's limitations that talks about the
     input rather than the change: "not provided", "not specified", "not detailed", "no
-    information", and their kin in English and Vietnamese. It drops, the same way, every
-    sentence that only states the change's scope: "does not affect…", "has no impact
-    on…", "only affects the CI environment", "only the tests were changed", "is
-    unchanged". Scope is what an audience's relevance decides (below), not something the
-    change does not do yet. A sentence that names where a real limitation applies, such as
-    "certificate validation is enforced only for MongoDB", is kept. A person's limitations
-    are kept as written.
+    information", "no mention of", "does not mention", and their kin in English and
+    Vietnamese. It drops, the same way, every sentence that only states the change's
+    scope: "does not affect…", "has no impact on…", "only affects the CI environment",
+    "only the tests were changed", "is unchanged". Scope is what an audience's relevance
+    decides (below), not something the change does not do yet. A sentence that names
+    where a real limitation applies, such as "certificate validation is enforced only for
+    MongoDB", is kept. A person's limitations are kept as written.
 
     Both filters work on the answer alone: the prompt and everything else sent to the
     provider are unchanged, so recorded replays of the request stay valid.

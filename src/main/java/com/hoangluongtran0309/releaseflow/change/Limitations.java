@@ -22,12 +22,15 @@ final class Limitations {
     // English and Vietnamese, the languages ReleaseFlow writes its own text in.
     private static final Pattern ABOUT_THE_INPUT = Pattern.compile(
             "\\bnot (provided|specified|detailed|mentioned|described|stated|given|documented|clear)\\b"
-                    + "|\\bno (information|details|further details|specifics)\\b"
+                    + "|\\bno (information|details|further details|specifics)\\b|\\bno details? (on|about)\\b"
+                    + "|\\b(no|makes no|made no) mention\\b"
+                    + "|\\b(does not|doesn't|did not|didn't|do not|don't) mention\\b"
                     + "|\\bunclear\\b"
                     + "|\\b(pull request|merge request|description|summary|evidence|input|issue|ticket)s?"
                     + " (does not|doesn't|did not|didn't|do not|don't)"
                     + " (say|mention|state|specify|describe|explain|include|provide|detail)"
-                    + "|không được (cung cấp|nêu|mô tả|nói rõ)|không nêu rõ|chưa được nêu|không có thông tin|không rõ",
+                    + "|không được (cung cấp|nêu|mô tả|nói rõ|đề cập)|không nêu rõ|chưa được nêu|không có thông tin|không rõ"
+                    + "|không đề cập",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
     private static final Pattern ONLY_SCOPE = Pattern.compile(

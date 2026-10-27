@@ -126,7 +126,8 @@ class AiClassificationParserTest {
             "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone",
             "Exports queue.\\nWatch the queue.",
             "Specific queue limits are not detailed.",
-            "The rollback steps are not provided."
+            "The rollback steps are not provided.",
+            "No mention of multi-user support or role-based access."
     })
     void dropsAHeadlineThatIsTooLongOnSeveralLinesOrARemarkOnTheInput(String headline) {
         AiClassification answer = parser.parse(withNarratives("""
@@ -148,8 +149,8 @@ class AiClassificationParserTest {
     @Test
     void dropsTheSentencesOfABodyThatRemarkOnTheInput() {
         AiClassification answer = parser.parse(withNarratives("""
-                {"operator":{"relevance":"full","headline":"","body":"Watch the export queue. Rollback steps are not provided."},
-                 "end_user":{"relevance":"full","headline":"","body":"The exact limits are not specified."}}"""), REQUEST);
+                {"operator":{"relevance":"full","headline":"","body":"Watch the export queue. Rollback steps are not provided. The change does not mention retries."},
+                 "end_user":{"relevance":"full","headline":"","body":"The exact limits are not specified. No mention of multi-user support."}}"""), REQUEST);
 
         assertThat(answer.narratives().get("operator").body()).isEqualTo("Watch the export queue.");
         // Left with nothing, and full, it says no more than having no narrative.
