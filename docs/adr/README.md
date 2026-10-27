@@ -24,7 +24,7 @@ they describe.
 | [0012](0012-category-catalog.md) | Category catalog per Organization | Accepted | 2026-09-15 | |
 | [0013](0013-context-sufficiency-and-duplicates.md) | Context sufficiency and possible duplicates | Accepted | 2026-09-15 | |
 | [0014](0014-project-sensitive-paths.md) | Sensitive paths per Project | Accepted | 2026-09-15 | |
-| [0015](0015-multilingual-release-notes.md) | Release notes in several languages | Accepted | 2026-09-15 | |
+| [0015](0015-multilingual-release-notes.md) | Release notes in several languages | Accepted | 2026-09-15 | Amended by [0036](0036-translation-glossary.md) (a glossary for translations), proposed |
 | [0016](0016-integration-sources-and-history-import.md) | Integration sources and history import | Accepted | 2026-09-15 | |
 | [0017](0017-gitlab-sources.md) | GitLab sources and provider seams | Accepted | 2026-09-16 | |
 | [0018](0018-linear-sources.md) | Linear sources | Accepted | 2026-09-16 | |
@@ -45,6 +45,7 @@ they describe.
 | [0033](0033-change-exclusion.md) | Excluding a change from releases | Accepted | 2026-10-17 | Builds on [0010](0010-release-review-lifecycle.md) |
 | [0034](0034-account-language-per-request.md) | The account's interface language is read on each request | Accepted | 2026-10-23 | Amends [0027](0027-ui-localization.md) |
 | [0035](0035-evidence-bound-notes-and-audience-relevance.md) | Notes bound to their evidence, and a selection per audience | Accepted | 2026-10-26 | Amends [0009](0009-automatic-ai-classification.md) and [0011](0011-audience-release-notes.md) |
+| [0036](0036-translation-glossary.md) | An Organization glossary for translated notes | Proposed | 2026-10-27 | Amends [0015](0015-multilingual-release-notes.md); refers to [0035](0035-evidence-bound-notes-and-audience-relevance.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)
