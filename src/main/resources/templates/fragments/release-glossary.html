@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* What the translations behind each note language did with the Organization's glossary
+       (ADR-0036). `retryHint` says that Retry translations tries the glossary again, which
+       only an approved release can do. */-->
+<div th:fragment="glossary(release, retryHint)" class="mt-4" id="release-glossary" th:unless="${#lists.isEmpty(release.glossaries)}">
+    <h3 class="text-sm font-semibold" th:text="#{ui.release.glossaryHeading}">Glossary</h3>
+    <ul class="mt-2 grid gap-1 text-sm">
+        <li th:each="glossary : ${release.glossaries}" th:id="|glossary-${glossary.language}|">
+            <span class="font-mono" th:text="${glossary.language}">vi</span>
+            <span class="badge badge-sm"
+                  th:classappend="${glossary.status.name() == 'APPLIED'} ? 'badge-success badge-soft' : (${glossary.notApplied()} ? 'badge-warning' : 'badge-ghost')"
+                  th:text="#{|ui.release.glossaryStatus.${glossary.status.name()}|}">Sent with every translation</span>
+            <span class="text-slate-600" th:if="${glossary.notApplied()}"
+                  th:text="#{|ui.release.glossaryReason.${glossary.reason}|}">The glossary could not be synced to DeepL.</span>
+        </li>
+    </ul>
+    <p class="mt-2 text-xs text-slate-500" th:unless="${#lists.isEmpty(release.glossaries.?[status.name() == 'APPLIED'])}"
+       th:text="#{ui.release.glossarySentHelp}">"Sent with every translation" means the glossary went with every translation into that language, not that DeepL kept every term.</p>
+    <p class="mt-2 text-xs text-slate-500"
+       th:if="${retryHint and !#lists.isEmpty(release.glossaries.?[notApplied() and reason != 'unsupported_language_pair'])}"
+       th:text="#{ui.release.glossaryRetry}">Retry translations to try the glossary again.</p>
+</div>
+</body>
+</html>

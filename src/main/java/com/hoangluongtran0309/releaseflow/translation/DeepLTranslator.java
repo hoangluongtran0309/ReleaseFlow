@@ -17,14 +17,19 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.function.Supplier;
 
 /**
- * DeepL's {@code POST /v2/translate}. Texts are sent in batches that stay under DeepL's
- * request limits, and a response that does not return one translation per text is
- * rejected. A Project's context goes in {@code context}, which DeepL neither translates
- * nor bills. The API key is never logged.
+ * DeepL's {@code POST /v2/translate}, and its v3 glossaries (ADR-0036). Texts are sent in
+ * batches that stay under DeepL's request limits, and a response that does not return one
+ * translation per text is rejected. A Project's context goes in {@code context}, which
+ * DeepL neither translates nor bills, and a glossary in {@code glossary_id}. A {@code 456}
+ * is a stop, never a retry: it is the character quota, or the number of glossaries the
+ * plan allows. The API key is never logged.
  */
 final class DeepLTranslator implements Translator {
 
@@ -36,6 +41,7 @@ final class DeepLTranslator implements Translator {
     private static final Logger log = LoggerFactory.getLogger(DeepLTranslator.class);
     private static final int TOO_MANY_REQUESTS = 429;
     private static final int QUOTA_EXCEEDED = 456;
+    private static final int NOT_FOUND = 404;
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -63,14 +69,129 @@ final class DeepLTranslator implements Translator {
     }
 
     @Override
-    public List<String> translate(List<String> texts, String sourceLanguage, String targetLanguage, String context)
-            throws TranslationException {
+    public List<String> translate(List<String> texts, String sourceLanguage, String targetLanguage, String context,
+                                  String glossaryId) throws TranslationException {
         Translator.requireNoTransaction();
         List<String> translations = new ArrayList<>(texts.size());
         for (List<String> batch : batches(texts)) {
-            translations.addAll(translateBatch(batch, sourceCode(sourceLanguage), targetCode(targetLanguage), context));
+            translations.addAll(translateBatch(batch, sourceCode(sourceLanguage), targetCode(targetLanguage), context,
+                    glossaryId));
         }
         return translations;
+    }
+
+    @Override
+    public GlossaryLanguages glossaryLanguages() throws TranslationException {
+        Translator.requireNoTransaction();
+        JsonNode languages = read(send(() -> restClient.get()
+                .uri("/v3/languages?resource=glossary")
+                .retrieve()
+                .body(String.class), false));
+        if (!languages.isArray()) {
+            throw new TranslationException(TranslationException.INVALID_RESPONSE, false);
+        }
+        // Being listed is what says a language can be used in a glossary; "features" is empty
+        // for languages whose glossaries work, so it is not read.
+        Set<String> sources = new HashSet<>();
+        Set<String> targets = new HashSet<>();
+        for (JsonNode language : languages.values()) {
+            String code = language.path("lang").asString("").toLowerCase(Locale.ROOT);
+            if (code.isEmpty()) {
+                continue;
+            }
+            if (language.path("usable_as_source").asBoolean(false)) {
+                sources.add(TranslationTexts.primary(code));
+            }
+            if (language.path("usable_as_target").asBoolean(false)) {
+                targets.add(TranslationTexts.primary(code));
+            }
+        }
+        return new GlossaryLanguages(sources, targets);
+    }
+
+    @Override
+    public String createGlossary(String name, String sourceLanguage, String targetLanguage, String tsv, int entries)
+            throws TranslationException {
+        Translator.requireNoTransaction();
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("name", name);
+        body.putArray("dictionaries").add(dictionary(sourceLanguage, targetLanguage, tsv));
+        JsonNode created = read(send(() -> restClient.post()
+                .uri("/v3/glossaries")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(objectMapper.writeValueAsString(body))
+                .retrieve()
+                .body(String.class), false));
+        String id = created.path("glossary_id").asString("");
+        JsonNode dictionaries = created.path("dictionaries");
+        if (id.isEmpty() || !dictionaries.isArray() || dictionaries.size() != 1
+                || dictionaries.get(0).path("entry_count").asInt(-1) != entries) {
+            throw new TranslationException(TranslationException.INVALID_RESPONSE, false);
+        }
+        return id;
+    }
+
+    @Override
+    public void replaceDictionary(String glossaryId, String sourceLanguage, String targetLanguage, String tsv, int entries)
+            throws TranslationException {
+        Translator.requireNoTransaction();
+        JsonNode replaced = read(send(() -> restClient.put()
+                .uri("/v3/glossaries/{id}/dictionaries", glossaryId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(objectMapper.writeValueAsString(dictionary(sourceLanguage, targetLanguage, tsv)))
+                .retrieve()
+                .body(String.class), true));
+        if (replaced.path("entry_count").asInt(-1) != entries) {
+            throw new TranslationException(TranslationException.INVALID_RESPONSE, false);
+        }
+    }
+
+    // A dictionary is created with root language codes: it applies to every region of its language.
+    private ObjectNode dictionary(String sourceLanguage, String targetLanguage, String tsv) {
+        ObjectNode dictionary = objectMapper.createObjectNode();
+        dictionary.put("source_lang", TranslationTexts.primary(sourceLanguage));
+        dictionary.put("target_lang", TranslationTexts.primary(targetLanguage));
+        dictionary.put("entries", tsv);
+        dictionary.put("entries_format", "tsv");
+        return dictionary;
+    }
+
+    private String send(Supplier<String> call, boolean notFoundIsGone) throws TranslationException {
+        try {
+            return call.get();
+        } catch (RestClientResponseException exception) {
+            int status = exception.getStatusCode().value();
+            log.warn("DeepL returned HTTP {} to a glossary request.", status);
+            if (notFoundIsGone && status == NOT_FOUND) {
+                throw new TranslationException(TranslationException.GLOSSARY_NOT_FOUND, false);
+            }
+            throw failure(exception);
+        } catch (RestClientException exception) {
+            log.warn("Could not reach DeepL.");
+            throw new TranslationException(TranslationException.UNAVAILABLE, true);
+        }
+    }
+
+    private JsonNode read(String response) throws TranslationException {
+        try {
+            return objectMapper.readTree(response == null ? "" : response);
+        } catch (JacksonException exception) {
+            throw new TranslationException(TranslationException.INVALID_RESPONSE, false);
+        }
+    }
+
+    // 429 and every 5xx are retried with backoff; 456, the quota or the plan's glossaries, never is.
+    private static TranslationException failure(RestClientResponseException exception) {
+        int status = exception.getStatusCode().value();
+        if (status == TOO_MANY_REQUESTS) {
+            return new TranslationException(TranslationException.RATE_LIMITED, true);
+        }
+        if (status == QUOTA_EXCEEDED) {
+            return new TranslationException(TranslationException.QUOTA_EXCEEDED, false);
+        }
+        return exception.getStatusCode().is5xxServerError()
+                ? new TranslationException(TranslationException.UNAVAILABLE, true)
+                : new TranslationException(TranslationException.REJECTED, false);
     }
 
     /** Consecutive texts, at most {@value #MAX_BATCH_TEXTS} and about 120 KiB per request. */
@@ -114,14 +235,17 @@ final class DeepLTranslator implements Translator {
         };
     }
 
-    private List<String> translateBatch(List<String> batch, String source, String target, String context)
-            throws TranslationException {
+    private List<String> translateBatch(List<String> batch, String source, String target, String context,
+                                        String glossaryId) throws TranslationException {
         ObjectNode body = objectMapper.createObjectNode();
         batch.forEach(body.putArray("text")::add);
         body.put("source_lang", source);
         body.put("target_lang", target);
         if (context != null && !context.isBlank()) {
             body.put("context", context);
+        }
+        if (glossaryId != null) {
+            body.put("glossary_id", glossaryId);
         }
         String response;
         try {
@@ -134,15 +258,13 @@ final class DeepLTranslator implements Translator {
         } catch (RestClientResponseException exception) {
             int status = exception.getStatusCode().value();
             log.warn("DeepL returned HTTP {}.", status);
-            if (status == TOO_MANY_REQUESTS) {
-                throw new TranslationException(TranslationException.RATE_LIMITED, true);
+            TranslationException failure = failure(exception);
+            // Refused with a glossary: the glossary is the likely cause, so it is sent again
+            // and the translation retried, the last time without it.
+            if (glossaryId != null && failure.code().equals(TranslationException.REJECTED)) {
+                throw new TranslationException(TranslationException.GLOSSARY_REFUSED, true);
             }
-            if (status == QUOTA_EXCEEDED) {
-                throw new TranslationException(TranslationException.QUOTA_EXCEEDED, false);
-            }
-            throw exception.getStatusCode().is5xxServerError()
-                    ? new TranslationException(TranslationException.UNAVAILABLE, true)
-                    : new TranslationException(TranslationException.REJECTED, false);
+            throw failure;
         } catch (RestClientException exception) {
             log.warn("Could not reach DeepL.");
             throw new TranslationException(TranslationException.UNAVAILABLE, true);

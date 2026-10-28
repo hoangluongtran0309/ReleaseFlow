@@ -119,6 +119,30 @@ với mọi release đã qua bước nháp.
 thể hoàn tác. Sao lưu trước; quay lại nghĩa là khôi phục bản sao lưu đó với phiên bản cũ, không
 bao giờ chạy phiên bản cũ trên cơ sở dữ liệu đã được migrate.
 
+### Nâng cấp lên phiên bản có bảng thuật ngữ {#upgrading-to-the-glossary}
+
+Phiên bản thêm [bảng thuật ngữ](release-notes.md#glossary) (Flyway `V33`) không thay đổi gì cho
+đến khi quản trị viên thêm thuật ngữ: Organization chưa có bảng thuật ngữ gửi DeepL đúng những yêu
+cầu như trước, và không note nào bị dịch lại. Để giữ thuật ngữ sau khi nâng cấp:
+
+1. Mở **Bảng thuật ngữ**, chọn những thuật ngữ gợi ý mà người đọc của bạn giữ bằng tiếng Anh, và
+   thêm những thuật ngữ khác, mỗi mục viết đúng như cần hiển thị. Thêm bản dịch cố định cho thuật
+   ngữ luôn phải dịch thành cùng một cụm từ trong một ngôn ngữ.
+2. Đưa một release đã duyệt về nháp rồi duyệt lại, hoặc duyệt release tiếp theo: bản dịch tạo từ
+   lúc đó dùng bảng thuật ngữ. Note đã publish không bao giờ thay đổi.
+3. Xem trang release: mỗi ngôn ngữ cho biết bảng thuật ngữ có ở trạng thái **Đã gửi kèm mọi bản
+   dịch** hay không. Trạng thái đó nghĩa là DeepL đã nhận bảng thuật ngữ, không phải mọi thuật ngữ
+   đều được giữ, nên đọc lại note, và thêm cụm mà DeepL đã dịch, như `container images`, thành một
+   thuật ngữ giữ nguyên riêng.
+
+**Với DeepL API Free, chỉ một Organization dùng được bảng thuật ngữ.** ReleaseFlow dùng một
+glossary của DeepL cho mỗi Organization, và tài khoản API Free chỉ có số glossary mà gói cho phép:
+là một khi được thử. Organization đồng bộ đầu tiên dùng nó; lần đồng bộ của mọi Organization khác
+thất bại với `quota_exceeded` và note của chúng được dịch mà không có bảng thuật ngữ, như trang
+release và trang Bảng thuật ngữ của chúng cho biết. Một bản cài đặt phục vụ nhiều Organization có
+bảng thuật ngữ cần gói DeepL có đủ số glossary đó. Glossary do công cụ khác tạo trong tài khoản
+cũng chiếm một chỗ.
+
 ## Artifact đã phát hành {#published-artifacts}
 
 Đây là các bản phát hành của chính ReleaseFlow, khác với những release mà nó viết release note,

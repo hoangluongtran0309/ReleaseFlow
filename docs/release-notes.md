@@ -185,6 +185,93 @@ PUT  /api/organization/release-languages                               {"targetL
 POST /api/projects/{projectId}/releases/{releaseId}/translations/retry
 ```
 
+### Glossary
+
+Machine translation turns product terms into words that mean something else: without
+help, DeepL wrote dbvault's "console" as *giao diện dòng lệnh* (command-line interface),
+"image" as *hình ảnh* (picture), and "pull request" as *yêu cầu kéo*. The Organization's
+**glossary**, on the **Glossary** page, fixes that for every note it translates. It holds
+two kinds of entry:
+
+- a **kept term** stays in English in every language: `CLI`, `console`, `image`,
+  `pull request`. DeepL still writes the sentence around it and may adapt its form to the
+  language, so dbvault's "images" came back as *các image*: a kept term is not frozen
+  text;
+- a **fixed translation** always becomes the same words between two languages, named by
+  their primary language: `en → vi`, "storage" → *lưu trữ*. It wins over a kept term with
+  the same text, for its two languages only.
+
+Administrators edit it and every member can read it. Nothing is added on its own: the page
+offers a list of terms common in software release notes, and only the ones an
+administrator ticks are kept. A term is 1 to 100 characters on one line, the glossary
+holds at most 500 entries, and uniqueness is exact: "Image" and "image" are two entries.
+A lowercase entry usually keeps the capitalized word at the start of a sentence too, so
+add another form only for one DeepL still changes.
+
+A glossary steers DeepL; it does not bind every word. DeepL can still translate a kept
+term inside a longer phrase: with "image", "secret", and "container" kept, dbvault's notes
+still got "container images", "emulator image", and "repository secrets" translated, and
+once a sentence-initial "The console". When DeepL translates a term inside a phrase, add
+the phrase as its own kept term (`container images`, `repository secrets`).
+
+Each language pair the Organization translates is one dictionary in a DeepL glossary,
+whose version is the hash of what is sent. Approval only records that a pair is wanted,
+and a background job syncs it to DeepL outside any transaction, retrying a rate limit, a
+server error, or a network failure up to five times. Translations of the pair wait for
+that sync, then carry the glossary beside the Project's context. Its version is part of
+what a translation is cached by, so:
+
+- an edit translates again at the next approval, including the release's own summary;
+- an edit that leaves the dictionary as it was, such as deleting a term and adding it
+  back, translates nothing again;
+- an Organization with no glossary sends exactly the requests it sent before.
+
+A glossary never holds up a release. A pair DeepL serves no glossary for, or whose sync
+failed, is translated without it, and for each language the release page says whether
+the glossary was **Sent with every translation**, is still being waited for, or was **Not
+applied**, and why: the pair is unsupported, the sync failed, or DeepL answered in the
+source language with the glossary. **Sent with every translation** means the glossary went
+with every translation into that language, not that DeepL kept every term; read the note,
+and add a phrase DeepL translated as its own kept term. Retry translations tries a failed sync again. The glossary never reaches the
+AI.
+
+A translation that comes back in its source language is not stored as one. For a
+Vietnamese note, a sentence with at least three words left to translate and no Vietnamese
+diacritic fails; for a language in another script, such as Japanese or Russian, a
+sentence with no character of that script fails. Kept terms, code, URLs, paths, and words
+like `MongoDB` are left out of the count. A failing answer is translated once more without
+the glossary, and if it fails again the note is **Not translated**, like any failed
+translation. Other Latin-script languages have no such check yet. See
+[ADR-0036](adr/0036-translation-glossary.md).
+
+```text
+GET    /api/glossary
+GET    /api/glossary/suggestions
+POST   /api/glossary/kept-terms                    {"terms": ["console", "CLI"]}
+DELETE /api/glossary/kept-terms/{termId}
+POST   /api/glossary/translations                  {"sourceLanguage", "targetLanguage", "sourceTerm", "targetTerm"}
+DELETE /api/glossary/translations/{translationId}
+```
+
+`POST /api/glossary/kept-terms` adds every term or none. `GET /api/glossary` returns
+`keptTerms`, `translations`, `entryLimit`, and `pairs`: for each language pair the
+Organization translates, `entryCount` and a `status` of `empty`, `not_synced`, `pending`,
+`synced`, `outdated` (edited since its sync), `unsupported`, or `failed` with its `error`.
+
+| Situation | Response |
+| --- | --- |
+| A blank, overlong, or multi-line term, an unknown language, or the same language twice | `400 validation_failed` |
+| A term the glossary already has, kept or for that pair | `409 glossary_term_taken` |
+| More than 500 entries | `409 glossary_limit` |
+| An unknown or foreign entry | `404 glossary_term_not_found` |
+
+**DeepL API Free holds one glossary.** Each Organization uses one glossary of the DeepL
+account, and an API Free account holds only as many as its plan allows, which was one when
+this was tested. On such a key, the first Organization to sync gets the glossary; every
+other Organization's sync fails at once with `quota_exceeded` (DeepL's `456`, which is
+never retried), its release page says the glossary was not applied, and its notes are
+translated without one. ReleaseFlow never deletes a glossary in DeepL.
+
 ## Releases
 
 Open **Releases** to prepare a Project's releases. The page creates a release
@@ -303,8 +390,11 @@ value without an offset is read as UTC. A release returns its `changes`, its
 `decisions` (`changeId`, `action`, `reviewerName`, `note`, `decidedAt`),
 `reviewedCount`, `plannedReleaseAt`, `approvedAt`, `approverName`, and its
 `notes` (`id`, `audienceCode`, `audienceName`, `language`, `content`,
-`autoRerender`, `lastEditorName`, `updatedAt`, and `translationStatus`:
-`READY`, `PENDING`, or `FAILED`). The download is `text/markdown`, named
+`autoRerender`, `lastEditorName`, `updatedAt`, `translationStatus`:
+`READY`, `PENDING`, or `FAILED`, and `glossaryStatus`: `NONE`, `PENDING`, `APPLIED`, or
+`NOT_APPLIED` with a `glossaryReason`), and `glossaries`: one entry per note language whose
+pair has a [glossary](#glossary), with its `language`, `status`, and `reason`. The
+download is `text/markdown`, named
 `<version>-<audience code>-<language>.md`.
 `release-assignments` lists which release, by ID, version, and status, each
 of the Project's changes belongs to. Errors:

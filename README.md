@@ -65,7 +65,8 @@ notes written from the same reviewed facts instead of rewritten by hand three ti
    approval. Changes with too little context, or that look like earlier ones, are flagged
    with the evidence.
 4. **Write.** One note per audience (operators, contributors, end users, or your own),
-   from a Mustache template, in up to five languages translated by DeepL.
+   from a Mustache template, in up to five languages translated by DeepL, with an
+   Organization glossary that keeps product terms as written.
 5. **Publish.** Published notes are frozen, then delivered by automation rules to GitHub
    Releases, Slack, email, Notion, Confluence, Microsoft Teams, Zendesk, or a public
    changelog with an RSS feed.

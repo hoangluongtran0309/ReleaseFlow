@@ -20,6 +20,7 @@ test.describe('workspace pages', () => {
       ['audiences', '/audiences'],
       ['new audience', '/audiences/new'],
       ['categories', '/categories'],
+      ['glossary', '/glossary'],
       ['automation', '/automation'],
     ];
 

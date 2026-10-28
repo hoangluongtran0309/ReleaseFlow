@@ -4,6 +4,7 @@ import com.hoangluongtran0309.releaseflow.account.OutputLanguageService;
 import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
+import com.hoangluongtran0309.releaseflow.translation.GlossaryUse;
 import com.hoangluongtran0309.releaseflow.translation.TranslationService;
 import com.hoangluongtran0309.releaseflow.translation.TranslationState;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,8 @@ import java.util.Map;
  * Puts a release's changes, and its own summary, into one note language. A change whose
  * summary is in another language uses its translation once that is ready, and its own
  * text until then; so does the release's summary, which a person wrote in the
- * Organization's output language. The note is only as ready as the least ready of them.
+ * Organization's output language. The note is only as ready as the least ready of them,
+ * and says what their translations did with the glossary only as all of them did it.
  * Only the database is touched, so this is safe inside the transaction that approves a
  * release.
  */
@@ -47,6 +49,7 @@ class ReleaseNoteWriter {
     Localized localize(Release release, List<ChangeView> changes, String language, boolean retry) {
         List<ChangeView> localized = new ArrayList<>(changes.size());
         TranslationState.Status status = TranslationState.Status.READY;
+        List<GlossaryUse> glossary = new ArrayList<>();
         for (ChangeView change : changes) {
             NeutralSummary summary = change.neutralSummary();
             if (summary == null || change.contentLanguage() == null) {
@@ -60,6 +63,7 @@ class ReleaseNoteWriter {
                     change.contentLanguage(), language, texts)
                     : translationService.ensure(release.getOrganizationId(), release.getProjectId(), change.id(),
                     change.contentLanguage(), language, texts);
+            glossary.add(state.glossary());
             if (state.ready()) {
                 localized.add(translated(change, state.texts(), language));
             } else {
@@ -76,13 +80,14 @@ class ReleaseNoteWriter {
                     release.getId(), sourceLanguage, language, texts)
                     : translationService.ensureForRelease(release.getOrganizationId(), release.getProjectId(),
                     release.getId(), sourceLanguage, language, texts);
+            glossary.add(state.glossary());
             if (state.ready()) {
                 summary = state.texts().get(RELEASE_SUMMARY);
             } else {
                 status = worse(status, state.status());
             }
         }
-        return new Localized(localized, summary, status);
+        return new Localized(localized, summary, status, GlossaryUse.combine(glossary));
     }
 
     /** The texts of a change that are translated: its summary fields and each audience's headline and body. */
@@ -133,7 +138,10 @@ class ReleaseNoteWriter {
         return TranslationState.Status.READY;
     }
 
-    /** A release's changes and summary in one note language, and how ready that language is. */
-    record Localized(List<ChangeView> changes, String summary, TranslationState.Status status) {
+    /**
+     * A release's changes and summary in one note language, how ready that language is,
+     * and what its translations did with the glossary.
+     */
+    record Localized(List<ChangeView> changes, String summary, TranslationState.Status status, GlossaryUse glossary) {
     }
 }

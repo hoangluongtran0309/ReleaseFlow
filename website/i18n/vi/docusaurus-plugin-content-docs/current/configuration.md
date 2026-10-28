@@ -100,7 +100,7 @@ không hợp lệ, hoặc khi key hay model của một nhà cung cấp được
 | --- | --- | --- |
 | `RELEASEFLOW_TRANSLATION_PROVIDER` | `disabled` | `deepl` bật tính năng dịch release note. Một giá trị khác `disabled` và `deepl` làm ứng dụng không khởi động, và `disabled` cũng vậy khi `RELEASEFLOW_DEEPL_API_KEY` đang được đặt |
 | `RELEASEFLOW_TRANSLATION_TIMEOUT` | `PT30S` | Thời gian tối đa cho mỗi request dịch |
-| `RELEASEFLOW_DEEPL_API_KEY` | (trống) | Key của DeepL; key kết thúc bằng `:fx` dùng API miễn phí. Bắt buộc với `deepl`, và một key được đặt khi provider không phải `deepl` làm ứng dụng không khởi động, nên muốn tắt dịch thì phải xoá cả key |
+| `RELEASEFLOW_DEEPL_API_KEY` | (trống) | Key của DeepL; key kết thúc bằng `:fx` dùng API miễn phí. Bắt buộc với `deepl`, và một key được đặt khi provider không phải `deepl` làm ứng dụng không khởi động, nên muốn tắt dịch thì phải xoá cả key. Mỗi Organization có [bảng thuật ngữ](release-notes.md#glossary) dùng một glossary của tài khoản DeepL, và gói API Free chỉ có một |
 | `RELEASEFLOW_DEEPL_BASE_URL` | (trống) | Ghi đè host được chọn dựa trên key |
 
 Xem [Ngôn ngữ release note](release-notes.md#release-note-languages).

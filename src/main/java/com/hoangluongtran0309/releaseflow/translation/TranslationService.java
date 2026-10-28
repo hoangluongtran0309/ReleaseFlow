@@ -15,10 +15,12 @@ import java.util.stream.Collectors;
 
 /**
  * Translations of change content, and of a release's own summary, one job per change or
- * release, target language, and input. The Project's context is part of the input
- * (ADR-0035), so editing it translates again at the next approval. It
- * only reads and writes the database and never calls a provider, so it is safe inside
- * the transaction that approves a release: the worker picks new jobs up after commit.
+ * release, target language, and input. The Project's context (ADR-0035) and the version of
+ * the pair's glossary (ADR-0036) are part of the input, so editing either translates again
+ * at the next approval, and unchanged input is never sent twice. A job that asks for a
+ * glossary DeepL does not hold yet wants it synced. It only reads and writes the database
+ * and never calls a provider, so it is safe inside the transaction that approves a release:
+ * the workers pick new jobs and syncs up after commit.
  */
 @Service
 public class TranslationService {
@@ -29,6 +31,8 @@ public class TranslationService {
     private final TranslationCacheRepository cacheRepository;
     private final TranslationProvider provider;
     private final ProjectService projectService;
+    private final GlossaryService glossaryService;
+    private final GlossarySyncRepository syncRepository;
     private final Clock clock;
 
     TranslationService(
@@ -36,12 +40,16 @@ public class TranslationService {
             TranslationCacheRepository cacheRepository,
             TranslationProvider provider,
             ProjectService projectService,
+            GlossaryService glossaryService,
+            GlossarySyncRepository syncRepository,
             Clock clock
     ) {
         this.jobRepository = jobRepository;
         this.cacheRepository = cacheRepository;
         this.provider = provider;
         this.projectService = projectService;
+        this.glossaryService = glossaryService;
+        this.syncRepository = syncRepository;
         this.clock = clock;
     }
 
@@ -83,9 +91,10 @@ public class TranslationService {
     }
 
     /**
-     * Starts the failed translation of these texts over, then reports where it stands.
-     * Anything but a failed job is left alone, and so is everything while no provider is
-     * configured to translate.
+     * Starts the failed translation of these texts over, then reports where it stands. A
+     * translation made without the glossary it asked for is made again, and a failed sync
+     * of the pair's glossary starts over. Anything else is left alone, and so is everything
+     * while no provider is configured to translate.
      */
     @Transactional
     public TranslationState retry(
@@ -118,21 +127,51 @@ public class TranslationService {
             return TranslationState.ready(texts);
         }
         String context = projectService.context(subject.organizationId(), subject.projectId());
-        String hash = TranslationTexts.inputHash(sourceLanguage, input, context);
+        String version = glossaryVersion(subject.organizationId(), sourceLanguage, targetLanguage);
+        String hash = TranslationTexts.inputHash(sourceLanguage, input, context, version);
         TranslationJob job = find(subject, targetLanguage, hash)
                 .orElseGet(() -> jobRepository.saveAndFlush(
-                        newJob(subject, sourceLanguage, targetLanguage, hash, input, context)));
+                        newJob(subject, sourceLanguage, targetLanguage, hash, input, context, version)));
+        if (!version.isEmpty() && job.getStatus() == TranslationJob.Status.PENDING) {
+            want(subject.organizationId(), sourceLanguage, targetLanguage, version);
+        }
         return merge(texts, job.state());
+    }
+
+    // Without a provider nothing is translated, so nothing asks for a glossary either.
+    private String glossaryVersion(UUID organizationId, String sourceLanguage, String targetLanguage) {
+        if (!provider.isEnabled()) {
+            return "";
+        }
+        return glossaryService.dictionary(organizationId, sourceLanguage, targetLanguage).version();
+    }
+
+    // The pair's sync row is locked, so a sync finishing meanwhile sees what was wanted.
+    private void want(UUID organizationId, String sourceLanguage, String targetLanguage, String version) {
+        String source = TranslationTexts.primary(sourceLanguage);
+        String target = TranslationTexts.primary(targetLanguage);
+        Instant now = now();
+        syncRepository.insertIfMissing(organizationId, source, target, version, now);
+        syncRepository.lock(organizationId, source, target).ifPresent(sync -> {
+            sync.want(version, now);
+            syncRepository.flush();
+        });
     }
 
     private TranslationState retry(Subject subject, String sourceLanguage, String targetLanguage, Map<String, String> texts) {
         Map<String, String> input = TranslationTexts.nonBlank(texts);
         if (provider.isEnabled() && !input.isEmpty() && !TranslationTexts.sameLanguage(sourceLanguage, targetLanguage)) {
             String context = projectService.context(subject.organizationId(), subject.projectId());
-            find(subject, targetLanguage, TranslationTexts.inputHash(sourceLanguage, input, context))
+            String version = glossaryVersion(subject.organizationId(), sourceLanguage, targetLanguage);
+            if (!version.isEmpty()) {
+                syncRepository.lock(subject.organizationId(), TranslationTexts.primary(sourceLanguage),
+                        TranslationTexts.primary(targetLanguage)).ifPresent(sync -> sync.restartIfFailed(now()));
+            }
+            find(subject, targetLanguage, TranslationTexts.inputHash(sourceLanguage, input, context, version))
                     .filter(job -> job.getOrganizationId().equals(subject.organizationId()))
                     .ifPresent(job -> {
                         job.restart(now());
+                        job.restartForGlossary(now());
                         jobRepository.flush();
                     });
         }
@@ -151,16 +190,19 @@ public class TranslationService {
             String targetLanguage,
             String hash,
             Map<String, String> input,
-            String context
+            String context,
+            String version
     ) {
         Instant now = now();
         TranslationJob job = new TranslationJob(
                 subject.organizationId(), subject.projectId(), subject.changeId(), subject.releaseId(),
-                sourceLanguage, targetLanguage, hash, input, context, now
+                sourceLanguage, targetLanguage, hash, input, context, version, now
         );
-        Optional<Map<String, String>> cached = cached(subject.organizationId(), sourceLanguage, targetLanguage, input, context);
+        Optional<Map<String, String>> cached = cached(subject.organizationId(), sourceLanguage, targetLanguage, input,
+                context, version);
         if (cached.isPresent()) {
-            job.succeed(cached.get(), now);
+            // Texts are cached under the glossary version they were translated with.
+            job.succeed(cached.get(), version.isEmpty() ? null : GlossaryUse.APPLIED_OUTCOME, now);
         } else if (!provider.isEnabled()) {
             job.fail(DISABLED, now);
         }
@@ -173,20 +215,22 @@ public class TranslationService {
             String sourceLanguage,
             String targetLanguage,
             Map<String, String> input,
-            String context
+            String context,
+            String version
     ) {
         Map<String, String> byHash = cacheRepository
                 .findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
                         organizationId,
                         sourceLanguage,
                         targetLanguage,
-                        input.values().stream().map(text -> TranslationTexts.textHash(text, context)).collect(Collectors.toSet())
+                        input.values().stream().map(text -> TranslationTexts.textHash(text, context, version))
+                                .collect(Collectors.toSet())
                 )
                 .stream()
                 .collect(Collectors.toMap(TranslationCacheEntry::getTextHash, TranslationCacheEntry::getTranslatedText));
         Map<String, String> translated = new LinkedHashMap<>();
         for (Map.Entry<String, String> text : input.entrySet()) {
-            String hit = byHash.get(TranslationTexts.textHash(text.getValue(), context));
+            String hit = byHash.get(TranslationTexts.textHash(text.getValue(), context, version));
             if (hit == null) {
                 return Optional.empty();
             }
@@ -202,7 +246,7 @@ public class TranslationService {
         }
         Map<String, String> merged = new LinkedHashMap<>(texts);
         merged.replaceAll((key, value) -> state.texts().getOrDefault(key, value));
-        return TranslationState.ready(merged);
+        return TranslationState.ready(merged, state.glossary());
     }
 
     // What a job translates: one change's content, or one release's own texts.

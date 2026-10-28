@@ -598,6 +598,7 @@ public class ReleaseService {
                         render(release, localized.summary(), localized.changes(), template, audience.code(), language,
                                 audience.displayName()),
                         localized.status(),
+                        localized.glossary(),
                         now
                 ));
             }
@@ -618,7 +619,7 @@ public class ReleaseService {
             ReleaseNoteWriter.Localized localized = byLanguage.computeIfAbsent(note.getLanguage(),
                     language -> noteWriter.localize(release, changes, language, retry));
             note.rerender(render(release, localized.summary(), localized.changes(), note.getTemplateBodySnapshot(),
-                    note.getAudienceCode(), note.getLanguage(), note.getAudienceName()), localized.status(), now);
+                    note.getAudienceCode(), note.getLanguage(), note.getAudienceName()), localized.status(), localized.glossary(), now);
         }
         noteRepository.flush();
     }
@@ -731,7 +732,8 @@ public class ReleaseService {
                 release.getPublishedAt(),
                 release.getPublisherName(),
                 markdown,
-                notes
+                notes,
+                ReleaseView.glossaries(notes)
         );
     }
 

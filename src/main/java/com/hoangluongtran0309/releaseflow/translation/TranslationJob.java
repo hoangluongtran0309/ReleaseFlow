@@ -56,6 +56,14 @@ class TranslationJob {
     @Column(nullable = false, length = 2000, updatable = false)
     private String context = "";
 
+    // The version of the pair's glossary the job was asked with; part of its input hash.
+    @Column(name = "glossary_version", nullable = false, length = 64, updatable = false)
+    private String glossaryVersion = "";
+
+    // Whether the translation used that glossary: "applied", a reason it did not, or nothing.
+    @Column(name = "glossary_outcome", length = 40)
+    private String glossaryOutcome;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, String> output;
@@ -95,6 +103,7 @@ class TranslationJob {
             String inputHash,
             Map<String, String> input,
             String context,
+            String glossaryVersion,
             Instant createdAt
     ) {
         this.id = UUID.randomUUID();
@@ -107,6 +116,7 @@ class TranslationJob {
         this.inputHash = inputHash;
         this.input = new LinkedHashMap<>(input);
         this.context = context;
+        this.glossaryVersion = glossaryVersion;
         this.status = Status.PENDING;
         this.attempts = 0;
         this.nextAttemptAt = createdAt;
@@ -124,9 +134,10 @@ class TranslationJob {
         return status == Status.RUNNING && claim.equals(claimedAt);
     }
 
-    void succeed(Map<String, String> translated, Instant now) {
+    void succeed(Map<String, String> translated, String glossaryOutcome, Instant now) {
         this.status = Status.SUCCEEDED;
         this.output = new LinkedHashMap<>(translated);
+        this.glossaryOutcome = glossaryOutcome;
         this.lastError = null;
         this.completedAt = now;
     }
@@ -138,6 +149,11 @@ class TranslationJob {
     }
 
     void fail(String error, Instant now) {
+        fail(error, null, now);
+    }
+
+    void fail(String error, String glossaryOutcome, Instant now) {
+        this.glossaryOutcome = glossaryOutcome;
         this.status = Status.FAILED;
         this.lastError = error;
         this.completedAt = now;
@@ -154,11 +170,28 @@ class TranslationJob {
         this.completedAt = null;
     }
 
+    /**
+     * A person's retry of a translation made without the glossary it asked for: it is made
+     * again, with the glossary if DeepL now holds it.
+     */
+    void restartForGlossary(Instant now) {
+        if (status != Status.SUCCEEDED || glossaryOutcome == null || glossaryOutcome.equals(GlossaryUse.APPLIED_OUTCOME)
+                || glossaryOutcome.equals(GlossaryUse.UNSUPPORTED)) {
+            return;
+        }
+        this.status = Status.PENDING;
+        this.output = null;
+        this.glossaryOutcome = null;
+        this.attempts = 0;
+        this.nextAttemptAt = now;
+        this.completedAt = null;
+    }
+
     TranslationState state() {
         return switch (status) {
-            case SUCCEEDED -> TranslationState.ready(output);
-            case FAILED -> TranslationState.failed();
-            case PENDING, RUNNING -> TranslationState.pending();
+            case SUCCEEDED -> TranslationState.ready(output, GlossaryUse.fromOutcome(glossaryOutcome));
+            case FAILED -> TranslationState.failed(GlossaryUse.fromOutcome(glossaryOutcome));
+            case PENDING, RUNNING -> TranslationState.pending(glossaryVersion.isEmpty() ? GlossaryUse.NONE : GlossaryUse.PENDING);
         };
     }
 
@@ -192,6 +225,10 @@ class TranslationJob {
 
     String getContext() {
         return context;
+    }
+
+    String getGlossaryVersion() {
+        return glossaryVersion;
     }
 
     Status getStatus() {
