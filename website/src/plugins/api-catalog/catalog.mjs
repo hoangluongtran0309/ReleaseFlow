@@ -10,7 +10,7 @@ export const AREAS_BY_GROUP = {
   'account-and-organization--workspace': ['Account'],
   'projects-and-sources--sources': ['Sources'],
   'changes--changes-and-review': ['Changes', 'Categories'],
-  'releases-and-notes--release-notes': ['Releases', 'Audiences'],
+  'releases-and-notes--release-notes': ['Releases', 'Audiences', 'Glossary'],
   'automation--automation': ['Automation'],
   'signed-webhooks': ['Webhooks'],
 };

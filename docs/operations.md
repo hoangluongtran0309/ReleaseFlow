@@ -127,6 +127,27 @@ refused by those triggers for every release past its draft.
 migration can be undone. Take a backup first; going back means restoring that backup
 with the older version, never starting the older version against the migrated database.
 
+### Upgrading to the glossary
+
+The version that adds the [glossary](release-notes.md#glossary) (Flyway `V33`) changes
+nothing until an administrator adds a term: an Organization without one sends DeepL the
+same requests as before, and no note is translated again. To keep terms after upgrading:
+
+1. Open **Glossary**, tick the suggested terms your readers keep in English, and keep
+   any others, one per entry as they should appear. Add a fixed translation for a term
+   that should always become the same words in one language.
+2. Return an approved release to draft and approve it again, or approve the next one:
+   translations made from then on use the glossary. Published notes never change.
+3. Check the release page: each language says whether the glossary was **Applied**.
+
+**On DeepL API Free, one Organization gets the glossary.** ReleaseFlow uses one DeepL
+glossary per Organization, and an API Free account holds only as many as its plan allows:
+one, when this was tested. The first Organization to sync uses it; every other
+Organization's sync fails with `quota_exceeded` and its notes are translated without a
+glossary, which its release page and Glossary page say. A deployment that serves several
+Organizations with glossaries needs a DeepL plan that holds that many. A glossary created
+in the account by anything else takes a slot too.
+
 ## Published artifacts
 
 ReleaseFlow's own releases, as opposed to the ones it writes notes for, listed on the

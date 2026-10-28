@@ -481,6 +481,7 @@
                             </form>
                         </span>
                     </div>
+                    <div th:replace="~{fragments/release-glossary :: glossary(${release}, true)}"></div>
                     <div class="tabs tabs-border mt-4" role="radiogroup" th:aria-label="#{ui.release.audiencesAndLanguages}" aria-label="Audiences and languages">
                         <th:block th:each="note, state : ${release.notes}">
                             <input type="radio" name="note-tabs" class="tab"

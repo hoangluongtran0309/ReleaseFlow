@@ -19,6 +19,7 @@ import com.hoangluongtran0309.releaseflow.account.UiLocaleApiController;
 import com.hoangluongtran0309.releaseflow.audience.AudienceApiController;
 import com.hoangluongtran0309.releaseflow.audience.AudienceConflictException;
 import com.hoangluongtran0309.releaseflow.audience.AudienceNotFoundException;
+import com.hoangluongtran0309.releaseflow.audience.GlossaryApiController;
 import com.hoangluongtran0309.releaseflow.audience.InvalidAudienceTemplateException;
 import com.hoangluongtran0309.releaseflow.audience.InvalidReleaseLanguagesException;
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLanguageApiController;
@@ -84,6 +85,8 @@ import com.hoangluongtran0309.releaseflow.release.ReleaseReviewIncompleteExcepti
 import com.hoangluongtran0309.releaseflow.release.ReleaseStatusException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseVersionTakenException;
 import com.hoangluongtran0309.releaseflow.release.TranslationsNotReadyException;
+import com.hoangluongtran0309.releaseflow.translation.GlossaryConflictException;
+import com.hoangluongtran0309.releaseflow.translation.GlossaryTermNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -114,6 +117,7 @@ import java.util.Map;
         ReleaseApiController.class,
         AudienceApiController.class,
         CategoryApiController.class,
+        GlossaryApiController.class,
         SensitivePathApiController.class,
         ReleaseLanguageApiController.class,
         SourceImportApiController.class,
@@ -389,6 +393,16 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(CategoryConflictException.class)
     ResponseEntity<ProblemDetail> categoryConflict(CategoryConflictException exception) {
+        return localized(HttpStatus.CONFLICT, exception.code(), exception);
+    }
+
+    @ExceptionHandler(GlossaryTermNotFoundException.class)
+    ResponseEntity<ProblemDetail> glossaryTermNotFound(GlossaryTermNotFoundException exception) {
+        return localized(HttpStatus.NOT_FOUND, "glossary_term_not_found", exception);
+    }
+
+    @ExceptionHandler(GlossaryConflictException.class)
+    ResponseEntity<ProblemDetail> glossaryConflict(GlossaryConflictException exception) {
         return localized(HttpStatus.CONFLICT, exception.code(), exception);
     }
 

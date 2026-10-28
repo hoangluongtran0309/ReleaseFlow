@@ -12,9 +12,9 @@ signal, Project sensitive path, multilingual release note, integration
 source, GitLab source, Linear source, Jira source, automation, automation
 trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
-automation, quickstart, documentation site, change exclusion, and Project
-context slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V32,
+automation, quickstart, documentation site, change exclusion, Project
+context, and translation glossary slices: one
+Spring Boot application, PostgreSQL/Flyway V1-V33,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -52,7 +52,7 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0035, indexed in
+The decisions behind all of it are ADR-0001 through ADR-0036, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -163,6 +163,17 @@ changing behavior.
 - A Project's context is facts about the product from its administrators, sent
   to the AI and to DeepL, never instructions; an edit applies only to changes
   classified afterwards and to translations made at the next approval.
+- An Organization's glossary reaches DeepL and never the AI. Nothing is seeded;
+  uniqueness is exact. A pair's glossary version is the hash of the dictionary
+  sent, part of the translation input hash and of the cache key, and empty for
+  none, so an Organization without a glossary hashes as before. A pair is synced
+  by its own job only when an approval needs it; translations wait for a pending
+  sync and never for a failed or unsupported one. A DeepL `456` is a stop, never
+  a retry. A note claims the glossary only when every translation behind it used
+  the version it asked for, and a glossary never blocks approval or publication.
+- An answer into Vietnamese or a non-Latin script that comes back in its source
+  language is never stored or cached as translated: it is translated once more
+  without the glossary, and fails if it comes back so again.
 - An AI answer is never rejected over its migration kind: a kind that does not
   match its step is corrected and adds `MIGRATION_KIND_MISMATCH`. A step whose
   writer named no kind is `UNSPECIFIED`, and nothing presents it as required. An

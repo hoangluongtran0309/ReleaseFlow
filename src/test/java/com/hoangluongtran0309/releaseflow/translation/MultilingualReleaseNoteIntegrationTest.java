@@ -129,9 +129,9 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         List<String> operatorVi = JsonPath.read(notes, "$[?(@.audienceCode == 'operator' && @.language == 'vi')].content");
         assertThat(operatorVi.getFirst())
                 .startsWith("# Bản phát hành 1.4.0")
-                .contains("- **[VI] Tables export as CSV.** ([#1](https://github.com/acme/releaseflow/pull/1)) — [VI] Watch the export queue.")
-                .contains("  - Lý do: [VI] Users asked.")
-                .contains("  - Chi tiết: [VI] Streams rows.");
+                .contains("- **[VI] (dịch) Tables export as CSV.** ([#1](https://github.com/acme/releaseflow/pull/1)) — [VI] (dịch) Watch the export queue.")
+                .contains("  - Lý do: [VI] (dịch) Users asked.")
+                .contains("  - Chi tiết: [VI] (dịch) Streams rows.");
         List<String> operatorEn = JsonPath.read(notes, "$[?(@.audienceCode == 'operator' && @.language == 'en')].content");
         assertThat(operatorEn.getFirst()).contains("- **Tables export as CSV.**").contains("  - Why: Users asked.");
 
@@ -168,7 +168,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         List<String> vietnamese = JsonPath.read(notes, "$[?(@.language == 'vi')].content");
         // A summary is untrusted text in Markdown, so the stand-in's brackets are escaped.
         assertThat(vietnamese).hasSize(4).allSatisfy(content -> assertThat(content)
-                .startsWith("# Bản phát hành 1.4.0\n\n\\[VI\\] Exports and clearer config.\n"));
+                .startsWith("# Bản phát hành 1.4.0\n\n\\[VI\\] (dịch) Exports and clearer config.\n"));
         List<String> english = JsonPath.read(notes, "$[?(@.language == 'en')].content");
         assertThat(english).allSatisfy(content -> assertThat(content)
                 .contains("Exports and clearer config.").doesNotContain("[VI]"));
@@ -266,7 +266,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes").session(owner.session()))
                 .andExpect(jsonPath("$[*].translationStatus").value(everyItem(is("READY"))))
                 .andExpect(jsonPath("$[?(@.language == 'vi')].content").value(everyItem(containsString(
-                        "[VI] Tables and charts export as CSV."))));
+                        "[VI] (dịch) Tables and charts export as CSV."))));
         assertThat(DEEPL.requests()).hasSize(2);
         assertThat(DEEPL.requests().getLast().texts()).containsExactly("Tables and charts export as CSV.");
     }

@@ -177,6 +177,79 @@ PUT  /api/organization/release-languages                               {"targetL
 POST /api/projects/{projectId}/releases/{releaseId}/translations/retry
 ```
 
+### Bảng thuật ngữ {#glossary}
+
+Dịch máy biến thuật ngữ sản phẩm thành những từ mang nghĩa khác: khi không có gì hỗ trợ, DeepL
+dịch "console" của dbvault thành *giao diện dòng lệnh*, "image" thành *hình ảnh*, và "pull
+request" thành *yêu cầu kéo*. **Bảng thuật ngữ** của Organization, trên trang **Bảng thuật
+ngữ**, sửa điều đó cho mọi note được dịch. Bảng có hai loại mục:
+
+- **thuật ngữ giữ nguyên** luôn ở dạng tiếng Anh trong mọi ngôn ngữ: `CLI`, `console`, `image`,
+  `pull request`. DeepL vẫn viết câu quanh nó và có thể đổi dạng cho hợp ngôn ngữ, nên
+  "images" của dbvault thành *các image*: thuật ngữ giữ nguyên không phải là chữ đóng băng;
+- **bản dịch cố định** luôn dịch thành cùng một cụm từ giữa hai ngôn ngữ, ghi bằng ngôn ngữ
+  chính: `en → vi`, "storage" → *lưu trữ*. Mục này được ưu tiên hơn thuật ngữ giữ nguyên có cùng
+  chữ, chỉ với hai ngôn ngữ của nó.
+
+Quản trị viên sửa bảng và mọi thành viên đều xem được. Không có gì được tự thêm: trang gợi ý
+những thuật ngữ hay gặp trong release note phần mềm, và chỉ những thuật ngữ quản trị viên chọn
+mới được giữ. Một thuật ngữ dài 1 đến 100 ký tự trên một dòng, bảng có tối đa 500 mục, và mỗi mục
+phải khác nhau chính xác từng ký tự: "Image" và "image" là hai mục. Mục viết thường đã giữ
+được từ viết hoa ở đầu câu, nên chỉ thêm dạng khác cho từ mà DeepL vẫn đổi.
+
+Mỗi cặp ngôn ngữ mà Organization dịch là một từ điển trong một glossary của DeepL, với phiên bản
+là mã băm của nội dung được gửi. Lúc duyệt chỉ ghi lại rằng cặp đó cần được đồng bộ, và một job
+nền đồng bộ nó lên DeepL ngoài mọi transaction, thử lại tối đa năm lần khi gặp giới hạn tần suất,
+lỗi máy chủ hoặc lỗi mạng. Bản dịch của cặp đó chờ lần đồng bộ ấy, rồi được gửi kèm bảng thuật
+ngữ bên cạnh ngữ cảnh của Project. Phiên bản bảng thuật ngữ là một phần của khoá cache bản dịch,
+nên:
+
+- một lần sửa sẽ dịch lại ở lần duyệt tới, kể cả tóm tắt của chính release;
+- một lần sửa không làm đổi từ điển, như xoá một thuật ngữ rồi thêm lại, không dịch lại gì;
+- một Organization không có bảng thuật ngữ gửi đúng những yêu cầu như trước.
+
+Bảng thuật ngữ không bao giờ giữ một release lại. Cặp mà DeepL không hỗ trợ bảng thuật ngữ, hoặc
+đồng bộ thất bại, được dịch mà không có nó, và với mỗi ngôn ngữ, trang release cho biết bảng
+thuật ngữ **Đã áp dụng**, vẫn đang chờ, hay **Chưa áp dụng**, và vì sao: cặp không được hỗ trợ,
+đồng bộ thất bại, hoặc DeepL trả lời bằng ngôn ngữ nguồn khi dùng bảng thuật ngữ. **Chạy lại bản
+dịch** sẽ thử đồng bộ thất bại thêm lần nữa. Bảng thuật ngữ không bao giờ được gửi cho AI.
+
+Bản dịch trả về bằng ngôn ngữ nguồn không được lưu như một bản dịch. Với note tiếng Việt, một câu
+còn ít nhất ba từ cần dịch mà không có dấu tiếng Việt nào sẽ bị coi là chưa dịch; với một ngôn ngữ
+dùng chữ viết khác, như tiếng Nhật hay tiếng Nga, một câu không có ký tự nào của chữ viết đó cũng
+vậy. Thuật ngữ giữ nguyên, mã, URL, đường dẫn và những từ như `MongoDB` không được tính. Câu trả
+lời không đạt được dịch lại một lần không có bảng thuật ngữ, và nếu vẫn không đạt thì note ở
+trạng thái **Chưa dịch**, như mọi bản dịch thất bại. Các ngôn ngữ chữ Latin khác chưa có bước kiểm
+tra này. Xem [ADR-0036](adr/0036-translation-glossary.md).
+
+```text
+GET    /api/glossary
+GET    /api/glossary/suggestions
+POST   /api/glossary/kept-terms                    {"terms": ["console", "CLI"]}
+DELETE /api/glossary/kept-terms/{termId}
+POST   /api/glossary/translations                  {"sourceLanguage", "targetLanguage", "sourceTerm", "targetTerm"}
+DELETE /api/glossary/translations/{translationId}
+```
+
+`POST /api/glossary/kept-terms` thêm tất cả thuật ngữ hoặc không thêm gì. `GET /api/glossary`
+trả về `keptTerms`, `translations`, `entryLimit` và `pairs`: với mỗi cặp ngôn ngữ mà Organization
+dịch, `entryCount` và `status` là `empty`, `not_synced`, `pending`, `synced`, `outdated` (đã sửa
+từ lần đồng bộ trước), `unsupported`, hoặc `failed` kèm `error`.
+
+| Tình huống | Phản hồi |
+| --- | --- |
+| Thuật ngữ trống, quá dài hoặc nhiều dòng, ngôn ngữ không hợp lệ, hoặc hai ngôn ngữ giống nhau | `400 validation_failed` |
+| Thuật ngữ bảng đã có, ở dạng giữ nguyên hoặc cho cặp đó | `409 glossary_term_taken` |
+| Quá 500 mục | `409 glossary_limit` |
+| Mục không tồn tại hoặc thuộc Organization khác | `404 glossary_term_not_found` |
+
+**DeepL API Free chỉ có một bảng thuật ngữ.** Mỗi Organization dùng một glossary của tài khoản
+DeepL, và tài khoản API Free chỉ có số glossary mà gói cho phép, là một khi được thử. Với key
+như vậy, Organization đồng bộ đầu tiên được dùng glossary; lần đồng bộ của mọi Organization khác
+thất bại ngay với `quota_exceeded` (mã `456` của DeepL, không bao giờ thử lại), trang release của
+nó cho biết bảng thuật ngữ chưa được áp dụng, và note của nó được dịch mà không có bảng thuật ngữ.
+ReleaseFlow không bao giờ xoá glossary trong DeepL.
+
 ## Release {#releases}
 
 Mở **Release** để chuẩn bị các release của một Project. Trang này tạo release với một phiên bản
@@ -284,8 +357,10 @@ GET    /api/projects/{projectId}/release-assignments
 lệch múi giờ được hiểu là UTC. Một release trả về `changes`, `decisions` (`changeId`, `action`,
 `reviewerName`, `note`, `decidedAt`), `reviewedCount`, `plannedReleaseAt`, `approvedAt`,
 `approverName`, và `notes` (`id`, `audienceCode`, `audienceName`, `language`, `content`,
-`autoRerender`, `lastEditorName`, `updatedAt`, và `translationStatus`: `READY`, `PENDING` hoặc
-`FAILED`). Tệp tải về có kiểu `text/markdown`, tên là
+`autoRerender`, `lastEditorName`, `updatedAt`, `translationStatus`: `READY`, `PENDING` hoặc
+`FAILED`, và `glossaryStatus`: `NONE`, `PENDING`, `APPLIED` hoặc `NOT_APPLIED` kèm
+`glossaryReason`), và `glossaries`: mỗi ngôn ngữ note có [bảng thuật ngữ](#glossary) một mục, gồm
+`language`, `status` và `reason`. Tệp tải về có kiểu `text/markdown`, tên là
 `<version>-<audience code>-<language>.md`. `release-assignments` liệt kê release (theo ID,
 phiên bản và trạng thái) mà mỗi thay đổi của Project thuộc về. Các lỗi:
 

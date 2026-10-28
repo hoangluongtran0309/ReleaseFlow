@@ -533,6 +533,25 @@ where it first appears; ADRs are linked from the slice they record.
     intent that names something to watch only when the evidence does, and a `support`
     preset that registration seeds.
 
+### Translation glossary (V33)
+
+- [ADR-0036](adr/0036-translation-glossary.md) (#14), with Flyway `V33`:
+  - an Organization glossary of kept terms and fixed translations per language pair, on
+    a Glossary page that members read and administrators edit, and through
+    `/api/glossary`, with `glossary_term_taken`, `glossary_limit`, and
+    `glossary_term_not_found`; at most 500 entries of 1 to 100 characters, uniqueness
+    exact, and suggested terms that are only offered;
+  - one DeepL v3 glossary per Organization with a dictionary per language pair, synced
+    by `GlossarySyncWorker` when an approval needs it, with bounded retries and `456`
+    final, so a DeepL API Free account serves one Organization's glossary;
+  - the pair's glossary version in the translation input hash and the cache key, so an
+    edit translates again at the next approval and an unchanged glossary sends nothing
+    twice, the release summary included;
+  - an untranslated guard for Vietnamese and non-Latin targets, which translates a
+    failing answer again without the glossary, or fails it;
+  - the glossary's outcome on each note and per language on the release page and `GET`,
+    never blocking approval or publication.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.
@@ -550,7 +569,8 @@ deliberately deferred list below, one reviewed slice at a time.
 - GitLab group-level webhooks, Linear projects and cycles, linked context from
   Linear or from more than one Jira source per Project, Jira issue types and
   statuses as classification signals, and queues or retries for work other than
-  enrichment, imports, polls, translation, and the automation outbox and actions.
+  enrichment, imports, polls, translation, glossary syncs, and the automation outbox and
+  actions.
 - Validating a repository with GitHub when it is connected, disconnecting or
   replacing a source, rotating a Linear signing secret without reconnecting, and
   secret or token rotation reminders.
@@ -559,6 +579,8 @@ deliberately deferred list below, one reviewed slice at a time.
   title and description follow the reader rather than staying English, localized
   dates and numbers beyond what the bundle's own patterns give, translation
   providers other than DeepL, and asynchronous note generation.
+- A glossary per Project, deleting an Organization's DeepL glossary, and an untranslated
+  guard for Latin-script languages other than Vietnamese.
 - Automation actions other than GitHub Releases, Slack, email, the public
   changelog, Notion, Confluence Cloud, Microsoft Teams, and Zendesk.
 - Confluence Data Center, Confluence OAuth, and reading a Notion, Confluence, or

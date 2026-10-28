@@ -99,7 +99,7 @@ empty. See [AI classification and summaries](changes.md#ai-classification-and-su
 | --- | --- | --- |
 | `RELEASEFLOW_TRANSLATION_PROVIDER` | `disabled` | `deepl` turns on translation of release notes. A value other than `disabled` or `deepl` stops startup, and so does `disabled` while `RELEASEFLOW_DEEPL_API_KEY` is set |
 | `RELEASEFLOW_TRANSLATION_TIMEOUT` | `PT30S` | Bound on each translation request |
-| `RELEASEFLOW_DEEPL_API_KEY` | (empty) | DeepL key; a key ending in `:fx` uses the free API. Required with `deepl`, and a key set while the provider is not `deepl` stops startup, so turning translation off means clearing the key too |
+| `RELEASEFLOW_DEEPL_API_KEY` | (empty) | DeepL key; a key ending in `:fx` uses the free API. Required with `deepl`, and a key set while the provider is not `deepl` stops startup, so turning translation off means clearing the key too. Each Organization with a [glossary](release-notes.md#glossary) uses one of the account's DeepL glossaries, and an API Free plan holds one |
 | `RELEASEFLOW_DEEPL_BASE_URL` | (empty) | Overrides the host chosen from the key |
 
 See [Release note languages](release-notes.md#release-note-languages).

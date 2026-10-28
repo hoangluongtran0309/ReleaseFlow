@@ -1,10 +1,13 @@
 package com.hoangluongtran0309.releaseflow.release;
 
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
+import com.hoangluongtran0309.releaseflow.translation.GlossaryUse;
 import com.hoangluongtran0309.releaseflow.translation.TranslationState;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -12,7 +15,8 @@ import java.util.UUID;
  * written at approval. {@code preview} groups the live changes of an unpublished
  * release; for a release published before audiences existed, {@code preview} and
  * {@code markdown} come from its legacy snapshot instead. {@code decisions} holds the
- * review decision on each change that has one.
+ * review decision on each change that has one. {@code glossaries} says, for each note
+ * language whose pair has a glossary, whether its notes' translations used it.
  */
 public record ReleaseView(
         UUID id,
@@ -32,7 +36,8 @@ public record ReleaseView(
         Instant publishedAt,
         String publisherName,
         String markdown,
-        List<AudienceNoteView> notes
+        List<AudienceNoteView> notes,
+        List<ReleaseGlossaryView> glossaries
 ) {
 
     public ReleaseView {
@@ -40,6 +45,22 @@ public record ReleaseView(
         decisions = List.copyOf(decisions);
         preview = List.copyOf(preview);
         notes = List.copyOf(notes);
+        glossaries = List.copyOf(glossaries);
+    }
+
+    /**
+     * One entry per note language, from the notes that follow their templates, which all
+     * share the language's translations; a language's notes that a person wrote say nothing.
+     */
+    static List<ReleaseGlossaryView> glossaries(List<AudienceNoteView> notes) {
+        Map<String, ReleaseGlossaryView> byLanguage = new LinkedHashMap<>();
+        for (AudienceNoteView note : notes) {
+            if (note.autoRerender() && note.glossaryStatus() != GlossaryUse.Status.NONE) {
+                byLanguage.putIfAbsent(note.language(),
+                        new ReleaseGlossaryView(note.language(), note.glossaryStatus(), note.glossaryReason()));
+            }
+        }
+        return List.copyOf(byLanguage.values());
     }
 
     /** The decision on a change of this release, or {@code null} if it has none yet. */

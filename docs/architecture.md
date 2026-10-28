@@ -17,7 +17,7 @@ readable classes and gains internal layers only when implemented behavior needs 
 | `change` | Webhook intake, imports and polls, change processing, classification, AI, review, the Change Inbox, sensitive paths, and review signals |
 | `category` | The category catalog and AI proposals |
 | `audience` | Audiences, their templates, and the release note languages |
-| `translation` | Translation jobs, the cache, and the DeepL client |
+| `translation` | Translation jobs, the cache, the Organization glossary and its DeepL sync, and the DeepL client |
 | `release` | The release lifecycle, release notes, and publication |
 | `automation` | Rules, triggers, runs, and every delivery action |
 | `changelog` | The anonymous public changelog |
@@ -214,12 +214,32 @@ translation_jobs (V17, V28)
   release_id (V28) composite FK -> releases, ON DELETE CASCADE; exactly one of the two
   source_language, target_language, input_hash; change_id or release_id + target_language + input_hash unique
   input (jsonb), context (V30, the Project's context it was asked with), output (jsonb, exactly when SUCCEEDED)
+  glossary_version (V33, the pair's glossary version it asked for; empty for none)
+  glossary_outcome (V33: applied | unsupported_language_pair | glossary_sync_failed | glossary_answer_untranslated)
   status (PENDING | RUNNING | SUCCEEDED | FAILED), attempts, next_attempt_at, claimed_at
   last_error, created_at, completed_at
 
 translation_cache (V17)
-  organization_id + source_language + target_language + text_hash (PK; the hash covers the context, if any)
+  organization_id + source_language + target_language + text_hash (PK; the hash covers the context and
+    the glossary version the text was translated with, if any)
   translated_text, created_at
+
+glossary_kept_terms (V33)
+  id (UUID PK); organization_id; term (1-100 characters, one line); organization_id + term unique
+  created_by (composite FK -> app_users), creator_name, created_at
+
+glossary_translations (V33)
+  id (UUID PK); organization_id; source_language, target_language (primary languages, different)
+  source_term, target_term; organization_id + source_language + target_language + source_term unique
+  created_by (composite FK -> app_users), creator_name, created_at
+
+translation_glossaries (V33)
+  organization_id (PK; locked by a sync), deepl_glossary_id, created_at
+
+glossary_syncs (V33)
+  organization_id + source_language + target_language (PK)
+  wanted_version, synced_version, status (PENDING | RUNNING | SYNCED | UNSUPPORTED | FAILED)
+  attempts, next_attempt_at, claimed_at, last_error, updated_at
 
 releases
   id (UUID PK)
@@ -251,6 +271,7 @@ release_audience_notes (written while APPROVED, immutable once PUBLISHED)
   audience_code, audience_name, language, template_body_snapshot
   content, auto_rerender, last_edited_by (composite FK -> app_users), last_editor_name
   translation_status (READY | PENDING | FAILED, V17)
+  glossary_status (NONE | PENDING | APPLIED | NOT_APPLIED, V33), glossary_reason (exactly when NOT_APPLIED)
   created_at, updated_at
 
 release_notes (legacy, immutable; releases published before V13)
@@ -524,6 +545,7 @@ short transaction that first checks the claim is still its own. Retries are boun
 | `ChangeProcessingWorker` | second | `change_processing_jobs` | Enrich and classify a change |
 | `SourceSyncWorker` | second | `source_sync_jobs` | History imports, and Jira polls that `JiraPollScheduler` books |
 | `TranslationWorker` | second | `translation_jobs` | DeepL translations of change summaries and release summaries |
+| `GlossarySyncWorker` | second | `glossary_syncs` | Send a language pair's glossary dictionary to DeepL, one sync per Organization at a time |
 | `AutomationWorker` | second | `automation_publish_jobs`, `automation_action_runs` | Turn publications into runs, then deliver one action at a time |
 | `AutomationTriggerWorker` | `RELEASEFLOW_AUTOMATION_TRIGGER_DELAY` (15 s) | `automation_rules`, `automation_runs` | Book runs for due schedules and reminders; it never calls a provider |
 
@@ -1210,6 +1232,39 @@ ADR-0015 writes a note per audience and **release note language**; see
   summary renders every automatic note again, which queues the new text.
   `retryTranslations` restarts the failed jobs of an approved release's current
   texts. Editing a note by hand makes it `READY`.
+- **Glossary.** ADR-0036 adds an Organization glossary; see
+  [ADR-0036](adr/0036-translation-glossary.md). Its page and API controllers sit in
+  `audience`, beside the release note languages they read, so `translation` still
+  depends on no domain package but `project`. `GlossaryService` keeps kept terms and
+  fixed translations (`glossary_kept_terms`, `glossary_translations`, Flyway `V33`) and
+  builds a pair's dictionary: every kept term mapped to itself and the pair's fixed
+  translations over them, sorted, as TSV. Its **version** is the SHA-256 of that TSV,
+  empty for none, and `TranslationTexts.inputHash` and `textHash` add it beside the
+  context only when it is not empty, so an Organization without a glossary hashes as
+  before. `ensure` records the version on the job and, while the job is pending, sets the
+  pair's `glossary_syncs` row to want it, locked and inserted with `ON CONFLICT DO
+  NOTHING`. `lockNextDue` skips a job whose pair is `PENDING` or `RUNNING` for its version.
+  `GlossarySyncWorker` claims a due row with `SKIP LOCKED`, only while no other pair of the
+  Organization is `RUNNING`, under the lock of `translation_glossaries`, and outside any
+  transaction asks `GET /v3/languages?resource=glossary` (a pair is supported when both
+  languages are listed; `features` is not read), then `POST /v3/glossaries` or `PUT
+  /v3/glossaries/{id}/dictionaries`, creating the glossary again on a `404`. A claim syncs
+  the dictionary as it stands, so an edit since the want cannot loop. 429, every 5xx, and
+  network failures are retried like translations; 456, the plan's glossaries, and every
+  other 4xx fail at once. The translation worker sends `glossary_id` only when the row is
+  `SYNCED` at the job's version and the attempt is not the last, records the outcome on
+  the job, and caches a text under the version it was translated with. A `400` with a
+  glossary sends the dictionary again and retries. `UntranslatedGuard` checks every answer
+  for Vietnamese and non-Latin targets after removing kept terms, fixed targets, code
+  spans, URLs, paths, and capitalized identifiers; an answer that fails with the glossary
+  is translated again without it in the same attempt
+  (`glossary_answer_untranslated`), and one that fails without it fails the job with
+  `untranslated` and is never cached. `ReleaseNoteWriter` combines the jobs' outcomes per
+  language (`NOT_APPLIED` over `PENDING` over `APPLIED` over `NONE`) into
+  `release_audience_notes.glossary_status`, and `ReleaseView.glossaries` reports it per
+  language. `retryTranslations` also restarts a failed sync and re-translates jobs that went
+  without their glossary for a reason other than an unsupported pair. The glossary never
+  reaches the AI request.
 - **Publication.** `publish` refuses a release with a note that is not ready
   (`409 translations_not_ready`), and the `releases_publish_ready_notes`
   trigger refuses it in the database too. Notes are unique per release,

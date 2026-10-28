@@ -14,6 +14,19 @@ section into the version's entry, and the GitHub release is written from it.
 
 ### Added
 
+- An Organization glossary for translated notes. Administrators keep product terms as
+  written in every language (CLI, console, image, pull request) and fix translations per
+  language pair (`storage` → *lưu trữ*) on a Glossary page or through `/api/glossary`;
+  members read it. Nothing is seeded: suggested terms are only offered. Each language pair
+  is synced to DeepL as a glossary dictionary when an approval needs it, and a glossary
+  edit translates again at the next approval, the release summary included. The release
+  page says, per language, whether the glossary was applied, and why not when it was not;
+  a pair DeepL cannot serve, or a failed sync, never blocks a release. A Vietnamese or
+  non-Latin answer that comes back in the source language is translated again without the
+  glossary, or fails, rather than being stored
+  ([ADR-0036](docs/adr/0036-translation-glossary.md)). See
+  [Upgrading to the glossary](docs/operations.md#upgrading-to-the-glossary) for adding
+  terms, and for the one glossary a DeepL API Free account holds.
 - A Project context: what administrators say about the product (what is a client and
   what a server, where settings live, what stays in English by design). The AI receives
   it with every change it classifies, and DeepL as context for the Project's
