@@ -138,7 +138,10 @@ same requests as before, and no note is translated again. To keep terms after up
    that should always become the same words in one language.
 2. Return an approved release to draft and approve it again, or approve the next one:
    translations made from then on use the glossary. Published notes never change.
-3. Check the release page: each language says whether the glossary was **Applied**.
+3. Check the release page: each language says whether the glossary was **Sent with every
+   translation**. That means DeepL received it, not that every term was kept, so read the
+   notes, and add a phrase DeepL translated, such as `container images`, as its own kept
+   term.
 
 **On DeepL API Free, one Organization gets the glossary.** ReleaseFlow uses one DeepL
 glossary per Organization, and an API Free account holds only as many as its plan allows:

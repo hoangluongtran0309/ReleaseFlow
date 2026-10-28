@@ -194,8 +194,14 @@ ngữ**, sửa điều đó cho mọi note được dịch. Bảng có hai loạ
 Quản trị viên sửa bảng và mọi thành viên đều xem được. Không có gì được tự thêm: trang gợi ý
 những thuật ngữ hay gặp trong release note phần mềm, và chỉ những thuật ngữ quản trị viên chọn
 mới được giữ. Một thuật ngữ dài 1 đến 100 ký tự trên một dòng, bảng có tối đa 500 mục, và mỗi mục
-phải khác nhau chính xác từng ký tự: "Image" và "image" là hai mục. Mục viết thường đã giữ
-được từ viết hoa ở đầu câu, nên chỉ thêm dạng khác cho từ mà DeepL vẫn đổi.
+phải khác nhau chính xác từng ký tự: "Image" và "image" là hai mục. Mục viết thường thường
+cũng giữ được từ viết hoa ở đầu câu, nên chỉ thêm dạng khác cho từ mà DeepL vẫn đổi.
+
+Bảng thuật ngữ định hướng DeepL chứ không ràng buộc từng chữ. DeepL vẫn có thể dịch một thuật ngữ
+giữ nguyên nằm trong một cụm dài hơn: dù đã giữ nguyên "image", "secret" và "container", note của
+dbvault vẫn bị dịch "container images", "emulator image" và "repository secrets", và một lần cả
+"The console" ở đầu câu. Khi DeepL dịch một thuật ngữ nằm trong một cụm, thêm cả cụm đó thành một
+thuật ngữ giữ nguyên riêng (`container images`, `repository secrets`).
 
 Mỗi cặp ngôn ngữ mà Organization dịch là một từ điển trong một glossary của DeepL, với phiên bản
 là mã băm của nội dung được gửi. Lúc duyệt chỉ ghi lại rằng cặp đó cần được đồng bộ, và một job
@@ -210,8 +216,11 @@ nên:
 
 Bảng thuật ngữ không bao giờ giữ một release lại. Cặp mà DeepL không hỗ trợ bảng thuật ngữ, hoặc
 đồng bộ thất bại, được dịch mà không có nó, và với mỗi ngôn ngữ, trang release cho biết bảng
-thuật ngữ **Đã áp dụng**, vẫn đang chờ, hay **Chưa áp dụng**, và vì sao: cặp không được hỗ trợ,
-đồng bộ thất bại, hoặc DeepL trả lời bằng ngôn ngữ nguồn khi dùng bảng thuật ngữ. **Chạy lại bản
+thuật ngữ **Đã gửi kèm mọi bản dịch**, vẫn đang chờ, hay **Chưa áp dụng**, và vì sao: cặp không được
+hỗ trợ, đồng bộ thất bại, hoặc DeepL trả lời bằng ngôn ngữ nguồn khi dùng bảng thuật ngữ. **Đã gửi
+kèm mọi bản dịch** nghĩa là bảng thuật ngữ đã được gửi cùng mọi bản dịch sang ngôn ngữ đó, không
+phải DeepL đã giữ đúng mọi thuật ngữ; đọc lại note, và thêm cụm mà DeepL đã dịch thành một thuật
+ngữ giữ nguyên riêng. **Chạy lại bản
 dịch** sẽ thử đồng bộ thất bại thêm lần nữa. Bảng thuật ngữ không bao giờ được gửi cho AI.
 
 Bản dịch trả về bằng ngôn ngữ nguồn không được lưu như một bản dịch. Với note tiếng Việt, một câu

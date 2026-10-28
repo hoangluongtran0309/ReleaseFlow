@@ -205,8 +205,14 @@ Administrators edit it and every member can read it. Nothing is added on its own
 offers a list of terms common in software release notes, and only the ones an
 administrator ticks are kept. A term is 1 to 100 characters on one line, the glossary
 holds at most 500 entries, and uniqueness is exact: "Image" and "image" are two entries.
-A lowercase entry already keeps the capitalized word at the start of a sentence, so add
-another form only for one DeepL still changes.
+A lowercase entry usually keeps the capitalized word at the start of a sentence too, so
+add another form only for one DeepL still changes.
+
+A glossary steers DeepL; it does not bind every word. DeepL can still translate a kept
+term inside a longer phrase: with "image", "secret", and "container" kept, dbvault's notes
+still got "container images", "emulator image", and "repository secrets" translated, and
+once a sentence-initial "The console". When DeepL translates a term inside a phrase, add
+the phrase as its own kept term (`container images`, `repository secrets`).
 
 Each language pair the Organization translates is one dictionary in a DeepL glossary,
 whose version is the hash of what is sent. Approval only records that a pair is wanted,
@@ -222,9 +228,11 @@ what a translation is cached by, so:
 
 A glossary never holds up a release. A pair DeepL serves no glossary for, or whose sync
 failed, is translated without it, and for each language the release page says whether
-the glossary was **Applied**, is still being waited for, or was **Not applied**, and why:
-the pair is unsupported, the sync failed, or DeepL answered in the source language with
-the glossary. Retry translations tries a failed sync again. The glossary never reaches the
+the glossary was **Sent with every translation**, is still being waited for, or was **Not
+applied**, and why: the pair is unsupported, the sync failed, or DeepL answered in the
+source language with the glossary. **Sent with every translation** means the glossary went
+with every translation into that language, not that DeepL kept every term; read the note,
+and add a phrase DeepL translated as its own kept term. Retry translations tries a failed sync again. The glossary never reaches the
 AI.
 
 A translation that comes back in its source language is not stored as one. For a

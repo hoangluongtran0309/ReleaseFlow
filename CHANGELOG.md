@@ -20,7 +20,8 @@ section into the version's entry, and the GitHub release is written from it.
   members read it. Nothing is seeded: suggested terms are only offered. Each language pair
   is synced to DeepL as a glossary dictionary when an approval needs it, and a glossary
   edit translates again at the next approval, the release summary included. The release
-  page says, per language, whether the glossary was applied, and why not when it was not;
+  page says, per language, whether the glossary was sent with every translation, which is
+  not a promise that DeepL kept every term, and why not when it was not;
   a pair DeepL cannot serve, or a failed sync, never blocks a release. A Vietnamese or
   non-Latin answer that comes back in the source language is translated again without the
   glossary, or fails, rather than being stored

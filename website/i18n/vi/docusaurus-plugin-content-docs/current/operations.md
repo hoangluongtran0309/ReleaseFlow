@@ -130,7 +130,10 @@ cầu như trước, và không note nào bị dịch lại. Để giữ thuật
    ngữ luôn phải dịch thành cùng một cụm từ trong một ngôn ngữ.
 2. Đưa một release đã duyệt về nháp rồi duyệt lại, hoặc duyệt release tiếp theo: bản dịch tạo từ
    lúc đó dùng bảng thuật ngữ. Note đã publish không bao giờ thay đổi.
-3. Xem trang release: mỗi ngôn ngữ cho biết bảng thuật ngữ có ở trạng thái **Đã áp dụng** hay không.
+3. Xem trang release: mỗi ngôn ngữ cho biết bảng thuật ngữ có ở trạng thái **Đã gửi kèm mọi bản
+   dịch** hay không. Trạng thái đó nghĩa là DeepL đã nhận bảng thuật ngữ, không phải mọi thuật ngữ
+   đều được giữ, nên đọc lại note, và thêm cụm mà DeepL đã dịch, như `container images`, thành một
+   thuật ngữ giữ nguyên riêng.
 
 **Với DeepL API Free, chỉ một Organization dùng được bảng thuật ngữ.** ReleaseFlow dùng một
 glossary của DeepL cho mỗi Organization, và tài khoản API Free chỉ có số glossary mà gói cho phép:

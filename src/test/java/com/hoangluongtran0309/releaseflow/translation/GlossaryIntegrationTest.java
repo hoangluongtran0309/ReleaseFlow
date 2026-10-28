@@ -267,7 +267,8 @@ class GlossaryIntegrationTest extends PostgreSqlIntegrationTest {
                 .allSatisfy(note -> assertThat(note).contains("The console now shows lưu trữ use.", "Console and lưu trữ."));
         mockMvc.perform(get(releasePage(projectId, releaseId)).session(owner.session()))
                 .andExpect(content().string(containsString("id=\"glossary-vi\"")))
-                .andExpect(content().string(containsString("Applied")));
+                .andExpect(content().string(containsString("Sent with every translation")))
+                .andExpect(content().string(containsString("not that DeepL kept every term")));
         mockMvc.perform(get("/api/glossary").session(owner.session()))
                 .andExpect(jsonPath("$.pairs[0].status").value("synced"));
 
