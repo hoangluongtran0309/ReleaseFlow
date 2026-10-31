@@ -77,15 +77,21 @@ temperature, là `0` trừ khi `RELEASEFLOW_AI_TEMPERATURE` đặt giá trị kh
 cùng một thay đổi ổn định nhất trong khả năng của model (xem
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) và
 [ADR-0038](adr/0038-configurable-ai-temperature.md)). Model chỉ nhận temperature mặc định từ
-chối mọi request có ghi temperature: model suy luận của OpenAI, hoặc model Claude ra mắt sau
-Opus 4.6, mà Anthropic chỉ nhận giá trị `1.0`. Với model như vậy, đặt
-`RELEASEFLOW_AI_TEMPERATURE=default`: request sẽ không gửi temperature.
+chối request có ghi temperature: model suy luận của OpenAI, hoặc model Claude ra mắt sau
+Opus 4.6, mà Anthropic chỉ nhận giá trị `1.0`. Model như vậy vẫn hoạt động mà không cần đặt gì:
+request bị từ chối được gửi lại một lần nữa không có temperature, và các request sau không gửi
+temperature cho đến khi ReleaseFlow khởi động lại, kèm một cảnh báo trong log
+([ADR-0039](adr/0039-ai-temperature-fallback.md)). Chỉ lỗi 400 về temperature mới dẫn đến việc
+này: lỗi có `error.param` là `temperature` từ OpenAI hoặc DeepSeek, hoặc
+`invalid_request_error` có thông báo nêu tên `temperature` từ Anthropic. Một số được đặt ở đây
+cũng được xử lý như vậy. `RELEASEFLOW_AI_TEMPERATURE=default` không gửi temperature ngay từ
+request đầu tiên, nên không có lần từ chối nào.
 
 | Biến | Mặc định | Tác dụng |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (trống: không dùng AI) | `openai`, `anthropic` hoặc `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Thời gian tối đa cho mỗi request tới AI |
-| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature của mọi request phân loại: một số từ `0` đến `2` với `openai` và `deepseek`, hoặc từ `0` đến `1` với `anthropic`; `default` không gửi temperature, để model dùng giá trị của chính nó. Không đặt hoặc để trống nghĩa là `0` |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature của mọi request phân loại: một số từ `0` đến `2` với `openai` và `deepseek`, hoặc từ `0` đến `1` với `anthropic`; `default` không gửi temperature, để model dùng giá trị của chính nó. Không đặt hoặc để trống nghĩa là `0`. Model từ chối temperature sẽ không được gửi temperature cho đến hết tiến trình |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (trống) | Key và model của OpenAI |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | Địa chỉ API của OpenAI |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (trống) | Key và model của Anthropic |

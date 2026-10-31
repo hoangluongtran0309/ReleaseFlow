@@ -28,6 +28,8 @@ public final class OpenAiStub implements AutoCloseable {
     private final HttpServer server;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final List<RecordedRequest> requests = new CopyOnWriteArrayList<>();
+    // What a model that takes only its own temperature answers to a request that names one.
+    private volatile String temperatureRefusal;
     private volatile StubResponse response = new StubResponse(200, completion("feature", false, false, "Adds a capability."), Duration.ZERO);
 
     private OpenAiStub() {
@@ -55,6 +57,18 @@ public final class OpenAiStub implements AutoCloseable {
 
     public void respond(int status, String body, Duration delay) {
         response = new StubResponse(status, body, delay);
+    }
+
+    /**
+     * Answers 400 with {@code errorBody} to every request whose body has a {@code temperature},
+     * as a model that accepts only its own does, and as before to any other.
+     */
+    public void refuseTemperature(String errorBody) {
+        temperatureRefusal = errorBody;
+    }
+
+    private boolean refusesTemperature(String requestBody) {
+        return temperatureRefusal != null && OBJECT_MAPPER.readTree(requestBody).has("temperature");
     }
 
     /** A valid answer whose what_changed is {@code summary}; the AI does not ask for review. */
@@ -103,6 +117,7 @@ public final class OpenAiStub implements AutoCloseable {
 
     public void reset() {
         requests.clear();
+        temperatureRefusal = null;
         respondWithClassification("feature", false, "Adds a capability.");
     }
 
@@ -181,7 +196,9 @@ public final class OpenAiStub implements AutoCloseable {
                 exchange.getRequestHeaders().getFirst("Authorization"),
                 body
         ));
-        StubResponse current = response;
+        StubResponse current = refusesTemperature(body)
+                ? new StubResponse(400, temperatureRefusal, Duration.ZERO)
+                : response;
         try {
             Thread.sleep(current.delay());
         } catch (InterruptedException exception) {

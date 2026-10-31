@@ -47,7 +47,8 @@ they describe.
 | [0035](0035-evidence-bound-notes-and-audience-relevance.md) | Notes bound to their evidence, and a selection per audience | Accepted | 2026-10-26 | Amends [0009](0009-automatic-ai-classification.md) and [0011](0011-audience-release-notes.md); amended by [0038](0038-configurable-ai-temperature.md) (a configurable temperature) |
 | [0036](0036-translation-glossary.md) | An Organization glossary for translated notes | Accepted | 2026-10-27 | Amends [0015](0015-multilingual-release-notes.md); refers to [0035](0035-evidence-bound-notes-and-audience-relevance.md) |
 | [0037](0037-security-changes-and-release-note-structure.md) | Security changes and release-wide note structure | Accepted | 2026-10-29 | Amends [0011](0011-audience-release-notes.md); refers to [0009](0009-automatic-ai-classification.md), [0010](0010-release-review-lifecycle.md), [0035](0035-evidence-bound-notes-and-audience-relevance.md), and [0036](0036-translation-glossary.md) |
-| [0038](0038-configurable-ai-temperature.md) | A configurable AI temperature | Accepted | 2026-10-31 | Amends [0035](0035-evidence-bound-notes-and-audience-relevance.md) |
+| [0038](0038-configurable-ai-temperature.md) | A configurable AI temperature | Accepted | 2026-10-31 | Amends [0035](0035-evidence-bound-notes-and-audience-relevance.md); amended by [0039](0039-ai-temperature-fallback.md) (a fallback when a model refuses the temperature) |
+| [0039](0039-ai-temperature-fallback.md) | Falling back when a model refuses the temperature | Accepted | 2026-11-01 | Amends [0038](0038-configurable-ai-temperature.md); refers to [0009](0009-automatic-ai-classification.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)
