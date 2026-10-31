@@ -71,7 +71,7 @@ for (const language of ['en', 'vi']) {
       expect(operator).toContain('## ⚠️ Breaking Changes\n\n- 🔒 Security: **remove CSRF protection from the API**');
       expect(operator).toContain('## 🔒 Security\n\n- **derive a key per target**');
       expect(operator).toContain(`[read the upgrade guide](${GUIDE})`);
-      expect(operator).toMatch(new RegExp(`\\*\\*Compare:\\*\\* \\[v0\\.1\\.0\\.\\.\\.v1\\.0\\.0\\]\\(${compare.replace(/[./]/g, '\\$&')}\\)`));
+      expect(operator).toContain(`**Compare:** [v0.1.0...v1.0.0](${compare})`);
       expect(await page.locator('#note-end_user-en textarea').inputValue()).not.toContain('Compare');
       await expectNoAccessibilityViolations(page, `approved notes with a footer (${language})`);
     });
