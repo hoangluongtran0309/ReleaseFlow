@@ -176,36 +176,52 @@ not drift while the dbvault request fixtures are recorded again.
   | GitLab | `{origin}/{projectPath}/-/compare/{previousVersion}...{version}` | `{origin}/{projectPath}/-/releases/{version}` |
 
   Each path value is encoded as a path segment while the slashes of a GitLab project path
-  stay separators. Versions are used exactly as ReleaseFlow records them; it does not add
-  or remove a `v`. `compareUrl` is empty without a previous version, while `releaseUrl`
+  stay separators. `compareUrl` is empty without a previous version, while `releaseUrl`
   still names the current version.
+- `compareUrl` and `releaseUrl` take each release's version, exactly as written, as its
+  tag name. ReleaseFlow does not add or remove a `v` or any other prefix, and there is no
+  tag-prefix setting. When a Project's versions and tags differ, a person writes the
+  links in the audience's footer template instead of using these variables.
+- `releaseUrl` is a footer variable, but no preset uses it. A published note is often the
+  GitHub release itself, where a link to the release would point to the page it is on.
 - The operator and contributor preset footers, in English and Vietnamese, conditionally
-  show three separately labelled lines: **Install** links the version to `releaseUrl`,
-  **Compare** links `previousVersion...version` to `compareUrl`, and **Upgrade guide**
-  links a read-before-upgrading call to `upgradeGuideUrl`. The Vietnamese labels are
-  **Cài đặt**, **So sánh**, and **Hướng dẫn nâng cấp**. A line disappears when its URL is
-  empty. The end-user preset footer is blank; support is blank by default too. Resetting
-  a preset adopts the shipped footer for every configured note language.
+  show two separately labelled lines: **Compare** links `previousVersion...version` to
+  `compareUrl`, and **Upgrade guide** links a read-before-upgrading call to
+  `upgradeGuideUrl`. The Vietnamese labels are **So sánh** and **Hướng dẫn nâng cấp**. A
+  line disappears when its URL is empty. The end-user preset footer is blank; support is
+  blank by default too. Resetting a preset adopts the shipped footer for every configured
+  note language.
 - Existing operator and contributor preset audiences receive the new footer in each of
   their languages because no footer existed to overwrite. Existing custom audiences get
   a blank footer. An administrator can change either afterwards.
 
 ### Limitations stay visible in upgrader-facing item templates
 
-- The operator, contributor, DBA-style, and support preset or regression templates print
-  `limitations` as its own labelled line, not as part of Detail or Implementation. The
-  labels are **Limitations** in English and **Giới hạn** in Vietnamese. End-user remains
-  concise and does not print it by default.
-- `dba-style` describes an upgrader-facing custom/regression template; it is not a fifth
-  seeded audience code. ADR-0035's four shipped audience codes remain unchanged, so this
-  decision does not otherwise change the audiences in an AI request.
+- The operator, contributor, and support preset templates print `limitations` as its own
+  labelled line, not as part of Detail or Implementation. The labels are **Limitations**
+  in English and **Giới hạn** in Vietnamese. End-user remains concise and does not print
+  it by default.
+- There is no fifth preset. A DBA-style audience, like the one the dbvault regression
+  uses, is a custom audience: it gets the limitations line and the footer through the
+  upgrade note, like every other custom audience. ADR-0035's four shipped audience codes
+  remain unchanged, so this decision does not otherwise change the audiences in an AI
+  request.
 - The release-note guide and its Vietnamese translation carry an upgrade note for custom
   audience templates. It shows how to add the localized `{{#limitations}}` item line and
-  how to populate the new footer with conditional release, compare, and upgrade-guide
-  links. Existing custom item templates are never rewritten silently.
+  how to populate the new footer with conditional compare and upgrade-guide links, and
+  says when to write a link by hand instead of using `compareUrl` or `releaseUrl`.
+  Existing custom item templates are never rewritten silently.
 - `limitations` keeps ADR-0035's meaning, filtering, human-edit precedence, translation,
   and glossary behavior. This decision changes where presets print it, not what the AI is
   asked to write there.
+
+### Invariants
+
+These hold as the matching breaking-change invariants do:
+
+- The AI never clears a security flag that a rule or a person set.
+- A security-flagged change always needs human review.
+- Rendering a footer never calls the network.
 
 ## Consequences
 
@@ -217,9 +233,10 @@ not drift while the dbvault request fixtures are recorded again.
 - The paid classification request changes once, and every dbvault request fixture has to
   be recorded again for the new required boolean. Later replay findings in this slice
   cannot be fixed by another prompt or schema edit.
-- A note can link the exact comparison, release, and upgrade guide without putting
-  release-wide values into every item. The provider URLs may not exist until their tags
-  or releases do; rendering remains offline and deterministic.
+- A note can link the exact comparison and upgrade guide without putting release-wide
+  values into every item. The provider URLs may not exist until their tags or releases
+  do, and they are wrong for a Project whose tags are not its versions until a person
+  edits the footer; rendering remains offline and deterministic.
 - A Project with several code hosts gets no guessed provider link. A Project with one code
   host and any number of tracker sources still gets one.
 - Existing published notes stay immutable. Older changes are not retroactively called
