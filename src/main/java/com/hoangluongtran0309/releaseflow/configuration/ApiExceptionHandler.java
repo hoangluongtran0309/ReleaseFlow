@@ -72,7 +72,9 @@ import com.hoangluongtran0309.releaseflow.project.SourceTokenRejectedException;
 import com.hoangluongtran0309.releaseflow.project.SourceUnavailableException;
 import com.hoangluongtran0309.releaseflow.release.ChangeNotReleasableException;
 import com.hoangluongtran0309.releaseflow.release.ClassificationChangedException;
+import com.hoangluongtran0309.releaseflow.release.InvalidPreviousReleaseException;
 import com.hoangluongtran0309.releaseflow.release.InvalidReleaseScheduleException;
+import com.hoangluongtran0309.releaseflow.release.InvalidUpgradeGuideUrlException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseApiController;
 import com.hoangluongtran0309.releaseflow.release.ChangeSummaryRequiredException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseEmptyException;
@@ -269,6 +271,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidReleaseScheduleException.class)
     ResponseEntity<ProblemDetail> invalidReleaseSchedule(InvalidReleaseScheduleException exception) {
         return localized(HttpStatus.BAD_REQUEST, "invalid_release_schedule", exception);
+    }
+
+    @ExceptionHandler(InvalidUpgradeGuideUrlException.class)
+    ResponseEntity<ProblemDetail> invalidUpgradeGuideUrl(InvalidUpgradeGuideUrlException exception) {
+        return localized(HttpStatus.BAD_REQUEST, "invalid_upgrade_guide_url", exception);
+    }
+
+    @ExceptionHandler(InvalidPreviousReleaseException.class)
+    ResponseEntity<ProblemDetail> invalidPreviousRelease(InvalidPreviousReleaseException exception) {
+        return localized(HttpStatus.BAD_REQUEST, "invalid_previous_release", exception);
     }
 
     @ExceptionHandler(ReleasePublishedException.class)

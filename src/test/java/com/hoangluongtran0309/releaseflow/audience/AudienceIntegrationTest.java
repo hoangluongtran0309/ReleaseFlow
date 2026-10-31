@@ -25,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -55,6 +56,7 @@ class AudienceIntegrationTest extends PostgreSqlIntegrationTest {
     void clearDatabase() {
         jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, releases");
         jdbcTemplate.update("DELETE FROM projects");
+        jdbcTemplate.update("DELETE FROM organization_translation_settings");
         jdbcTemplate.update("DELETE FROM app_users");
         deleteOrganizationSettings();
         jdbcTemplate.update("DELETE FROM organizations");
@@ -193,6 +195,86 @@ class AudienceIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(post("/api/audiences/{id}/reset-to-preset", custom).session(admin.session()).with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("audience_not_preset"));
+    }
+
+    // ADR-0037: a footer per audience and language, kept when a caller leaves it out.
+    @Test
+    void anAudienceHasAFooterThatCallersWrittenBeforeItKeep() throws Exception {
+        Admin admin = registerAndLogin("owner@example.com", "en");
+        mockMvc.perform(put("/api/organization/release-languages").session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"targetLanguages\":[\"en\",\"vi\"]}"))
+                .andExpect(status().isOk());
+        UUID operator = idOf(admin, "operator");
+
+        mockMvc.perform(get("/api/audiences/{id}", operator).session(admin.session()))
+                .andExpect(jsonPath("$.footerTemplateBody", containsString("**Compare:** [{{previousVersion}}...{{version}}]")))
+                .andExpect(jsonPath("$.footerTemplateBody", not(containsString("releaseUrl"))))
+                .andExpect(jsonPath("$.footerTemplateVariants.vi", containsString("**So sánh:**")));
+        UUID board = UUID.fromString(JsonPath.read(create(admin, "board", "Board", "", TEMPLATE)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.footerTemplateBody").value(""))
+                .andExpect(jsonPath("$.footerTemplateVariants.vi").value(""))
+                .andReturn().getResponse().getContentAsString(), "$.id"));
+
+        String footer = "{{#releaseUrl}}[Install {{version}}]({{releaseUrl}}){{/releaseUrl}}";
+        mockMvc.perform(put("/api/audiences/{id}", board).session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of("displayName", "Board", "templateBody", TEMPLATE,
+                                "footerTemplateBody", footer))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.footerTemplateBody").value(footer));
+        mockMvc.perform(put("/api/audiences/{id}", board).session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Board\",\"templateBody\":\"{{whatChanged}}\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.footerTemplateBody").value(footer));
+        for (String invalid : List.of("{{whatChanged}}", "{{#compareUrl}}open", "{{tag}}")) {
+            mockMvc.perform(put("/api/audiences/{id}", board).session(admin.session()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(OBJECT_MAPPER.writeValueAsString(Map.of("displayName", "Board", "templateBody", TEMPLATE,
+                                    "footerTemplateBody", invalid))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("template_invalid"));
+        }
+        mockMvc.perform(put("/api/audiences/{id}/templates/vi", board).session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"templateBody\":\"- {{whatChanged}}\",\"footerTemplateBody\":\"{{#compareUrl}}So sánh{{/compareUrl}}\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.footerTemplateVariants.vi").value("{{#compareUrl}}So sánh{{/compareUrl}}"));
+        mockMvc.perform(put("/api/audiences/{id}/templates/vi", board).session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"templateBody\":\"- {{headline}}\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.footerTemplateVariants.vi").value("{{#compareUrl}}So sánh{{/compareUrl}}"));
+        mockMvc.perform(put("/api/audiences/{id}/templates/vi", board).session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"templateBody\":\"- {{headline}}\",\"footerTemplateBody\":\"{{headline}}\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("template_invalid"));
+
+        mockMvc.perform(post("/api/audiences/preview").session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of("templateBody", "- {{whatChanged}}",
+                                "footerTemplateBody", footer))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.markdown").value("- A safer deployment workflow is now available.\n\n"
+                        + "[Install v1.4.0](https://github.com/acme/app/releases/tag/v1.4.0)\n"));
+        mockMvc.perform(post("/api/audiences/preview").session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"templateBody\":\"- {{whatChanged}}\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.markdown").value("- A safer deployment workflow is now available."));
+
+        // Resetting a shipped audience adopts the shipped footer in every language.
+        mockMvc.perform(put("/api/audiences/{id}", operator).session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(OBJECT_MAPPER.writeValueAsString(Map.of("displayName", "Ops", "templateBody", TEMPLATE,
+                                "footerTemplateBody", ""))))
+                .andExpect(jsonPath("$.footerTemplateBody").value(""));
+        mockMvc.perform(post("/api/audiences/{id}/reset-to-preset", operator).session(admin.session()).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.footerTemplateBody", containsString("**Upgrade guide:**")))
+                .andExpect(jsonPath("$.footerTemplateVariants.vi", containsString("**Hướng dẫn nâng cấp:**")));
     }
 
     @Test

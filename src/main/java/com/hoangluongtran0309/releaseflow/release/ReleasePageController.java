@@ -114,6 +114,9 @@ public class ReleasePageController {
         } catch (InvalidReleaseScheduleException exception) {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
             bindingResult.rejectValue("plannedReleaseAt", exception.messageKey(), exception.arguments(), null);
+        } catch (InvalidUpgradeGuideUrlException | InvalidPreviousReleaseException exception) {
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            bindingResult.rejectValue(linkField(exception), exception.messageKey(), exception.arguments(), null);
         }
         return renderReleases(principal, projectId, null, model, response);
     }
@@ -144,7 +147,7 @@ public class ReleasePageController {
             return renderRelease(principal, projectId, releaseId, model, response);
         }
         return act(principal, projectId, releaseId, model, response, bindingResult,
-                failure -> failure instanceof ReleaseVersionTakenException ? "version" : null,
+                failure -> failure instanceof ReleaseVersionTakenException ? "version" : linkField(failure),
                 () -> releaseService.edit(principal.organizationId(), projectId, releaseId, request));
     }
 
@@ -398,7 +401,10 @@ public class ReleasePageController {
     ) {
         try {
             action.run();
-        } catch (InvalidReleaseScheduleException | InvalidChangeReviewException exception) {
+        } catch (InvalidReleaseScheduleException
+                 | InvalidChangeReviewException
+                 | InvalidUpgradeGuideUrlException
+                 | InvalidPreviousReleaseException exception) {
             return refuse(principal, projectId, releaseId, HttpStatus.BAD_REQUEST, exception, form, fieldOf, model, response);
         } catch (ReleasePublishedException
                  | ReleaseStatusException
@@ -459,11 +465,17 @@ public class ReleasePageController {
         model.addAttribute("statusCounts", Map.of());
         model.addAttribute("releaseCount", 0);
         model.addAttribute("projectFound", false);
-        if (!model.containsAttribute("releaseRequest")) {
-            model.addAttribute("releaseRequest", new NewReleaseRequest());
-        }
+        model.addAttribute("previousReleases", List.of());
         if (selectedProjectId != null) {
             List<ReleaseSummary> releases = releaseService.list(principal.organizationId(), selectedProjectId);
+            List<ReleaseOption> previous = releaseService.previousCandidates(principal.organizationId(), selectedProjectId);
+            model.addAttribute("previousReleases", previous);
+            if (!model.containsAttribute("releaseRequest")) {
+                // A new release follows the most recently published one unless a person chooses.
+                NewReleaseRequest request = new NewReleaseRequest();
+                request.setPreviousReleaseId(previous.isEmpty() ? null : previous.getFirst().id());
+                model.addAttribute("releaseRequest", request);
+            }
             Map<ReleaseStatus, Long> counts = new EnumMap<>(ReleaseStatus.class);
             for (ReleaseStatus value : ReleaseStatus.values()) {
                 counts.put(value, releases.stream().filter(release -> release.status() == value).count());
@@ -474,6 +486,9 @@ public class ReleasePageController {
             model.addAttribute("statusCounts", counts);
             model.addAttribute("releaseCount", releases.size());
             model.addAttribute("projectFound", true);
+        }
+        if (!model.containsAttribute("releaseRequest")) {
+            model.addAttribute("releaseRequest", new NewReleaseRequest());
         }
         return "releases";
     }
@@ -503,10 +518,17 @@ public class ReleasePageController {
         model.addAttribute("availableChanges", release.status() == ReleaseStatus.DRAFT
                 ? releaseService.availableChanges(principal.organizationId(), projectId, releaseId)
                 : List.of());
+        model.addAttribute("previousReleases", release.status() == ReleaseStatus.DRAFT
+                ? releaseService.previousCandidates(principal.organizationId(), projectId).stream()
+                .filter(option -> !option.id().equals(releaseId))
+                .toList()
+                : List.of());
         if (!model.containsAttribute("releaseRequest")) {
             ReleaseRequest request = new ReleaseRequest();
             request.setVersion(release.version());
             request.setSummary(release.summary());
+            request.setUpgradeGuideUrl(release.upgradeGuideUrl());
+            request.setPreviousReleaseId(release.previousReleaseId());
             model.addAttribute("releaseRequest", request);
         }
         // The forms the page repeats or keeps small read their errors from these.
@@ -557,6 +579,14 @@ public class ReleasePageController {
         response.setStatus(status.value());
         model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error(exception));
         return renderRelease(principal, projectId, releaseId, model, response);
+    }
+
+    // The field of the release form a refused link belongs under, or null for another failure.
+    private static String linkField(LocalizedException failure) {
+        if (failure instanceof InvalidUpgradeGuideUrlException) {
+            return "upgradeGuideUrl";
+        }
+        return failure instanceof InvalidPreviousReleaseException ? "previousReleaseId" : null;
     }
 
     private static String releasePath(UUID projectId, UUID releaseId) {

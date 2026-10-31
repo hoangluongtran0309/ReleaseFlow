@@ -8,8 +8,8 @@ import java.util.List;
 
 /**
  * Combines the fixed rules with one AI outcome (ADR-0009). The rules always win: a
- * category they chose is kept, the AI can add a breaking flag but never remove one,
- * and review triggers still force review. The AI settles a change only when the
+ * category they chose is kept, the AI can add a breaking or security flag but never
+ * remove one (ADR-0037), and review triggers still force review. The AI settles a change only when the
  * rules left it Unknown and nothing else requires a person. A category the AI proposed
  * instead of choosing one keeps the change Unknown and adds a trigger until an
  * administrator decides the proposal. Insufficient context adds a trigger too; context
@@ -33,7 +33,8 @@ final class ChangeAiMerge {
             List<ReviewTrigger> triggers = new ArrayList<>(rules.triggers());
             triggers.add(ReviewTrigger.classifierFallback());
             return new ClassifiedChange(
-                    new ChangeClassification(rules.category(), rules.breaking(), true, rules.reasons(), triggers),
+                    new ChangeClassification(rules.category(), rules.breaking(), rules.security(), true, rules.reasons(),
+                            triggers),
                     ClassificationSource.RULES,
                     ai,
                     null,
@@ -66,15 +67,20 @@ final class ChangeAiMerge {
         if (answer.breaking() && !rules.breaking()) {
             reasons.add("AI marked it breaking");
         }
+        boolean security = rules.security() || answer.security();
+        if (answer.security() && !rules.security()) {
+            reasons.add("AI marked it a security change");
+        }
         if (answer.needsHumanReview()) {
             reasons.add("AI asked for human review");
         }
         boolean needsReview = breaking
+                || security
                 || category.isUnknown()
                 || !triggers.isEmpty()
                 || answer.needsHumanReview();
         return new ClassifiedChange(
-                new ChangeClassification(category, breaking, needsReview, reasons, triggers),
+                new ChangeClassification(category, breaking, security, needsReview, reasons, triggers),
                 aiChoseCategory ? ClassificationSource.AI : ClassificationSource.RULES,
                 ai,
                 suggestion,

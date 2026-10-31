@@ -11,19 +11,19 @@ manage audiences on the **Audiences** page or through `/api/audiences`. Each
 Organization starts with four presets, named in its output language
 (English or Vietnamese):
 
-| Code | Writes for | Template |
-| --- | --- | --- |
-| `operator` | operational risk, rollback, and how the product is deployed and run | the headline with the pull request link and narrative, then why, detail, limitations, and the migration step under its kind |
-| `contributor` | implementation detail and code changes | as operator, with implementation instead of detail |
-| `end_user` | plain language, what people notice | the headline and the narrative, and a migration step only when it is required |
-| `support` | what customers may ask about, and what to tell them | the headline with the link and narrative, the migration step under its kind, and limitations |
+| Code | Writes for | Template | Footer |
+| --- | --- | --- | --- |
+| `operator` | operational risk, rollback, and how the product is deployed and run | the headline with the pull request link and narrative, then why, detail, limitations, and the migration step under its kind | the compare link and the upgrade guide |
+| `contributor` | implementation detail and code changes | as operator, with implementation instead of detail | as operator |
+| `end_user` | plain language, what people notice | the headline and the narrative, and a migration step only when it is required | none |
+| `support` | what customers may ask about, and what to tell them | the headline with the link and narrative, the migration step under its kind, and limitations | none |
 
 ![The Audiences page: the three presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
 
 An audience has a **code** (lowercase letters, digits, and underscores,
 starting with a letter; fixed once created), a **display name**, a
 **communication intent** that the AI follows when it writes the audience's
-narrative, and a **template**. Each preset's intent ends by saying when a change is
+narrative, a **template** for each change, and a [footer](#footer) for the note. Each preset's intent ends by saying when a change is
 none of its audience's concern: for end users, build, CI, dependency, test, and internal
 changes they cannot see. The operator intent asks for something to watch after deploying
 only when the change or the [Project context](changes.md#project-context) names one. Templates are
@@ -51,7 +51,10 @@ it is saved: it must compile, use only these variables, and use `{{narrative}}`
 rather than naming another audience.
 
 The shipped templates lead with `**{{headline}}**`, and the detailed ones link a change
-as `[{{reference}}]({{pullRequestUrl}})`. They label a migration step by its kind:
+as `[{{reference}}]({{pullRequestUrl}})`. The operator, contributor, and support
+templates print a change's limitations on a line of their own, **Limitations**
+(**Giới hạn**), so what a change does not do yet is not lost in its detail; the end-user
+template does not print them. They label a migration step by its kind:
 **Required step**, **If it applies to you**, **Recommended step**, or the neutral
 **Migration** for an unspecified one, so a step nobody called required is never
 presented as one. Their detail lines sit inside `{{^brief}}`, so a brief change keeps its
@@ -72,14 +75,103 @@ relevance reads as `full`.
 A note leaves out a change that is `none` for its audience, unless the change is
 breaking: a breaking change is in every note, and `none` on it reads as `brief`. A change
 with no narrative for the audience (no AI, a failure, or an audience added later) is
-included in full. The counts and the breaking-change warning describe what the note
-shows. An audience that nothing in the release concerns still gets its note: the title,
+included in full.
+
+A **security change** is listed under **🔒 Security**, after the breaking changes,
+whatever its category: a security fix is still a Fix everywhere else. A change that is
+both breaking and security is listed once, under breaking changes, and starts with
+**🔒 Security:** whatever the audience's template prints. A security change is in the
+operator, contributor, and support notes even when it is `none` for them, and then reads
+as `brief`; for an end-user or a custom audience it follows its relevance like any other
+change, unless it is also breaking. See
+[ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
+
+The counts and the breaking-change warning describe what the note shows, and every
+change counts once, in the section it is listed in. An audience that nothing in the release concerns still gets its note: the title,
 the release summary, and one line saying that nothing in the release concerns it.
 Approval still writes one note per audience and language, and an automation action
 delivers that note like any other. See
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 ![Editing an audience's template and saving it](assets/release-notes/rn-2-template.webp)
+
+### Footer
+
+An audience's **footer** is a Mustache template rendered once, after the last section of
+the note (or after the line saying nothing concerns the audience), from the release's own
+values rather than a change's:
+
+| Variable | Value |
+| --- | --- |
+| `version` | the release's version |
+| `previousVersion` | the version of the [previous release](#releases), or empty |
+| `compareUrl` | the code host's comparison of the previous version with this one, or empty |
+| `upgradeGuideUrl` | the release's upgrade guide, or empty |
+| `releaseUrl` | the code host's page for this version, or empty |
+
+An empty value is false, so a line inside `{{#compareUrl}}…{{/compareUrl}}` disappears
+when the release has no comparison, and `{{^previousVersion}}…{{/previousVersion}}`
+shows only for a first release. Inside a section, `{{.}}` is the section's own value and
+every other footer variable still has its value. A footer uses only these five
+variables; a change's variables, such as `whatChanged`, are not in it, and the footer's
+are not in an item template. A blank footer adds nothing. A footer is checked when it is
+saved, like a template, and **Preview** renders the sample change followed by a sample
+footer.
+
+`compareUrl` and `releaseUrl` come from the Project's one code host, from the
+coordinates it was connected with; ReleaseFlow never asks the provider, so rendering a
+footer never calls the network, and a link can name a tag that does not exist yet.
+
+| Source | `compareUrl` | `releaseUrl` |
+| --- | --- | --- |
+| GitHub | `https://github.com/{owner}/{repository}/compare/{previousVersion}...{version}` | `https://github.com/{owner}/{repository}/releases/tag/{version}` |
+| GitLab | `{GitLab URL}/{project path}/-/compare/{previousVersion}...{version}` | `{GitLab URL}/{project path}/-/releases/{version}` |
+
+A Project with no GitHub or GitLab source, or with more than one, gets neither link;
+Linear and Jira sources do not count. `compareUrl` is empty without a previous release.
+Each release's version is used, exactly as written, as its tag name: ReleaseFlow does not
+add or remove a `v`, and there is no tag-prefix setting. When a Project's tags are not
+its versions (`v1.2.0` tags for `1.2.0` versions, or a `server/` prefix), write the
+links in the footer by hand instead of using these two variables.
+
+The operator and contributor footers show two lines, each only when it has its link:
+**Compare** (`So sánh`) links `previousVersion...version` to the comparison, and
+**Upgrade guide** (`Hướng dẫn nâng cấp`) links **Read before upgrading** to the guide.
+Neither links `releaseUrl`: a published note is often the GitHub release itself, where an
+install link would point to the page it is on. A note keeps the footer it was approved
+with, like its template.
+
+### Upgrading custom audience templates
+
+Audiences created before 1.1.0 keep their own templates; nothing rewrites them. The
+shipped operator and contributor audiences received the new footer in each of their
+languages, since they had none, and the end-user and support audiences keep a blank one.
+A custom audience, such as a DBA audience, starts with a blank footer. To give one the
+limitations line and the footer, add this line inside its item template, where its other
+detail lines are (inside `{{^brief}}` if it has one):
+
+```text
+{{#limitations}}
+  - Limitations: {{.}}
+{{/limitations}}
+```
+
+and write its footer, on the Audiences page or through `footerTemplateBody`:
+
+```text
+{{#compareUrl}}
+**Compare:** [{{previousVersion}}...{{version}}]({{compareUrl}})
+{{/compareUrl}}
+
+{{#upgradeGuideUrl}}
+**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})
+{{/upgradeGuideUrl}}
+```
+
+For a Vietnamese template, the labels are `Giới hạn`, `So sánh`, `Hướng dẫn nâng cấp`,
+and `Đọc trước khi nâng cấp`. A release note language other than the main one has its own
+template and footer under **Language templates**. **Reset to preset** gives a shipped
+audience its shipped footer in every language.
 
 An Organization keeps between 1 and 20 audiences. An audience cannot be deleted
 while something still names it: a release note, an automation rule's action, or an
@@ -93,20 +185,25 @@ Every audience endpoint is for administrators only:
 
 ```text
 GET    /api/audiences
-POST   /api/audiences                          {"code", "displayName", "communicationIntent", "templateBody"}
+POST   /api/audiences                          {"code", "displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
 GET    /api/audiences/{audienceId}
-PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody"}
-PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody"}
+PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
+PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody", "footerTemplateBody"}
 DELETE /api/audiences/{audienceId}
 POST   /api/audiences/{audienceId}/reset-to-preset
-POST   /api/audiences/preview                  {"templateBody"} -> {"markdown", "html"}
+POST   /api/audiences/preview                  {"templateBody", "footerTemplateBody"} -> {"markdown", "html"}
 ```
+
+An audience returns `footerTemplateBody` beside `templateBody`, and
+`footerTemplateVariants` beside `templateVariants`, each keyed by language. A request that
+leaves `footerTemplateBody` out keeps the footer the audience or language has, and a new
+audience then has none, so callers written before footers keep working.
 
 | Situation | Response |
 | --- | --- |
 | A member, not an administrator | `403` |
 | A missing field, or a code that is not `[a-z][a-z0-9_]*` | `400 validation_failed` |
-| A template that does not compile or uses an unknown variable | `400 template_invalid` |
+| A template or footer that does not compile or uses an unknown variable | `400 template_invalid` |
 | A template naming `narratives.<code>` | `400 template_narratives_path` |
 | The code is already used | `409 audience_code_taken` |
 | The Organization already has 20 audiences | `409 audience_limit` |
@@ -275,12 +372,22 @@ translated without one. ReleaseFlow never deletes a glossary in DeepL.
 ## Releases
 
 Open **Releases** to prepare a Project's releases. The page creates a release
-with a version (up to 50 characters), an optional summary, and an optional
-planned release time in UTC, and lists the Project's releases with status
+with a version (up to 50 characters), an optional summary, an optional
+planned release time in UTC, an optional **upgrade guide**, and the **previous
+release**, and lists the Project's releases with status
 filters and counts. A Project can prepare several releases at once, and each
 change belongs to at most one release.
 
 ![A Project's releases by status: four published, none in draft, review, or approval](assets/release-notes/rn-5-releases.webp)
+
+The **upgrade guide** is an absolute `http://` or `https://` address of at most 2,000
+characters, without a user name or password; a query and a fragment are allowed. When the
+release has breaking changes, the warning in every note links **read the upgrade guide**
+to it, and the [footer](#footer) may link it too. The **previous release** is a published
+release of the same Project that the notes compare this one with. A new release follows
+the Project's most recently published release unless a person chooses another or none;
+the choice stays when another release is published later. Both can be changed while the
+release is a draft.
 
 A release moves through four steps, shown at the top of its page:
 
@@ -292,7 +399,8 @@ A release moves through four steps, shown at the top of its page:
    then **Request review**, which needs at least one change.
 2. **In review.** The change list is fixed except for rejections. On the
    **Review** tab, each change gets a decision: **Approve as shown** confirms
-   its category and breaking flag, **Edit classification** corrects them, and
+   its category, breaking flag, and security flag, **Edit classification** corrects
+   them, and
    **Reject** removes the change from the release so it becomes available for
    another one. Approving and editing record the reviewer on the change itself,
    exactly like a review in the Change Inbox, with an optional note. An Unknown
@@ -329,7 +437,8 @@ writes new ones.
 Before approval, the preview shows what each audience's note would say. A note
 starts with the release title and summary and a **What's New** overview with
 counts, warns about breaking changes, and lists breaking changes first, then
-features, fixes, performance, documentation, and maintenance. Each change is
+security changes, features, fixes, performance, documentation, and maintenance, and
+ends with the audience's footer. Each change is
 written by the audience's template from its neutral summary and the audience's
 narrative; without a summary, the pull request title is used, with its
 Conventional Commit prefix removed. Labels are English or Vietnamese, following
@@ -359,9 +468,10 @@ REST clients use the same rules:
 
 ```text
 GET    /api/projects/{projectId}/releases
-POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt"}
+POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt",
+                                                                          "upgradeGuideUrl", "previousReleaseId"}
 GET    /api/projects/{projectId}/releases/{releaseId}
-PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary"}
+PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary", "upgradeGuideUrl", "previousReleaseId"}
 DELETE /api/projects/{projectId}/releases/{releaseId}
 PUT    /api/projects/{projectId}/releases/{releaseId}/schedule           {"plannedReleaseAt"} (null clears it)
 GET    /api/projects/{projectId}/releases/{releaseId}/available-changes
@@ -369,7 +479,7 @@ POST   /api/projects/{projectId}/releases/{releaseId}/changes            {"chang
 DELETE /api/projects/{projectId}/releases/{releaseId}/changes/{changeId} (remove, or reject during review)
 POST   /api/projects/{projectId}/releases/{releaseId}/request-review
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/decision
-                                                                         {"action": "APPROVE" | "EDIT", "category", "breaking", "note"}
+                                                                         {"action": "APPROVE" | "EDIT", "category", "breaking", "security", "note"}
 POST   /api/projects/{projectId}/releases/{releaseId}/approve
 POST   /api/projects/{projectId}/releases/{releaseId}/return-to-draft
 POST   /api/projects/{projectId}/releases/{releaseId}/publish
@@ -386,7 +496,12 @@ GET    /api/projects/{projectId}/release-assignments
 ```
 
 `plannedReleaseAt` is an ISO-8601 instant such as `2026-10-01T09:00:00Z`; a
-value without an offset is read as UTC. A release returns its `changes`, its
+value without an offset is read as UTC. A create request that leaves
+`previousReleaseId` out follows the most recently published release, and an update that
+leaves `upgradeGuideUrl` or `previousReleaseId` out keeps it; an explicit `null` clears
+either. A decision that leaves `security` out confirms the change's current flag, as
+callers written before it do; `APPROVE` must otherwise send the flag the change has.
+A release returns `upgradeGuideUrl`, `previousReleaseId`, `previousVersion`, its `changes`, its
 `decisions` (`changeId`, `action`, `reviewerName`, `note`, `decidedAt`),
 `reviewedCount`, `plannedReleaseAt`, `approvedAt`, `approverName`, and its
 `notes` (`id`, `audienceCode`, `audienceName`, `language`, `content`,
@@ -405,7 +520,9 @@ of the Project's changes belongs to. Errors:
 | Review requested or approval attempted with no changes | `409 release_empty` |
 | Approval attempted before every change has a decision | `409 release_review_incomplete` |
 | Approval attempted while a change with a title of fewer than three words has no summary a person wrote, and too little description for the AI's; `detail` names them | `409 change_summary_required` |
-| `APPROVE` sent with a classification other than the change's current one | `409 classification_changed` |
+| `APPROVE` sent with a classification other than the change's current one, security flag included | `409 classification_changed` |
+| An upgrade guide that is not an absolute `http://` or `https://` address, has a user name or password, or is over 2,000 characters | `400 invalid_upgrade_guide_url` |
+| A previous release that is not a published release of this Project | `400 invalid_previous_release` |
 | `unknown` or an unsupported category in a decision | `400 invalid_change_review` |
 | `APPROVE` of an Unknown change, whatever category it names: approving keeps the current classification, so an Unknown change takes `EDIT` with a category | `400 invalid_change_review` |
 | An unreadable or past planned release time | `400 invalid_release_schedule` |

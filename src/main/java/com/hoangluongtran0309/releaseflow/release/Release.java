@@ -46,6 +46,14 @@ class Release {
     @Column(name = "planned_release_at")
     private Instant plannedReleaseAt;
 
+    // Release-wide values for the notes' footers (ADR-0037, V34).
+    @Column(name = "upgrade_guide_url", length = 2000)
+    private String upgradeGuideUrl;
+
+    // A published release of the same Project, chosen while this one is a draft.
+    @Column(name = "previous_release_id")
+    private UUID previousReleaseId;
+
     @Column(name = "approved_at")
     private Instant approvedAt;
 
@@ -82,6 +90,14 @@ class Release {
         requireDraft();
         this.version = version;
         this.summary = summary;
+        this.updatedAt = at;
+    }
+
+    /** Sets the upgrade guide and the release this one follows; either may be null. */
+    void link(String upgradeGuideUrl, UUID previousReleaseId, Instant at) {
+        requireDraft();
+        this.upgradeGuideUrl = upgradeGuideUrl;
+        this.previousReleaseId = previousReleaseId;
         this.updatedAt = at;
     }
 
@@ -186,6 +202,14 @@ class Release {
 
     String getApproverName() {
         return approverName;
+    }
+
+    String getUpgradeGuideUrl() {
+        return upgradeGuideUrl;
+    }
+
+    UUID getPreviousReleaseId() {
+        return previousReleaseId;
     }
 
     UUID getId() {

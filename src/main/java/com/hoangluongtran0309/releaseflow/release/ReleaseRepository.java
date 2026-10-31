@@ -42,6 +42,12 @@ interface ReleaseRepository extends JpaRepository<Release, UUID> {
 
     List<Release> findAllByOrganizationIdAndProjectIdOrderByCreatedAtDescIdDesc(UUID organizationId, UUID projectId);
 
+    List<Release> findAllByOrganizationIdAndProjectIdAndStatusOrderByPublishedAtDescIdDesc(
+            UUID organizationId,
+            UUID projectId,
+            ReleaseStatus status
+    );
+
     List<Release> findAllByOrganizationIdAndStatusOrderByCreatedAtDescIdDesc(UUID organizationId, ReleaseStatus status);
 
     List<Release> findAllByOrganizationIdAndStatusAndPlannedReleaseAtGreaterThanAndPlannedReleaseAtLessThanEqualOrderByPlannedReleaseAtAscIdAsc(

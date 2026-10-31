@@ -148,7 +148,7 @@ changes
   changed_file_status (COLLECTED | UNAVAILABLE | NOT_SUPPORTED), changed_files (jsonb)
   review_triggers (jsonb array of {type, detail})
   category (code), category_display_name, category_group (snapshot of the catalog category)
-  breaking, needs_review, classification_reasons (text[])
+  breaking, security (V34), needs_review, classification_reasons (text[])
   classification_source (RULES | AI | SUGGESTION | HUMAN), ai_status (NOT_REQUESTED | SUCCEEDED | FAILED)
   ai_provider, ai_model, ai_failure, ai_attempted_at
   reviewed_by (composite FK with organization_id -> app_users), reviewer_name, reviewed_at
@@ -199,11 +199,12 @@ audience_definitions
   organization_id (FK -> organizations.id); (id, organization_id) unique
   code ([a-z][a-z0-9_]*, unique per Organization, fixed), display_name
   communication_intent, template_body (Mustache, at most 10000 characters)
+  footer_template_body (V34, Mustache over the release's values; blank adds nothing)
   preset, created_at, updated_at
 
 audience_template_variants (V17)
   id (UUID PK); (audience_id, organization_id) FK -> audience_definitions, ON DELETE CASCADE
-  language, template_body; audience_id + language unique
+  language, template_body, footer_template_body (V34); audience_id + language unique
 
 organization_translation_settings (V17)
   organization_id (PK)
@@ -248,6 +249,9 @@ releases
   status (DRAFT | IN_REVIEW | APPROVED | PUBLISHED)
   version unique per Project, ignoring case
   created_at, updated_at, planned_release_at
+  upgrade_guide_url (V34, absolute http or https, at most 2000 characters)
+  previous_release_id (V34, composite FK with organization_id, project_id -> releases;
+    releases_previous_release_published: only a published release, never itself)
   approved_at, approved_by (composite FK -> app_users), approver_name
   published_at, published_by (composite FK -> app_users), publisher_name
 
@@ -268,7 +272,7 @@ release_audience_notes (written while APPROVED, immutable once PUBLISHED)
   id (UUID PK); release_id + audience_id + language unique (V17)
   (release_id, organization_id, project_id) FK -> releases, ON DELETE CASCADE
   (audience_id, organization_id) FK -> audience_definitions (blocks deleting a used audience)
-  audience_code, audience_name, language, template_body_snapshot
+  audience_code, audience_name, language, template_body_snapshot, footer_template_snapshot (V34)
   content, auto_rerender, last_edited_by (composite FK -> app_users), last_editor_name
   translation_status (READY | PENDING | FAILED, V17)
   glossary_status (NONE | PENDING | APPLIED | NOT_APPLIED, V33), glossary_reason (exactly when NOT_APPLIED)
@@ -956,8 +960,8 @@ Flyway `V14` enforces the catalog with these constraints:
 
 `ChangeReviewService` settles one change in a single transaction. It loads the
 change by ID, Organization ID, and Project ID, and requires a concrete
-category. It then stores the category and breaking flag exactly as the
-reviewer submitted them, sets `needs_review = false`, and records
+category. It then stores the category, breaking flag, and security flag exactly as
+the reviewer submitted them, sets `needs_review = false`, and records
 `reviewed_by`, `reviewer_name`, and `reviewed_at`. Because the reviewer
 submits explicit values rather than approving whatever is current, a stale
 page cannot confirm a classification it did not show. Any change may be
@@ -965,9 +969,10 @@ reviewed, including one already settled by rules or by an earlier review; the
 latest review is kept.
 
 Confirming unchanged values keeps the classification source (`RULES` or `AI`).
-Changing either value sets it to `HUMAN`. A reviewer may clear a breaking
-flag: the invariant that breaking changes require human review is met by the
-recorded review itself.
+Changing any value sets it to `HUMAN`. A reviewer may clear a breaking or security
+flag: the invariant that they require human review is met by the recorded review
+itself. `ChangeReviewRequest.security` is optional, for callers written before ADR-0037:
+null confirms the flag the change has.
 
 Flyway `V6` adds a unique `(id, organization_id)` key on `app_users` so that
 `changes_reviewer_fk` keeps reviewers inside the change's Organization. It
@@ -1027,8 +1032,9 @@ processing can be added, including one that still needs review.
 composite foreign keys on `(id, organization_id, project_id)` make the
 database reject a change joining a release of another Project or tenant.
 
-A decision is `APPROVE` or `EDIT` and carries the category and breaking flag
-the reviewer saw. `APPROVE` must match the change's current classification
+A decision is `APPROVE` or `EDIT` and carries the category, breaking flag, and
+security flag the reviewer saw; a decision without `security` confirms the current one.
+`APPROVE` must match the change's current classification
 (`409 classification_changed` otherwise) and cannot confirm an Unknown
 change. Both actions call `ChangeReviewService.review`, so the change records
 the reviewer exactly as an Inbox review does, and a `release_change_reviews`
@@ -1115,9 +1121,18 @@ narrative for the audience is `FULL`, and `NONE` on a breaking change reads as
 - the title and the escaped release summary;
 - "What's New", with a count per section of what the note shows, joined by the
   bundle's list pattern, and a breaking warning;
-- sections by category group in the order breaking (the flag), features,
+- sections in the order breaking (the flag), security (the flag, ADR-0037), features,
   fixes, performance, documentation, maintenance, other, each item rendered by
-  the template and its headings demoted two levels outside fenced code.
+  the template and its headings demoted two levels outside fenced code;
+- the audience's footer, rendered once with `AudienceTemplate.renderFooter`.
+
+Placement is exclusive: a breaking change is in Breaking, a security change that is not
+breaking in Security, and any other in its group's section, so the counts add up to the
+total. A change that is both gets the bundle's `securityMarker` after its list marker,
+whatever the template prints. `concerns` also keeps a security change for the
+`operator`, `contributor`, and `support` codes, where `NONE` reads as `BRIEF`. The
+breaking warning uses `breakingWarning.guide`, which links the release's upgrade guide,
+when it has one.
 
 When nothing concerns the audience, the note is the title, the summary, and the
 bundle's `nothingForAudience` line; approval still writes it, and an automation
@@ -1138,7 +1153,7 @@ translation, keep what the AI or a person wrote.
 
 - **Approval** renders one `AudienceReleaseNote` per audience and release note
   language from the current changes, snapshots the audience's code, name,
-  template for that language, and the language, and inserts the notes after the
+  template and footer for that language, and the language, and inserts the notes after the
   release row is flushed as approved (see
   [Release note languages and translation](#release-note-languages-and-translation)). A render failure aborts approval with
   `409 release_note_render_failed`. Before that, `ReleaseNotePreview.needsSummary`
@@ -1154,7 +1169,7 @@ translation, keep what the AI or a person wrote.
   change of the release. It calls `ChangeSummaryService.edit`, which keeps
   narratives only for current audience codes, and only those that say more than
   having none, and then renders every automatic note again from its stored
-  template. `ChangeSummaryRequest.Narrative` binds `narratives[<code>].relevance`,
+  template and footer. `ChangeSummaryRequest.Narrative` binds `narratives[<code>].relevance`,
   `.headline`, and `.body` from the page, and from JSON either that object or a
   plain string (a delegating `@JsonCreator`), which is a full body. A person's
   headline is collapsed onto one line.
@@ -1173,6 +1188,51 @@ updates only while the release is approved. An update may change only the
 content and the edit record, and deletes are rejected once the release is
 published. `release_audience_notes_edit_recorded` ties `auto_rerender` to the
 editor columns.
+
+## Security changes and release-wide note structure
+
+ADR-0037 adds a security flag beside breaking and a footer per audience; see
+[ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
+
+- **Rules.** `ChangeClassifier` sets `security` for a label equal, ignoring case and
+  surrounding whitespace, to `security`, `security-fix`, `security fix`, or
+  `vulnerability`, and for `CVE-\d{4}-\d{4,}` (case-insensitive) in the title, the
+  description, or a label, and records the match as a reason. Security forces review like
+  breaking.
+- **AI.** The response schema requires one boolean, `security_change`, and the
+  instructions say what it means; nothing else in the request changed. The parser rejects
+  an answer without a boolean there, like `breaking_change`. `ChangeAiMerge` stores the
+  rule result OR the AI's, so the AI can add the flag but never clear what a rule found,
+  and a security change stays in review. A person's review is never asked of the AI again
+  (`isAiEligible`), so the AI never clears what a person set either.
+- **Database.** Flyway `V34` adds `changes.security` (false for every change recorded
+  before) and redefines `changes_review_required` so a security change leaves review only
+  with a recorded review.
+- **Releases.** `upgrade_guide_url` is checked by `ReleaseLinkBuilder.validatedUpgradeGuideUrl`
+  (`400 invalid_upgrade_guide_url`), and `previous_release_id` must be a published
+  release of the same Project (`400 invalid_previous_release`), which the composite
+  foreign key and the `releases_previous_release_published` trigger hold in the database
+  too. `ReleaseRequest` records whether each field was sent, so an older caller's update
+  keeps both and a create without `previousReleaseId` takes the Project's most recently
+  published release by `published_at`. The pages always send both.
+- **Footers.** An audience and each language variant have a `footer_template_body`;
+  `AudienceTemplate.validateFooter` compiles and renders it with `ReleaseLinks.SAMPLE`,
+  under the same compiler, with the `template_invalid` contract and the form field the
+  exception names. JMustache in standards mode looks a name up only in the innermost
+  context, so each footer value is a `FooterValue`: it prints as its text, and as a
+  section it renders its body, only when not empty, in a scope that still holds every
+  footer value and prints as its own text for `{{.}}`. Registration seeds the shipped
+  footers, `resetToPreset` restores them in every language, and `V34` gave existing
+  operator and contributor audiences the same text (a migration test compares them).
+  Approval snapshots the footer into `footer_template_snapshot`; notes written before
+  have a blank one.
+- **Links.** `ReleaseLinkBuilder` reads the Project's sources from the database and keeps
+  GitHub and GitLab ones; with exactly one, it builds `compareUrl` from the previous
+  release's version and this one's, and `releaseUrl` from this one's, each a path segment
+  encoded by `UriUtils` and used as the tag name exactly as written. It makes no provider
+  call, so rendering a note, a preview included, never touches the network.
+  `ReleaseNoteDigest` escapes the versions for Markdown and percent-encodes the
+  parentheses of the upgrade guide before the footer sees them.
 
 ## Release note languages and translation
 

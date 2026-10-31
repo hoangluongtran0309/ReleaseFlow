@@ -14,10 +14,11 @@ import java.util.UUID;
 
 /**
  * The note one audience gets in one language for an approved or published release. It
- * is rendered at approval from a snapshot of the audience's template for that language,
- * and follows later summary edits and translations until a person edits it; then it is
- * manual and never rendered again. The database allows writes only while the release is
- * approved, and publication only once every note is ready, so a published note is final.
+ * is rendered at approval from a snapshot of the audience's template and footer for that
+ * language, and follows later summary edits and translations until a person edits it;
+ * then it is manual and never rendered again. The database allows writes only while the
+ * release is approved, and publication only once every note is ready, so a published note
+ * is final.
  */
 @Entity
 @Table(name = "release_audience_notes")
@@ -49,6 +50,10 @@ class AudienceReleaseNote {
 
     @Column(name = "template_body_snapshot", nullable = false, columnDefinition = "text", updatable = false)
     private String templateBodySnapshot;
+
+    // Blank for a note written before footers existed (ADR-0037, V34).
+    @Column(name = "footer_template_snapshot", nullable = false, columnDefinition = "text", updatable = false)
+    private String footerTemplateSnapshot = "";
 
     @Column(nullable = false, columnDefinition = "text")
     private String content;
@@ -91,6 +96,7 @@ class AudienceReleaseNote {
             String audienceName,
             String language,
             String templateBodySnapshot,
+            String footerTemplateSnapshot,
             String content,
             TranslationState.Status translationStatus,
             GlossaryUse glossary,
@@ -105,6 +111,7 @@ class AudienceReleaseNote {
         this.audienceName = audienceName;
         this.language = language;
         this.templateBodySnapshot = templateBodySnapshot;
+        this.footerTemplateSnapshot = footerTemplateSnapshot;
         this.content = content;
         this.autoRerender = true;
         this.translationStatus = translationStatus;
@@ -190,5 +197,9 @@ class AudienceReleaseNote {
 
     String getTemplateBodySnapshot() {
         return templateBodySnapshot;
+    }
+
+    String getFooterTemplateSnapshot() {
+        return footerTemplateSnapshot;
     }
 }

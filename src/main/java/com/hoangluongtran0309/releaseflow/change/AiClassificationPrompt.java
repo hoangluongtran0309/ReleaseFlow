@@ -54,6 +54,7 @@ final class AiClassificationPrompt {
               other (anything else).
               UNKNOWN means the pull request does not contain enough information to decide, or that no category fits.
             - breaking_change: true only when the change removes or incompatibly alters behavior, configuration, or APIs that users rely on.
+            - security_change: true when the change changes a security property, or remediates or introduces a vulnerability, including authentication, authorization, secret or credential protection, cryptography, request forgery, and transport protection. Use only the change and project_context as evidence.
             - needs_human_review: true when a person should check this change before it is released.
             - neutral_core: an object with six strings:
               what_changed (the specific change that was made, in one sentence),
@@ -92,7 +93,7 @@ final class AiClassificationPrompt {
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["category", "suggested_category", "breaking_change", "needs_human_review", "neutral_core", "context_sufficiency", "narratives"],
+              "required": ["category", "suggested_category", "breaking_change", "security_change", "needs_human_review", "neutral_core", "context_sufficiency", "narratives"],
               "properties": {
                 "category": {"type": "string", "enum": []},
                 "suggested_category": {
@@ -110,6 +111,7 @@ final class AiClassificationPrompt {
                   }
                 },
                 "breaking_change": {"type": "boolean"},
+                "security_change": {"type": "boolean"},
                 "needs_human_review": {"type": "boolean"},
                 "neutral_core": {
                   "type": "object",

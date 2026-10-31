@@ -235,6 +235,83 @@ class ChangeReviewIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(content().string(containsString("A reviewed change cannot stay Unknown.")));
     }
 
+    // ADR-0037: a security change needs a person, and only a recorded review confirms or clears it.
+    @Test
+    void aSecurityChangeNeedsReviewAndOnlyAReviewConfirmsOrClearsIt() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner.session());
+        UUID labelled = seedChange(owner, projectId, 1, "fix: derive a key per target", List.of("security"));
+        UUID cve = seedChange(owner, projectId, 2, "fix: patch CVE-2026-1234 in the parser", List.of());
+        UUID plain = seedChange(owner, projectId, 3, "fix: handle empty tables", List.of());
+
+        mockMvc.perform(get("/api/projects/{projectId}/changes", projectId).session(owner.session()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.pullRequestNumber == 1)].security").value(contains(true)))
+                .andExpect(jsonPath("$[?(@.pullRequestNumber == 1)].breaking").value(contains(false)))
+                .andExpect(jsonPath("$[?(@.pullRequestNumber == 1)].needsReview").value(contains(true)))
+                .andExpect(jsonPath("$[?(@.pullRequestNumber == 2)].security").value(contains(true)))
+                .andExpect(jsonPath("$[?(@.pullRequestNumber == 3)].security").value(contains(false)));
+
+        // A caller written before the field confirms what the change has.
+        review(owner, projectId, labelled, "fix", false)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.security").value(true))
+                .andExpect(jsonPath("$.needsReview").value(false))
+                .andExpect(jsonPath("$.classificationSource").value("RULES"));
+        reviewWithSecurity(owner, projectId, cve, "fix", false)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.security").value(false))
+                .andExpect(jsonPath("$.classificationSource").value("HUMAN"));
+        reviewWithSecurity(owner, projectId, plain, "fix", true)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.security").value(true))
+                .andExpect(jsonPath("$.classificationSource").value("HUMAN"));
+        mockMvc.perform(post("/api/projects/{projectId}/changes/{changeId}/review", projectId, plain)
+                        .session(owner.session())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"fix\",\"breaking\":false,\"security\":\"maybe\"}"))
+                .andExpect(status().isBadRequest());
+        assertThat(changeRepository.findById(plain).orElseThrow().isSecurity()).isTrue();
+    }
+
+    @Test
+    void theInboxShowsAndReviewsTheSecurityFlag() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner.session());
+        UUID labelled = seedChange(owner, projectId, 1, "fix: derive a key per target", List.of("security"));
+
+        mockMvc.perform(get("/changes").session(owner.session()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(">Security</span>")))
+                .andExpect(content().string(matchesPattern("(?s).*id=\"change-" + labelled + "\".*"
+                        + "name=\"security\" value=\"true\" class=\"checkbox checkbox-sm\" checked=\"checked\".*"
+                        + "Security change.*")));
+
+        // An unchecked box sends only the form's marker, so it clears the security flag.
+        mockMvc.perform(post("/projects/{projectId}/changes/{changeId}/review", projectId, labelled)
+                        .session(owner.session())
+                        .with(csrf())
+                        .param("category", "fix")
+                        .param("_breaking", "on")
+                        .param("_security", "on"))
+                .andExpect(status().isFound());
+
+        Change reviewed = changeRepository.findById(labelled).orElseThrow();
+        assertThat(reviewed.isSecurity()).isFalse();
+        assertThat(reviewed.isNeedsReview()).isFalse();
+        assertThat(reviewed.getClassificationSource()).isEqualTo(ClassificationSource.HUMAN);
+    }
+
+    private ResultActions reviewWithSecurity(Owner owner, UUID projectId, UUID changeId, String category, boolean security)
+            throws Exception {
+        return mockMvc.perform(post("/api/projects/{projectId}/changes/{changeId}/review", projectId, changeId)
+                .session(owner.session())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"category\":\"%s\",\"breaking\":false,\"security\":%s}".formatted(category, security)));
+    }
+
     private void expectNumbers(Owner owner, UUID projectId, String status, Integer... numbers) throws Exception {
         mockMvc.perform(get("/api/projects/{projectId}/changes", projectId)
                         .session(owner.session())
