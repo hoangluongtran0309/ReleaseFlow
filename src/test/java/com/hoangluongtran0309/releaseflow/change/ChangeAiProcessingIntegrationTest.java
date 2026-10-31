@@ -190,6 +190,34 @@ class ChangeAiProcessingIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(breaking.isNeedsReview()).isTrue();
     }
 
+    // ADR-0037: the AI may mark a change security, which a person must then review, and its
+    // one request carries the question.
+    @Test
+    void theAiCanMarkAChangeSecurityButNeverClearARulesFlag() throws Exception {
+        Repository repository = connect();
+        GITHUB.respondWithFiles("src/main/java/Vault.java");
+
+        OPENAI.respondWithSecurity("fix", true, "Derives a key per target.");
+        deliver(repository, 25, "fix: derive a key per target");
+        worker.processOne();
+        OPENAI.respondWithSecurity("fix", false, "Patches the parser.");
+        deliver(repository, 26, "fix: patch CVE-2026-1234 in the parser");
+        worker.processOne();
+
+        Change proposed = change(25);
+        assertThat(proposed.isSecurity()).isTrue();
+        assertThat(proposed.getCategory()).isEqualTo(TestCategories.FIX);
+        assertThat(proposed.isNeedsReview()).isTrue();
+        assertThat(proposed.getClassificationReasons()).contains("AI marked it a security change");
+        Change found = change(26);
+        assertThat(found.isSecurity()).isTrue();
+        assertThat(found.isNeedsReview()).isTrue();
+        assertThat(found.getClassificationReasons()).contains("CVE identifier \"CVE-2026-1234\"");
+        assertThat(OPENAI.requests()).hasSize(2).allSatisfy(request -> assertThat(request.body())
+                .contains("\"security_change\":{\"type\":\"boolean\"}")
+                .contains("- security_change: true when the change changes a security property"));
+    }
+
     @Test
     void aFailedAiCallBecomesAFallbackThatAPersonCanRetry() throws Exception {
         Repository repository = connect();
@@ -633,6 +661,7 @@ class ChangeAiProcessingIntegrationTest extends PostgreSqlIntegrationTest {
         OPENAI.respond(200, OpenAiStub.completionWithContent(OBJECT_MAPPER.writeValueAsString(Map.of(
                 "category", "fix",
                 "breaking_change", false,
+                "security_change", false,
                 "needs_human_review", false,
                 "neutral_core", Map.of(
                         "what_changed", "Exports are written to EXPORT_PATH.",

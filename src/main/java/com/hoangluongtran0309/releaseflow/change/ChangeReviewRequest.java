@@ -11,6 +11,9 @@ public class ChangeReviewRequest {
     @NotNull(message = "{validation.breaking.required}")
     private Boolean breaking;
 
+    // Optional for callers written before ADR-0037: left out, it confirms the current value.
+    private Boolean security;
+
     public String getCategory() {
         return category;
     }
@@ -25,5 +28,13 @@ public class ChangeReviewRequest {
 
     public void setBreaking(Boolean breaking) {
         this.breaking = breaking;
+    }
+
+    public Boolean getSecurity() {
+        return security;
+    }
+
+    public void setSecurity(Boolean security) {
+        this.security = security;
     }
 }

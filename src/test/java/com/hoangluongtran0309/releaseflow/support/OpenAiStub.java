@@ -71,6 +71,7 @@ public final class OpenAiStub implements AutoCloseable {
         respond(200, completionWithContent(OBJECT_MAPPER.writeValueAsString(Map.of(
                 "category", "UNKNOWN",
                 "breaking_change", false,
+                "security_change", false,
                 "needs_human_review", true,
                 "neutral_core", Map.of(
                         "what_changed", "Rotates the signing keys.",
@@ -84,6 +85,11 @@ public final class OpenAiStub implements AutoCloseable {
                 "context_sufficiency", Map.of("score", 80, "reasons", List.of()),
                 "narratives", Map.of()
         ))));
+    }
+
+    /** A valid answer that marks the change as a security change, or not. */
+    public void respondWithSecurity(String category, boolean security, String summary) {
+        respond(200, completionWithContent(classification(category, false, security, false, summary, Map.of())));
     }
 
     /** A valid answer that also explains the change to the given audiences. */
@@ -115,9 +121,22 @@ public final class OpenAiStub implements AutoCloseable {
             String summary,
             Map<String, String> narratives
     ) {
+        return classification(category, breaking, false, needsReview, summary, narratives);
+    }
+
+    /** A valid answer that also says whether the change is a security change (ADR-0037). */
+    public static String classification(
+            String category,
+            boolean breaking,
+            boolean security,
+            boolean needsReview,
+            String summary,
+            Map<String, String> narratives
+    ) {
         return OBJECT_MAPPER.writeValueAsString(Map.of(
                 "category", category,
                 "breaking_change", breaking,
+                "security_change", security,
                 "needs_human_review", needsReview,
                 "neutral_core", Map.of(
                         "what_changed", summary,

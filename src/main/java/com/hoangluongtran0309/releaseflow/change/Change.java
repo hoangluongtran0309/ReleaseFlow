@@ -106,6 +106,10 @@ class Change {
     @Column(nullable = false)
     private boolean breaking;
 
+    // Beside breaking, never a category: a security fix is still a fix (ADR-0037, V34).
+    @Column(nullable = false)
+    private boolean security;
+
     @Column(name = "needs_review", nullable = false)
     private boolean needsReview;
 
@@ -248,6 +252,7 @@ class Change {
         change.url = pullRequest.url();
         change.setCategory(CategoryRef.UNKNOWN);
         change.breaking = false;
+        change.security = false;
         change.needsReview = true;
         change.classificationReasons = new String[]{"Waiting for changed files"};
         change.classificationSource = ClassificationSource.RULES;
@@ -371,6 +376,7 @@ class Change {
         classification.triggers().stream().filter(trigger -> !triggers.contains(trigger)).forEach(triggers::add);
         setCategory(classification.category());
         this.breaking = classification.breaking();
+        this.security = classification.security();
         this.needsReview = classification.needsReview() || !triggers.isEmpty();
         this.classificationReasons = classification.reasons().toArray(String[]::new);
         this.reviewTriggers = triggers;
@@ -407,17 +413,25 @@ class Change {
         }
     }
 
-    // Stores exactly what the reviewer confirmed. Changing either value makes the
+    // Stores exactly what the reviewer confirmed. Changing any of the values makes the
     // reviewer the source of the classification.
-    void review(CategoryRef reviewedCategory, boolean reviewedBreaking, UUID reviewer, String name, Instant at) {
+    void review(
+            CategoryRef reviewedCategory,
+            boolean reviewedBreaking,
+            boolean reviewedSecurity,
+            UUID reviewer,
+            String name,
+            Instant at
+    ) {
         if (isProcessing()) {
             throw new ChangeProcessingException();
         }
-        if (!reviewedCategory.code().equals(category) || reviewedBreaking != breaking) {
+        if (!reviewedCategory.code().equals(category) || reviewedBreaking != breaking || reviewedSecurity != security) {
             this.classificationSource = ClassificationSource.HUMAN;
         }
         setCategory(reviewedCategory);
         this.breaking = reviewedBreaking;
+        this.security = reviewedSecurity;
         this.needsReview = false;
         this.reviewedBy = reviewer;
         this.reviewerName = name;
@@ -591,6 +605,10 @@ class Change {
 
     boolean isBreaking() {
         return breaking;
+    }
+
+    boolean isSecurity() {
+        return security;
     }
 
     boolean isNeedsReview() {

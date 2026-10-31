@@ -115,7 +115,9 @@ class AudienceMigrationIntegrationTest extends PostgreSqlIntegrationTest {
                         row.getString("code"),
                         row.getString("display_name"),
                         row.getString("communication_intent"),
-                        row.getString("template_body")
+                        row.getString("template_body"),
+                        // V13 knew no footers; V34 added them.
+                        ""
                 ),
                 organizationId
         );
@@ -162,7 +164,7 @@ class AudienceMigrationIntegrationTest extends PostgreSqlIntegrationTest {
         return AudiencePresets.forLanguage(language).stream()
                 .filter(preset -> templates.containsKey(preset.code()))
                 .map(preset -> new AudiencePresets.Preset(preset.code(), preset.displayName(),
-                        V13_INTENTS.get(preset.code()), templates.get(preset.code())))
+                        V13_INTENTS.get(preset.code()), templates.get(preset.code()), ""))
                 .sorted((left, right) -> left.code().compareTo(right.code()))
                 .toList();
     }

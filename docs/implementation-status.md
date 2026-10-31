@@ -552,6 +552,26 @@ where it first appears; ADRs are linked from the slice they record.
   - the glossary's outcome on each note and per language on the release page and `GET`,
     never blocking approval or publication.
 
+### Security changes and note structure (V34)
+
+- [ADR-0037](adr/0037-security-changes-and-release-note-structure.md) (#17), with Flyway
+  `V34`:
+  - a security flag beside breaking, set by security labels and CVE identifiers, proposed
+    by the AI through one new `security_change` answer, never cleared by it, and always
+    reviewed; both review paths and their APIs confirm or correct it, and an older caller
+    that leaves it out confirms it;
+  - a 🔒 Security section after Breaking, in English and Vietnamese, counted once; a
+    breaking security change appears once, in Breaking, marked; operator, contributor,
+    and support notes always include a security change;
+  - an optional upgrade guide and a previous release on each release, defaulting to the
+    Project's most recently published one, with `invalid_upgrade_guide_url` and
+    `invalid_previous_release`; the breaking warning links the guide;
+  - a footer template per audience and language, with `version`, `previousVersion`,
+    `compareUrl`, `upgradeGuideUrl`, and `releaseUrl`, built offline from the Project's
+    one GitHub or GitLab source; the operator and contributor presets show the compare
+    and upgrade-guide links, and existing ones received them;
+  - the upgrade note for custom audience templates in the release-note guide.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.

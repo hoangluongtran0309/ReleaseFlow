@@ -41,10 +41,21 @@ Việc phân loại dùng các quy tắc cố định:
   là Documentation, bất kể tiêu đề nói gì;
 - dấu `!` sau type trong tiêu đề, nhãn `breaking-change`, hoặc footer `BREAKING CHANGE:` trong
   mô tả đánh dấu thay đổi là phá vỡ tương thích;
+- nhãn `security`, `security-fix`, `security fix` hoặc `vulnerability`, viết hoa hay thường
+  đều được, hoặc một mã CVE như `CVE-2026-12345` trong tiêu đề, mô tả hay một nhãn, đánh dấu
+  thay đổi là **thay đổi bảo mật**;
 - mọi trường hợp khác là Unknown.
 
-Thay đổi phá vỡ tương thích và thay đổi Unknown luôn cần review, và mọi thay đổi có trigger
-review cũng vậy:
+Bảo mật là một cờ nằm cạnh category, giống phá vỡ tương thích, không bao giờ là một category
+riêng: một bản sửa lỗi bảo mật vẫn là Fix ở mọi nơi dùng category, và release note liệt kê nó
+trong mục 🔒 Bảo mật (xem [Mỗi audience đọc gì](release-notes.md#what-each-audience-reads)).
+Các từ như `auth`, `password` hay `encryption` tự chúng không đánh dấu thay đổi là bảo mật;
+chúng vẫn là bằng chứng [đường dẫn nhạy cảm](#sensitive-paths) hoặc từ nhạy cảm. Một thay đổi
+được ghi nhận trước khi có cờ bảo mật không phải là thay đổi bảo mật cho tới khi một người đánh
+dấu nó.
+
+Thay đổi phá vỡ tương thích, thay đổi bảo mật và thay đổi Unknown luôn cần review, và mọi thay
+đổi có trigger review cũng vậy:
 
 | Trigger | Khi nào |
 | --- | --- |
@@ -131,7 +142,8 @@ các issue Jira mà thay đổi nhắc tới dưới dạng bằng chứng khôn
 của từng [audience](release-notes.md#audiences), và [ngữ cảnh Project](#project-context). Nó
 không gửi tác giả, và request tới OpenAI đặt `store: false`. Câu trả lời gồm một mã category trong
 danh mục (hoặc đề xuất một category mới khi không có cái nào phù hợp), một cờ phá vỡ tương thích,
-việc có nên để người review hay không, một **bản tóm tắt trung lập**, và một **narrative** cho
+một cờ bảo mật (thay đổi có làm khác một thuộc tính bảo mật, hay sửa hoặc gây ra một lỗ hổng
+không), việc có nên để người review hay không, một **bản tóm tắt trung lập**, và một **narrative** cho
 từng audience, tất cả viết bằng ngôn ngữ đầu ra. Bản tóm tắt trung lập gồm: thay đổi gì (một
 câu), vì sao, chi tiết kỹ thuật, bước chuyển đổi kèm loại của nó, và giới hạn: những gì thay đổi
 cố ý chưa làm. Narrative của mỗi audience có mức liên quan (`none`, `brief` hoặc `full`), một dòng
@@ -210,9 +222,10 @@ tính phí phần này. Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audienc
 Quy tắc luôn được ưu tiên:
 
 - category mà quy tắc đã chọn được giữ nguyên;
-- AI có thể đánh dấu một thay đổi là phá vỡ tương thích nhưng không bao giờ gỡ cờ đó;
-- thay đổi phá vỡ tương thích, Unknown và có trigger, cùng những thay đổi AI đề nghị review, đều
-  ở lại trạng thái cần review.
+- AI có thể đánh dấu một thay đổi là phá vỡ tương thích hoặc bảo mật nhưng không bao giờ gỡ cờ
+  nào trong hai cờ đó;
+- thay đổi phá vỡ tương thích, bảo mật, Unknown và có trigger, cùng những thay đổi AI đề nghị
+  review, đều ở lại trạng thái cần review.
 
 Ngoài những trường hợp đó, câu trả lời của AI quyết định thay đổi, và một thay đổi Unknown có
 thể nhận category từ AI.
@@ -239,22 +252,25 @@ cách đó khi đã có nhà cung cấp.
 
 ## Review của con người {#human-review}
 
-Mỗi thay đổi trong Hộp thay đổi có một biểu mẫu review điền sẵn category và cờ phá vỡ tương
-thích hiện tại. Thay đổi cần review hiển thị biểu mẫu ngay; các thay đổi khác hiển thị nó trong
+Mỗi thay đổi trong Hộp thay đổi có một biểu mẫu review điền sẵn category, cờ phá vỡ tương
+thích và cờ bảo mật hiện tại. Thay đổi cần review hiển thị biểu mẫu ngay; các thay đổi khác hiển thị nó trong
 mục **Sửa phân loại**. Người review giữ nguyên hoặc đổi các giá trị rồi bấm **Xác nhận
 review**. ReleaseFlow lưu đúng các giá trị đã gửi, gỡ nhu cầu review, và ghi lại người review
 cùng thời điểm. Người review chọn một category đang hoạt động trong danh mục, vì thay đổi đã
-review không thể là Unknown, và có thể gỡ cờ phá vỡ tương thích do quy tắc hoặc AI đặt.
+review không thể là Unknown, có thể gỡ cờ phá vỡ tương thích hoặc cờ bảo mật do quy tắc hoặc AI
+đặt, và có thể đánh dấu bảo mật cho một thay đổi chưa ai đánh dấu.
 
-Xác nhận mà không thay đổi gì sẽ giữ nguồn phân loại ban đầu (quy tắc hoặc AI). Đổi category
-hoặc cờ phá vỡ tương thích sẽ khiến người review trở thành nguồn phân loại, hiển thị là "Sửa lại
+Xác nhận mà không thay đổi gì sẽ giữ nguồn phân loại ban đầu (quy tắc hoặc AI). Đổi category,
+cờ phá vỡ tương thích hoặc cờ bảo mật sẽ khiến người review trở thành nguồn phân loại, hiển thị là "Sửa lại
 bởi". Một thay đổi có thể được review lại; lần review gần nhất được giữ.
 
 ![Một thay đổi sau khi một người sửa category thành Fix: thẻ ghi ai đã sửa](assets/changes/c-8-correct.webp)
 
 REST client gọi `POST /api/projects/{projectId}/changes/{changeId}/review` với phiên đăng nhập,
-CSRF token và `{"category": "fix", "breaking": false}`. Category là một mã trong danh mục,
-không phân biệt hoa thường. Lời gọi trả về thay đổi đã cập nhật; `400 invalid_change_review` cho
+CSRF token và `{"category": "fix", "breaking": false, "security": true}`. Category là một mã
+trong danh mục, không phân biệt hoa thường. Có thể bỏ `security`, như các client viết trước khi
+có nó: khi đó review xác nhận cờ mà thay đổi đang có, còn `false` tường minh sẽ gỡ cờ. Mọi thay
+đổi API trả về đều có `security`. Lời gọi trả về thay đổi đã cập nhật; `400 invalid_change_review` cho
 `unknown`, một category đã lưu trữ, hoặc một mã không có trong danh mục; `400 validation_failed`
 khi thiếu trường; và `404 change_not_found` cho thay đổi của Organization khác.
 

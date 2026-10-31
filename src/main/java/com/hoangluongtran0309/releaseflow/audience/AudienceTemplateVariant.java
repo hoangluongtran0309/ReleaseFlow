@@ -8,7 +8,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** An audience's template for one language; other languages use its main template. */
+/** An audience's templates for one language; other languages use its main templates. */
 @Entity
 @Table(name = "audience_template_variants")
 class AudienceTemplateVariant {
@@ -28,6 +28,9 @@ class AudienceTemplateVariant {
     @Column(name = "template_body", nullable = false, columnDefinition = "text")
     private String templateBody;
 
+    @Column(name = "footer_template_body", nullable = false, columnDefinition = "text")
+    private String footerTemplateBody;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -37,18 +40,27 @@ class AudienceTemplateVariant {
     protected AudienceTemplateVariant() {
     }
 
-    AudienceTemplateVariant(UUID organizationId, UUID audienceId, String language, String templateBody, Instant at) {
+    AudienceTemplateVariant(
+            UUID organizationId,
+            UUID audienceId,
+            String language,
+            String templateBody,
+            String footerTemplateBody,
+            Instant at
+    ) {
         this.id = UUID.randomUUID();
         this.organizationId = organizationId;
         this.audienceId = audienceId;
         this.language = language;
         this.templateBody = templateBody;
+        this.footerTemplateBody = footerTemplateBody;
         this.createdAt = at;
         this.updatedAt = at;
     }
 
-    void update(String templateBody, Instant at) {
+    void update(String templateBody, String footerTemplateBody, Instant at) {
         this.templateBody = templateBody;
+        this.footerTemplateBody = footerTemplateBody;
         this.updatedAt = at;
     }
 
@@ -62,5 +74,9 @@ class AudienceTemplateVariant {
 
     String getTemplateBody() {
         return templateBody;
+    }
+
+    String getFooterTemplateBody() {
+        return footerTemplateBody;
     }
 }

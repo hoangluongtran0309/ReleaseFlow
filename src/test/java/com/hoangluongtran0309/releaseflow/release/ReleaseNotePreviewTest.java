@@ -149,6 +149,7 @@ class ReleaseNotePreviewTest {
                 category.group(),
                 breaking,
                 false,
+                false,
                 List.of(),
                 ClassificationSource.RULES,
                 AiStatus.NOT_REQUESTED,

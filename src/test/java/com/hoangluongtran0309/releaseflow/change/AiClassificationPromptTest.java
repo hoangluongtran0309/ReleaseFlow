@@ -89,6 +89,25 @@ class AiClassificationPromptTest {
                 .contains("return relevance none with an empty headline and body");
     }
 
+    @Test
+    void asksOnceWhetherTheChangeIsASecurityChange() {
+        for (boolean dependencyUpdate : new boolean[] {false, true}) {
+            AiClassificationRequest request = request(SourceType.GITHUB, "", dependencyUpdate);
+            JsonNode schema = AiClassificationPrompt.responseSchema(request, OBJECT_MAPPER);
+
+            assertThat(schema.path("required").toString()).isEqualTo("[\"category\",\"suggested_category\","
+                    + "\"breaking_change\",\"security_change\",\"needs_human_review\",\"neutral_core\","
+                    + "\"context_sufficiency\",\"narratives\"]");
+            assertThat(schema.path("properties").path("security_change").toString()).isEqualTo("{\"type\":\"boolean\"}");
+            String system = AiClassificationPrompt.system(request);
+            assertThat(system).contains("- security_change: true when the change changes a security property, or"
+                    + " remediates or introduces a vulnerability, including authentication, authorization, secret or"
+                    + " credential protection, cryptography, request forgery, and transport protection. Use only the"
+                    + " change and project_context as evidence.\n");
+            assertThat(system.split("security_change", -1)).hasSize(2);
+        }
+    }
+
     private static AiClassificationRequest request(SourceType type, String context) {
         return request(type, context, false);
     }

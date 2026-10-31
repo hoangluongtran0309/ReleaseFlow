@@ -272,7 +272,90 @@ class AudienceTemplateTest {
     @Test
     void acceptsEveryShippedPreset() {
         for (String language : new String[]{"en", "vi", "pt-BR"}) {
-            AudiencePresets.forLanguage(language).forEach(preset -> AudienceTemplate.validate(preset.templateBody()));
+            AudiencePresets.forLanguage(language).forEach(preset -> {
+                AudienceTemplate.validate(preset.templateBody());
+                AudienceTemplate.validateFooter(preset.footerBody());
+            });
         }
+    }
+
+    // ADR-0037: whoever upgrades, or answers for an upgrade, reads what is not done yet on a
+    // line of its own, in both languages; end users do not.
+    @Test
+    void theUpgraderPresetsPrintLimitationsOnALineOfTheirOwn() {
+        AudienceItem full = relevant(AudienceItem.FULL);
+        for (String[] language : new String[][]{{"en", "  - Limitations: Only CSV for now.\n"}, {"vi", "  - Giới hạn: Only CSV for now.\n"}}) {
+            for (String code : List.of(AudiencePresets.OPERATOR, AudiencePresets.CONTRIBUTOR, AudiencePresets.SUPPORT)) {
+                assertThat(AudienceTemplate.render(AudiencePresets.find(code, language[0]).orElseThrow().templateBody(), full))
+                        .as(code + " " + language[0]).contains(language[1]);
+            }
+            assertThat(AudienceTemplate.render(
+                    AudiencePresets.find(AudiencePresets.END_USER, language[0]).orElseThrow().templateBody(), full))
+                    .doesNotContain("Only CSV for now.");
+        }
+    }
+
+    @Test
+    void theUpgraderPresetFootersLinkTheComparisonAndTheGuideButNotTheRelease() {
+        ReleaseLinks links = new ReleaseLinks("v1.0.0", "v0.3.0", "https://github.com/acme/app/compare/v0.3.0...v1.0.0",
+                "https://docs.example.com/upgrade", "https://github.com/acme/app/releases/tag/v1.0.0");
+        for (String code : List.of(AudiencePresets.OPERATOR, AudiencePresets.CONTRIBUTOR)) {
+            assertThat(AudienceTemplate.renderFooter(AudiencePresets.find(code, "en").orElseThrow().footerBody(), links))
+                    .isEqualTo("""
+                            **Compare:** [v0.3.0...v1.0.0](https://github.com/acme/app/compare/v0.3.0...v1.0.0)
+
+                            **Upgrade guide:** [Read before upgrading](https://docs.example.com/upgrade)""");
+            assertThat(AudienceTemplate.renderFooter(AudiencePresets.find(code, "vi").orElseThrow().footerBody(), links))
+                    .isEqualTo("""
+                            **So sánh:** [v0.3.0...v1.0.0](https://github.com/acme/app/compare/v0.3.0...v1.0.0)
+
+                            **Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp](https://docs.example.com/upgrade)""");
+            assertThat(AudienceTemplate.renderFooter(AudiencePresets.find(code, "en").orElseThrow().footerBody(),
+                    new ReleaseLinks("v0.1.0", "", "", "", "https://github.com/acme/app/releases/tag/v0.1.0"))).isEmpty();
+        }
+        for (String code : List.of(AudiencePresets.END_USER, AudiencePresets.SUPPORT)) {
+            assertThat(AudiencePresets.find(code, "en").orElseThrow().footerBody()).isEmpty();
+        }
+    }
+
+    @Test
+    void rendersTheSampleFooterForThePreview() {
+        assertThat(AudienceTemplate.sampleFooter("[{{previousVersion}}...{{version}}]({{compareUrl}}) {{releaseUrl}} {{upgradeGuideUrl}}"))
+                .isEqualTo("[v1.3.0...v1.4.0](https://github.com/acme/app/compare/v1.3.0...v1.4.0)"
+                        + " https://github.com/acme/app/releases/tag/v1.4.0 https://docs.acme.example/upgrade/1.4");
+        assertThat(AudienceTemplate.sampleFooter("")).isEmpty();
+        assertThat(AudienceTemplate.sampleFooter(null)).isEmpty();
+    }
+
+    @Test
+    void aFooterSectionSeesItsOwnValueAndTheOthersAndAnInvertedOneShowsWhenEmpty() {
+        String footer = "{{#compareUrl}}<{{.}}> {{version}}{{#previousVersion}} after {{.}}{{/previousVersion}}{{/compareUrl}}"
+                + "{{^previousVersion}}First release {{version}}{{/previousVersion}}";
+
+        assertThat(AudienceTemplate.renderFooter(footer, new ReleaseLinks("v2", "v1", "https://x/compare", "", "")))
+                .isEqualTo("<https://x/compare> v2 after v1");
+        assertThat(AudienceTemplate.renderFooter(footer, new ReleaseLinks("v1", "", "", "", "")))
+                .isEqualTo("First release v1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{{whatChanged}}", "{{#narrative}}x{{/narrative}}", "{{tag}}", "{{#compareUrl}}unclosed", "{{/version}}"})
+    void rejectsAFooterThatUsesAnItemVariableAnUnknownOneOrInvalidMustache(String body) {
+        assertThatThrownBy(() -> AudienceTemplate.validateFooter(body))
+                .isInstanceOfSatisfying(InvalidAudienceTemplateException.class, exception -> {
+                    assertThat(exception.code()).isEqualTo(InvalidAudienceTemplateException.INVALID);
+                    assertThat(exception.field()).isEqualTo("footerTemplateBody");
+                });
+    }
+
+    @Test
+    void rejectsAnOverlongFooterAndAnItemTemplateThatUsesAFooterVariable() {
+        assertThatThrownBy(() -> AudienceTemplate.validateFooter("x".repeat(AudienceTemplate.MAX_LENGTH + 1)))
+                .isInstanceOf(InvalidAudienceTemplateException.class)
+                .hasMessage("error.template_invalid.tooLong");
+        assertThatThrownBy(() -> AudienceTemplate.validate("- {{whatChanged}} {{compareUrl}}"))
+                .isInstanceOfSatisfying(InvalidAudienceTemplateException.class,
+                        exception -> assertThat(exception.field()).isEqualTo("templateBody"));
+        assertThatCode(() -> AudienceTemplate.validateFooter("  \n")).doesNotThrowAnyException();
     }
 }

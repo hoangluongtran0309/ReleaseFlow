@@ -13,6 +13,12 @@ import java.util.ResourceBundle;
  * (ADR-0035). V13 seeded the values of its time for Organizations that existed before;
  * they keep their templates until an administrator resets a preset, and can add the
  * support audience themselves.
+ *
+ * <p>Operators and contributors upgrade, so their footers link the comparison with the
+ * previous release and the upgrade guide, each only when there is one (ADR-0037). Neither
+ * links the release itself: a published note is often that release's own page. The
+ * end-user and support footers are blank. V34 gave existing operator and contributor
+ * audiences the same footers.
  */
 final class AudiencePresets {
 
@@ -90,9 +96,19 @@ final class AudiencePresets {
             {{/limitations}}
             {{/brief}}
             """;
+    // The release-wide lines an upgrader reads after the changes.
+    private static final String UPGRADER_FOOTER = """
+            {{#compareUrl}}
+            **%s:** [{{previousVersion}}...{{version}}]({{compareUrl}})
+            {{/compareUrl}}
+
+            {{#upgradeGuideUrl}}
+            **%s:** [%s]({{upgradeGuideUrl}})
+            {{/upgradeGuideUrl}}
+            """;
     private static final String BUNDLE = "messages/audience-presets";
 
-    record Preset(String code, String displayName, String communicationIntent, String templateBody) {
+    record Preset(String code, String displayName, String communicationIntent, String templateBody, String footerBody) {
     }
 
     private AudiencePresets() {
@@ -105,6 +121,11 @@ final class AudiencePresets {
                 ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
         );
         String why = labels.getString("label.why");
+        String upgraderFooter = UPGRADER_FOOTER.formatted(
+                labels.getString("label.compare"),
+                labels.getString("label.upgradeGuide"),
+                labels.getString("label.upgradeGuide.link")
+        );
         String limitations = labels.getString("label.limitations");
         String required = REQUIRED_LINE.formatted(labels.getString("label.migration.required"));
         String otherMigration = OTHER_MIGRATION_LINES.formatted(
@@ -117,21 +138,25 @@ final class AudiencePresets {
                         OPERATOR,
                         labels.getString("operator.displayName"),
                         OPERATOR_INTENT,
-                        DETAILED_BODY.formatted(why, labels.getString("label.detail"), limitations, required, otherMigration)
+                        DETAILED_BODY.formatted(why, labels.getString("label.detail"), limitations, required, otherMigration),
+                        upgraderFooter
                 ),
                 new Preset(
                         CONTRIBUTOR,
                         labels.getString("contributor.displayName"),
                         CONTRIBUTOR_INTENT,
                         DETAILED_BODY.formatted(why, labels.getString("label.implementation"), limitations, required,
-                                otherMigration)
+                                otherMigration),
+                        upgraderFooter
                 ),
-                new Preset(END_USER, labels.getString("end_user.displayName"), END_USER_INTENT, PLAIN_BODY.formatted(required)),
+                new Preset(END_USER, labels.getString("end_user.displayName"), END_USER_INTENT, PLAIN_BODY.formatted(required),
+                        ""),
                 new Preset(
                         SUPPORT,
                         labels.getString("support.displayName"),
                         SUPPORT_INTENT,
-                        SUPPORT_BODY.formatted(required, otherMigration, limitations)
+                        SUPPORT_BODY.formatted(required, otherMigration, limitations),
+                        ""
                 )
         );
     }

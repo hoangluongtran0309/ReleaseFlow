@@ -11,6 +11,8 @@ import java.util.Objects;
  * One validated AI answer. The rules and review triggers decide what is kept.
  *
  * @param category a category of the catalog the AI was given
+ * @param security whether the AI found that the change changes a security property, or
+ *     remediates or introduces a vulnerability (ADR-0037)
  * @param narratives the change explained for each audience, keyed by audience code;
  *     an audience the AI wrote nothing usable for is absent
  * @param suggestion a new category the AI proposed because none fit, or null; only
@@ -24,6 +26,7 @@ import java.util.Objects;
 record AiClassification(
         CategoryRef category,
         boolean breaking,
+        boolean security,
         boolean needsHumanReview,
         NeutralSummary summary,
         Map<String, AudienceNarrative> narratives,

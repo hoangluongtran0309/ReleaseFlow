@@ -1,6 +1,7 @@
 package com.hoangluongtran0309.releaseflow.release;
 
 import com.hoangluongtran0309.releaseflow.category.CategoryGroup;
+import com.hoangluongtran0309.releaseflow.audience.ReleaseLinks;
 import com.hoangluongtran0309.releaseflow.category.CategoryRef;
 import com.hoangluongtran0309.releaseflow.change.AiStatus;
 import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
@@ -357,6 +358,177 @@ class ReleaseNoteDigestTest {
         return text.toString();
     }
 
+    private static final String FOOTER = """
+            {{#compareUrl}}
+            **Compare:** [{{previousVersion}}...{{version}}]({{compareUrl}})
+            {{/compareUrl}}
+
+            {{#upgradeGuideUrl}}
+            **Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})
+            {{/upgradeGuideUrl}}
+            """;
+
+    private static List<ChangeView> securityRelease() {
+        return List.of(
+                change(1, "feat!: rename the API", TestCategories.FEATURE, true, 1, null, Map.of()),
+                secure(2, "fix: derive a key per target", TestCategories.FIX, false, 2, Map.of()),
+                secure(3, "feat!: remove CSRF protection from the API", TestCategories.FEATURE, true, 3, Map.of()),
+                change(4, "feat: add export", TestCategories.FEATURE, false, 4, null, Map.of())
+        );
+    }
+
+    @Test
+    void putsSecurityChangesAfterBreakingOnesAndEachChangeInOneSection() {
+        assertThat(ReleaseNoteDigest.render("2.0.0", null, securityRelease(), TEMPLATE, "operator", "en")).isEqualTo("""
+                # Release 2.0.0
+
+                ## What's New
+
+                This release includes 4 changes: 2 breaking changes, 1 security change, and 1 new feature.
+
+                > ⚠️ 2 breaking changes require action before upgrading.
+
+                ## ⚠️ Breaking Changes
+
+                - rename the API
+
+                - 🔒 Security: remove CSRF protection from the API
+
+                ## 🔒 Security
+
+                - derive a key per target
+
+                ## ✨ New Features
+
+                - add export
+                """);
+    }
+
+    @Test
+    void writesTheSecuritySectionAndMarkerInVietnamese() {
+        String note = ReleaseNoteDigest.render("2.0.0", null, securityRelease(), TEMPLATE, "operator", "vi");
+
+        assertThat(note)
+                .contains("Bản phát hành này gồm 4 thay đổi: 2 thay đổi phá vỡ, 1 thay đổi bảo mật và 1 tính năng mới.")
+                .contains("\n## 🔒 Bảo mật\n\n- derive a key per target\n")
+                .contains("- 🔒 Bảo mật: remove CSRF protection from the API");
+    }
+
+    @Test
+    void marksABreakingSecurityChangeWhateverTheTemplatePrints() {
+        List<ChangeView> changes = List.of(
+                secure(3, "feat!: remove CSRF protection from the API", TestCategories.FEATURE, true, 3, Map.of()));
+
+        assertThat(ReleaseNoteDigest.render("2.0.0", null, changes, "{{whatChanged}}", "operator", "en"))
+                .contains("## ⚠️ Breaking Changes\n\n🔒 Security: remove CSRF protection from the API\n");
+        assertThat(ReleaseNoteDigest.render("2.0.0", null, changes, "1. **{{whatChanged}}**", "operator", "en"))
+                .contains("\n1. 🔒 Security: **remove CSRF protection from the API**\n");
+    }
+
+    @Test
+    void aSecurityChangeAlwaysConcernsOperatorsContributorsAndSupport() {
+        Map<String, AudienceNarrative> none = Map.of(
+                "operator", new AudienceNarrative(Relevance.NONE, "", ""),
+                "contributor", new AudienceNarrative(Relevance.NONE, "", ""),
+                "support", new AudienceNarrative(Relevance.NONE, "", ""),
+                "end_user", new AudienceNarrative(Relevance.NONE, "", ""),
+                "dba", new AudienceNarrative(Relevance.NONE, "", "")
+        );
+        List<ChangeView> changes = List.of(
+                secure(2, "fix: derive a key per target", TestCategories.FIX, false, 2, none),
+                change(4, "feat: add export", TestCategories.FEATURE, false, 4, null, Map.of())
+        );
+
+        for (String upgrader : List.of("operator", "contributor", "support")) {
+            assertThat(ReleaseNoteDigest.render("2.0.0", null, changes, "- {{whatChanged}} ({{relevance}})", upgrader, "en"))
+                    .contains("## 🔒 Security\n\n- derive a key per target (brief)\n")
+                    .contains("This release includes 2 changes: 1 security change and 1 new feature.");
+        }
+        for (String other : List.of("end_user", "dba")) {
+            assertThat(ReleaseNoteDigest.render("2.0.0", null, changes, TEMPLATE, other, "en"))
+                    .doesNotContain("Security")
+                    .contains("This release includes 1 change: 1 new feature.");
+        }
+    }
+
+    @Test
+    void aBreakingSecurityChangeIsInEveryAudiencesNote() {
+        Map<String, AudienceNarrative> none = Map.of("end_user", new AudienceNarrative(Relevance.NONE, "", ""));
+        List<ChangeView> changes = List.of(
+                secure(3, "feat!: remove CSRF protection from the API", TestCategories.FEATURE, true, 3, none));
+
+        assertThat(ReleaseNoteDigest.render("2.0.0", null, changes, "- {{whatChanged}} ({{relevance}})", "end_user", "en"))
+                .contains("- 🔒 Security: remove CSRF protection from the API (brief)")
+                .contains("This release includes 1 change: 1 breaking change.");
+    }
+
+    @Test
+    void linksTheBreakingWarningToTheUpgradeGuide() {
+        List<ChangeView> changes = List.of(change(1, "feat!: rename the API", TestCategories.FEATURE, true, 1, null, Map.of()));
+        ReleaseLinks links = new ReleaseLinks("2.0.0", "", "", "https://docs.example.com/upgrade_(2.0)?from=1#steps", "");
+
+        assertThat(ReleaseNoteDigest.render(null, changes, TEMPLATE, "", links, "operator", "en")).contains(
+                "> ⚠️ 1 breaking change requires action before upgrading: [read the upgrade guide]"
+                        + "(https://docs.example.com/upgrade_%282.0%29?from=1#steps).\n");
+        assertThat(ReleaseNoteDigest.render(null, changes, TEMPLATE, "", links, "operator", "vi")).contains(
+                "> ⚠️ 1 thay đổi phá vỡ cần được xử lý trước khi nâng cấp: [đọc hướng dẫn nâng cấp]"
+                        + "(https://docs.example.com/upgrade_%282.0%29?from=1#steps).\n");
+        assertThat(ReleaseNoteDigest.render("2.0.0", null, changes, TEMPLATE, "operator", "en"))
+                .contains("> ⚠️ 1 breaking change requires action before upgrading.\n");
+    }
+
+    @Test
+    void endsTheNoteWithTheFooterRenderedOnce() {
+        List<ChangeView> changes = List.of(
+                change(1, "feat: add export", TestCategories.FEATURE, false, 1, null, Map.of()),
+                change(2, "fix: handle empty tables", TestCategories.FIX, false, 2, null, Map.of())
+        );
+        ReleaseLinks links = new ReleaseLinks("v2.0.0", "v1.9.0", "https://github.com/acme/app/compare/v1.9.0...v2.0.0",
+                "https://docs.example.com/upgrade", "https://github.com/acme/app/releases/tag/v2.0.0");
+
+        assertThat(ReleaseNoteDigest.render(null, changes, TEMPLATE, FOOTER, links, "operator", "en")).endsWith("""
+                ## 🐛 Bug Fixes
+
+                - handle empty tables
+
+                **Compare:** [v1.9.0...v2.0.0](https://github.com/acme/app/compare/v1.9.0...v2.0.0)
+
+                **Upgrade guide:** [Read before upgrading](https://docs.example.com/upgrade)
+                """);
+    }
+
+    @Test
+    void aFooterLineDisappearsWithoutItsLinkAndABlankFooterAddsNothing() {
+        List<ChangeView> changes = List.of(change(1, "feat: add export", TestCategories.FEATURE, false, 1, null, Map.of()));
+        ReleaseLinks first = new ReleaseLinks("v1.0.0", "", "", "https://docs.example.com/upgrade",
+                "https://github.com/acme/app/releases/tag/v1.0.0");
+        ReleaseLinks nothing = new ReleaseLinks("v1.0.0", "", "", "", "");
+
+        assertThat(ReleaseNoteDigest.render(null, changes, TEMPLATE, FOOTER, first, "operator", "en"))
+                .endsWith("- add export\n\n**Upgrade guide:** [Read before upgrading](https://docs.example.com/upgrade)\n")
+                .doesNotContain("Compare");
+        assertThat(ReleaseNoteDigest.render(null, changes, TEMPLATE, FOOTER, nothing, "operator", "en"))
+                .isEqualTo(ReleaseNoteDigest.render("v1.0.0", null, changes, TEMPLATE, "operator", "en"))
+                .endsWith("- add export\n");
+        assertThat(ReleaseNoteDigest.render(null, changes, TEMPLATE, "  \n", first, "operator", "en"))
+                .endsWith("- add export\n");
+    }
+
+    @Test
+    void aFooterFollowsTheLineOfANoteNothingConcernsAndEscapesTheVersions() {
+        List<ChangeView> changes = List.of(change(1, "feat: add export", TestCategories.FEATURE, false, 1, null,
+                Map.of("end_user", new AudienceNarrative(Relevance.NONE, "", ""))));
+        ReleaseLinks links = new ReleaseLinks("v2_0*", "v1_9", "https://github.com/acme/app/compare/v1_9...v2_0%2A", "", "");
+
+        assertThat(ReleaseNoteDigest.render(null, changes, TEMPLATE, FOOTER, links, "end_user", "en")).isEqualTo("""
+                # Release v2\\_0\\*
+
+                Nothing in this release concerns this audience.
+
+                **Compare:** [v1\\_9...v2\\_0\\*](https://github.com/acme/app/compare/v1_9...v2_0%2A)
+                """);
+    }
+
     private static ChangeView change(
             int number,
             String title,
@@ -395,6 +567,35 @@ class ReleaseNoteDigestTest {
             String url,
             SourceType sourceType
     ) {
+        return change(number, title, category, breaking, false, minute, summary, narratives, linkedIssues, url, sourceType);
+    }
+
+    // A change whose security flag a rule, the AI, or a person set.
+    private static ChangeView secure(
+            int number,
+            String title,
+            CategoryRef category,
+            boolean breaking,
+            int minute,
+            Map<String, AudienceNarrative> narratives
+    ) {
+        return change(number, title, category, breaking, true, minute, null, narratives, List.of(),
+                "https://github.com/acme/releaseflow/pull/" + number, null);
+    }
+
+    private static ChangeView change(
+            int number,
+            String title,
+            CategoryRef category,
+            boolean breaking,
+            boolean security,
+            int minute,
+            NeutralSummary summary,
+            Map<String, AudienceNarrative> narratives,
+            List<LinkedIssue> linkedIssues,
+            String url,
+            SourceType sourceType
+    ) {
         return new ChangeView(
                 UUID.randomUUID(),
                 number,
@@ -410,6 +611,7 @@ class ReleaseNoteDigestTest {
                 category.displayName(),
                 category.group(),
                 breaking,
+                security,
                 false,
                 List.of(),
                 ClassificationSource.RULES,
