@@ -1,6 +1,6 @@
 # ADR-0037: Security changes and release-wide note structure
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-29
 - Amends: [ADR-0011](0011-audience-release-notes.md), for the digest sections,
   audience templates, template snapshots, and presets
