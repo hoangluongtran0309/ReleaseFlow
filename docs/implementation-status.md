@@ -507,7 +507,10 @@ where it first appears; ADRs are linked from the slice they record.
     about the input or only about the change's scope dropped by a deterministic filter;
   - an AI migration step that only says nothing needs doing dropped, so its kind is
     `none`;
-  - every classification request at a fixed temperature of `0`.
+  - every classification request at the same temperature, `0` unless
+    `RELEASEFLOW_AI_TEMPERATURE` names another in the provider's range or `default`, which
+    sends none for a model that accepts only its own
+    ([ADR-0038](adr/0038-configurable-ai-temperature.md)).
 
 ### A note per audience (V32)
 

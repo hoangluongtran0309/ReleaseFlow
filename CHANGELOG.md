@@ -102,8 +102,13 @@ section into the version's entry, and the GitHub release is written from it.
 - An AI migration step that only says nothing needs doing, such as "No immediate action
   is required", is dropped, so the change has no step rather than a recommended one.
 - Every AI classification request uses temperature 0, so the same change varies less from
-  one request to the next. A model that accepts only its default temperature, such as an
-  OpenAI reasoning model, can no longer classify changes.
+  one request to the next. `RELEASEFLOW_AI_TEMPERATURE` sets another value in the
+  provider's range (`0` to `2` for OpenAI and DeepSeek, `0` to `1` for Anthropic), checked
+  at startup ([ADR-0038](docs/adr/0038-configurable-ai-temperature.md)). A model that
+  accepts only its default temperature, such as an OpenAI reasoning model or a Claude model
+  released after Opus 4.6, keeps working only with `RELEASEFLOW_AI_TEMPERATURE=default`,
+  which leaves the temperature out of the request as 1.0 did: set it before upgrading (see
+  [Upgrading with a reasoning model](docs/operations.md#upgrading-with-a-reasoning-model)).
 
 ## [1.0.1] - 2026-10-25
 

@@ -119,6 +119,28 @@ với mọi release đã qua bước nháp.
 thể hoàn tác. Sao lưu trước; quay lại nghĩa là khôi phục bản sao lưu đó với phiên bản cũ, không
 bao giờ chạy phiên bản cũ trên cơ sở dữ liệu đã được migrate.
 
+### Nâng cấp khi dùng model suy luận {#upgrading-with-a-reasoning-model}
+
+Từ 1.1.0, mọi request phân loại dùng cùng một temperature, là `0` trừ khi
+`RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác
+([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
+[ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 không gửi temperature. Model chỉ nhận
+temperature mặc định từ chối mọi request có ghi temperature, nên việc phân loại bằng AI sẽ thất
+bại ở mọi thay đổi, và thay đổi phải chờ một người review. Đó là các model suy luận của OpenAI
+và các model Claude ra mắt sau Opus 4.6. Trước khi nâng cấp bản triển khai dùng model như vậy,
+đặt:
+
+```bash
+RELEASEFLOW_AI_TEMPERATURE=default
+```
+
+Khi đó request không gửi temperature, như mọi request trước đây. Với Docker Compose, đặt biến này
+trong file `.env` cạnh file Compose, file này sẽ chuyển nó vào ứng dụng, và gửi `0` khi biến không
+được đặt. Bản triển khai có model
+nhận temperature thì không cần làm gì. Thay đổi đã thất bại vì thiếu biến này được gửi lại bằng
+**Thử lại bằng AI** trong Hộp thay đổi (xem
+[Phân loại và tóm tắt bằng AI](changes.md#ai-classification-and-summaries)).
+
 ### Nâng cấp lên phiên bản có bảng thuật ngữ {#upgrading-to-the-glossary}
 
 Phiên bản thêm [bảng thuật ngữ](release-notes.md#glossary) (Flyway `V33`) không thay đổi gì cho

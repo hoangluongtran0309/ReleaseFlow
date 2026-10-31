@@ -21,6 +21,7 @@ import java.io.InterruptedIOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * The Claude Messages API through the official Java SDK, with Structured Outputs
@@ -35,13 +36,22 @@ final class AnthropicChangeClassifier implements AiChangeClassifier, AutoCloseab
     private static final Logger log = LoggerFactory.getLogger(AnthropicChangeClassifier.class);
 
     private final String model;
+    private final OptionalDouble temperature;
     private final Duration timeout;
     private final AnthropicClient client;
     private final ObjectMapper objectMapper;
     private final AiClassificationParser parser;
 
-    AnthropicChangeClassifier(String apiKey, String model, String baseUrl, Duration timeout, ObjectMapper objectMapper) {
+    AnthropicChangeClassifier(
+            String apiKey,
+            String model,
+            OptionalDouble temperature,
+            String baseUrl,
+            Duration timeout,
+            ObjectMapper objectMapper
+    ) {
         this.model = model;
+        this.temperature = temperature;
         this.timeout = timeout;
         this.objectMapper = objectMapper;
         this.parser = new AiClassificationParser(objectMapper);
@@ -66,10 +76,12 @@ final class AnthropicChangeClassifier implements AiChangeClassifier, AutoCloseab
     @Override
     public AiClassification classify(AiClassificationRequest request) {
         AiChangeClassifier.requireNoTransaction();
-        MessageCreateParams params = MessageCreateParams.builder()
+        MessageCreateParams.Builder builder = MessageCreateParams.builder()
                 .model(model)
-                .maxTokens(MAX_TOKENS)
-                .temperature(AiClassificationPrompt.TEMPERATURE)
+                .maxTokens(MAX_TOKENS);
+        // Left out entirely for a model that accepts only its default.
+        temperature.ifPresent(builder::temperature);
+        MessageCreateParams params = builder
                 .system(AiClassificationPrompt.system(request))
                 .addUserMessage(AiClassificationPrompt.userMessage(request, objectMapper))
                 .outputConfig(OutputConfig.builder()

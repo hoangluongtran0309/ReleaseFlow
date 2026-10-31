@@ -72,16 +72,20 @@ See [Changes and review](changes.md).
 ## AI
 
 AI is optional. Choose one provider and give it a key and a model. There is no default
-model; pick one that supports structured JSON output and a temperature. Every
-classification request asks for temperature `0`, a fixed value that keeps one change's
-answer as stable as the model allows, so a model that accepts only its default
-temperature, such as an OpenAI reasoning model, fails every request (see
-[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md)).
+model; pick one that supports structured JSON output. Every classification request asks
+for the same temperature, `0` unless `RELEASEFLOW_AI_TEMPERATURE` says otherwise, which
+keeps one change's answer as stable as the model allows (see
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) and
+[ADR-0038](adr/0038-configurable-ai-temperature.md)). A model that accepts only its default
+temperature refuses every request that names one: an OpenAI reasoning model, or a Claude
+model released after Opus 4.6, which Anthropic accepts only `1.0` from. Give such a model
+`RELEASEFLOW_AI_TEMPERATURE=default`: the requests then leave the temperature out.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (empty: no AI) | `openai`, `anthropic`, or `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Bound on each AI request |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature of every classification request: a number from `0` to `2` for `openai` and `deepseek`, or from `0` to `1` for `anthropic`; `default` sends none, so the model uses its own. Unset or blank means `0` |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (empty) | OpenAI key and model |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI API address |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (empty) | Anthropic key and model |
@@ -90,8 +94,9 @@ temperature, such as an OpenAI reasoning model, fails every request (see
 | `RELEASEFLOW_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek API address |
 
 Startup fails when the selected provider lacks its key or model, when the provider name is
-unknown, or when a provider's key or model is set while `RELEASEFLOW_AI_PROVIDER` is
-empty. See [AI classification and summaries](changes.md#ai-classification-and-summaries).
+unknown, when a provider's key or model is set while `RELEASEFLOW_AI_PROVIDER` is
+empty, or when `RELEASEFLOW_AI_TEMPERATURE` is neither `default` nor a number in the
+selected provider's range; the message names the variable and the range. See [AI classification and summaries](changes.md#ai-classification-and-summaries).
 
 ## Translation
 

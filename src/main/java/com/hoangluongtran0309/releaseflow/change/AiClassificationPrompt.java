@@ -22,10 +22,11 @@ final class AiClassificationPrompt {
     static final int DESCRIPTION_LIMIT = 4000;
 
     /**
-     * Every provider is asked at the same low, fixed temperature (ADR-0035), so one change's
-     * answer varies as little as the model allows: a migration kind should not change from
-     * one request to the next. It does not make an answer reproducible, and a model that
-     * accepts no temperature but its default cannot be used.
+     * The temperature every request asks for unless {@code RELEASEFLOW_AI_TEMPERATURE} names
+     * another (ADR-0035, ADR-0038), so one change's answer varies as little as the model
+     * allows: a migration kind should not change from one request to the next. It does not
+     * make an answer reproducible. A model that accepts no temperature but its default needs
+     * {@code RELEASEFLOW_AI_TEMPERATURE=default}, which leaves it out of the request.
      */
     static final double TEMPERATURE = 0.0;
 
