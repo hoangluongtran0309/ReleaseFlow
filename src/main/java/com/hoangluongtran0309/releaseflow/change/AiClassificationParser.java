@@ -59,8 +59,9 @@ final class AiClassificationParser {
                 .findFirst()
                 .orElseThrow(AiClassificationParser::invalid);
         JsonNode breaking = result.path("breaking_change");
+        JsonNode security = result.path("security_change");
         JsonNode needsReview = result.path("needs_human_review");
-        if (!breaking.isBoolean() || !needsReview.isBoolean()) {
+        if (!breaking.isBoolean() || !security.isBoolean() || !needsReview.isBoolean()) {
             throw invalid();
         }
         JsonNode core = result.path("neutral_core");
@@ -89,6 +90,7 @@ final class AiClassificationParser {
         return new AiClassification(
                 category,
                 breaking.booleanValue(),
+                security.booleanValue(),
                 needsReview.booleanValue(),
                 new NeutralSummary(
                         whatChanged,

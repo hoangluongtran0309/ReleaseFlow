@@ -43,10 +43,20 @@ Classification uses fixed rules:
   the change is Documentation, whatever its title says;
 - a `!` after the title type, a `breaking-change` label, or a
   `BREAKING CHANGE:` footer in the description marks the change as breaking;
+- a `security`, `security-fix`, `security fix`, or `vulnerability` label, in any case,
+  or a CVE identifier such as `CVE-2026-12345` in the title, description, or a label,
+  marks the change as a **security change**;
 - anything else is Unknown.
 
-Breaking and Unknown changes always need review, and so does any change with a
-review trigger:
+Security is a flag beside the category, like breaking, never a category of its own: a
+security fix is still a Fix wherever categories are used, and its note lists it under
+🔒 Security (see [What each audience reads](release-notes.md#what-each-audience-reads)).
+Words such as `auth`, `password`, or `encryption` do not mark a change security by
+themselves; they stay [sensitive-path](#sensitive-paths) or sensitive-word evidence. A
+change recorded before security flags existed is not security until a person marks it.
+
+Breaking, security, and Unknown changes always need review, and so does any change with
+a review trigger:
 
 | Trigger | When |
 | --- | --- |
@@ -139,7 +149,9 @@ issues it mentions as untrusted evidence, the code and communication intent of e
 [audience](release-notes.md#audiences), and the [Project context](#project-context).
 It does not send the author, and OpenAI requests set `store: false`. The answer is
 one category code from the catalog (or a proposal for a new category when none
-fits), a breaking flag, whether a person should review it, a **neutral summary**,
+fits), a breaking flag, a security flag (whether the change alters a security property,
+or fixes or introduces a vulnerability), whether a person should review it, a **neutral
+summary**,
 and a **narrative** for each audience, all written in the output language. The
 neutral summary is what changed (one sentence), why, technical detail, a migration
 step with its kind, and limitations: what the change deliberately does not do yet.
@@ -224,8 +236,8 @@ translates nor bills. See [ADR-0035](adr/0035-evidence-bound-notes-and-audience-
 The rules always win:
 
 - a category the rules chose is kept;
-- the AI may mark a change breaking but never clears the flag;
-- breaking, Unknown, and triggered changes, and changes the AI asks to have
+- the AI may mark a change breaking or security but never clears either flag;
+- breaking, security, Unknown, and triggered changes, and changes the AI asks to have
   reviewed, stay in review.
 
 Otherwise the AI's answer settles the change, and an Unknown change can
@@ -255,24 +267,26 @@ has reviewed, can be sent the same way once one is.
 ## Human review
 
 Every change in the Change Inbox has a review form prefilled with its current
-category and breaking flag. Changes that need review show the form directly;
+category, breaking flag, and security flag. Changes that need review show the form directly;
 other changes show it under **Edit classification**. The reviewer keeps or
 changes the values and presses **Confirm review**. ReleaseFlow stores exactly
 the submitted values, clears the need for review, and records the reviewer and
 time. A reviewer chooses an active category of the catalog, since a reviewed
-change cannot stay Unknown, and may clear a breaking flag set by the rules or
-AI.
+change cannot stay Unknown, and may clear a breaking or security flag set by the rules
+or AI, or mark a change security that nothing marked.
 
 Confirming without changes keeps the original classification source (rules or
-AI). Changing the category or breaking flag makes the reviewer the source,
+AI). Changing the category, breaking flag, or security flag makes the reviewer the source,
 shown as "Corrected by". A change can be reviewed again; the latest review is
 kept.
 
 ![A change after a person corrected its category to Fix: the card says who corrected it](assets/changes/c-8-correct.webp)
 
 REST clients call `POST /api/projects/{projectId}/changes/{changeId}/review`
-with the session, a CSRF token, and `{"category": "fix", "breaking": false}`.
-The category is a code of the catalog in any case. It returns the updated
+with the session, a CSRF token, and `{"category": "fix", "breaking": false, "security": true}`.
+The category is a code of the catalog in any case. `security` may be left out, as clients
+written before it do: the review then confirms the flag the change has, and an explicit
+`false` clears it. Every change the API returns carries `security`. It returns the updated
 change, `400 invalid_change_review` for `unknown`, an archived category, or a
 code that is not in the catalog, `400 validation_failed` when a field is missing, and
 `404 change_not_found` for another Organization's change.

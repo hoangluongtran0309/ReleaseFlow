@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -57,9 +58,9 @@ public class AudienceService {
 
     @Transactional(readOnly = true)
     public List<AudienceView> list(UUID organizationId) {
-        Map<UUID, Map<String, String>> variants = variants(organizationId);
+        List<AudienceTemplateVariant> variants = variantRepository.findAllByOrganizationIdOrderByLanguageAsc(organizationId);
         return audienceRepository.findAllByOrganizationIdOrderByDisplayNameAscCodeAsc(organizationId).stream()
-                .map(audience -> audience.view(variants.getOrDefault(audience.getId(), Map.of())))
+                .map(audience -> view(audience, variants))
                 .toList();
     }
 
@@ -86,6 +87,8 @@ public class AudienceService {
             throw AudienceConflictException.codeTaken();
         }
         AudienceTemplate.validate(request.getTemplateBody());
+        String footer = request.getFooterTemplateBody() == null ? "" : request.getFooterTemplateBody();
+        AudienceTemplate.validateFooter(footer);
         AudienceDefinition audience = new AudienceDefinition(
                 UUID.randomUUID(),
                 organizationId,
@@ -93,6 +96,7 @@ public class AudienceService {
                 request.getDisplayName(),
                 request.intent(),
                 request.getTemplateBody(),
+                footer,
                 false,
                 clock.instant()
         );
@@ -109,29 +113,46 @@ public class AudienceService {
     public AudienceView update(UUID organizationId, UUID audienceId, AudienceRequest request) {
         AudienceDefinition audience = find(organizationId, audienceId);
         AudienceTemplate.validate(request.getTemplateBody());
-        audience.update(request.getDisplayName(), request.intent(), request.getTemplateBody(), clock.instant());
+        String footer = request.getFooterTemplateBody() == null
+                ? audience.getFooterTemplateBody()
+                : request.getFooterTemplateBody();
+        AudienceTemplate.validateFooter(footer);
+        audience.update(request.getDisplayName(), request.intent(), request.getTemplateBody(), footer, clock.instant());
         audienceRepository.flush();
         return view(audience);
     }
 
     /**
-     * Writes an audience's template for one of the Organization's target languages.
+     * Writes an audience's templates for one of the Organization's target languages. A
+     * footer left out keeps the one the language has.
      *
+     * @param footerBody the footer, or null to keep it
      * @throws InvalidAudienceTemplateException when the language is not a target language
-     *                                          or the template does not render
+     *                                          or a template does not render
      */
     @Transactional
-    public AudienceView updateTemplate(UUID organizationId, UUID audienceId, String languageTag, String templateBody) {
+    public AudienceView updateTemplate(
+            UUID organizationId,
+            UUID audienceId,
+            String languageTag,
+            String templateBody,
+            String footerBody
+    ) {
         AudienceDefinition audience = find(organizationId, audienceId);
         String language = targetLanguage(organizationId, languageTag);
         AudienceTemplate.validate(templateBody);
+        Optional<AudienceTemplateVariant> existing =
+                variantRepository.findByAudienceIdAndOrganizationIdAndLanguage(audienceId, organizationId, language);
+        String footer = footerBody != null
+                ? footerBody
+                : existing.map(AudienceTemplateVariant::getFooterTemplateBody).orElseGet(() -> variantFooter(audience, language));
+        AudienceTemplate.validateFooter(footer);
         Instant now = clock.instant();
-        variantRepository.findByAudienceIdAndOrganizationIdAndLanguage(audienceId, organizationId, language)
-                .ifPresentOrElse(
-                        variant -> variant.update(templateBody, now),
-                        () -> variantRepository.save(new AudienceTemplateVariant(organizationId, audienceId, language,
-                                templateBody, now))
-                );
+        existing.ifPresentOrElse(
+                variant -> variant.update(templateBody, footer, now),
+                () -> variantRepository.save(new AudienceTemplateVariant(organizationId, audienceId, language,
+                        templateBody, footer, now))
+        );
         variantRepository.flush();
         return view(audience);
     }
@@ -180,8 +201,9 @@ public class AudienceService {
     }
 
     /**
-     * Restores a shipped audience's name, intent, and template in the current output
-     * language, and each of its language templates to the shipped version in that language.
+     * Restores a shipped audience's name, intent, template, and footer in the current output
+     * language, and each of its language templates and footers to the shipped version in
+     * that language.
      */
     @Transactional
     public AudienceView resetToPreset(UUID organizationId, UUID audienceId) {
@@ -193,17 +215,25 @@ public class AudienceService {
         AudiencePresets.Preset preset = AudiencePresets.find(audience.getCode(), language.tag())
                 .orElseThrow(AudienceConflictException::notPreset);
         Instant now = clock.instant();
-        audience.update(preset.displayName(), preset.communicationIntent(), preset.templateBody(), now);
+        audience.update(preset.displayName(), preset.communicationIntent(), preset.templateBody(), preset.footerBody(), now);
         variantRepository.findAllByOrganizationIdOrderByLanguageAsc(organizationId).stream()
                 .filter(variant -> variant.getAudienceId().equals(audienceId))
-                .forEach(variant -> variant.update(variantBody(audience, variant.getLanguage()), now));
+                .forEach(variant -> variant.update(variantBody(audience, variant.getLanguage()),
+                        variantFooter(audience, variant.getLanguage()), now));
         audienceRepository.flush();
         return view(audience);
     }
 
-    /** Renders a template with sample values; it is validated exactly as on save. */
-    public AudiencePreview preview(String templateBody) {
+    /**
+     * Renders a template with sample values, followed by the footer when one is given; both
+     * are validated exactly as on save.
+     */
+    public AudiencePreview preview(String templateBody, String footerBody) {
         String markdown = AudienceTemplate.sample(templateBody);
+        String footer = AudienceTemplate.sampleFooter(footerBody);
+        if (!footer.isEmpty()) {
+            markdown = markdown.strip() + "\n\n" + footer + "\n";
+        }
         return new AudiencePreview(markdown, MarkdownHtml.render(markdown));
     }
 
@@ -225,6 +255,7 @@ public class AudienceService {
                         preset.displayName(),
                         preset.communicationIntent(),
                         preset.templateBody(),
+                        preset.footerBody(),
                         true,
                         now
                 ))
@@ -245,7 +276,7 @@ public class AudienceService {
             for (String language : languages) {
                 if (!existing.contains(audience.getId() + "/" + language)) {
                     variantRepository.save(new AudienceTemplateVariant(organizationId, audience.getId(), language,
-                            variantBody(audience, language), now));
+                            variantBody(audience, language), variantFooter(audience, language), now));
                 }
             }
         }
@@ -262,6 +293,16 @@ public class AudienceService {
                 .orElse(audience.getTemplateBody());
     }
 
+    // The same for the footer: the shipped one in that language, or the main footer.
+    private static String variantFooter(AudienceDefinition audience, String language) {
+        if (!audience.isPreset()) {
+            return audience.getFooterTemplateBody();
+        }
+        return AudiencePresets.find(audience.getCode(), language)
+                .map(AudiencePresets.Preset::footerBody)
+                .orElse(audience.getFooterTemplateBody());
+    }
+
     private String targetLanguage(UUID organizationId, String languageTag) {
         final String language;
         try {
@@ -276,17 +317,20 @@ public class AudienceService {
     }
 
     private AudienceView view(AudienceDefinition audience) {
-        return audience.view(variants(audience.getOrganizationId()).getOrDefault(audience.getId(), Map.of()));
+        return view(audience, variantRepository.findAllByOrganizationIdOrderByLanguageAsc(audience.getOrganizationId()));
     }
 
-    // Audience ID -> language -> template.
-    private Map<UUID, Map<String, String>> variants(UUID organizationId) {
-        Map<UUID, Map<String, String>> variants = new HashMap<>();
-        for (AudienceTemplateVariant variant : variantRepository.findAllByOrganizationIdOrderByLanguageAsc(organizationId)) {
-            variants.computeIfAbsent(variant.getAudienceId(), ignored -> new HashMap<>())
-                    .put(variant.getLanguage(), variant.getTemplateBody());
+    // The audience with its language templates and footers, each keyed by language.
+    private static AudienceView view(AudienceDefinition audience, List<AudienceTemplateVariant> variants) {
+        Map<String, String> templates = new HashMap<>();
+        Map<String, String> footers = new HashMap<>();
+        for (AudienceTemplateVariant variant : variants) {
+            if (variant.getAudienceId().equals(audience.getId())) {
+                templates.put(variant.getLanguage(), variant.getTemplateBody());
+                footers.put(variant.getLanguage(), variant.getFooterTemplateBody());
+            }
         }
-        return variants;
+        return audience.view(templates, footers);
     }
 
     private AudienceDefinition find(UUID organizationId, UUID audienceId) {

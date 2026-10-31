@@ -10,18 +10,19 @@ Mỗi release đã duyệt có một release note cho mỗi **audience**. Quản
 trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu với bốn audience mẫu,
 được đặt tên theo ngôn ngữ đầu ra của nó (tiếng Anh hoặc tiếng Việt):
 
-| Mã | Viết cho | Template |
-| --- | --- | --- |
-| `operator` | rủi ro vận hành, cách rollback, và cách sản phẩm được triển khai và chạy | dòng tiêu đề kèm liên kết pull request và narrative, rồi vì sao, chi tiết, giới hạn, và bước chuyển đổi dưới nhãn theo loại của nó |
-| `contributor` | chi tiết triển khai và thay đổi mã nguồn | như operator, nhưng là chi tiết triển khai thay cho chi tiết chung |
-| `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | dòng tiêu đề và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc |
-| `support` | những gì khách hàng có thể hỏi, và nên trả lời họ thế nào | dòng tiêu đề kèm liên kết và narrative, bước chuyển đổi dưới nhãn theo loại của nó, và giới hạn |
+| Mã | Viết cho | Template | Phần cuối |
+| --- | --- | --- | --- |
+| `operator` | rủi ro vận hành, cách rollback, và cách sản phẩm được triển khai và chạy | dòng tiêu đề kèm liên kết pull request và narrative, rồi vì sao, chi tiết, giới hạn, và bước chuyển đổi dưới nhãn theo loại của nó | liên kết so sánh và hướng dẫn nâng cấp |
+| `contributor` | chi tiết triển khai và thay đổi mã nguồn | như operator, nhưng là chi tiết triển khai thay cho chi tiết chung | như operator |
+| `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | dòng tiêu đề và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc | không có |
+| `support` | những gì khách hàng có thể hỏi, và nên trả lời họ thế nào | dòng tiêu đề kèm liên kết và narrative, bước chuyển đổi dưới nhãn theo loại của nó, và giới hạn | không có |
 
 ![Trang Audiences: ba preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
 
 Một audience có một **mã** (chữ thường, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái; cố định
 sau khi tạo), một **tên hiển thị**, một **ý định truyền đạt** mà AI làm theo khi viết narrative
-cho audience đó, và một **template**. Ý định của mỗi audience mẫu kết thúc bằng câu nói khi nào
+cho audience đó, một **template** cho mỗi thay đổi, và một [phần cuối](#footer) cho cả note. Ý
+định của mỗi audience mẫu kết thúc bằng câu nói khi nào
 một thay đổi không liên quan tới audience đó: với người dùng cuối, đó là các thay đổi về build,
 CI, dependency, test và nội bộ mà họ không thấy được. Ý định của operator chỉ yêu cầu nêu điều cần
 theo dõi sau khi triển khai khi chính thay đổi hoặc [ngữ cảnh Project](changes.md#project-context)
@@ -50,7 +51,9 @@ mẫu. Template được kiểm tra khi lưu: nó phải biên dịch được, 
 `{{narrative}}` thay vì gọi tên một audience khác.
 
 Các template đi kèm mở đầu bằng `**{{headline}}**`, và các template chi tiết liên kết một thay
-đổi bằng `[{{reference}}]({{pullRequestUrl}})`. Chúng ghi nhãn bước chuyển đổi theo loại của nó:
+đổi bằng `[{{reference}}]({{pullRequestUrl}})`. Template của operator, contributor và support in
+giới hạn của một thay đổi trên một dòng riêng, **Giới hạn** (**Limitations**), để những gì thay đổi
+chưa làm không bị lẫn vào phần chi tiết; template của người dùng cuối không in chúng. Chúng ghi nhãn bước chuyển đổi theo loại của nó:
 **Bước bắt buộc**, **Nếu áp dụng cho bạn**, **Bước khuyến nghị**, hoặc nhãn trung tính **Cách
 chuyển đổi** cho bước không ghi rõ loại, nên một bước không ai gọi là bắt buộc sẽ không bao giờ
 được trình bày như vậy. Các dòng chi tiết nằm trong `{{^brief}}`, nên một thay đổi ngắn gọn vẫn giữ
@@ -71,13 +74,100 @@ xét như vậy ("not provided", "not specified") cũng bị bỏ. Mức liên q
 Release note bỏ qua một thay đổi có mức `none` với audience của nó, trừ khi thay đổi đó phá vỡ
 tương thích: thay đổi phá vỡ tương thích có mặt trong mọi note, và `none` trên nó được coi là
 `brief`. Thay đổi không có narrative cho audience (không có AI, AI lỗi, hoặc audience được thêm
-sau) được đưa vào đầy đủ. Các con số và cảnh báo phá vỡ tương thích mô tả đúng những gì note hiển
-thị. Audience không liên quan tới bất cứ thay đổi nào trong release vẫn có note của mình: tiêu đề,
+sau) được đưa vào đầy đủ.
+
+Một **thay đổi bảo mật** được liệt kê trong mục **🔒 Bảo mật**, ngay sau các thay đổi phá vỡ
+tương thích, bất kể category của nó: một bản sửa lỗi bảo mật vẫn là Fix ở mọi nơi khác. Thay đổi
+vừa phá vỡ tương thích vừa bảo mật chỉ được liệt kê một lần, trong mục phá vỡ tương thích, và mở
+đầu bằng **🔒 Bảo mật:** bất kể template của audience in gì. Thay đổi bảo mật có mặt trong note
+của operator, contributor và support kể cả khi nó là `none` với họ, và khi đó được coi là `brief`;
+với người dùng cuối hoặc một audience tự tạo, nó theo mức liên quan như mọi thay đổi khác, trừ khi
+nó cũng phá vỡ tương thích. Xem
+[ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
+
+Các con số và cảnh báo phá vỡ tương thích mô tả đúng những gì note hiển thị, và mỗi thay đổi chỉ
+được đếm một lần, trong mục mà nó được liệt kê. Audience không liên quan tới bất cứ thay đổi nào trong release vẫn có note của mình: tiêu đề,
 tóm tắt release, và một dòng nói rằng release này không có gì liên quan tới họ. Việc duyệt vẫn viết
 một note cho mỗi audience và ngôn ngữ, và một hành động automation giao note đó như mọi note khác.
 Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 ![Sửa template của một audience rồi lưu lại](assets/release-notes/rn-2-template.webp)
+
+### Phần cuối {#footer}
+
+**Phần cuối** (footer) của một audience là một template Mustache được dựng một lần, sau mục cuối
+cùng của note (hoặc sau dòng nói rằng release không có gì liên quan tới audience), từ chính các
+giá trị của release chứ không phải của một thay đổi:
+
+| Biến | Giá trị |
+| --- | --- |
+| `version` | phiên bản của release |
+| `previousVersion` | phiên bản của [release trước](#releases), hoặc rỗng |
+| `compareUrl` | trang so sánh phiên bản trước với phiên bản này trên code host, hoặc rỗng |
+| `upgradeGuideUrl` | hướng dẫn nâng cấp của release, hoặc rỗng |
+| `releaseUrl` | trang của phiên bản này trên code host, hoặc rỗng |
+
+Giá trị rỗng được coi là false, nên một dòng nằm trong `{{#compareUrl}}…{{/compareUrl}}` biến mất
+khi release không có trang so sánh, và `{{^previousVersion}}…{{/previousVersion}}` chỉ hiện với
+release đầu tiên. Bên trong một section, `{{.}}` là giá trị của chính section đó và mọi biến khác
+của phần cuối vẫn giữ giá trị của nó. Phần cuối chỉ dùng năm biến này; các biến của một thay đổi,
+như `whatChanged`, không có trong nó, và các biến của phần cuối không có trong template của thay
+đổi. Phần cuối để trống không thêm gì. Phần cuối được kiểm tra khi lưu, như template, và **Xem
+thử** dựng thay đổi mẫu rồi tới phần cuối mẫu.
+
+`compareUrl` và `releaseUrl` lấy từ code host duy nhất của Project, theo toạ độ đã dùng khi kết
+nối nó; ReleaseFlow không bao giờ hỏi nhà cung cấp, nên việc dựng phần cuối không bao giờ gọi ra
+mạng, và một liên kết có thể nhắc tới một tag chưa tồn tại.
+
+| Nguồn | `compareUrl` | `releaseUrl` |
+| --- | --- | --- |
+| GitHub | `https://github.com/{owner}/{repository}/compare/{previousVersion}...{version}` | `https://github.com/{owner}/{repository}/releases/tag/{version}` |
+| GitLab | `{địa chỉ GitLab}/{đường dẫn project}/-/compare/{previousVersion}...{version}` | `{địa chỉ GitLab}/{đường dẫn project}/-/releases/{version}` |
+
+Project không có nguồn GitHub hay GitLab nào, hoặc có nhiều hơn một, sẽ không có liên kết nào;
+nguồn Linear và Jira không được tính. `compareUrl` rỗng khi không có release trước. Phiên bản của
+mỗi release được dùng đúng như đã viết làm tên tag: ReleaseFlow không thêm hay bỏ chữ `v`, và
+không có thiết lập tiền tố tag. Khi tag của một Project không trùng với phiên bản của nó (tag
+`v1.2.0` cho phiên bản `1.2.0`, hay tiền tố `server/`), hãy tự viết liên kết trong phần cuối thay
+vì dùng hai biến này.
+
+Phần cuối của operator và contributor có hai dòng, mỗi dòng chỉ hiện khi có liên kết của nó:
+**So sánh** (`Compare`) liên kết `previousVersion...version` tới trang so sánh, và **Hướng dẫn
+nâng cấp** (`Upgrade guide`) liên kết **Đọc trước khi nâng cấp** tới hướng dẫn. Không dòng nào
+liên kết `releaseUrl`: một note đã publish thường chính là trang GitHub release, nơi một liên kết
+cài đặt sẽ trỏ về đúng trang đang mở. Một note giữ phần cuối mà nó được duyệt cùng, như template
+của nó.
+
+### Nâng cấp template của audience tự tạo {#upgrading-custom-audience-templates}
+
+Audience tạo trước 1.1.0 giữ nguyên template của mình; không có gì viết lại chúng. Audience mẫu
+operator và contributor được nhận phần cuối mới ở mọi ngôn ngữ của chúng, vì trước đó chưa có, còn
+audience người dùng cuối và support giữ phần cuối trống. Một audience tự tạo, như audience cho DBA,
+bắt đầu với phần cuối trống. Để thêm dòng giới hạn và phần cuối cho nó, thêm dòng này vào template
+của thay đổi, ở chỗ các dòng chi tiết khác (trong `{{^brief}}` nếu template có):
+
+```text
+{{#limitations}}
+  - Giới hạn: {{.}}
+{{/limitations}}
+```
+
+rồi viết phần cuối của nó, trên trang Audience hoặc qua `footerTemplateBody`:
+
+```text
+{{#compareUrl}}
+**So sánh:** [{{previousVersion}}...{{version}}]({{compareUrl}})
+{{/compareUrl}}
+
+{{#upgradeGuideUrl}}
+**Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp]({{upgradeGuideUrl}})
+{{/upgradeGuideUrl}}
+```
+
+Với template tiếng Anh, các nhãn là `Limitations`, `Compare`, `Upgrade guide` và `Read before
+upgrading`. Một ngôn ngữ release note khác ngôn ngữ chính có template và phần cuối riêng trong mục
+**Template theo ngôn ngữ**. **Đặt lại về preset** trả cho audience mẫu phần cuối đi kèm ở mọi ngôn
+ngữ.
 
 Một Organization giữ từ 1 đến 20 audience. Audience không xoá được khi còn thứ gì đó nhắc tới
 nó: một release note, một hành động của quy tắc automation, hoặc lịch sử chạy automation. Quy
@@ -90,20 +180,25 @@ Mọi endpoint audience chỉ dành cho quản trị viên:
 
 ```text
 GET    /api/audiences
-POST   /api/audiences                          {"code", "displayName", "communicationIntent", "templateBody"}
+POST   /api/audiences                          {"code", "displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
 GET    /api/audiences/{audienceId}
-PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody"}
-PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody"}
+PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
+PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody", "footerTemplateBody"}
 DELETE /api/audiences/{audienceId}
 POST   /api/audiences/{audienceId}/reset-to-preset
-POST   /api/audiences/preview                  {"templateBody"} -> {"markdown", "html"}
+POST   /api/audiences/preview                  {"templateBody", "footerTemplateBody"} -> {"markdown", "html"}
 ```
+
+Một audience trả về `footerTemplateBody` cạnh `templateBody`, và `footerTemplateVariants` cạnh
+`templateVariants`, mỗi cái theo khoá ngôn ngữ. Request bỏ `footerTemplateBody` sẽ giữ phần cuối
+mà audience hay ngôn ngữ đó đang có, và audience mới khi đó không có phần cuối, nên các client viết
+trước khi có phần cuối vẫn chạy được.
 
 | Tình huống | Phản hồi |
 | --- | --- |
 | Thành viên, không phải quản trị viên | `403` |
 | Thiếu trường, hoặc mã không khớp `[a-z][a-z0-9_]*` | `400 validation_failed` |
-| Template không biên dịch được hoặc dùng biến không tồn tại | `400 template_invalid` |
+| Template hoặc phần cuối không biên dịch được hoặc dùng biến không tồn tại | `400 template_invalid` |
 | Template gọi tới `narratives.<code>` | `400 template_narratives_path` |
 | Mã đã được dùng | `409 audience_code_taken` |
 | Organization đã có 20 audience | `409 audience_limit` |
@@ -262,12 +357,20 @@ ReleaseFlow không bao giờ xoá glossary trong DeepL.
 ## Release {#releases}
 
 Mở **Release** để chuẩn bị các release của một Project. Trang này tạo release với một phiên bản
-(tối đa 50 ký tự), một bản tóm tắt không bắt buộc, và một thời điểm phát hành dự kiến theo UTC
-không bắt buộc, đồng thời liệt kê các release của Project kèm bộ lọc theo trạng thái và số
+(tối đa 50 ký tự), một bản tóm tắt không bắt buộc, một thời điểm phát hành dự kiến theo UTC
+không bắt buộc, một **hướng dẫn nâng cấp** không bắt buộc, và **release trước**, đồng thời liệt kê các release của Project kèm bộ lọc theo trạng thái và số
 lượng. Một Project có thể chuẩn bị nhiều release cùng lúc, và mỗi thay đổi thuộc về tối đa một
 release.
 
 ![Các release của một Project theo trạng thái: bốn release đã publish, không có release nào ở nháp, review hay đã duyệt](assets/release-notes/rn-5-releases.webp)
+
+**Hướng dẫn nâng cấp** là một địa chỉ `http://` hoặc `https://` đầy đủ, tối đa 2.000 ký tự, không
+có tên người dùng hay mật khẩu; query và fragment đều được phép. Khi release có thay đổi phá vỡ
+tương thích, cảnh báo trong mọi note sẽ liên kết **đọc hướng dẫn nâng cấp** tới địa chỉ này, và
+[phần cuối](#footer) cũng có thể liên kết tới nó. **Release trước** là một release đã publish của
+cùng Project mà các note so sánh release này với nó. Release mới theo release được publish gần
+nhất của Project, trừ khi một người chọn release khác hoặc không chọn release nào; lựa chọn đó
+giữ nguyên khi có release khác được publish sau. Cả hai đều sửa được khi release còn là nháp.
 
 Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
 
@@ -276,8 +379,8 @@ Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
    viên đã [loại khỏi release](changes.md#excluding-a-change-from-releases) không được đề xuất. Sửa phiên bản và bản
    tóm tắt, bỏ bớt thay đổi, rồi bấm **Yêu cầu review**, việc này cần ít nhất một thay đổi.
 2. **Đang review.** Danh sách thay đổi được cố định, chỉ trừ việc từ chối. Trên tab **Review**,
-   mỗi thay đổi nhận một quyết định: **Duyệt đúng như hiển thị** xác nhận category và cờ phá vỡ
-   tương thích của nó, **Sửa phân loại** sửa lại chúng, và **Từ chối** bỏ thay đổi khỏi release
+   mỗi thay đổi nhận một quyết định: **Duyệt đúng như hiển thị** xác nhận category, cờ phá vỡ
+   tương thích và cờ bảo mật của nó, **Sửa phân loại** sửa lại chúng, và **Từ chối** bỏ thay đổi khỏi release
    để nó dùng được cho release khác. Duyệt và sửa đều ghi người review lên chính thay đổi, giống
    hệt một lần review trong Hộp thay đổi, kèm ghi chú không bắt buộc. Thay đổi Unknown bắt buộc
    phải sửa. **Duyệt release** dùng được khi mọi thay đổi đã có quyết định. Một thay đổi mà tiêu
@@ -309,7 +412,8 @@ cũng xoá các release note; duyệt lại sẽ viết release note mới.
 Trước khi duyệt, phần xem trước cho thấy release note của mỗi audience sẽ viết gì. Một release
 note bắt đầu bằng tiêu đề và bản tóm tắt của release và phần tổng quan **Có gì mới** kèm số
 lượng, cảnh báo về thay đổi phá vỡ tương thích, rồi liệt kê thay đổi phá vỡ tương thích trước,
-sau đó là tính năng, sửa lỗi, hiệu năng, tài liệu và bảo trì. Mỗi thay đổi được template của
+sau đó là thay đổi bảo mật, tính năng, sửa lỗi, hiệu năng, tài liệu và bảo trì, và kết thúc bằng
+phần cuối của audience. Mỗi thay đổi được template của
 audience viết ra từ bản tóm tắt trung lập và narrative của audience đó; khi không có bản tóm
 tắt, tiêu đề pull request được dùng thay, sau khi bỏ tiền tố Conventional Commit. Các nhãn là
 tiếng Anh hoặc tiếng Việt, theo ngôn ngữ đầu ra.
@@ -336,9 +440,10 @@ REST client tuân theo cùng các quy tắc:
 
 ```text
 GET    /api/projects/{projectId}/releases
-POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt"}
+POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt",
+                                                                          "upgradeGuideUrl", "previousReleaseId"}
 GET    /api/projects/{projectId}/releases/{releaseId}
-PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary"}
+PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary", "upgradeGuideUrl", "previousReleaseId"}
 DELETE /api/projects/{projectId}/releases/{releaseId}
 PUT    /api/projects/{projectId}/releases/{releaseId}/schedule           {"plannedReleaseAt"} (null clears it)
 GET    /api/projects/{projectId}/releases/{releaseId}/available-changes
@@ -346,7 +451,7 @@ POST   /api/projects/{projectId}/releases/{releaseId}/changes            {"chang
 DELETE /api/projects/{projectId}/releases/{releaseId}/changes/{changeId} (remove, or reject during review)
 POST   /api/projects/{projectId}/releases/{releaseId}/request-review
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/decision
-                                                                         {"action": "APPROVE" | "EDIT", "category", "breaking", "note"}
+                                                                         {"action": "APPROVE" | "EDIT", "category", "breaking", "security", "note"}
 POST   /api/projects/{projectId}/releases/{releaseId}/approve
 POST   /api/projects/{projectId}/releases/{releaseId}/return-to-draft
 POST   /api/projects/{projectId}/releases/{releaseId}/publish
@@ -363,7 +468,11 @@ GET    /api/projects/{projectId}/release-assignments
 ```
 
 `plannedReleaseAt` là một thời điểm ISO-8601 như `2026-10-01T09:00:00Z`; giá trị không kèm độ
-lệch múi giờ được hiểu là UTC. Một release trả về `changes`, `decisions` (`changeId`, `action`,
+lệch múi giờ được hiểu là UTC. Request tạo release bỏ `previousReleaseId` sẽ theo release được
+publish gần nhất, còn request cập nhật bỏ `upgradeGuideUrl` hoặc `previousReleaseId` sẽ giữ giá trị
+đó; `null` tường minh xoá giá trị. Quyết định bỏ `security` sẽ xác nhận cờ hiện tại của thay đổi,
+như bên gọi viết trước khi có trường này gửi; ngoài trường hợp đó, `APPROVE` phải gửi đúng cờ mà
+thay đổi đang có. Một release trả về `upgradeGuideUrl`, `previousReleaseId`, `previousVersion`, `changes`, `decisions` (`changeId`, `action`,
 `reviewerName`, `note`, `decidedAt`), `reviewedCount`, `plannedReleaseAt`, `approvedAt`,
 `approverName`, và `notes` (`id`, `audienceCode`, `audienceName`, `language`, `content`,
 `autoRerender`, `lastEditorName`, `updatedAt`, `translationStatus`: `READY`, `PENDING` hoặc
@@ -379,7 +488,9 @@ phiên bản và trạng thái) mà mỗi thay đổi của Project thuộc về
 | Yêu cầu review hoặc duyệt khi không có thay đổi nào | `409 release_empty` |
 | Duyệt trước khi mọi thay đổi có quyết định | `409 release_review_incomplete` |
 | Duyệt trong khi một thay đổi có tiêu đề dưới ba từ chưa có tóm tắt do người viết, và mô tả quá ít cho tóm tắt của AI; `detail` nêu tên các thay đổi đó | `409 change_summary_required` |
-| Gửi `APPROVE` với phân loại khác phân loại hiện tại của thay đổi | `409 classification_changed` |
+| Gửi `APPROVE` với phân loại khác phân loại hiện tại của thay đổi, kể cả cờ bảo mật | `409 classification_changed` |
+| Hướng dẫn nâng cấp không phải địa chỉ `http://` hoặc `https://` đầy đủ, có tên người dùng hay mật khẩu, hoặc dài hơn 2.000 ký tự | `400 invalid_upgrade_guide_url` |
+| Release trước không phải một release đã publish của Project này | `400 invalid_previous_release` |
 | `unknown` hoặc một category không được hỗ trợ trong quyết định | `400 invalid_change_review` |
 | `APPROVE` một thay đổi Unknown, dù có nêu category nào: approve giữ nguyên phân loại hiện tại, nên thay đổi Unknown phải dùng `EDIT` kèm một category | `400 invalid_change_review` |
 | Thời điểm phát hành dự kiến không đọc được hoặc đã qua | `400 invalid_release_schedule` |

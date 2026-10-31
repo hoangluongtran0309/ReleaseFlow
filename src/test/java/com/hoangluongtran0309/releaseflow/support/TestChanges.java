@@ -75,6 +75,11 @@ public final class TestChanges {
         return id;
     }
 
+    /** Marks a change as a security change, as a rule or the AI would; it must still need review. */
+    public static void markSecurity(JdbcTemplate jdbcTemplate, UUID changeId) {
+        jdbcTemplate.update("UPDATE changes SET security = true WHERE id = ?", changeId);
+    }
+
     /**
      * Records a successful AI summary with the given narratives (a JSON object keyed by
      * audience code), as the worker would. A narrative given as a plain string is stored

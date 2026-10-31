@@ -14,6 +14,29 @@ section into the version's entry, and the GitHub release is written from it.
 
 ### Added
 
+- Security changes have a section of their own. A change gains a security flag beside
+  breaking: rules set it from a `security`, `security-fix`, `security fix`, or
+  `vulnerability` label and from a CVE identifier, the AI may propose it, and a person
+  confirms or corrects it in the Change Inbox and in a release's review. A security
+  change always needs review, and the AI never clears the flag. Notes list security
+  changes under 🔒 Security after breaking changes and count each change once; one that
+  is both breaking and security appears once, under breaking changes, marked as security.
+  The operator, contributor, and support notes always include a security change
+  ([ADR-0037](docs/adr/0037-security-changes-and-release-note-structure.md)).
+- A release can link an upgrade guide, which the breaking-change warning then links,
+  and names the release it follows, by default the Project's most recently published
+  one.
+- A footer template per audience and language, rendered once at the end of each note
+  with `version`, `previousVersion`, `compareUrl`, `upgradeGuideUrl`, and `releaseUrl`.
+  The compare and release links come from the Project's one GitHub or GitLab source,
+  with each version used as its tag name, and are built without calling the provider.
+  The operator and contributor presets end with a Compare link and an Upgrade guide link,
+  and existing operator and contributor audiences received them. See
+  [Upgrading custom audience templates](docs/release-notes.md#upgrading-custom-audience-templates)
+  for adding the footer and the limitations line to an audience your team created.
+- A change returned by the API has `security`; a release has `upgradeGuideUrl`,
+  `previousReleaseId`, and `previousVersion`; an audience has `footerTemplateBody` and
+  `footerTemplateVariants`. A request that leaves the new fields out keeps working.
 - An Organization glossary for translated notes. Administrators keep product terms as
   written in every language (CLI, console, image, pull request) and fix translations per
   language pair (`storage` → *lưu trữ*) on a Glossary page or through `/api/glossary`;

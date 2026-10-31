@@ -17,6 +17,8 @@ import java.util.UUID;
  * {@code markdown} come from its legacy snapshot instead. {@code decisions} holds the
  * review decision on each change that has one. {@code glossaries} says, for each note
  * language whose pair has a glossary, whether its notes' translations used it.
+ * {@code previousVersion} is the version of {@code previousReleaseId}, the published
+ * release this one follows, which the notes compare against (ADR-0037).
  */
 public record ReleaseView(
         UUID id,
@@ -27,6 +29,9 @@ public record ReleaseView(
         Instant createdAt,
         Instant updatedAt,
         Instant plannedReleaseAt,
+        String upgradeGuideUrl,
+        UUID previousReleaseId,
+        String previousVersion,
         List<ChangeView> changes,
         List<ReleaseDecisionView> decisions,
         int reviewedCount,

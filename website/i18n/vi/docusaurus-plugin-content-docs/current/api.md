@@ -95,7 +95,10 @@ audience tới nội dung narrative, còn `audienceNarrativeDetails` bên cạnh
 `headline` và `body` của từng narrative ([Mỗi audience đọc gì](release-notes.md#what-each-audience-reads));
 Sửa tóm tắt nhận cả hai dạng trong `narratives`. Tương tự, một release có thêm `glossaries`, và
 mỗi note có thêm `glossaryStatus` và `glossaryReason`, bên cạnh các trường vốn có
-([Bảng thuật ngữ](release-notes.md#glossary)). API không có tiền tố phiên bản và không có tài liệu OpenAPI; trang này và các hướng dẫn chính là
+([Bảng thuật ngữ](release-notes.md#glossary)). Một thay đổi có thêm `security`, một release có
+thêm `upgradeGuideUrl`, `previousReleaseId` và `previousVersion`, và một audience có thêm
+`footerTemplateBody` và `footerTemplateVariants`; request bỏ các trường mới này vẫn chạy như trước
+([Phần cuối](release-notes.md#footer)). API không có tiền tố phiên bản và không có tài liệu OpenAPI; trang này và các hướng dẫn chính là
 phần mô tả của nó. Chỉ `GET /api/automation/runs` có phân trang; mọi danh sách khác, kể cả
 Change Inbox, trả về toàn bộ trong một lần.
 
@@ -249,7 +252,7 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Audience | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
 | Bảng thuật ngữ | `404` | `glossary_term_not_found` |
 | Bảng thuật ngữ | `409` | `glossary_term_taken`, `glossary_limit` |
-| Release | `400` | `invalid_release_schedule` |
+| Release | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release` |
 | Release | `404` | `release_not_found`, `release_note_not_found` |
 | Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
 | Automation | `400`, `404`, `409` | Xem [Automation](automation.md#rest) |

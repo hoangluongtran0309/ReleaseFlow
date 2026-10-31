@@ -12,8 +12,9 @@ import java.util.regex.Pattern;
 
 /**
  * Groups a release's changes into release-note sections. Breaking changes come first
- * and are listed only there; the other sections follow in a fixed group order. Unknown
- * changes are left out; review gives them a category before approval.
+ * and are listed only there, then security changes that are not breaking (ADR-0037); the
+ * other sections follow in a fixed group order. Unknown changes are left out; review
+ * gives them a category before approval.
  */
 final class ReleaseNotePreview {
 
@@ -55,9 +56,16 @@ final class ReleaseNotePreview {
         if (!breaking.isEmpty()) {
             sections.add(new ReleaseNoteSection("Breaking changes", breaking));
         }
+        List<ReleaseNoteItem> security = sorted.stream()
+                .filter(change -> !change.breaking() && change.security())
+                .map(ReleaseNotePreview::item)
+                .toList();
+        if (!security.isEmpty()) {
+            sections.add(new ReleaseNoteSection("Security", security));
+        }
         SECTION_TITLES.forEach((group, title) -> {
             List<ReleaseNoteItem> section = sorted.stream()
-                    .filter(change -> !change.breaking() && change.categoryGroup() == group)
+                    .filter(change -> !change.breaking() && !change.security() && change.categoryGroup() == group)
                     .map(ReleaseNotePreview::item)
                     .toList();
             if (!section.isEmpty()) {

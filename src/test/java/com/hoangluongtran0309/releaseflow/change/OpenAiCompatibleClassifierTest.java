@@ -50,6 +50,7 @@ class OpenAiCompatibleClassifierTest {
         assertThat(answer).isEqualTo(new AiClassification(
                 TestCategories.FIX,
                 true,
+                false,
                 true,
                 new NeutralSummary("Empty tables now export a header row.", "Requested by users.",
                         "Handled in the exporter.", ""),
@@ -174,7 +175,7 @@ class OpenAiCompatibleClassifierTest {
         assertFailure("OpenAI returned an invalid classification.");
 
         stub.respond(200, OpenAiStub.completionWithContent(
-                "{\"category\":\"fix\",\"breaking_change\":false,\"needs_human_review\":false}"));
+                "{\"category\":\"fix\",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":false}"));
         assertFailure("OpenAI returned an invalid classification.");
 
         stub.respond(200, OpenAiStub.completionWithContent("not json"));

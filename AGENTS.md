@@ -6,7 +6,8 @@ ReleaseFlow currently implements the bootstrap, Organization administrator, Proj
 plus GitHub configuration, signed GitHub merged-pull-request intake,
 deterministic classification with the Change Inbox, automatic AI
 classification with neutral summaries and an Organization output language,
-human review, release review lifecycle, Release Note publication,
+human review, release review lifecycle, Release Note publication, security change and
+note structure,
 changed-file review, audience release note, category catalog, review
 signal, Project sensitive path, multilingual release note, integration
 source, GitLab source, Linear source, Jira source, automation, automation
@@ -14,7 +15,7 @@ trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
 context, and translation glossary slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V33,
+Spring Boot application, PostgreSQL/Flyway V1-V34,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -52,7 +53,7 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0036, indexed in
+The decisions behind all of it are ADR-0001 through ADR-0037, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -93,7 +94,11 @@ changing behavior.
 
 - Tenant identity comes from authenticated or cryptographically verified
   identity, never a submitted tenant field.
-- Breaking changes require human review.
+- Breaking changes require human review, and so do security changes.
+- Security is a flag beside the category, never a category. Rules set it only from a
+  security label or a CVE identifier; the AI never clears a security flag that a rule or
+  a person set; only a recorded human review confirms or clears one. A change that is
+  breaking and security is listed once, under breaking changes, marked as security.
 - External and AI failures become explicit unknown/review states.
 - Network I/O does not run inside database transactions.
 - Credentials never appear in source, logs, examples, or later API responses.
@@ -197,8 +202,10 @@ changing behavior.
   triggers but never settle, merge, or remove a change. Context is assessed only
   from an AI answer, and a duplicate decision is recorded once.
 - An Organization always has at least one audience. Rendering a release note
-  never calls AI; notes are written at approval from a snapshot of each
-  audience's template and are frozen at publication.
+  never calls AI, and rendering its footer never calls the network: the compare and
+  release links come from the Project's one code host as stored, each version used as
+  its tag name exactly as written; notes are written at approval from a snapshot of each
+  audience's template and footer and are frozen at publication.
 - A relevance only leaves a change out of an audience's note when it is `none`
   and the change is not breaking: a breaking change is in every note, and a
   change with no narrative for the audience is included. An audience nothing

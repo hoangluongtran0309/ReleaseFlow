@@ -31,6 +31,7 @@ public record ChangeView(
         String categoryName,
         CategoryGroup categoryGroup,
         boolean breaking,
+        boolean security,
         boolean needsReview,
         List<String> reasons,
         ClassificationSource classificationSource,
@@ -97,7 +98,7 @@ public record ChangeView(
     /** The same change with its summary and narratives written in another language. */
     public ChangeView withContent(NeutralSummary summary, Map<String, AudienceNarrative> narratives, String language) {
         return new ChangeView(id, pullRequestNumber, title, description, authorLogin, labels, targetBranch, mergeCommitSha,
-                mergedAt, url, category, categoryName, categoryGroup, breaking, needsReview, reasons,
+                mergedAt, url, category, categoryName, categoryGroup, breaking, security, needsReview, reasons,
                 classificationSource, aiStatus, aiModel, aiFailure, aiEligible, reviewedBy, reviewerName, reviewedAt,
                 processingStatus, changedFileStatus, linkedContextStatus, linkedIssues, changedFiles, reviewTriggers, summary, language, aiProvider,
                 narratives, summaryEditorName, summaryEditedAt, context, sourceId, origin, sourceType, exclusion);
@@ -161,6 +162,7 @@ public record ChangeView(
                 change.getCategory().displayName(),
                 change.getCategory().group(),
                 change.isBreaking(),
+                change.isSecurity(),
                 change.isNeedsReview(),
                 change.getClassificationReasons(),
                 change.getClassificationSource(),

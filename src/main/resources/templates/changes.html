@@ -198,6 +198,7 @@
                               th:title="#{ui.changes.suggestedCategoryTitle}"
                               th:text="#{ui.changes.suggestedCategory}">Suggested category</span>
                         <span class="badge badge-error font-semibold" th:if="${change.breaking}" th:text="#{ui.changes.breaking}">Breaking</span>
+                        <span class="badge badge-info font-semibold" th:if="${change.security}" th:text="#{ui.changes.security}">Security</span>
                         <span class="badge badge-warning font-semibold" th:if="${change.needsReview}" th:text="#{ui.changes.needsReview}">Needs review</span>
                         <span class="badge badge-success font-semibold" th:if="${change.reviewedAt != null}" th:text="#{ui.changes.reviewed}">Reviewed</span>
                         <span class="badge badge-soft badge-success font-semibold"
