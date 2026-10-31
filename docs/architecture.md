@@ -831,6 +831,12 @@ such a change, after the first rule: when unsure whether a change is breaking, s
 `AiProvider.maxTemperature()`, or none for `default`, which leaves the field out of the
 request for a model that accepts only its own (ADR-0038). Without a provider the value is
 not read; with one, a value that is not `default` or a number in the range stops startup.
+A 400 that refuses the temperature (`error.param` of `temperature` for the Chat Completions
+API, an `invalid_request_error` whose message names `temperature` for Anthropic) sends the
+same request once more without it and sets the client's `temperatureRefused` flag, so every
+later request of the process leaves it out; the first thread to set it logs one warning.
+The error body is read only to decide this. Any other failure, the second request's
+included, becomes the change's failure as before (ADR-0039).
 
 ### Project context
 

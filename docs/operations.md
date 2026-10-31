@@ -133,21 +133,27 @@ From 1.1.0 every classification request asks for the same temperature, `0` unles
 `RELEASEFLOW_AI_TEMPERATURE` names another
 ([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
 [ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 sent none. A model that accepts
-only its default temperature refuses every request that names one, so each change would
-fail AI classification and wait for a person. Such models are OpenAI's reasoning models
-and Claude models released after Opus 4.6. Before upgrading a deployment that uses one,
-set:
+only its default temperature refuses a request that names one: OpenAI's reasoning models
+and Claude models released after Opus 4.6 do.
+
+**No action is needed.** When the provider refuses the temperature, ReleaseFlow sends the
+same request once more without it, and leaves it out of every later request until it
+restarts ([ADR-0039](adr/0039-ai-temperature-fallback.md)). The log says so once:
+
+```text
+OpenAI model o4-mini refused the temperature, so classification requests leave it out until ReleaseFlow restarts. Set RELEASEFLOW_AI_TEMPERATURE=default to avoid the first refusal.
+```
+
+Each start costs one refused request. To skip it, set:
 
 ```bash
 RELEASEFLOW_AI_TEMPERATURE=default
 ```
 
-Its requests then leave the temperature out, as every request did before. With Docker
-Compose, put it in the `.env` beside the Compose file, which forwards it and sends `0`
-when it is not set. A deployment whose
-model accepts a temperature needs nothing. A change that failed because the setting was
-missing is sent again with **Retry with AI** in the Change Inbox (see
-[AI classification and summaries](changes.md#ai-classification-and-summaries)).
+Requests then leave the temperature out from the first, as every request did before. With
+Docker Compose, put it in the `.env` beside the Compose file, which forwards it and sends `0`
+when it is not set. A deployment whose model accepts a temperature sends `0` and sees no
+refusal.
 
 ### Upgrading to the glossary
 

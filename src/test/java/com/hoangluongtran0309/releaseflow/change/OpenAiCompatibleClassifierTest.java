@@ -8,12 +8,16 @@ import com.hoangluongtran0309.releaseflow.support.TestCategories;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Duration;
 import java.util.List;
@@ -24,11 +28,28 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@ExtendWith(OutputCaptureExtension.class)
 class OpenAiCompatibleClassifierTest {
 
     private static final String API_KEY = "sk-test-key-that-must-not-leak";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final OptionalDouble ZERO = OptionalDouble.of(AiClassificationPrompt.TEMPERATURE);
+    private static final String WARNING = "refused the temperature, so classification requests leave it out until "
+            + "ReleaseFlow restarts. Set RELEASEFLOW_AI_TEMPERATURE=default to avoid the first refusal.";
+
+    /**
+     * OpenAI's refusals of a temperature (ADR-0039): the error names the parameter in
+     * {@code error.param}, which its error-codes guide documents. The first was reported for
+     * o3-mini in openai/openai-python#2072; the second is the refusal of a value other than
+     * the default.
+     */
+    static final String UNSUPPORTED_PARAMETER = """
+            {"error":{"message":"Unsupported parameter: 'temperature' is not supported with this model.",\
+            "type":"invalid_request_error","param":"temperature","code":"unsupported_parameter"}}""";
+    static final String UNSUPPORTED_VALUE = """
+            {"error":{"message":"Unsupported value: 'temperature' does not support 0 with this model. \
+            Only the default (1) value is supported.","type":"invalid_request_error","param":"temperature",\
+            "code":"unsupported_value"}}""";
 
     private OpenAiStub stub;
     private OpenAiCompatibleClassifier openAi;
@@ -166,6 +187,98 @@ class OpenAiCompatibleClassifierTest {
         JsonNode body = OBJECT_MAPPER.readTree(stub.requests().getFirst().body());
         assertThat(body.has("temperature")).isFalse();
         assertThat(body.path("model").isString()).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"openai, 0.0, PARAMETER", "openai, 0.7, VALUE", "deepseek, 0.0, VALUE", "deepseek, 1.5, PARAMETER"})
+    void aRefusedTemperatureIsSentOnceMoreWithoutItAndNeverAgain(
+            String provider, double temperature, String refusal, CapturedOutput output) {
+        OpenAiCompatibleClassifier classifier = classifier(provider, OptionalDouble.of(temperature));
+        stub.refuseTemperature("PARAMETER".equals(refusal) ? UNSUPPORTED_PARAMETER : UNSUPPORTED_VALUE);
+        stub.respondWithClassification("fix", false, "Empty tables export a header.");
+
+        AiClassification first = classifier.classify(request(null, null, "en"));
+        AiClassification second = classifier.classify(request(null, null, "en"));
+
+        assertThat(first.category()).isEqualTo(TestCategories.FIX);
+        assertThat(second.category()).isEqualTo(TestCategories.FIX);
+        List<JsonNode> bodies = stub.requests().stream().map(recorded -> OBJECT_MAPPER.readTree(recorded.body())).toList();
+        assertThat(bodies).hasSize(3);
+        assertThat(bodies.get(0).path("temperature").doubleValue()).isEqualTo(temperature);
+        assertThat(bodies.get(1).has("temperature")).isFalse();
+        assertThat(bodies.get(2).has("temperature")).isFalse();
+        // The second request is the first without its temperature, and nothing else.
+        assertThat(((ObjectNode) bodies.get(0).deepCopy()).without("temperature"))
+                .isEqualTo(bodies.get(1));
+        String label = AiProvider.fromValue(provider).orElseThrow().getLabel();
+        String model = "deepseek".equals(provider) ? "deepseek-test" : "test-model";
+        assertThat(output.getOut()).containsOnlyOnce(label + " model " + model + " " + WARNING);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"openai", "deepseek"})
+    void aRefusalOnTheSecondRequestIsTheChangesFailure(String provider) {
+        OpenAiCompatibleClassifier classifier = classifier(provider, ZERO);
+        stub.refuseTemperature(UNSUPPORTED_PARAMETER);
+        stub.respond(500, "{\"error\":{\"message\":\"overloaded\"}}");
+
+        assertThatThrownBy(() -> classifier.classify(request(null, null, "en")))
+                .isInstanceOf(AiClassificationException.class)
+                .hasMessage(AiProvider.fromValue(provider).orElseThrow().getLabel() + " returned HTTP 500.");
+        assertThat(stub.requests()).hasSize(2);
+    }
+
+    // Only a 400 that names temperature as its parameter is a refusal of it.
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "openai|400|{\"error\":{\"message\":\"Invalid schema for response_format 'change_classification'.\",\"type\":\"invalid_request_error\",\"param\":\"response_format\",\"code\":null}}",
+            "openai|400|{\"error\":{\"message\":\"Unsupported parameter: 'temperature' is not supported with this model.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}",
+            "deepseek|400|{\"error\":{\"message\":\"Invalid request\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"invalid_request_error\"}}",
+            "openai|422|{\"error\":{\"message\":\"temperature\",\"type\":\"invalid_request_error\",\"param\":\"temperature\"}}",
+            "deepseek|400|<html>Bad Request</html>"
+    })
+    void anyOtherErrorIsNotSentAgain(String provider, int status, String errorBody, CapturedOutput output) {
+        OpenAiCompatibleClassifier classifier = classifier(provider, ZERO);
+        stub.respond(status, errorBody);
+
+        assertThatThrownBy(() -> classifier.classify(request(null, null, "en")))
+                .isInstanceOf(AiClassificationException.class)
+                .hasMessage(AiProvider.fromValue(provider).orElseThrow().getLabel() + " returned HTTP " + status + ".");
+        assertThat(stub.requests()).hasSize(1);
+
+        stub.respondWithClassification("fix", false, "Empty tables export a header.");
+        classifier.classify(request(null, null, "en"));
+        assertThat(OBJECT_MAPPER.readTree(stub.requests().get(1).body()).path("temperature").isNumber()).isTrue();
+        assertThat(output.getOut()).doesNotContain(WARNING);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"openai", "deepseek"})
+    void aRequestThatSucceedsKeepsItsTemperature(String provider, CapturedOutput output) {
+        OpenAiCompatibleClassifier classifier = classifier(provider, ZERO);
+        stub.respondWithClassification("fix", false, "Empty tables export a header.");
+
+        classifier.classify(request(null, null, "en"));
+        classifier.classify(request(null, null, "en"));
+
+        assertThat(stub.requests()).hasSize(2)
+                .allSatisfy(recorded -> assertThat(recorded.body()).contains("\"temperature\":0.0,"));
+        assertThat(output.getOut()).doesNotContain(WARNING);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"openai", "deepseek"})
+    void theProviderDefaultIsNeverRefused(String provider, CapturedOutput output) {
+        OpenAiCompatibleClassifier classifier = classifier(provider, OptionalDouble.empty());
+        stub.refuseTemperature(UNSUPPORTED_VALUE);
+        stub.respondWithClassification("fix", false, "Empty tables export a header.");
+
+        classifier.classify(request(null, null, "en"));
+        classifier.classify(request(null, null, "en"));
+
+        assertThat(stub.requests()).hasSize(2)
+                .allSatisfy(recorded -> assertThat(OBJECT_MAPPER.readTree(recorded.body()).has("temperature")).isFalse());
+        assertThat(output.getOut()).doesNotContain(WARNING);
     }
 
     private OpenAiCompatibleClassifier classifier(String provider, OptionalDouble temperature) {

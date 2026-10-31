@@ -125,21 +125,27 @@ Từ 1.1.0, mọi request phân loại dùng cùng một temperature, là `0` tr
 `RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác
 ([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
 [ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 không gửi temperature. Model chỉ nhận
-temperature mặc định từ chối mọi request có ghi temperature, nên việc phân loại bằng AI sẽ thất
-bại ở mọi thay đổi, và thay đổi phải chờ một người review. Đó là các model suy luận của OpenAI
-và các model Claude ra mắt sau Opus 4.6. Trước khi nâng cấp bản triển khai dùng model như vậy,
-đặt:
+temperature mặc định từ chối request có ghi temperature: các model suy luận của OpenAI và các
+model Claude ra mắt sau Opus 4.6 đều như vậy.
+
+**Không cần làm gì.** Khi nhà cung cấp từ chối temperature, ReleaseFlow gửi lại đúng request đó
+một lần nữa nhưng không có temperature, và không gửi temperature trong mọi request sau đó cho đến
+khi khởi động lại ([ADR-0039](adr/0039-ai-temperature-fallback.md)). Log ghi điều này một lần:
+
+```text
+OpenAI model o4-mini refused the temperature, so classification requests leave it out until ReleaseFlow restarts. Set RELEASEFLOW_AI_TEMPERATURE=default to avoid the first refusal.
+```
+
+Mỗi lần khởi động tốn một request bị từ chối. Để bỏ qua request đó, đặt:
 
 ```bash
 RELEASEFLOW_AI_TEMPERATURE=default
 ```
 
-Khi đó request không gửi temperature, như mọi request trước đây. Với Docker Compose, đặt biến này
-trong file `.env` cạnh file Compose, file này sẽ chuyển nó vào ứng dụng, và gửi `0` khi biến không
-được đặt. Bản triển khai có model
-nhận temperature thì không cần làm gì. Thay đổi đã thất bại vì thiếu biến này được gửi lại bằng
-**Thử lại bằng AI** trong Hộp thay đổi (xem
-[Phân loại và tóm tắt bằng AI](changes.md#ai-classification-and-summaries)).
+Khi đó request không gửi temperature ngay từ request đầu tiên, như mọi request trước đây. Với
+Docker Compose, đặt biến này trong file `.env` cạnh file Compose, file này sẽ chuyển nó vào ứng
+dụng, và gửi `0` khi biến không được đặt. Bản triển khai có model nhận temperature thì gửi `0`
+và không gặp lần từ chối nào.
 
 ### Nâng cấp lên phiên bản có bảng thuật ngữ {#upgrading-to-the-glossary}
 

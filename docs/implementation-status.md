@@ -510,7 +510,9 @@ where it first appears; ADRs are linked from the slice they record.
   - every classification request at the same temperature, `0` unless
     `RELEASEFLOW_AI_TEMPERATURE` names another in the provider's range or `default`, which
     sends none for a model that accepts only its own
-    ([ADR-0038](adr/0038-configurable-ai-temperature.md)).
+    ([ADR-0038](adr/0038-configurable-ai-temperature.md)), and none for the rest of the
+    process once a model refuses it, after sending the refused request once more without it
+    ([ADR-0039](adr/0039-ai-temperature-fallback.md)).
 
 ### A note per audience (V32)
 

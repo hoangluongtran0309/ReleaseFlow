@@ -106,8 +106,11 @@ section into the version's entry, and the GitHub release is written from it.
   provider's range (`0` to `2` for OpenAI and DeepSeek, `0` to `1` for Anthropic), checked
   at startup ([ADR-0038](docs/adr/0038-configurable-ai-temperature.md)). A model that
   accepts only its default temperature, such as an OpenAI reasoning model or a Claude model
-  released after Opus 4.6, keeps working only with `RELEASEFLOW_AI_TEMPERATURE=default`,
-  which leaves the temperature out of the request as 1.0 did: set it before upgrading (see
+  released after Opus 4.6, keeps working with no action: when it refuses the temperature,
+  the same request is sent once more without it, and later requests leave it out until
+  ReleaseFlow restarts, with one warning in the log
+  ([ADR-0039](docs/adr/0039-ai-temperature-fallback.md)). `RELEASEFLOW_AI_TEMPERATURE=default`
+  leaves it out from the first request and so avoids that refusal (see
   [Upgrading with a reasoning model](docs/operations.md#upgrading-with-a-reasoning-model)).
 
 ## [1.0.1] - 2026-10-25

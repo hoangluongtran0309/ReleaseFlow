@@ -77,15 +77,21 @@ for the same temperature, `0` unless `RELEASEFLOW_AI_TEMPERATURE` says otherwise
 keeps one change's answer as stable as the model allows (see
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) and
 [ADR-0038](adr/0038-configurable-ai-temperature.md)). A model that accepts only its default
-temperature refuses every request that names one: an OpenAI reasoning model, or a Claude
-model released after Opus 4.6, which Anthropic accepts only `1.0` from. Give such a model
-`RELEASEFLOW_AI_TEMPERATURE=default`: the requests then leave the temperature out.
+temperature refuses a request that names one: an OpenAI reasoning model, or a Claude model
+released after Opus 4.6, which Anthropic accepts only `1.0` from. Such a model works without
+any setting: the refused request is sent once more without the temperature, and later
+requests leave it out until ReleaseFlow restarts, with one warning in the log
+([ADR-0039](adr/0039-ai-temperature-fallback.md)). Only a 400 about the temperature does
+this: one whose `error.param` is `temperature` from OpenAI or DeepSeek, or an
+`invalid_request_error` whose message names `temperature` from Anthropic. A number set here
+falls back the same way. `RELEASEFLOW_AI_TEMPERATURE=default` leaves the temperature out from
+the first request, so the refusal never happens.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (empty: no AI) | `openai`, `anthropic`, or `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Bound on each AI request |
-| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature of every classification request: a number from `0` to `2` for `openai` and `deepseek`, or from `0` to `1` for `anthropic`; `default` sends none, so the model uses its own. Unset or blank means `0` |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature of every classification request: a number from `0` to `2` for `openai` and `deepseek`, or from `0` to `1` for `anthropic`; `default` sends none, so the model uses its own. Unset or blank means `0`. A model that refuses the temperature is sent none for the rest of the process |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (empty) | OpenAI key and model |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI API address |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (empty) | Anthropic key and model |

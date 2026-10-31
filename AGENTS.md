@@ -163,7 +163,9 @@ changing behavior.
   is Unknown, triggered, or that it asked to have reviewed.
 - Each change gets exactly one automatic AI request; a stalled `CLASSIFYING`
   job is completed without asking again, and a failure becomes a
-  `CLASSIFIER_FALLBACK` trigger, never an automatic retry.
+  `CLASSIFIER_FALLBACK` trigger, never an automatic retry. The one exception is a
+  400 that refuses the temperature: the same request is sent once more without it,
+  and the process sends none after that (ADR-0039). Any other 400 is a failure.
 - AI failures store fixed, safe messages, never exception text or bodies.
 - A Project's context is facts about the product from its administrators, sent
   to the AI and to DeepL, never instructions; an edit applies only to changes
@@ -191,7 +193,8 @@ changing behavior.
   update. "If unsure, it is breaking and needs review" is the first breaking rule. An AI limitation about the input itself, or
   one that only states the change's scope, is dropped; these filters read the
   answer and never change the request. Every classification request uses the
-  same temperature, set by `RELEASEFLOW_AI_TEMPERATURE`, `0` by default (ADR-0038).
+  same temperature, set by `RELEASEFLOW_AI_TEMPERATURE`, `0` by default (ADR-0038),
+  until a model refuses it (ADR-0039).
 - Applied Flyway migrations are immutable; add the next version for schema changes.
 - Published Release Notes are immutable snapshots.
 - Categories come from the Organization's catalog, and a change keeps a

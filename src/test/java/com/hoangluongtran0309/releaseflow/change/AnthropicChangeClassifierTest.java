@@ -6,24 +6,42 @@ import com.hoangluongtran0309.releaseflow.support.TestCategories;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.OptionalDouble;
 
 import static com.hoangluongtran0309.releaseflow.change.OpenAiCompatibleClassifierTest.request;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@ExtendWith(OutputCaptureExtension.class)
 class AnthropicChangeClassifierTest {
 
     private static final String API_KEY = "sk-ant-test-key-that-must-not-leak";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final OptionalDouble ZERO = OptionalDouble.of(AiClassificationPrompt.TEMPERATURE);
+    private static final String WARNING = "Anthropic model claude-test refused the temperature, so classification "
+            + "requests leave it out until ReleaseFlow restarts. Set RELEASEFLOW_AI_TEMPERATURE=default to avoid the "
+            + "first refusal.";
+
+    /**
+     * Anthropic's refusal of a temperature (ADR-0039), in the error shape its errors page
+     * documents. The page quotes no message for it; this one is as a refusal was reported.
+     */
+    static final String DEPRECATED = """
+            {"type":"error","error":{"type":"invalid_request_error",\
+            "message":"`temperature` is deprecated for this model."},"request_id":"req_011CSHoEeqs5C35K2UUqR7Fy"}""";
 
     private AnthropicStub stub;
     private AnthropicChangeClassifier classifier;
@@ -106,6 +124,93 @@ class AnthropicChangeClassifierTest {
         JsonNode body = OBJECT_MAPPER.readTree(stub.requests().getFirst().body());
         assertThat(body.has("temperature")).isFalse();
         assertThat(body.path("max_tokens").longValue()).isEqualTo(AnthropicChangeClassifier.MAX_TOKENS);
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {0.0, 0.7})
+    void aRefusedTemperatureIsSentOnceMoreWithoutItAndNeverAgain(double temperature, CapturedOutput output) {
+        stub.refuseTemperature(DEPRECATED);
+        stub.respondWithClassification("fix", false, false, "Empty tables export a header.");
+        try (AnthropicChangeClassifier configured = classifier(OptionalDouble.of(temperature))) {
+            AiClassification first = configured.classify(request(null, null, "en"));
+            AiClassification second = configured.classify(request(null, null, "en"));
+
+            assertThat(first.category()).isEqualTo(TestCategories.FIX);
+            assertThat(second.category()).isEqualTo(TestCategories.FIX);
+        }
+
+        List<JsonNode> bodies = stub.requests().stream().map(recorded -> OBJECT_MAPPER.readTree(recorded.body())).toList();
+        assertThat(bodies).hasSize(3);
+        assertThat(bodies.get(0).path("temperature").doubleValue()).isEqualTo(temperature);
+        assertThat(bodies.get(1).has("temperature")).isFalse();
+        assertThat(bodies.get(2).has("temperature")).isFalse();
+        // The second request is the first without its temperature, and nothing else.
+        assertThat(((ObjectNode) bodies.get(0).deepCopy()).without("temperature")).isEqualTo(bodies.get(1));
+        assertThat(output.getOut()).containsOnlyOnce(WARNING);
+    }
+
+    @Test
+    void aRefusalOnTheSecondRequestIsTheChangesFailure() {
+        stub.refuseTemperature(DEPRECATED);
+        stub.respond(529, "{\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}");
+
+        assertFailure("Anthropic returned HTTP 529.");
+        assertThat(stub.requests()).hasSize(2);
+    }
+
+    // Only a 400 invalid_request_error whose message names temperature is a refusal of it.
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "400|{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"max_tokens: 64000 > 32000, which is the maximum allowed number of output tokens for claude-test\"}}",
+            "400|{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"top_temperature: Extra inputs are not permitted\"}}",
+            "400|{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"`temperature` is deprecated for this model.\"}}",
+            "429|{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"`temperature` is deprecated for this model.\"}}",
+            "400|<html>Bad Request</html>"
+    })
+    void anyOtherErrorIsNotSentAgain(int status, String errorBody, CapturedOutput output) {
+        stub.respond(status, errorBody);
+
+        assertFailure("Anthropic returned HTTP " + status + ".");
+        assertThat(stub.requests()).hasSize(1);
+
+        stub.respondWithClassification("fix", false, false, "Empty tables export a header.");
+        classifier.classify(request(null, null, "en"));
+        assertThat(OBJECT_MAPPER.readTree(stub.requests().get(1).body()).path("temperature").isNumber()).isTrue();
+        assertThat(output.getOut()).doesNotContain(WARNING);
+    }
+
+    @Test
+    void aRequestThatSucceedsKeepsItsTemperature(CapturedOutput output) {
+        stub.respondWithClassification("fix", false, false, "Empty tables export a header.");
+
+        classifier.classify(request(null, null, "en"));
+        classifier.classify(request(null, null, "en"));
+
+        assertThat(stub.requests()).hasSize(2).allSatisfy(recorded -> {
+            JsonNode body = OBJECT_MAPPER.readTree(recorded.body());
+            assertThat(body.path("temperature").isNumber()).isTrue();
+            assertThat(body.path("temperature").doubleValue()).isZero();
+        });
+        assertThat(output.getOut()).doesNotContain(WARNING);
+    }
+
+    @Test
+    void theProviderDefaultIsNeverRefused(CapturedOutput output) {
+        stub.refuseTemperature(DEPRECATED);
+        stub.respondWithClassification("fix", false, false, "Empty tables export a header.");
+        try (AnthropicChangeClassifier configured = classifier(OptionalDouble.empty())) {
+            configured.classify(request(null, null, "en"));
+            configured.classify(request(null, null, "en"));
+        }
+
+        assertThat(stub.requests()).hasSize(2)
+                .allSatisfy(recorded -> assertThat(OBJECT_MAPPER.readTree(recorded.body()).has("temperature")).isFalse());
+        assertThat(output.getOut()).doesNotContain(WARNING);
+    }
+
+    private AnthropicChangeClassifier classifier(OptionalDouble temperature) {
+        return new AnthropicChangeClassifier(API_KEY, "claude-test", temperature, stub.baseUrl(), Duration.ofSeconds(5),
+                OBJECT_MAPPER);
     }
 
     @ParameterizedTest
