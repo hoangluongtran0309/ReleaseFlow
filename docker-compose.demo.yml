@@ -28,6 +28,8 @@ services:
       RELEASEFLOW_MANAGEMENT_ADDRESS: 0.0.0.0
       # Optional AI classification; leave the provider empty to use the rules only.
       RELEASEFLOW_AI_PROVIDER: ${RELEASEFLOW_AI_PROVIDER:-}
+      # 0 unless set; "default" sends none, for a model that takes only its own (ADR-0038).
+      RELEASEFLOW_AI_TEMPERATURE: ${RELEASEFLOW_AI_TEMPERATURE:-0}
       RELEASEFLOW_OPENAI_API_KEY: ${RELEASEFLOW_OPENAI_API_KEY:-}
       RELEASEFLOW_OPENAI_MODEL: ${RELEASEFLOW_OPENAI_MODEL:-}
       RELEASEFLOW_ANTHROPIC_API_KEY: ${RELEASEFLOW_ANTHROPIC_API_KEY:-}

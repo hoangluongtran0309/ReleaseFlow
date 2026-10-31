@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -17,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +28,7 @@ class OpenAiCompatibleClassifierTest {
 
     private static final String API_KEY = "sk-test-key-that-must-not-leak";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final OptionalDouble ZERO = OptionalDouble.of(AiClassificationPrompt.TEMPERATURE);
 
     private OpenAiStub stub;
     private OpenAiCompatibleClassifier openAi;
@@ -33,7 +36,7 @@ class OpenAiCompatibleClassifierTest {
     @BeforeEach
     void startStub() {
         stub = OpenAiStub.start();
-        openAi = OpenAiCompatibleClassifier.openAi(API_KEY, "test-model", stub.baseUrl(), Duration.ofSeconds(2), OBJECT_MAPPER);
+        openAi = OpenAiCompatibleClassifier.openAi(API_KEY, "test-model", ZERO, stub.baseUrl(), Duration.ofSeconds(2), OBJECT_MAPPER);
     }
 
     @AfterEach
@@ -116,7 +119,7 @@ class OpenAiCompatibleClassifierTest {
     @Test
     void deepSeekAsksForAJsonObjectAndSpellsOutTheSchema() {
         OpenAiCompatibleClassifier deepSeek = OpenAiCompatibleClassifier.deepSeek(
-                API_KEY, "deepseek-test", stub.baseUrl(), Duration.ofSeconds(2), OBJECT_MAPPER);
+                API_KEY, "deepseek-test", ZERO, stub.baseUrl(), Duration.ofSeconds(2), OBJECT_MAPPER);
         stub.respondWithClassification("maintenance", false, "Upgrades the build plugin.");
 
         AiClassification answer = deepSeek.classify(request(null, null, "en"));
@@ -132,6 +135,45 @@ class OpenAiCompatibleClassifierTest {
                 .contains("\"required\":[\"operator\",\"end_user\"]");
         JsonNode user = OBJECT_MAPPER.readTree(body.path("messages").path(1).path("content").stringValue());
         assertThat(user.path("locked_category").isNull()).isTrue();
+    }
+
+    // 0 is sent exactly as before RELEASEFLOW_AI_TEMPERATURE existed, so recorded requests still match.
+    @ParameterizedTest
+    @CsvSource({"openai, 0.0", "openai, 0.7", "deepseek, 0.0", "deepseek, 1.5"})
+    void sendsTheConfiguredTemperature(String provider, double temperature) {
+        OpenAiCompatibleClassifier classifier = classifier(provider, OptionalDouble.of(temperature));
+        stub.respondWithClassification("fix", false, "Empty tables export a header.");
+
+        classifier.classify(request(null, null, "en"));
+
+        String recorded = stub.requests().getFirst().body();
+        assertThat(recorded).contains("\"temperature\":" + temperature + ",");
+        JsonNode body = OBJECT_MAPPER.readTree(recorded);
+        assertThat(body.path("temperature").isNumber()).isTrue();
+        assertThat(body.path("temperature").doubleValue()).isEqualTo(temperature);
+    }
+
+    // A model that accepts only its default, such as an OpenAI reasoning model, gets no temperature.
+    @ParameterizedTest
+    @ValueSource(strings = {"openai", "deepseek"})
+    void leavesTheTemperatureOutForTheProviderDefault(String provider) {
+        OpenAiCompatibleClassifier classifier = classifier(provider, OptionalDouble.empty());
+        stub.respondWithClassification("fix", false, "Empty tables export a header.");
+
+        AiClassification answer = classifier.classify(request(null, null, "en"));
+
+        assertThat(answer.category()).isEqualTo(TestCategories.FIX);
+        JsonNode body = OBJECT_MAPPER.readTree(stub.requests().getFirst().body());
+        assertThat(body.has("temperature")).isFalse();
+        assertThat(body.path("model").isString()).isTrue();
+    }
+
+    private OpenAiCompatibleClassifier classifier(String provider, OptionalDouble temperature) {
+        return "deepseek".equals(provider)
+                ? OpenAiCompatibleClassifier.deepSeek(API_KEY, "deepseek-test", temperature, stub.baseUrl(),
+                Duration.ofSeconds(2), OBJECT_MAPPER)
+                : OpenAiCompatibleClassifier.openAi(API_KEY, "test-model", temperature, stub.baseUrl(),
+                Duration.ofSeconds(2), OBJECT_MAPPER);
     }
 
     @Test
@@ -188,7 +230,7 @@ class OpenAiCompatibleClassifierTest {
     @Test
     void reportsTimeoutsAndUnreachableServers() {
         OpenAiCompatibleClassifier impatient = OpenAiCompatibleClassifier.openAi(
-                API_KEY, "test-model", stub.baseUrl(), Duration.ofMillis(200), OBJECT_MAPPER);
+                API_KEY, "test-model", ZERO, stub.baseUrl(), Duration.ofMillis(200), OBJECT_MAPPER);
         stub.respond(200, OpenAiStub.completion("fix", false, false, "Late."), Duration.ofSeconds(2));
 
         assertThatThrownBy(() -> impatient.classify(request(null, null, "en")))
@@ -198,7 +240,7 @@ class OpenAiCompatibleClassifierTest {
         String closedBaseUrl = stub.baseUrl();
         stub.close();
         OpenAiCompatibleClassifier unreachable = OpenAiCompatibleClassifier.openAi(
-                API_KEY, "test-model", closedBaseUrl, Duration.ofSeconds(2), OBJECT_MAPPER);
+                API_KEY, "test-model", ZERO, closedBaseUrl, Duration.ofSeconds(2), OBJECT_MAPPER);
         assertThatThrownBy(() -> unreachable.classify(request(null, null, "en")))
                 .isInstanceOf(AiClassificationException.class)
                 .hasMessage("Could not reach OpenAI.");

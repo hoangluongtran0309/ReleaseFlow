@@ -202,8 +202,9 @@ provided" or "The version is not specified", is dropped, and so is one that only
 the change's scope, such as "This does not affect the CLI" or "It only affects the CI
 environment", since an audience's relevance already says who the change matters to. A
 limitation such as "Certificate validation is enforced only for MongoDB" is kept, and a
-missing limitations field is empty. Every request asks for temperature `0`, so the same change varies as little as
-the model allows (see [Configuration](configuration.md#ai)).
+missing limitations field is empty. Every request asks for the same temperature, `0` unless
+the deployment sets `RELEASEFLOW_AI_TEMPERATURE`, so the same change varies as little as the
+model allows (see [Configuration](configuration.md#ai)).
 
 The Change Inbox shows the summary and narratives under each change, each narrative
 with its relevance and headline, and the changes API returns them as `neutralSummary`,

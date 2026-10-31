@@ -17,6 +17,7 @@ import tools.jackson.databind.node.ObjectNode;
 import java.net.http.HttpClient;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.OptionalDouble;
 
 /**
  * The Chat Completions API as served by OpenAI and by DeepSeek. OpenAI enforces the
@@ -29,6 +30,7 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
 
     private final AiProvider provider;
     private final String model;
+    private final OptionalDouble temperature;
     private final Duration timeout;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -38,12 +40,14 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
             AiProvider provider,
             String apiKey,
             String model,
+            OptionalDouble temperature,
             String baseUrl,
             Duration timeout,
             ObjectMapper objectMapper
     ) {
         this.provider = provider;
         this.model = model;
+        this.temperature = temperature;
         this.timeout = timeout;
         this.objectMapper = objectMapper;
         this.parser = new AiClassificationParser(objectMapper);
@@ -61,21 +65,25 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
     static OpenAiCompatibleClassifier openAi(
             String apiKey,
             String model,
+            OptionalDouble temperature,
             String baseUrl,
             Duration timeout,
             ObjectMapper objectMapper
     ) {
-        return new OpenAiCompatibleClassifier(AiProvider.OPENAI, apiKey, model, baseUrl, timeout, objectMapper);
+        return new OpenAiCompatibleClassifier(AiProvider.OPENAI, apiKey, model, temperature, baseUrl, timeout,
+                objectMapper);
     }
 
     static OpenAiCompatibleClassifier deepSeek(
             String apiKey,
             String model,
+            OptionalDouble temperature,
             String baseUrl,
             Duration timeout,
             ObjectMapper objectMapper
     ) {
-        return new OpenAiCompatibleClassifier(AiProvider.DEEPSEEK, apiKey, model, baseUrl, timeout, objectMapper);
+        return new OpenAiCompatibleClassifier(AiProvider.DEEPSEEK, apiKey, model, temperature, baseUrl, timeout,
+                objectMapper);
     }
 
     @Override
@@ -114,7 +122,8 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
     private String requestBody(AiClassificationRequest request) {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", model);
-        body.put("temperature", AiClassificationPrompt.TEMPERATURE);
+        // Left out entirely for a model that accepts only its default.
+        temperature.ifPresent(value -> body.put("temperature", value));
         String system = AiClassificationPrompt.system(request);
         ObjectNode schema = AiClassificationPrompt.responseSchema(request, objectMapper);
         if (provider == AiProvider.OPENAI) {

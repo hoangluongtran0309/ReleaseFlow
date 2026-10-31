@@ -13,6 +13,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.util.OptionalDouble;
 
 import static com.hoangluongtran0309.releaseflow.change.OpenAiCompatibleClassifierTest.request;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +23,7 @@ class AnthropicChangeClassifierTest {
 
     private static final String API_KEY = "sk-ant-test-key-that-must-not-leak";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final OptionalDouble ZERO = OptionalDouble.of(AiClassificationPrompt.TEMPERATURE);
 
     private AnthropicStub stub;
     private AnthropicChangeClassifier classifier;
@@ -29,7 +31,7 @@ class AnthropicChangeClassifierTest {
     @BeforeEach
     void startStub() {
         stub = AnthropicStub.start();
-        classifier = new AnthropicChangeClassifier(API_KEY, "claude-test", stub.baseUrl(), Duration.ofSeconds(5), OBJECT_MAPPER);
+        classifier = new AnthropicChangeClassifier(API_KEY, "claude-test", ZERO, stub.baseUrl(), Duration.ofSeconds(5), OBJECT_MAPPER);
     }
 
     @AfterEach
@@ -75,6 +77,38 @@ class AnthropicChangeClassifierTest {
     }
 
     @ParameterizedTest
+    @ValueSource(doubles = {0.0, 0.7, 1.0})
+    void sendsTheConfiguredTemperature(double temperature) {
+        try (AnthropicChangeClassifier configured = new AnthropicChangeClassifier(
+                API_KEY, "claude-test", OptionalDouble.of(temperature), stub.baseUrl(), Duration.ofSeconds(5),
+                OBJECT_MAPPER)) {
+            stub.respondWithClassification("fix", false, false, "Empty tables export a header.");
+
+            configured.classify(request(null, null, "en"));
+        }
+
+        JsonNode body = OBJECT_MAPPER.readTree(stub.requests().getFirst().body());
+        assertThat(body.path("temperature").isNumber()).isTrue();
+        assertThat(body.path("temperature").doubleValue()).isEqualTo(temperature);
+    }
+
+    @Test
+    void leavesTheTemperatureOutForTheProviderDefault() {
+        try (AnthropicChangeClassifier configured = new AnthropicChangeClassifier(
+                API_KEY, "claude-test", OptionalDouble.empty(), stub.baseUrl(), Duration.ofSeconds(5), OBJECT_MAPPER)) {
+            stub.respondWithClassification("fix", false, false, "Empty tables export a header.");
+
+            AiClassification answer = configured.classify(request(null, null, "en"));
+
+            assertThat(answer.category()).isEqualTo(TestCategories.FIX);
+        }
+
+        JsonNode body = OBJECT_MAPPER.readTree(stub.requests().getFirst().body());
+        assertThat(body.has("temperature")).isFalse();
+        assertThat(body.path("max_tokens").longValue()).isEqualTo(AnthropicChangeClassifier.MAX_TOKENS);
+    }
+
+    @ParameterizedTest
     @ValueSource(ints = {500, 529, 429, 401})
     void reportsHttpFailuresOnceWithoutRetrying(int status) {
         stub.respond(status, "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"secret-body " + API_KEY + "\"}}");
@@ -104,7 +138,7 @@ class AnthropicChangeClassifierTest {
         String closedBaseUrl = stub.baseUrl();
         stub.close();
         AnthropicChangeClassifier unreachable = new AnthropicChangeClassifier(
-                API_KEY, "claude-test", closedBaseUrl, Duration.ofSeconds(2), OBJECT_MAPPER);
+                API_KEY, "claude-test", ZERO, closedBaseUrl, Duration.ofSeconds(2), OBJECT_MAPPER);
         try {
             assertThatThrownBy(() -> unreachable.classify(request(null, null, "en")))
                     .isInstanceOf(AiClassificationException.class)

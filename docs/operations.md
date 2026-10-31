@@ -127,6 +127,28 @@ refused by those triggers for every release past its draft.
 migration can be undone. Take a backup first; going back means restoring that backup
 with the older version, never starting the older version against the migrated database.
 
+### Upgrading with a reasoning model
+
+From 1.1.0 every classification request asks for the same temperature, `0` unless
+`RELEASEFLOW_AI_TEMPERATURE` names another
+([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
+[ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 sent none. A model that accepts
+only its default temperature refuses every request that names one, so each change would
+fail AI classification and wait for a person. Such models are OpenAI's reasoning models
+and Claude models released after Opus 4.6. Before upgrading a deployment that uses one,
+set:
+
+```bash
+RELEASEFLOW_AI_TEMPERATURE=default
+```
+
+Its requests then leave the temperature out, as every request did before. With Docker
+Compose, put it in the `.env` beside the Compose file, which forwards it and sends `0`
+when it is not set. A deployment whose
+model accepts a temperature needs nothing. A change that failed because the setting was
+missing is sent again with **Retry with AI** in the Change Inbox (see
+[AI classification and summaries](changes.md#ai-classification-and-summaries)).
+
 ### Upgrading to the glossary
 
 The version that adds the [glossary](release-notes.md#glossary) (Flyway `V33`) changes

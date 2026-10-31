@@ -72,16 +72,20 @@ Xem [Thay đổi và review](changes.md).
 ## AI {#ai}
 
 AI không bắt buộc. Chọn một nhà cung cấp và cung cấp key cùng model. Không có model mặc định;
-chọn một model hỗ trợ đầu ra JSON có cấu trúc và nhận tham số temperature. Mọi request phân loại
-đều dùng temperature `0`, một giá trị cố định giúp câu trả lời cho cùng một thay đổi ổn định nhất
-trong khả năng của model, nên model chỉ nhận temperature mặc định, như model suy luận của OpenAI,
-sẽ thất bại ở mọi request (xem
-[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md)).
+chọn một model hỗ trợ đầu ra JSON có cấu trúc. Mọi request phân loại đều dùng cùng một
+temperature, là `0` trừ khi `RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác, giúp câu trả lời cho
+cùng một thay đổi ổn định nhất trong khả năng của model (xem
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) và
+[ADR-0038](adr/0038-configurable-ai-temperature.md)). Model chỉ nhận temperature mặc định từ
+chối mọi request có ghi temperature: model suy luận của OpenAI, hoặc model Claude ra mắt sau
+Opus 4.6, mà Anthropic chỉ nhận giá trị `1.0`. Với model như vậy, đặt
+`RELEASEFLOW_AI_TEMPERATURE=default`: request sẽ không gửi temperature.
 
 | Biến | Mặc định | Tác dụng |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (trống: không dùng AI) | `openai`, `anthropic` hoặc `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Thời gian tối đa cho mỗi request tới AI |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature của mọi request phân loại: một số từ `0` đến `2` với `openai` và `deepseek`, hoặc từ `0` đến `1` với `anthropic`; `default` không gửi temperature, để model dùng giá trị của chính nó. Không đặt hoặc để trống nghĩa là `0` |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (trống) | Key và model của OpenAI |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | Địa chỉ API của OpenAI |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (trống) | Key và model của Anthropic |
@@ -90,8 +94,10 @@ sẽ thất bại ở mọi request (xem
 | `RELEASEFLOW_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Địa chỉ API của DeepSeek |
 
 Ứng dụng không khởi động được khi nhà cung cấp đã chọn thiếu key hoặc model, khi tên nhà cung cấp
-không hợp lệ, hoặc khi key hay model của một nhà cung cấp được đặt trong khi
-`RELEASEFLOW_AI_PROVIDER` để trống. Xem
+không hợp lệ, khi key hay model của một nhà cung cấp được đặt trong khi
+`RELEASEFLOW_AI_PROVIDER` để trống, hoặc khi `RELEASEFLOW_AI_TEMPERATURE` không phải `default`
+cũng không phải một số trong khoảng của nhà cung cấp đã chọn; thông báo lỗi nêu tên biến và
+khoảng giá trị. Xem
 [Phân loại và tóm tắt bằng AI](changes.md#ai-classification-and-summaries).
 
 ## Dịch thuật {#translation}

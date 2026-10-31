@@ -190,8 +190,8 @@ specified", sẽ bị bỏ, và câu chỉ nói phạm vi của thay đổi, nh�
 hay "It only affects the CI environment", cũng vậy, vì mức liên quan của từng đối tượng đọc đã
 cho biết thay đổi quan trọng với ai. Giới hạn như "Certificate validation is enforced only for
 MongoDB" được giữ, và trường giới hạn bị thiếu thì coi là trống. Mọi request đều dùng
-temperature `0`, để cùng một thay đổi dao động ít nhất trong khả năng của model (xem
-[Cấu hình](configuration.md#ai)).
+cùng một temperature, là `0` trừ khi bản triển khai đặt `RELEASEFLOW_AI_TEMPERATURE`, để cùng
+một thay đổi dao động ít nhất trong khả năng của model (xem [Cấu hình](configuration.md#ai)).
 
 Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, mỗi narrative kèm mức liên
 quan và dòng tiêu đề, và API thay đổi trả về chúng dưới dạng `neutralSummary`,
