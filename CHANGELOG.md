@@ -12,6 +12,8 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-01
+
 ### Added
 
 - Security changes have a section of their own. A change gains a security flag beside
@@ -186,6 +188,7 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.1.0
 [1.0.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.0
