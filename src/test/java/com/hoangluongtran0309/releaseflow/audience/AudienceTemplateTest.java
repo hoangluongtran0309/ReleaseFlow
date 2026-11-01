@@ -18,7 +18,11 @@ class AudienceTemplateTest {
             "",
             "Streams rows.",
             "",
+            "",
+            "",
             "Download data from any table.",
+            "",
+            null,
             "#12",
             12,
             "https://github.com/acme/app/pull/12",
@@ -45,6 +49,110 @@ class AudienceTemplateTest {
                   - Detail: Streams rows.
                   - Download data from any table.
                 """);
+    }
+
+    @Test
+    void labelsAMigrationStepByItsKindAndPrintsLimitations() {
+        String template = """
+                {{#migrationRequired}}Required: {{migrationStep}}{{/migrationRequired}}\
+                {{#migrationConditional}}If: {{migrationStep}}{{/migrationConditional}}\
+                {{#migrationRecommended}}Recommended: {{migrationStep}}{{/migrationRecommended}}\
+                {{#migrationUnspecified}}Migration: {{migrationStep}}{{/migrationUnspecified}}\
+                {{#limitations}} Not yet: {{.}}{{/limitations}} ({{migrationKind}})""";
+
+        assertThat(AudienceTemplate.render(template, migration("Rename EXPORT_DIR to EXPORT_PATH.", "required", "Only MongoDB.")))
+                .isEqualTo("Required: Rename EXPORT_DIR to EXPORT_PATH. Not yet: Only MongoDB. (required)");
+        assertThat(AudienceTemplate.render(template, migration("No direct action is required.", "unspecified", "")))
+                .isEqualTo("Migration: No direct action is required. (unspecified)");
+        // A step whose writer named no kind is unspecified, and no step has no kind at all.
+        assertThat(AudienceTemplate.render(template, migration("Set X.", null, ""))).isEqualTo("Migration: Set X. (unspecified)");
+        assertThat(AudienceTemplate.render(template, migration("", "required", ""))).isEqualTo(" ()");
+    }
+
+    @Test
+    void theShippedPresetsNeverPresentAnUnspecifiedStepAsRequired() {
+        AudienceItem unspecified = migration("No direct action is required; credentials migrate on update.", "unspecified", "");
+        AudienceItem required = migration("Rename EXPORT_DIR to EXPORT_PATH.", "required", "");
+
+        AudiencePresets.forLanguage("en").forEach(preset -> {
+            assertThat(AudienceTemplate.render(preset.templateBody(), unspecified)).doesNotContain("Required step");
+            assertThat(AudienceTemplate.render(preset.templateBody(), required)).contains("  - Required step: Rename EXPORT_DIR to EXPORT_PATH.");
+        });
+        assertThat(AudienceTemplate.render(AudiencePresets.find(AudiencePresets.OPERATOR, "en").orElseThrow().templateBody(),
+                unspecified)).contains("  - Migration: No direct action is required");
+        // End users read a step only when they cannot do without it.
+        assertThat(AudienceTemplate.render(AudiencePresets.find(AudiencePresets.END_USER, "en").orElseThrow().templateBody(),
+                migration("Rename EXPORT_DIR to EXPORT_PATH.", "recommended", ""))).doesNotContain("EXPORT_PATH");
+    }
+
+    // ADR-0035: a bold headline, the detail lines only for a full change, and a required
+    // step whatever the relevance.
+    @Test
+    void theShippedPresetsLeadWithTheHeadlineAndKeepABriefChangeShort() {
+        AudienceItem full = relevant(AudienceItem.FULL);
+        AudienceItem brief = relevant(AudienceItem.BRIEF);
+        String operator = AudiencePresets.find(AudiencePresets.OPERATOR, "en").orElseThrow().templateBody();
+
+        assertThat(AudienceTemplate.render(operator, full)).isEqualTo("""
+                - **Exports queue in the background.** ([#25](https://github.com/acme/app/pull/25)) — Watch the queue.
+                  - Why: Large exports timed out.
+                  - Detail: Rows stream in pages.
+                  - Limitations: Only CSV for now.
+                  - Required step: Set EXPORT_QUEUE=on.
+                """);
+        assertThat(AudienceTemplate.render(operator, brief)).isEqualTo("""
+                - **Exports queue in the background.** ([#25](https://github.com/acme/app/pull/25)) — Watch the queue.
+                  - Required step: Set EXPORT_QUEUE=on.
+                """);
+        for (String language : List.of("en", "vi")) {
+            AudiencePresets.forLanguage(language).forEach(preset -> {
+                String fullNote = AudienceTemplate.render(preset.templateBody(), full);
+                String briefNote = AudienceTemplate.render(preset.templateBody(), brief);
+                assertThat(fullNote).as(preset.code()).startsWith("- **Exports queue in the background.**");
+                assertThat(briefNote).as(preset.code()).contains("Set EXPORT_QUEUE=on.")
+                        .doesNotContain("Large exports timed out.", "Rows stream in pages.", "Only CSV for now.");
+            });
+        }
+        // Without a headline, what changed leads, as before.
+        assertThat(AudienceTemplate.render(operator, migration("", "", ""))).startsWith("- **Keys per target.**");
+    }
+
+    @Test
+    void theSupportPresetSaysWhetherAStepIsRequiredOrOnlyAdvisable() {
+        String support = AudiencePresets.find(AudiencePresets.SUPPORT, "en").orElseThrow().templateBody();
+
+        assertThat(AudienceTemplate.render(support, migration("Re-save each target.", "recommended", "Only MySQL.")))
+                .isEqualTo("""
+                        - **Keys per target.** ([#25](https://github.com/acme/app/pull/25))
+                          - Recommended step: Re-save each target.
+                          - Limitations: Only MySQL.
+                        """);
+        assertThat(AudienceTemplate.render(support, migration("Rename EXPORT_DIR.", "required", "")))
+                .contains("  - Required step: Rename EXPORT_DIR.");
+    }
+
+    @Test
+    void registrationSeedsFourPresetsWhoseIntentsSayWhenAChangeIsNone() {
+        assertThat(AudiencePresets.forLanguage("en").stream().map(AudiencePresets.Preset::code))
+                .containsExactly("operator", "contributor", "end_user", "support");
+        assertThat(AudiencePresets.find(AudiencePresets.SUPPORT, "vi").orElseThrow().displayName()).isEqualTo("Hỗ trợ");
+        AudiencePresets.forLanguage("en").forEach(preset -> assertThat(preset.communicationIntent())
+                .as(preset.code()).containsPattern("A change is none for [a-z ]+ (only )?when"));
+        // Asked for what to watch in general, the AI invented advice nobody gave.
+        assertThat(AudiencePresets.OPERATOR_INTENT)
+                .doesNotContain("what to watch after deploy.")
+                .contains("only when the change or the project context names it");
+    }
+
+    private static AudienceItem relevant(String relevance) {
+        return new AudienceItem("Exports no longer time out.", "Large exports timed out.", "Rows stream in pages.",
+                "Set EXPORT_QUEUE=on.", "required", "Only CSV for now.", "Watch the queue.",
+                "Exports queue in the background.", relevance, "#25", 25, "https://github.com/acme/app/pull/25", List.of());
+    }
+
+    private static AudienceItem migration(String step, String kind, String limitations) {
+        return new AudienceItem("Keys per target.", "", "", step, kind, limitations, "", "", null, "#25", 25,
+                "https://github.com/acme/app/pull/25", List.of());
     }
 
     @Test
@@ -119,7 +227,7 @@ class AudienceTemplateTest {
     @Test
     void listsTheIssuesAChangeMentionsAndLeavesTheSectionOutWithoutThem() {
         String template = "- {{whatChanged}}{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}";
-        AudienceItem linked = new AudienceItem("Export.", "", "", "", "", "#12", 12, "https://github.com/acme/app/pull/12",
+        AudienceItem linked = new AudienceItem("Export.", "", "", "", "", "", "", "", null, "#12", 12, "https://github.com/acme/app/pull/12",
                 List.of(
                         new LinkedIssue("APP-7", "Export tables", "never shown", "Story", "Done",
                                 "https://acme.atlassian.net/browse/APP-7"),
@@ -141,7 +249,7 @@ class AudienceTemplateTest {
 
     @Test
     void theShippedDetailedPresetsNameAChangeTheWayItsSourceDoes() {
-        AudienceItem mergeRequest = new AudienceItem(ITEM.whatChanged(), "", "", "", "", "!2", 2,
+        AudienceItem mergeRequest = new AudienceItem(ITEM.whatChanged(), "", "", "", "", "", "", "", null, "!2", 2,
                 "https://gitlab.com/acme/app/-/merge_requests/2", List.of());
 
         AudiencePresets.forLanguage("en").stream()
@@ -153,7 +261,7 @@ class AudienceTemplateTest {
     @Test
     void theShippedPresetsIgnoreLinkedIssues() {
         AudienceItem linked = new AudienceItem(ITEM.whatChanged(), ITEM.whyChanged(), ITEM.technicalDetail(),
-                ITEM.migrationStep(), ITEM.narrative(), ITEM.reference(), ITEM.pullRequestNumber(), ITEM.pullRequestUrl(),
+                ITEM.migrationStep(), ITEM.migrationKind(), ITEM.limitations(), ITEM.narrative(), ITEM.headline(), ITEM.relevance(), ITEM.reference(), ITEM.pullRequestNumber(), ITEM.pullRequestUrl(),
                 List.of(new LinkedIssue("APP-7", "Export tables", "", "Story", "Done",
                         "https://acme.atlassian.net/browse/APP-7")));
 
@@ -164,7 +272,90 @@ class AudienceTemplateTest {
     @Test
     void acceptsEveryShippedPreset() {
         for (String language : new String[]{"en", "vi", "pt-BR"}) {
-            AudiencePresets.forLanguage(language).forEach(preset -> AudienceTemplate.validate(preset.templateBody()));
+            AudiencePresets.forLanguage(language).forEach(preset -> {
+                AudienceTemplate.validate(preset.templateBody());
+                AudienceTemplate.validateFooter(preset.footerBody());
+            });
         }
+    }
+
+    // ADR-0037: whoever upgrades, or answers for an upgrade, reads what is not done yet on a
+    // line of its own, in both languages; end users do not.
+    @Test
+    void theUpgraderPresetsPrintLimitationsOnALineOfTheirOwn() {
+        AudienceItem full = relevant(AudienceItem.FULL);
+        for (String[] language : new String[][]{{"en", "  - Limitations: Only CSV for now.\n"}, {"vi", "  - Giới hạn: Only CSV for now.\n"}}) {
+            for (String code : List.of(AudiencePresets.OPERATOR, AudiencePresets.CONTRIBUTOR, AudiencePresets.SUPPORT)) {
+                assertThat(AudienceTemplate.render(AudiencePresets.find(code, language[0]).orElseThrow().templateBody(), full))
+                        .as(code + " " + language[0]).contains(language[1]);
+            }
+            assertThat(AudienceTemplate.render(
+                    AudiencePresets.find(AudiencePresets.END_USER, language[0]).orElseThrow().templateBody(), full))
+                    .doesNotContain("Only CSV for now.");
+        }
+    }
+
+    @Test
+    void theUpgraderPresetFootersLinkTheComparisonAndTheGuideButNotTheRelease() {
+        ReleaseLinks links = new ReleaseLinks("v1.0.0", "v0.3.0", "https://github.com/acme/app/compare/v0.3.0...v1.0.0",
+                "https://docs.example.com/upgrade", "https://github.com/acme/app/releases/tag/v1.0.0");
+        for (String code : List.of(AudiencePresets.OPERATOR, AudiencePresets.CONTRIBUTOR)) {
+            assertThat(AudienceTemplate.renderFooter(AudiencePresets.find(code, "en").orElseThrow().footerBody(), links))
+                    .isEqualTo("""
+                            **Compare:** [v0.3.0...v1.0.0](https://github.com/acme/app/compare/v0.3.0...v1.0.0)
+
+                            **Upgrade guide:** [Read before upgrading](https://docs.example.com/upgrade)""");
+            assertThat(AudienceTemplate.renderFooter(AudiencePresets.find(code, "vi").orElseThrow().footerBody(), links))
+                    .isEqualTo("""
+                            **So sánh:** [v0.3.0...v1.0.0](https://github.com/acme/app/compare/v0.3.0...v1.0.0)
+
+                            **Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp](https://docs.example.com/upgrade)""");
+            assertThat(AudienceTemplate.renderFooter(AudiencePresets.find(code, "en").orElseThrow().footerBody(),
+                    new ReleaseLinks("v0.1.0", "", "", "", "https://github.com/acme/app/releases/tag/v0.1.0"))).isEmpty();
+        }
+        for (String code : List.of(AudiencePresets.END_USER, AudiencePresets.SUPPORT)) {
+            assertThat(AudiencePresets.find(code, "en").orElseThrow().footerBody()).isEmpty();
+        }
+    }
+
+    @Test
+    void rendersTheSampleFooterForThePreview() {
+        assertThat(AudienceTemplate.sampleFooter("[{{previousVersion}}...{{version}}]({{compareUrl}}) {{releaseUrl}} {{upgradeGuideUrl}}"))
+                .isEqualTo("[v1.3.0...v1.4.0](https://github.com/acme/app/compare/v1.3.0...v1.4.0)"
+                        + " https://github.com/acme/app/releases/tag/v1.4.0 https://docs.acme.example/upgrade/1.4");
+        assertThat(AudienceTemplate.sampleFooter("")).isEmpty();
+        assertThat(AudienceTemplate.sampleFooter(null)).isEmpty();
+    }
+
+    @Test
+    void aFooterSectionSeesItsOwnValueAndTheOthersAndAnInvertedOneShowsWhenEmpty() {
+        String footer = "{{#compareUrl}}<{{.}}> {{version}}{{#previousVersion}} after {{.}}{{/previousVersion}}{{/compareUrl}}"
+                + "{{^previousVersion}}First release {{version}}{{/previousVersion}}";
+
+        assertThat(AudienceTemplate.renderFooter(footer, new ReleaseLinks("v2", "v1", "https://x/compare", "", "")))
+                .isEqualTo("<https://x/compare> v2 after v1");
+        assertThat(AudienceTemplate.renderFooter(footer, new ReleaseLinks("v1", "", "", "", "")))
+                .isEqualTo("First release v1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{{whatChanged}}", "{{#narrative}}x{{/narrative}}", "{{tag}}", "{{#compareUrl}}unclosed", "{{/version}}"})
+    void rejectsAFooterThatUsesAnItemVariableAnUnknownOneOrInvalidMustache(String body) {
+        assertThatThrownBy(() -> AudienceTemplate.validateFooter(body))
+                .isInstanceOfSatisfying(InvalidAudienceTemplateException.class, exception -> {
+                    assertThat(exception.code()).isEqualTo(InvalidAudienceTemplateException.INVALID);
+                    assertThat(exception.field()).isEqualTo("footerTemplateBody");
+                });
+    }
+
+    @Test
+    void rejectsAnOverlongFooterAndAnItemTemplateThatUsesAFooterVariable() {
+        assertThatThrownBy(() -> AudienceTemplate.validateFooter("x".repeat(AudienceTemplate.MAX_LENGTH + 1)))
+                .isInstanceOf(InvalidAudienceTemplateException.class)
+                .hasMessage("error.template_invalid.tooLong");
+        assertThatThrownBy(() -> AudienceTemplate.validate("- {{whatChanged}} {{compareUrl}}"))
+                .isInstanceOfSatisfying(InvalidAudienceTemplateException.class,
+                        exception -> assertThat(exception.field()).isEqualTo("templateBody"));
+        assertThatCode(() -> AudienceTemplate.validateFooter("  \n")).doesNotThrowAnyException();
     }
 }

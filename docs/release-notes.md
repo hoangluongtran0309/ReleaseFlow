@@ -8,28 +8,40 @@ are frozen.
 
 Every approved release gets one release note per **audience**. Administrators
 manage audiences on the **Audiences** page or through `/api/audiences`. Each
-Organization starts with three presets, named in its output language
+Organization starts with four presets, named in its output language
 (English or Vietnamese):
 
-| Code | Writes for | Template |
-| --- | --- | --- |
-| `operator` | operational risk, rollback, what to watch | what changed with the pull request link and narrative, then why, detail, and migration |
-| `contributor` | implementation detail and code changes | as operator, with implementation instead of detail |
-| `end_user` | plain language, what people notice | what changed and the narrative only |
+| Code | Writes for | Template | Footer |
+| --- | --- | --- | --- |
+| `operator` | operational risk, rollback, and how the product is deployed and run | the headline with the pull request link and narrative, then why, detail, limitations, and the migration step under its kind | the compare link and the upgrade guide |
+| `contributor` | implementation detail and code changes | as operator, with implementation instead of detail | as operator |
+| `end_user` | plain language, what people notice | the headline and the narrative, and a migration step only when it is required | none |
+| `support` | what customers may ask about, and what to tell them | the headline with the link and narrative, the migration step under its kind, and limitations | none |
 
 ![The Audiences page: the three presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
 
 An audience has a **code** (lowercase letters, digits, and underscores,
 starting with a letter; fixed once created), a **display name**, a
 **communication intent** that the AI follows when it writes the audience's
-narrative, and a **template**. Templates are
+narrative, a **template** for each change, and a [footer](#footer) for the note. Each preset's intent ends by saying when a change is
+none of its audience's concern: for end users, build, CI, dependency, test, and internal
+changes they cannot see. The operator intent asks for something to watch after deploying
+only when the change or the [Project context](changes.md#project-context) names one. Templates are
 [Mustache](https://mustache.github.io/mustache.5.html) and render one change as
 Markdown with the variables `whatChanged`, `whyChanged`, `technicalDetail`,
-`migrationStep`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and
-`linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
+`migrationStep`, `migrationKind`, `limitations`, `narrative`, `headline`, `relevance`,
+`brief`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
 `url`, escaped like any other tracker text, as they were read when the change was recorded
-([Linked Jira issues](sources.md#linked-jira-issues)). The four summary values and
-`narrative` keep their Markdown, but any raw HTML in them is escaped, so a placeholder
+([Linked Jira issues](sources.md#linked-jira-issues)). `migrationKind` is `required`,
+`conditional`, `recommended`, or `unspecified` for a step recorded before kinds
+existed, and is empty without a step (see
+[AI classification](changes.md#ai-classification-and-summaries)). Since Mustache cannot
+compare values, the sections `migrationRequired`, `migrationConditional`,
+`migrationRecommended`, and `migrationUnspecified` are each true for one kind.
+`headline` is the audience's one-line headline, or `whatChanged` when it has none, so it
+always has a value; `relevance` is `brief` or `full`, and the section `brief` is true for
+a brief change (see [What each audience reads](#what-each-audience-reads)). The
+summary values, `headline`, and `narrative` keep their Markdown, but any raw HTML in them is escaped, so a placeholder
 such as `<id>` shows as written wherever the note is read. `reference` is how the change's source
 names it: `#12` for a GitHub pull request, `!12` for a GitLab merge request, and the
 issue key, such as `APP-12` or `ENG-12`, for Jira and Linear; `pullRequestNumber` is
@@ -38,9 +50,128 @@ the bare number whatever the source. A section such as
 it is saved: it must compile, use only these variables, and use `{{narrative}}`
 rather than naming another audience.
 
-The shipped detailed templates link a change as `[{{reference}}]({{pullRequestUrl}})`.
+The shipped templates lead with `**{{headline}}**`, and the detailed ones link a change
+as `[{{reference}}]({{pullRequestUrl}})`. The operator, contributor, and support
+templates print a change's limitations on a line of their own, **Limitations**
+(**Giới hạn**), so what a change does not do yet is not lost in its detail; the end-user
+template does not print them. They label a migration step by its kind:
+**Required step**, **If it applies to you**, **Recommended step**, or the neutral
+**Migration** for an unspecified one, so a step nobody called required is never
+presented as one. Their detail lines sit inside `{{^brief}}`, so a brief change keeps its
+headline, its narrative, and a required step, which is printed whatever the relevance.
+Audiences created before these templates keep their own until a preset is reset, and an
+Organization created before the `support` preset can add an audience coded `support` and
+reset it to the preset.
+
+### What each audience reads
+
+For each audience, the AI says how much a change concerns it: `none` (this reader would
+neither notice nor need it), `brief` (its headline is enough), or `full`. It also writes a
+**headline**, one line of at most 20 words, beside the narrative. A headline that is
+longer, runs over several lines, or remarks on missing evidence is dropped, and so is any
+sentence of a narrative that remarks on it ("not provided", "not specified"). An unknown
+relevance reads as `full`.
+
+A note leaves out a change that is `none` for its audience, unless the change is
+breaking: a breaking change is in every note, and `none` on it reads as `brief`. A change
+with no narrative for the audience (no AI, a failure, or an audience added later) is
+included in full.
+
+A **security change** is listed under **🔒 Security**, after the breaking changes,
+whatever its category: a security fix is still a Fix everywhere else. A change that is
+both breaking and security is listed once, under breaking changes, and starts with
+**🔒 Security:** whatever the audience's template prints. A security change is in the
+operator, contributor, and support notes even when it is `none` for them, and then reads
+as `brief`; for an end-user or a custom audience it follows its relevance like any other
+change, unless it is also breaking. See
+[ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
+
+The counts and the breaking-change warning describe what the note shows, and every
+change counts once, in the section it is listed in. An audience that nothing in the release concerns still gets its note: the title,
+the release summary, and one line saying that nothing in the release concerns it.
+Approval still writes one note per audience and language, and an automation action
+delivers that note like any other. See
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 ![Editing an audience's template and saving it](assets/release-notes/rn-2-template.webp)
+
+### Footer
+
+An audience's **footer** is a Mustache template rendered once, after the last section of
+the note (or after the line saying nothing concerns the audience), from the release's own
+values rather than a change's:
+
+| Variable | Value |
+| --- | --- |
+| `version` | the release's version |
+| `previousVersion` | the version of the [previous release](#releases), or empty |
+| `compareUrl` | the code host's comparison of the previous version with this one, or empty |
+| `upgradeGuideUrl` | the release's upgrade guide, or empty |
+| `releaseUrl` | the code host's page for this version, or empty |
+
+An empty value is false, so a line inside `{{#compareUrl}}…{{/compareUrl}}` disappears
+when the release has no comparison, and `{{^previousVersion}}…{{/previousVersion}}`
+shows only for a first release. Inside a section, `{{.}}` is the section's own value and
+every other footer variable still has its value. A footer uses only these five
+variables; a change's variables, such as `whatChanged`, are not in it, and the footer's
+are not in an item template. A blank footer adds nothing. A footer is checked when it is
+saved, like a template, and **Preview** renders the sample change followed by a sample
+footer.
+
+`compareUrl` and `releaseUrl` come from the Project's one code host, from the
+coordinates it was connected with; ReleaseFlow never asks the provider, so rendering a
+footer never calls the network, and a link can name a tag that does not exist yet.
+
+| Source | `compareUrl` | `releaseUrl` |
+| --- | --- | --- |
+| GitHub | `https://github.com/{owner}/{repository}/compare/{previousVersion}...{version}` | `https://github.com/{owner}/{repository}/releases/tag/{version}` |
+| GitLab | `{GitLab URL}/{project path}/-/compare/{previousVersion}...{version}` | `{GitLab URL}/{project path}/-/releases/{version}` |
+
+A Project with no GitHub or GitLab source, or with more than one, gets neither link;
+Linear and Jira sources do not count. `compareUrl` is empty without a previous release.
+Each release's version is used, exactly as written, as its tag name: ReleaseFlow does not
+add or remove a `v`, and there is no tag-prefix setting. When a Project's tags are not
+its versions (`v1.2.0` tags for `1.2.0` versions, or a `server/` prefix), write the
+links in the footer by hand instead of using these two variables.
+
+The operator and contributor footers show two lines, each only when it has its link:
+**Compare** (`So sánh`) links `previousVersion...version` to the comparison, and
+**Upgrade guide** (`Hướng dẫn nâng cấp`) links **Read before upgrading** to the guide.
+Neither links `releaseUrl`: a published note is often the GitHub release itself, where an
+install link would point to the page it is on. A note keeps the footer it was approved
+with, like its template.
+
+### Upgrading custom audience templates
+
+Audiences created before 1.1.0 keep their own templates; nothing rewrites them. The
+shipped operator and contributor audiences received the new footer in each of their
+languages, since they had none, and the end-user and support audiences keep a blank one.
+A custom audience, such as a DBA audience, starts with a blank footer. To give one the
+limitations line and the footer, add this line inside its item template, where its other
+detail lines are (inside `{{^brief}}` if it has one):
+
+```text
+{{#limitations}}
+  - Limitations: {{.}}
+{{/limitations}}
+```
+
+and write its footer, on the Audiences page or through `footerTemplateBody`:
+
+```text
+{{#compareUrl}}
+**Compare:** [{{previousVersion}}...{{version}}]({{compareUrl}})
+{{/compareUrl}}
+
+{{#upgradeGuideUrl}}
+**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})
+{{/upgradeGuideUrl}}
+```
+
+For a Vietnamese template, the labels are `Giới hạn`, `So sánh`, `Hướng dẫn nâng cấp`,
+and `Đọc trước khi nâng cấp`. A release note language other than the main one has its own
+template and footer under **Language templates**. **Reset to preset** gives a shipped
+audience its shipped footer in every language.
 
 An Organization keeps between 1 and 20 audiences. An audience cannot be deleted
 while something still names it: a release note, an automation rule's action, or an
@@ -48,32 +179,38 @@ automation run's history. A rule that is enabled or disabled can be pointed at a
 audience first. An archived rule cannot be changed, and run history keeps the
 audience it delivered to, so either keeps the audience for good; a refusal says
 which of these holds it. A preset can be reset to its shipped version in the current
-output language. See [ADR-0011](adr/0011-audience-release-notes.md).
+output language, and so can an audience your team added under a shipped code (`operator`,
+`contributor`, `end_user`, or `support`), which becomes a preset from then on. See [ADR-0011](adr/0011-audience-release-notes.md).
 
 Every audience endpoint is for administrators only:
 
 ```text
 GET    /api/audiences
-POST   /api/audiences                          {"code", "displayName", "communicationIntent", "templateBody"}
+POST   /api/audiences                          {"code", "displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
 GET    /api/audiences/{audienceId}
-PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody"}
-PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody"}
+PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
+PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody", "footerTemplateBody"}
 DELETE /api/audiences/{audienceId}
 POST   /api/audiences/{audienceId}/reset-to-preset
-POST   /api/audiences/preview                  {"templateBody"} -> {"markdown", "html"}
+POST   /api/audiences/preview                  {"templateBody", "footerTemplateBody"} -> {"markdown", "html"}
 ```
+
+An audience returns `footerTemplateBody` beside `templateBody`, and
+`footerTemplateVariants` beside `templateVariants`, each keyed by language. A request that
+leaves `footerTemplateBody` out keeps the footer the audience or language has, and a new
+audience then has none, so callers written before footers keep working.
 
 | Situation | Response |
 | --- | --- |
 | A member, not an administrator | `403` |
 | A missing field, or a code that is not `[a-z][a-z0-9_]*` | `400 validation_failed` |
-| A template that does not compile or uses an unknown variable | `400 template_invalid` |
+| A template or footer that does not compile or uses an unknown variable | `400 template_invalid` |
 | A template naming `narratives.<code>` | `400 template_narratives_path` |
 | The code is already used | `409 audience_code_taken` |
 | The Organization already has 20 audiences | `409 audience_limit` |
 | Deleting the last audience | `409 audience_last` |
 | Deleting an audience that has release notes, that an automation rule's action delivers to (enabled, disabled, or archived), or that a run's history names | `409 audience_in_use`; `detail` says which |
-| Resetting an audience your team created | `409 audience_not_preset` |
+| Resetting an audience whose code no shipped audience has | `409 audience_not_preset` |
 | A language template for a language that is not a release note language | `400 template_language_not_targeted` |
 | An unknown or foreign audience | `404 audience_not_found` |
 
@@ -85,8 +222,8 @@ the Audiences page, or with `PUT /api/organization/release-languages` and
 `{"targetLanguages": ["en", "vi"]}`; every member can read them with `GET`.
 Tags are canonicalized and repeats dropped; an empty list, more than five, or
 an invalid tag returns `400 invalid_release_languages`. Approving a release
-then writes one note per audience and language, so three audiences in English
-and Vietnamese make six notes.
+then writes one note per audience and language, so four audiences in English
+and Vietnamese make eight notes.
 
 Each audience has its own template for every release note language that the
 output language does not cover, created when the language or the audience is
@@ -96,8 +233,8 @@ template. Edit them under **Language templates** on the audience's page or
 with `PUT /api/audiences/{audienceId}/templates/{language}`. Resetting a shipped
 audience resets these templates too.
 
-A change's summary and narratives are written in the language the AI (or a
-person) used. For a note in another language they are translated with
+A change's summary, headlines, and narratives are written in the language the AI (or a
+person) used; a relevance is not text and is never translated. For a note in another language they are translated with
 [DeepL](https://developers.deepl.com/docs) after approval, never inside it:
 
 ```sh
@@ -113,6 +250,11 @@ again, even when a release returns to draft and is approved again. A rate limit,
 a server error, or a network failure is retried up to five times with growing
 delays; any other failure is final. A pull request title used in place of a
 missing summary is not translated.
+
+DeepL also receives the Project's [context](changes.md#project-context) as its
+`context`, which guides the translation and is neither translated nor billed. It is
+part of what a translation is cached by: editing it translates again at the next
+approval, and an unchanged context still never sends the same text twice.
 
 The release's own **summary**, the line under the note's heading, is translated the
 same way. A person writes it, in the Organization's output language, so a note in that
@@ -141,15 +283,112 @@ PUT  /api/organization/release-languages                               {"targetL
 POST /api/projects/{projectId}/releases/{releaseId}/translations/retry
 ```
 
+### Glossary
+
+Machine translation turns product terms into words that mean something else: without
+help, DeepL wrote dbvault's "console" as *giao diện dòng lệnh* (command-line interface),
+"image" as *hình ảnh* (picture), and "pull request" as *yêu cầu kéo*. The Organization's
+**glossary**, on the **Glossary** page, fixes that for every note it translates. It holds
+two kinds of entry:
+
+- a **kept term** stays in English in every language: `CLI`, `console`, `image`,
+  `pull request`. DeepL still writes the sentence around it and may adapt its form to the
+  language, so dbvault's "images" came back as *các image*: a kept term is not frozen
+  text;
+- a **fixed translation** always becomes the same words between two languages, named by
+  their primary language: `en → vi`, "storage" → *lưu trữ*. It wins over a kept term with
+  the same text, for its two languages only.
+
+Administrators edit it and every member can read it. Nothing is added on its own: the page
+offers a list of terms common in software release notes, and only the ones an
+administrator ticks are kept. A term is 1 to 100 characters on one line, the glossary
+holds at most 500 entries, and uniqueness is exact: "Image" and "image" are two entries.
+A lowercase entry usually keeps the capitalized word at the start of a sentence too, so
+add another form only for one DeepL still changes.
+
+A glossary steers DeepL; it does not bind every word. DeepL can still translate a kept
+term inside a longer phrase: with "image", "secret", and "container" kept, dbvault's notes
+still got "container images", "emulator image", and "repository secrets" translated, and
+once a sentence-initial "The console". When DeepL translates a term inside a phrase, add
+the phrase as its own kept term (`container images`, `repository secrets`).
+
+Each language pair the Organization translates is one dictionary in a DeepL glossary,
+whose version is the hash of what is sent. Approval only records that a pair is wanted,
+and a background job syncs it to DeepL outside any transaction, retrying a rate limit, a
+server error, or a network failure up to five times. Translations of the pair wait for
+that sync, then carry the glossary beside the Project's context. Its version is part of
+what a translation is cached by, so:
+
+- an edit translates again at the next approval, including the release's own summary;
+- an edit that leaves the dictionary as it was, such as deleting a term and adding it
+  back, translates nothing again;
+- an Organization with no glossary sends exactly the requests it sent before.
+
+A glossary never holds up a release. A pair DeepL serves no glossary for, or whose sync
+failed, is translated without it, and for each language the release page says whether
+the glossary was **Sent with every translation**, is still being waited for, or was **Not
+applied**, and why: the pair is unsupported, the sync failed, or DeepL answered in the
+source language with the glossary. **Sent with every translation** means the glossary went
+with every translation into that language, not that DeepL kept every term; read the note,
+and add a phrase DeepL translated as its own kept term. Retry translations tries a failed sync again. The glossary never reaches the
+AI.
+
+A translation that comes back in its source language is not stored as one. For a
+Vietnamese note, a sentence with at least three words left to translate and no Vietnamese
+diacritic fails; for a language in another script, such as Japanese or Russian, a
+sentence with no character of that script fails. Kept terms, code, URLs, paths, and words
+like `MongoDB` are left out of the count. A failing answer is translated once more without
+the glossary, and if it fails again the note is **Not translated**, like any failed
+translation. Other Latin-script languages have no such check yet. See
+[ADR-0036](adr/0036-translation-glossary.md).
+
+```text
+GET    /api/glossary
+GET    /api/glossary/suggestions
+POST   /api/glossary/kept-terms                    {"terms": ["console", "CLI"]}
+DELETE /api/glossary/kept-terms/{termId}
+POST   /api/glossary/translations                  {"sourceLanguage", "targetLanguage", "sourceTerm", "targetTerm"}
+DELETE /api/glossary/translations/{translationId}
+```
+
+`POST /api/glossary/kept-terms` adds every term or none. `GET /api/glossary` returns
+`keptTerms`, `translations`, `entryLimit`, and `pairs`: for each language pair the
+Organization translates, `entryCount` and a `status` of `empty`, `not_synced`, `pending`,
+`synced`, `outdated` (edited since its sync), `unsupported`, or `failed` with its `error`.
+
+| Situation | Response |
+| --- | --- |
+| A blank, overlong, or multi-line term, an unknown language, or the same language twice | `400 validation_failed` |
+| A term the glossary already has, kept or for that pair | `409 glossary_term_taken` |
+| More than 500 entries | `409 glossary_limit` |
+| An unknown or foreign entry | `404 glossary_term_not_found` |
+
+**DeepL API Free holds one glossary.** Each Organization uses one glossary of the DeepL
+account, and an API Free account holds only as many as its plan allows, which was one when
+this was tested. On such a key, the first Organization to sync gets the glossary; every
+other Organization's sync fails at once with `quota_exceeded` (DeepL's `456`, which is
+never retried), its release page says the glossary was not applied, and its notes are
+translated without one. ReleaseFlow never deletes a glossary in DeepL.
+
 ## Releases
 
 Open **Releases** to prepare a Project's releases. The page creates a release
-with a version (up to 50 characters), an optional summary, and an optional
-planned release time in UTC, and lists the Project's releases with status
+with a version (up to 50 characters), an optional summary, an optional
+planned release time in UTC, an optional **upgrade guide**, and the **previous
+release**, and lists the Project's releases with status
 filters and counts. A Project can prepare several releases at once, and each
 change belongs to at most one release.
 
 ![A Project's releases by status: four published, none in draft, review, or approval](assets/release-notes/rn-5-releases.webp)
+
+The **upgrade guide** is an absolute `http://` or `https://` address of at most 2,000
+characters, without a user name or password; a query and a fragment are allowed. When the
+release has breaking changes, the warning in every note links **read the upgrade guide**
+to it, and the [footer](#footer) may link it too. The **previous release** is a published
+release of the same Project that the notes compare this one with. A new release follows
+the Project's most recently published release unless a person chooses another or none;
+the choice stays when another release is published later. Both can be changed while the
+release is a draft.
 
 A release moves through four steps, shown at the top of its page:
 
@@ -161,12 +400,19 @@ A release moves through four steps, shown at the top of its page:
    then **Request review**, which needs at least one change.
 2. **In review.** The change list is fixed except for rejections. On the
    **Review** tab, each change gets a decision: **Approve as shown** confirms
-   its category and breaking flag, **Edit classification** corrects them, and
+   its category, breaking flag, and security flag, **Edit classification** corrects
+   them, and
    **Reject** removes the change from the release so it becomes available for
    another one. Approving and editing record the reviewer on the change itself,
    exactly like a review in the Change Inbox, with an optional note. An Unknown
    change must be edited. **Approve release** becomes available once every
-   change has a decision.
+   change has a decision. A change whose title is fewer than three words, once
+   its Conventional Commit prefix and issue keys are removed (`fix`,
+   `update deps`), is marked **Needs a summary** unless a person wrote its
+   summary, or the AI wrote one from a description of at least ten words (HTML
+   comments not counted) whose context it did not find insufficient. A title that
+   short cannot stand alone in a note, and an AI given nothing else can only
+   restate it, so approval waits until a person writes the summary.
 3. **Approved.** The approver and time are recorded, and a release note is
    written for every audience in every release note language from its
    template (see [Release note languages](#release-note-languages)). Check each
@@ -192,7 +438,8 @@ writes new ones.
 Before approval, the preview shows what each audience's note would say. A note
 starts with the release title and summary and a **What's New** overview with
 counts, warns about breaking changes, and lists breaking changes first, then
-features, fixes, performance, documentation, and maintenance. Each change is
+security changes, features, fixes, performance, documentation, and maintenance, and
+ends with the audience's footer. Each change is
 written by the audience's template from its neutral summary and the audience's
 narrative; without a summary, the pull request title is used, with its
 Conventional Commit prefix removed. Labels are English or Vietnamese, following
@@ -201,8 +448,17 @@ the output language.
 ![A release's notes, one per audience and language; the operator note was edited by hand and is marked Manual](assets/release-notes/rn-7-manual-note.webp)
 
 During review and after approval, **Edit summary** on the Review tab lets a
-person write or correct a change's summary and each audience's narrative. This
-works whether or not the AI wrote one. The change records who wrote it, and the
+person write or correct a change's summary, including its migration kind and
+limitations, and each audience's relevance, headline, and narrative. This works whether
+or not the AI wrote one, and the AI never replaces what a person chose. Through the API,
+each audience's narrative is `{"relevance": "NONE" | "BRIEF" | "FULL", "headline", "body"}`
+or, as callers written before relevance existed send, a plain string, which is a full
+narrative without a headline. A full narrative with neither headline nor body is not
+kept, since it says no more than having none; an unknown relevance returns
+`400 malformed_request`. A request that names no `migrationKind`, as callers written before it
+existed send, records `UNSPECIFIED` for a step and `NONE` without one; a kind that
+does not match the step (`NONE` with a step, any other without) returns
+`400 validation_failed`. The change records who wrote it, and the
 notes of an approved release that still follow their template are rendered
 again. Notes reflect the changes at approval: to pick up a classification
 corrected later in the Change Inbox, return the release to draft and approve it
@@ -213,9 +469,10 @@ REST clients use the same rules:
 
 ```text
 GET    /api/projects/{projectId}/releases
-POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt"}
+POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt",
+                                                                          "upgradeGuideUrl", "previousReleaseId"}
 GET    /api/projects/{projectId}/releases/{releaseId}
-PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary"}
+PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary", "upgradeGuideUrl", "previousReleaseId"}
 DELETE /api/projects/{projectId}/releases/{releaseId}
 PUT    /api/projects/{projectId}/releases/{releaseId}/schedule           {"plannedReleaseAt"} (null clears it)
 GET    /api/projects/{projectId}/releases/{releaseId}/available-changes
@@ -223,13 +480,15 @@ POST   /api/projects/{projectId}/releases/{releaseId}/changes            {"chang
 DELETE /api/projects/{projectId}/releases/{releaseId}/changes/{changeId} (remove, or reject during review)
 POST   /api/projects/{projectId}/releases/{releaseId}/request-review
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/decision
-                                                                         {"action": "APPROVE" | "EDIT", "category", "breaking", "note"}
+                                                                         {"action": "APPROVE" | "EDIT", "category", "breaking", "security", "note"}
 POST   /api/projects/{projectId}/releases/{releaseId}/approve
 POST   /api/projects/{projectId}/releases/{releaseId}/return-to-draft
 POST   /api/projects/{projectId}/releases/{releaseId}/publish
 POST   /api/projects/{projectId}/releases/{releaseId}/translations/retry
 PUT    /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/summary
-                                                                         {"whatChanged", "whyChanged", "technicalDetail", "migrationStep", "narratives": {"<code>": "..."}}
+                                                                         {"whatChanged", "whyChanged", "technicalDetail", "migrationStep",
+                                                                          "migrationKind", "limitations",
+                                                                          "narratives": {"<code>": {"relevance", "headline", "body"} or "..."}}
 GET    /api/projects/{projectId}/releases/{releaseId}/note-previews
 GET    /api/projects/{projectId}/releases/{releaseId}/notes
 PUT    /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}     {"content"}
@@ -238,12 +497,20 @@ GET    /api/projects/{projectId}/release-assignments
 ```
 
 `plannedReleaseAt` is an ISO-8601 instant such as `2026-10-01T09:00:00Z`; a
-value without an offset is read as UTC. A release returns its `changes`, its
+value without an offset is read as UTC. A create request that leaves
+`previousReleaseId` out follows the most recently published release, and an update that
+leaves `upgradeGuideUrl` or `previousReleaseId` out keeps it; an explicit `null` clears
+either. A decision that leaves `security` out confirms the change's current flag, as
+callers written before it do; `APPROVE` must otherwise send the flag the change has.
+A release returns `upgradeGuideUrl`, `previousReleaseId`, `previousVersion`, its `changes`, its
 `decisions` (`changeId`, `action`, `reviewerName`, `note`, `decidedAt`),
 `reviewedCount`, `plannedReleaseAt`, `approvedAt`, `approverName`, and its
 `notes` (`id`, `audienceCode`, `audienceName`, `language`, `content`,
-`autoRerender`, `lastEditorName`, `updatedAt`, and `translationStatus`:
-`READY`, `PENDING`, or `FAILED`). The download is `text/markdown`, named
+`autoRerender`, `lastEditorName`, `updatedAt`, `translationStatus`:
+`READY`, `PENDING`, or `FAILED`, and `glossaryStatus`: `NONE`, `PENDING`, `APPLIED`, or
+`NOT_APPLIED` with a `glossaryReason`), and `glossaries`: one entry per note language whose
+pair has a [glossary](#glossary), with its `language`, `status`, and `reason`. The
+download is `text/markdown`, named
 `<version>-<audience code>-<language>.md`.
 `release-assignments` lists which release, by ID, version, and status, each
 of the Project's changes belongs to. Errors:
@@ -253,7 +520,10 @@ of the Project's changes belongs to. Errors:
 | The operation does not fit the release's status | `409 release_status_conflict` |
 | Review requested or approval attempted with no changes | `409 release_empty` |
 | Approval attempted before every change has a decision | `409 release_review_incomplete` |
-| `APPROVE` sent with a classification other than the change's current one | `409 classification_changed` |
+| Approval attempted while a change with a title of fewer than three words has no summary a person wrote, and too little description for the AI's; `detail` names them | `409 change_summary_required` |
+| `APPROVE` sent with a classification other than the change's current one, security flag included | `409 classification_changed` |
+| An upgrade guide that is not an absolute `http://` or `https://` address, has a user name or password, or is over 2,000 characters | `400 invalid_upgrade_guide_url` |
+| A previous release that is not a published release of this Project | `400 invalid_previous_release` |
 | `unknown` or an unsupported category in a decision | `400 invalid_change_review` |
 | `APPROVE` of an Unknown change, whatever category it names: approving keeps the current classification, so an Unknown change takes `EDIT` with a category | `400 invalid_change_review` |
 | An unreadable or past planned release time | `400 invalid_release_schedule` |

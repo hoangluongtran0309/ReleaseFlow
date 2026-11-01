@@ -119,6 +119,58 @@ với mọi release đã qua bước nháp.
 thể hoàn tác. Sao lưu trước; quay lại nghĩa là khôi phục bản sao lưu đó với phiên bản cũ, không
 bao giờ chạy phiên bản cũ trên cơ sở dữ liệu đã được migrate.
 
+### Nâng cấp khi dùng model suy luận {#upgrading-with-a-reasoning-model}
+
+Từ 1.1.0, mọi request phân loại dùng cùng một temperature, là `0` trừ khi
+`RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác
+([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
+[ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 không gửi temperature. Model chỉ nhận
+temperature mặc định từ chối request có ghi temperature: các model suy luận của OpenAI và các
+model Claude ra mắt sau Opus 4.6 đều như vậy.
+
+**Không cần làm gì.** Khi nhà cung cấp từ chối temperature, ReleaseFlow gửi lại đúng request đó
+một lần nữa nhưng không có temperature, và không gửi temperature trong mọi request sau đó cho đến
+khi khởi động lại ([ADR-0039](adr/0039-ai-temperature-fallback.md)). Log ghi điều này một lần:
+
+```text
+OpenAI model o4-mini refused the temperature, so classification requests leave it out until ReleaseFlow restarts. Set RELEASEFLOW_AI_TEMPERATURE=default to avoid the first refusal.
+```
+
+Mỗi lần khởi động tốn một request bị từ chối. Để bỏ qua request đó, đặt:
+
+```bash
+RELEASEFLOW_AI_TEMPERATURE=default
+```
+
+Khi đó request không gửi temperature ngay từ request đầu tiên, như mọi request trước đây. Với
+Docker Compose, đặt biến này trong file `.env` cạnh file Compose, file này sẽ chuyển nó vào ứng
+dụng, và gửi `0` khi biến không được đặt. Bản triển khai có model nhận temperature thì gửi `0`
+và không gặp lần từ chối nào.
+
+### Nâng cấp lên phiên bản có bảng thuật ngữ {#upgrading-to-the-glossary}
+
+Phiên bản thêm [bảng thuật ngữ](release-notes.md#glossary) (Flyway `V33`) không thay đổi gì cho
+đến khi quản trị viên thêm thuật ngữ: Organization chưa có bảng thuật ngữ gửi DeepL đúng những yêu
+cầu như trước, và không note nào bị dịch lại. Để giữ thuật ngữ sau khi nâng cấp:
+
+1. Mở **Bảng thuật ngữ**, chọn những thuật ngữ gợi ý mà người đọc của bạn giữ bằng tiếng Anh, và
+   thêm những thuật ngữ khác, mỗi mục viết đúng như cần hiển thị. Thêm bản dịch cố định cho thuật
+   ngữ luôn phải dịch thành cùng một cụm từ trong một ngôn ngữ.
+2. Đưa một release đã duyệt về nháp rồi duyệt lại, hoặc duyệt release tiếp theo: bản dịch tạo từ
+   lúc đó dùng bảng thuật ngữ. Note đã publish không bao giờ thay đổi.
+3. Xem trang release: mỗi ngôn ngữ cho biết bảng thuật ngữ có ở trạng thái **Đã gửi kèm mọi bản
+   dịch** hay không. Trạng thái đó nghĩa là DeepL đã nhận bảng thuật ngữ, không phải mọi thuật ngữ
+   đều được giữ, nên đọc lại note, và thêm cụm mà DeepL đã dịch, như `container images`, thành một
+   thuật ngữ giữ nguyên riêng.
+
+**Với DeepL API Free, chỉ một Organization dùng được bảng thuật ngữ.** ReleaseFlow dùng một
+glossary của DeepL cho mỗi Organization, và tài khoản API Free chỉ có số glossary mà gói cho phép:
+là một khi được thử. Organization đồng bộ đầu tiên dùng nó; lần đồng bộ của mọi Organization khác
+thất bại với `quota_exceeded` và note của chúng được dịch mà không có bảng thuật ngữ, như trang
+release và trang Bảng thuật ngữ của chúng cho biết. Một bản cài đặt phục vụ nhiều Organization có
+bảng thuật ngữ cần gói DeepL có đủ số glossary đó. Glossary do công cụ khác tạo trong tài khoản
+cũng chiếm một chỗ.
+
 ## Artifact đã phát hành {#published-artifacts}
 
 Đây là các bản phát hành của chính ReleaseFlow, khác với những release mà nó viết release note,

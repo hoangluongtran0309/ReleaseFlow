@@ -18,13 +18,13 @@ they describe.
 | [0006](0006-organization-roles-and-invitations.md) | Organization roles and invitations | Accepted | 2026-09-14 | |
 | [0007](0007-ci-and-container-supply-chain.md) | CI gates and container supply chain | Accepted | 2026-09-14 | Amended by [0026](0026-deployment-observability.md) (health check on the management port) |
 | [0008](0008-durable-change-processing.md) | Durable change processing and changed-file review triggers | Accepted | 2026-09-14 | |
-| [0009](0009-automatic-ai-classification.md) | Automatic AI classification and neutral summaries | Accepted | 2026-09-14 | Supersedes [0004](0004-openai-classification-as-reviewed-suggestion.md) |
+| [0009](0009-automatic-ai-classification.md) | Automatic AI classification and neutral summaries | Accepted | 2026-09-14 | Supersedes [0004](0004-openai-classification-as-reviewed-suggestion.md); amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (Project context, migration kind, limitations) |
 | [0010](0010-release-review-lifecycle.md) | Release review lifecycle | Accepted | 2026-09-14 | |
-| [0011](0011-audience-release-notes.md) | Audiences and a release note per audience | Accepted | 2026-09-15 | |
+| [0011](0011-audience-release-notes.md) | Audiences and a release note per audience | Accepted | 2026-09-15 | Amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (a selection and headline per audience) and [0037](0037-security-changes-and-release-note-structure.md) (security and release-wide note structure) |
 | [0012](0012-category-catalog.md) | Category catalog per Organization | Accepted | 2026-09-15 | |
 | [0013](0013-context-sufficiency-and-duplicates.md) | Context sufficiency and possible duplicates | Accepted | 2026-09-15 | |
 | [0014](0014-project-sensitive-paths.md) | Sensitive paths per Project | Accepted | 2026-09-15 | |
-| [0015](0015-multilingual-release-notes.md) | Release notes in several languages | Accepted | 2026-09-15 | |
+| [0015](0015-multilingual-release-notes.md) | Release notes in several languages | Accepted | 2026-09-15 | Amended by [0036](0036-translation-glossary.md) (a glossary for translations) |
 | [0016](0016-integration-sources-and-history-import.md) | Integration sources and history import | Accepted | 2026-09-15 | |
 | [0017](0017-gitlab-sources.md) | GitLab sources and provider seams | Accepted | 2026-09-16 | |
 | [0018](0018-linear-sources.md) | Linear sources | Accepted | 2026-09-16 | |
@@ -44,6 +44,11 @@ they describe.
 | [0032](0032-documentation-site.md) | Documentation site | Accepted | 2026-10-12 | Builds on [0007](0007-ci-and-container-supply-chain.md) and [0030](0030-release-automation.md) |
 | [0033](0033-change-exclusion.md) | Excluding a change from releases | Accepted | 2026-10-17 | Builds on [0010](0010-release-review-lifecycle.md) |
 | [0034](0034-account-language-per-request.md) | The account's interface language is read on each request | Accepted | 2026-10-23 | Amends [0027](0027-ui-localization.md) |
+| [0035](0035-evidence-bound-notes-and-audience-relevance.md) | Notes bound to their evidence, and a selection per audience | Accepted | 2026-10-26 | Amends [0009](0009-automatic-ai-classification.md) and [0011](0011-audience-release-notes.md); amended by [0038](0038-configurable-ai-temperature.md) (a configurable temperature) |
+| [0036](0036-translation-glossary.md) | An Organization glossary for translated notes | Accepted | 2026-10-27 | Amends [0015](0015-multilingual-release-notes.md); refers to [0035](0035-evidence-bound-notes-and-audience-relevance.md) |
+| [0037](0037-security-changes-and-release-note-structure.md) | Security changes and release-wide note structure | Accepted | 2026-10-29 | Amends [0011](0011-audience-release-notes.md); refers to [0009](0009-automatic-ai-classification.md), [0010](0010-release-review-lifecycle.md), [0035](0035-evidence-bound-notes-and-audience-relevance.md), and [0036](0036-translation-glossary.md) |
+| [0038](0038-configurable-ai-temperature.md) | A configurable AI temperature | Accepted | 2026-10-31 | Amends [0035](0035-evidence-bound-notes-and-audience-relevance.md); amended by [0039](0039-ai-temperature-fallback.md) (a fallback when a model refuses the temperature) |
+| [0039](0039-ai-temperature-fallback.md) | Falling back when a model refuses the temperature | Accepted | 2026-11-01 | Amends [0038](0038-configurable-ai-temperature.md); refers to [0009](0009-automatic-ai-classification.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)

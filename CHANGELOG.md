@@ -12,6 +12,109 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-01
+
+### Added
+
+- Security changes have a section of their own. A change gains a security flag beside
+  breaking: rules set it from a `security`, `security-fix`, `security fix`, or
+  `vulnerability` label and from a CVE identifier, the AI may propose it, and a person
+  confirms or corrects it in the Change Inbox and in a release's review. A security
+  change always needs review, and the AI never clears the flag. Notes list security
+  changes under 🔒 Security after breaking changes and count each change once; one that
+  is both breaking and security appears once, under breaking changes, marked as security.
+  The operator, contributor, and support notes always include a security change
+  ([ADR-0037](docs/adr/0037-security-changes-and-release-note-structure.md)).
+- A release can link an upgrade guide, which the breaking-change warning then links,
+  and names the release it follows, by default the Project's most recently published
+  one.
+- A footer template per audience and language, rendered once at the end of each note
+  with `version`, `previousVersion`, `compareUrl`, `upgradeGuideUrl`, and `releaseUrl`.
+  The compare and release links come from the Project's one GitHub or GitLab source,
+  with each version used as its tag name, and are built without calling the provider.
+  The operator and contributor presets end with a Compare link and an Upgrade guide link,
+  and existing operator and contributor audiences received them. See
+  [Upgrading custom audience templates](docs/release-notes.md#upgrading-custom-audience-templates)
+  for adding the footer and the limitations line to an audience your team created.
+- A change returned by the API has `security`; a release has `upgradeGuideUrl`,
+  `previousReleaseId`, and `previousVersion`; an audience has `footerTemplateBody` and
+  `footerTemplateVariants`. A request that leaves the new fields out keeps working.
+- An Organization glossary for translated notes. Administrators keep product terms as
+  written in every language (CLI, console, image, pull request) and fix translations per
+  language pair (`storage` → *lưu trữ*) on a Glossary page or through `/api/glossary`;
+  members read it. Nothing is seeded: suggested terms are only offered. Each language pair
+  is synced to DeepL as a glossary dictionary when an approval needs it, and a glossary
+  edit translates again at the next approval, the release summary included. The release
+  page says, per language, whether the glossary was sent with every translation, which is
+  not a promise that DeepL kept every term, and why not when it was not;
+  a pair DeepL cannot serve, or a failed sync, never blocks a release. A Vietnamese or
+  non-Latin answer that comes back in the source language is translated again without the
+  glossary, or fails, rather than being stored
+  ([ADR-0036](docs/adr/0036-translation-glossary.md)). See
+  [Upgrading to the glossary](docs/operations.md#upgrading-to-the-glossary) for adding
+  terms, and for the one glossary a DeepL API Free account holds.
+- A Project context: what administrators say about the product (what is a client and
+  what a server, where settings live, what stays in English by design). The AI receives
+  it with every change it classifies, and DeepL as context for the Project's
+  translations ([ADR-0035](docs/adr/0035-evidence-bound-notes-and-audience-relevance.md)).
+- A change's summary records how much its migration step asks — required, only if it
+  applies, or recommended — and what the change deliberately does not do yet. The shipped
+  templates label a step by its kind, and Edit summary sets both.
+- Each audience's note shows only the changes that concern it. The AI says, for every
+  audience, whether a change is not for it, worth a headline, or worth the detail, and
+  writes a one-line headline beside its narrative. A breaking change is in every note,
+  counts and the breaking warning describe what the note shows, and an audience that
+  nothing concerns gets a note saying so. Templates gain `headline`, `relevance`, and the
+  `brief` section, and Edit summary sets all three for each audience
+  ([ADR-0035](docs/adr/0035-evidence-bound-notes-and-audience-relevance.md)).
+- A fourth shipped audience, Support: what customers may ask about, what to tell them,
+  and whether a step is required or only advisable. New Organizations start with it; an
+  existing one can add an audience coded `support` and reset it to the preset.
+
+- A change returned by the API has `audienceNarrativeDetails`: each audience's
+  narrative as `relevance`, `headline`, and `body`. `audienceNarratives` stays a map of
+  audience code to narrative text, and Edit summary accepts either an object or a plain
+  string for each audience, so existing clients keep working.
+
+### Changed
+
+- The shipped templates lead with each audience's headline, keep their detail lines out
+  of a brief change, and always print a required step. Audiences created before keep
+  their templates until they are reset to the preset.
+- The shipped intents say when a change does not concern their audience, and the
+  operator intent asks for something to watch after deploying only when the change or the
+  Project context names it.
+
+- The AI is told to state only what a change's evidence supports in every field: no
+  invented consequences or places in the product, no steps taken from a dependency's
+  changelog, no files for a tracker issue that names none, and no remarks about missing
+  detail. A tracker issue is sent as one rather than as a pull request.
+- A release cannot be approved while one of its changes has no summary and a title of
+  fewer than three words, such as "fix"; the release page marks it and asks for a summary.
+- A migration kind the AI got wrong is corrected and sent to review, rather than costing
+  the whole answer.
+- A dependency update from Dependabot or Renovate reaches the AI without the release
+  notes, changelog, and commits it quotes, so another project's upgrade steps no longer
+  become this project's; it is breaking only when its own words say so. Only a dependency
+  update is told that, so the AI still marks an ordinary change breaking when it is unsure.
+- A change with a title like "fix" and an empty or very short description waits for a
+  person's summary even when the AI wrote one, since the AI could only restate the title.
+- Limitations that only remark on what the change did not explain, or only say what the
+  change does not affect, are dropped.
+- An AI migration step that only says nothing needs doing, such as "No immediate action
+  is required", is dropped, so the change has no step rather than a recommended one.
+- Every AI classification request uses temperature 0, so the same change varies less from
+  one request to the next. `RELEASEFLOW_AI_TEMPERATURE` sets another value in the
+  provider's range (`0` to `2` for OpenAI and DeepSeek, `0` to `1` for Anthropic), checked
+  at startup ([ADR-0038](docs/adr/0038-configurable-ai-temperature.md)). A model that
+  accepts only its default temperature, such as an OpenAI reasoning model or a Claude model
+  released after Opus 4.6, keeps working with no action: when it refuses the temperature,
+  the same request is sent once more without it, and later requests leave it out until
+  ReleaseFlow restarts, with one warning in the log
+  ([ADR-0039](docs/adr/0039-ai-temperature-fallback.md)). `RELEASEFLOW_AI_TEMPERATURE=default`
+  leaves it out from the first request and so avoids that refusal (see
+  [Upgrading with a reasoning model](docs/operations.md#upgrading-with-a-reasoning-model)).
+
 ## [1.0.1] - 2026-10-25
 
 ### Fixed
@@ -85,6 +188,7 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.1.0
 [1.0.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.0

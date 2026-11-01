@@ -22,7 +22,8 @@ class AudiencePresetDivergenceTest {
     private static final Map<String, String> NARRATIVES = Map.of(
             AudiencePresets.OPERATOR, "Exports now stream from a background queue; watch queue depth and roll back by disabling the export flag.",
             AudiencePresets.CONTRIBUTOR, "The exporter moved to ExportJob, so callers of TableExporter.export must switch to the new async API.",
-            AudiencePresets.END_USER, "You can download any table as a spreadsheet, even very large ones."
+            AudiencePresets.END_USER, "You can download any table as a spreadsheet, even very large ones.",
+            AudiencePresets.SUPPORT, "Customers may ask why big exports now arrive later; tell them the file is still complete."
     );
 
     @Test
@@ -54,7 +55,11 @@ class AudiencePresetDivergenceTest {
                 "Exports of big tables failed after 30 seconds.",
                 "Rows are streamed in pages of 1000 through a queue.",
                 "Set EXPORT_QUEUE_ENABLED=true before upgrading.",
+                "required",
+                "",
                 narrative,
+                "",
+                null,
                 "#42",
                 42,
                 "https://github.com/acme/app/pull/42",

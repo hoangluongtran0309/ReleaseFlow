@@ -17,6 +17,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AiClassificationParserTest {
 
+    // A complete answer; %s is where its security answer goes, so a test can leave it out.
+    private static final String VALID = """
+            {"category":"fix","breaking_change":false%s,"needs_human_review":false,
+             "context_sufficiency":{"score":90,"reasons":[]},
+             "neutral_core":{"what_changed":"Derives a key per target.","why_changed":"","technical_detail":"",
+             "migration_step":"","migration_kind":"none","limitations":""}}
+            """;
+
     private static final AiClassificationRequest REQUEST = OpenAiCompatibleClassifierTest.request(null, null, "en");
     private static final String SUMMARY = "\"context_sufficiency\":{\"score\":90,\"reasons\":[]},\"neutral_core\":{\"what_changed\":\"Adds audit logs.\",\"why_changed\":\"\","
             + "\"technical_detail\":\"\",\"migration_step\":\"\"}";
@@ -26,7 +34,7 @@ class AiClassificationParserTest {
     @Test
     void parsesAValidAnswerAndIgnoresExtraFields() {
         AiClassification answer = parser.parse("""
-                {"category":"fix","breaking_change":true,"needs_human_review":false,"confidence":0.4,
+                {"category":"fix","breaking_change":true,"security_change":false,"needs_human_review":false,"confidence":0.4,
                  "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"  Trims input.  ","why_changed":"","technical_detail":"Strip()",
                  "migration_step":"","narratives":{"end_user":"ignored"}}}
                 """, REQUEST);
@@ -35,18 +43,20 @@ class AiClassificationParserTest {
                 TestCategories.FIX,
                 true,
                 false,
+                false,
                 new NeutralSummary("Trims input.", "", "Strip()", ""),
                 Map.of(),
                 null,
                 90,
-                List.of()
+                List.of(),
+                null
         ));
     }
 
     @Test
     void keepsAProposedCategoryWithAnUnknownAnswer() {
         AiClassification answer = parser.parse("""
-                {"category":"UNKNOWN","breaking_change":false,"needs_human_review":true,%s,
+                {"category":"UNKNOWN","breaking_change":false,"security_change":false,"needs_human_review":true,%s,
                  "suggested_category":{"code":" audit-log ","display_name":"Audit log","group":"feature",
                  "rationale":"No listed category covers auditing."}}
                 """.formatted(SUMMARY), REQUEST);
@@ -67,7 +77,7 @@ class AiClassificationParserTest {
     })
     void dropsProposalsThatAreEmptyInvalidAlreadyListedOrNotForAnUnknownAnswer(String fields) {
         AiClassification answer = parser.parse(
-                "{" + fields + ",\"breaking_change\":false,\"needs_human_review\":true," + SUMMARY + "}", REQUEST);
+                "{" + fields + ",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":true," + SUMMARY + "}", REQUEST);
 
         assertThat(answer.suggestion()).isNull();
     }
@@ -75,7 +85,7 @@ class AiClassificationParserTest {
     @Test
     void defaultsAProposalsNameAndGroup() {
         AiClassification answer = parser.parse("""
-                {"category":"unknown","breaking_change":false,"needs_human_review":true,%s,
+                {"category":"unknown","breaking_change":false,"security_change":false,"needs_human_review":true,%s,
                  "suggested_category":{"code":"COMPLIANCE","display_name":"  ","group":"legal","rationale":"%s"}}
                 """.formatted(SUMMARY, "r".repeat(1500)), REQUEST);
 
@@ -87,19 +97,97 @@ class AiClassificationParserTest {
     @Test
     void keepsTheNarrativesOfRequestedAudiencesOnly() {
         AiClassification answer = parser.parse("""
-                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,
                  "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""},
                  "narratives":{"operator":"  Watch the import logs.  ","end_user":"   ","contributor":"Not requested."}}
                 """, REQUEST);
 
-        assertThat(answer.narratives()).containsExactly(Map.entry("operator", "Watch the import logs."));
+        // A plain string, as answers were before ADR-0035, is a full body.
+        assertThat(answer.narratives()).containsExactly(Map.entry("operator", AudienceNarrative.of("Watch the import logs.")));
+    }
+
+    @Test
+    void readsARelevanceAHeadlineAndABodyForEachAudience() {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"brief","headline":"  Exports queue in the background.  ","body":" Watch the queue. "},
+                 "end_user":{"relevance":"none","headline":"","body":""}}"""), REQUEST);
+
+        assertThat(answer.narratives()).containsOnly(
+                Map.entry("operator", new AudienceNarrative(Relevance.BRIEF, "Exports queue in the background.", "Watch the queue.")),
+                // None says something having no narrative would not: the note leaves the change out.
+                Map.entry("end_user", new AudienceNarrative(Relevance.NONE, "", ""))
+        );
+    }
+
+    // One audience's slip must not cost the whole answer (ADR-0035).
+    @ParameterizedTest
+    @ValueSource(strings = {"\"often\"", "\"\"", "null", "3"})
+    void readsAnUnknownOrMissingRelevanceAsFull(String relevance) {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":%s,"headline":"Exports queue.","body":"Watch the queue."}}""".formatted(relevance)), REQUEST);
+
+        assertThat(answer.narratives().get("operator"))
+                .isEqualTo(new AudienceNarrative(Relevance.FULL, "Exports queue.", "Watch the queue."));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone",
+            "Exports queue.\\nWatch the queue.",
+            "Specific queue limits are not detailed.",
+            "The rollback steps are not provided.",
+            "No mention of multi-user support or role-based access."
+    })
+    void dropsAHeadlineThatIsTooLongOnSeveralLinesOrARemarkOnTheInput(String headline) {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":"%s","body":"Watch the queue."}}""".formatted(headline)), REQUEST);
+
+        assertThat(answer.narratives().get("operator")).isEqualTo(new AudienceNarrative(Relevance.FULL, "", "Watch the queue."));
+    }
+
+    @Test
+    void keepsAHeadlineOfTwentyWords() {
+        String headline = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
+                + "sixteen seventeen eighteen nineteen twenty";
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":"%s","body":""}}""".formatted(headline)), REQUEST);
+
+        assertThat(answer.narratives().get("operator").headline()).isEqualTo(headline);
+    }
+
+    @Test
+    void dropsTheSentencesOfABodyThatRemarkOnTheInput() {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":"","body":"Watch the export queue. Rollback steps are not provided. The change does not mention retries."},
+                 "end_user":{"relevance":"full","headline":"","body":"The exact limits are not specified. No mention of multi-user support."}}"""), REQUEST);
+
+        assertThat(answer.narratives().get("operator").body()).isEqualTo("Watch the export queue.");
+        // Left with nothing, and full, it says no more than having no narrative.
+        assertThat(answer.narratives()).doesNotContainKey("end_user");
+    }
+
+    @Test
+    void leavesOutANarrativeThatSaysNothing() {
+        AiClassification answer = parser.parse(withNarratives("""
+                {"operator":{"relevance":"full","headline":" ","body":""},
+                 "end_user":{"relevance":"brief","headline":"","body":""}}"""), REQUEST);
+
+        assertThat(answer.narratives()).containsOnly(Map.entry("end_user", new AudienceNarrative(Relevance.BRIEF, "", "")));
+    }
+
+    private static String withNarratives(String narratives) {
+        return """
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""},
+                 "narratives":%s}
+                """.formatted(narratives);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", ",\"narratives\":null", ",\"narratives\":[]", ",\"narratives\":{\"operator\":42}"})
     void acceptsMissingOrMistypedNarrativesWithoutThem(String narratives) {
         AiClassification answer = parser.parse("""
-                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,
                  "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""}%s}
                 """.formatted(narratives), REQUEST);
 
@@ -111,7 +199,7 @@ class AiClassificationParserTest {
     @CsvSource({"150, 100", "-3, 0", "59.6, 60"})
     void clampsAndRoundsTheContextScore(String score, int expected) {
         AiClassification answer = parser.parse("""
-                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,
                  "context_sufficiency":{"score":%s,"reasons":[" NO_PROBLEM_STATEMENT ","",42,"A","B","C","D","E"]},
                  "neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""}}
                 """.formatted(score), REQUEST);
@@ -125,16 +213,124 @@ class AiClassificationParserTest {
             ",\"context_sufficiency\":{\"score\":\"high\",\"reasons\":[]}"})
     void rejectsAnAnswerWithoutAContextScore(String context) {
         assertThatThrownBy(() -> parser.parse("""
-                {"category":"fix","breaking_change":false,"needs_human_review":false%s,
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false%s,
                  "neutral_core":{"what_changed":"Trims input.","why_changed":"","technical_detail":"","migration_step":""}}
                 """.formatted(context), REQUEST))
                 .isInstanceOf(AiClassificationException.class);
     }
 
     @Test
+    void keepsAMigrationKindThatMatchesItsStepAndTheLimitations() {
+        AiClassification answer = parser.parse(core("\"Rename EXPORT_DIR to EXPORT_PATH.\"", "\"required\"",
+                "\"Validation is enforced only for MongoDB.\""), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.REQUIRED);
+        assertThat(answer.summary().limitations()).isEqualTo("Validation is enforced only for MongoDB.");
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    // One slip must not cost the category, the summary, and every narrative (ADR-0035).
+    @ParameterizedTest
+    @CsvSource(delimiterString = "|", value = {
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"none\"'        | RECOMMENDED | none",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"unspecified\"' | RECOMMENDED | unspecified",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | '\"optional\"'    | RECOMMENDED | optional",
+            "'\"Rename EXPORT_DIR to EXPORT_PATH.\"' | null              | UNSPECIFIED | ''",
+            "'\"\"'                      | '\"required\"'    | NONE        | required",
+            "'\"\"'                      | '\"conditional\"' | NONE        | conditional"
+    })
+    void correctsAMigrationKindThatDoesNotMatchItsStep(String step, String kind, MigrationKind expected, String returned) {
+        AiClassification answer = parser.parse(core(step, kind, "\"\""), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(expected);
+        assertThat(answer.correctedMigrationKind()).isEqualTo(returned);
+    }
+
+    // Nothing says how much the step asks, so it is never presented as required, and a
+    // person checks it.
+    @Test
+    void aStepWithoutAKindIsUnspecifiedAndCorrected() {
+        AiClassification answer = parser.parse("""
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Keys per target.",
+                 "why_changed":"","technical_detail":"","migration_step":"Rename EXPORT_DIR to EXPORT_PATH."}}
+                """, REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.UNSPECIFIED);
+        assertThat(answer.correctedMigrationKind()).isEmpty();
+        assertThat(ReviewTrigger.migrationKindMismatch(answer.correctedMigrationKind()))
+                .isEqualTo(new ReviewTrigger(ReviewTriggerType.MIGRATION_KIND_MISMATCH, null));
+    }
+
+    @Test
+    void dropsTheLimitationsThatAreAboutTheInput() {
+        AiClassification answer = parser.parse(core("\"\"", "\"none\"",
+                "\"Validation is enforced only for MongoDB. Rollback steps are not provided.\""), REQUEST);
+        AiClassification remarksOnly = parser.parse(core("\"\"", "\"none\"",
+                "\"Technical specifics are not detailed.\""), REQUEST);
+
+        assertThat(answer.summary().limitations()).isEqualTo("Validation is enforced only for MongoDB.");
+        assertThat(remarksOnly.summary().limitations()).isEmpty();
+    }
+
+    // A step that only says nothing needs doing is no step, so none stays none and its fact
+    // stays in the limitations the AI wrote.
+    @Test
+    void dropsAStepThatOnlySaysNothingNeedsDoing() {
+        AiClassification answer = parser.parse(core(
+                "\"No immediate action is required; existing passwords are migrated to per-target keys when edited.\"",
+                "\"none\"",
+                "\"Existing passwords keep the master key until each target is next saved.\""), REQUEST);
+
+        assertThat(answer.summary().migrationStep()).isEmpty();
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.summary().limitations()).isEqualTo("Existing passwords keep the master key until each target is next saved.");
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    @Test
+    void aKindForAStepThatSaysNothingNeedsDoingIsCorrectedToNone() {
+        AiClassification answer = parser.parse(core("\"No migration required.\"", "\"recommended\"", "\"\""), REQUEST);
+
+        assertThat(answer.summary().migrationStep()).isEmpty();
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.correctedMigrationKind()).isEqualTo("recommended");
+    }
+
+    @Test
+    void dropsTheLimitationsThatOnlyStateTheScope() {
+        AiClassification answer = parser.parse(core("\"\"", "\"none\"",
+                "\"Certificate validation is enforced only for MongoDB. The change has no impact on PostgreSQL targets.\""), REQUEST);
+        AiClassification scopeOnly = parser.parse(core("\"\"", "\"none\"",
+                "\"It only affects the CI environment.\""), REQUEST);
+
+        assertThat(answer.summary().limitations()).isEqualTo("Certificate validation is enforced only for MongoDB.");
+        assertThat(scopeOnly.summary().limitations()).isEmpty();
+    }
+
+    @Test
+    void anAnswerWithoutAKindOrLimitationsForAnEmptyStepNeedsNoCorrection() {
+        AiClassification answer = parser.parse("""
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,%s}
+                """.formatted(SUMMARY), REQUEST);
+
+        assertThat(answer.summary().migrationKind()).isEqualTo(MigrationKind.NONE);
+        assertThat(answer.summary().limitations()).isEmpty();
+        assertThat(answer.correctedMigrationKind()).isNull();
+    }
+
+    private static String core(String step, String kind, String limitations) {
+        return """
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,
+                 "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"Keys per target.",
+                 "why_changed":"","technical_detail":"","migration_step":%s,"migration_kind":%s,"limitations":%s}}
+                """.formatted(step, kind, limitations);
+    }
+
+    @Test
     void shortensOverlongSummaryFields() {
         String answer = """
-                {"category":"fix","breaking_change":false,"needs_human_review":false,
+                {"category":"fix","breaking_change":false,"security_change":false,"needs_human_review":false,
                  "context_sufficiency":{"score":90,"reasons":[]},"neutral_core":{"what_changed":"%s","why_changed":"","technical_detail":"","migration_step":""}}
                 """.formatted("w".repeat(3000));
 
@@ -143,19 +339,35 @@ class AiClassificationParserTest {
                 .endsWith("…");
     }
 
+    @Test
+    void readsTheSecurityAnswer() {
+        AiClassification answer = parser.parse(VALID.formatted(",\"security_change\":true"), REQUEST);
+
+        assertThat(answer.security()).isTrue();
+        assertThat(answer.breaking()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", ",\"security_change\":\"yes\"", ",\"security_change\":null", ",\"security_change\":1"})
+    void rejectsAnAnswerWithoutABooleanSecurityAnswer(String security) {
+        assertThatThrownBy(() -> parser.parse(VALID.formatted(security), REQUEST))
+                .isInstanceOf(AiClassificationException.class)
+                .hasMessage(AiClassificationParser.INVALID);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "",
             "not json",
             "[]",
-            "{\"category\":\"security\",\"breaking_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
-            "{\"category\":\"performance-ish\",\"breaking_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
+            "{\"category\":\"security\",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
+            "{\"category\":\"performance-ish\",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
             "{\"category\":\"fix\",\"breaking_change\":\"no\",\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
-            "{\"category\":\"fix\",\"breaking_change\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
-            "{\"category\":\"fix\",\"breaking_change\":false,\"needs_human_review\":false}",
-            "{\"category\":\"fix\",\"breaking_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\"}}",
-            "{\"category\":\"fix\",\"breaking_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"  \",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
-            "{\"category\":\"fix\",\"breaking_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":null,\"technical_detail\":\"\",\"migration_step\":\"\"}}"
+            "{\"category\":\"fix\",\"breaking_change\":false,\"security_change\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
+            "{\"category\":\"fix\",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":false}",
+            "{\"category\":\"fix\",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":\"\",\"technical_detail\":\"\"}}",
+            "{\"category\":\"fix\",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"  \",\"why_changed\":\"\",\"technical_detail\":\"\",\"migration_step\":\"\"}}",
+            "{\"category\":\"fix\",\"breaking_change\":false,\"security_change\":false,\"needs_human_review\":false,\"neutral_core\":{\"what_changed\":\"x\",\"why_changed\":null,\"technical_detail\":\"\",\"migration_step\":\"\"}}"
     })
     void rejectsIncompleteOrMistypedAnswers(String content) {
         assertThatThrownBy(() -> parser.parse(content, REQUEST))

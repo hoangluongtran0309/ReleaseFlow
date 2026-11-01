@@ -35,6 +35,18 @@ class MergedPullRequestTest {
     }
 
     @Test
+    void keepsTheHeadBranchItWasMergedFromWhenThereIsOne() {
+        String withHead = VALID.replace("\"base\":{\"ref\":\"release/1.2\"}",
+                "\"base\":{\"ref\":\"release/1.2\"},\"head\":{\"ref\":\"%s\"}");
+
+        assertThat(MergedPullRequest.from(json(withHead.formatted("dependabot/maven/spring-boot-4.1.1"))).headBranch())
+                .isEqualTo("dependabot/maven/spring-boot-4.1.1");
+        assertThat(MergedPullRequest.from(json(VALID)).headBranch()).isNull();
+        // Too long to store is left out, never cut into another name.
+        assertThat(MergedPullRequest.from(json(withHead.formatted("b".repeat(256)))).headBranch()).isNull();
+    }
+
+    @Test
     void treatsEmptyBodyAndMissingLabelsAsAbsent() {
         MergedPullRequest pullRequest = MergedPullRequest.from(json(VALID
                 .replace("\"body\":\"Details\"", "\"body\":null")

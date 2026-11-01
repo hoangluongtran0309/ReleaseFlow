@@ -188,6 +188,22 @@ class ChangeDatabaseConstraintIntegrationTest extends PostgreSqlIntegrationTest 
                 .doesNotThrowAnyException();
     }
 
+    // ADR-0037: a security change leaves review only through a recorded review, like a breaking one.
+    @Test
+    void requiresReviewForSecurityChanges() {
+        UUID organization = insertOrganization("First");
+        UUID project = insertProject(organization);
+        insertChange(organization, project, 1, "Title", VALID_SHA, "FIX", false, true);
+        UUID id = jdbcTemplate.queryForObject("SELECT id FROM changes WHERE pull_request_number = 1", UUID.class);
+        jdbcTemplate.update("UPDATE changes SET security = true WHERE id = ?", id);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE changes SET needs_review = false WHERE id = ?", id))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(jdbcTemplate.queryForObject("SELECT security FROM changes WHERE id = ?", Boolean.class, id)).isTrue();
+        assertThatCode(() -> jdbcTemplate.update("UPDATE changes SET security = false, needs_review = false WHERE id = ?", id))
+                .doesNotThrowAnyException();
+    }
+
     @Test
     void keepsLinkedIssuesToALookupThatGotFarEnoughToReadThem() {
         UUID organization = insertOrganization("First");

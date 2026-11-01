@@ -6,6 +6,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,10 +22,24 @@ class TranslationTextsTest {
         reordered.put("whyChanged", "Users asked.");
         reordered.put("whatChanged", "Tables export as CSV.");
 
-        String hash = TranslationTexts.inputHash("en", first);
-        assertThat(hash).hasSize(64).isEqualTo(TranslationTexts.inputHash("en", reordered));
-        assertThat(TranslationTexts.inputHash("de", first)).isNotEqualTo(hash);
-        assertThat(TranslationTexts.inputHash("en", Map.of("whatChanged", "Tables export as TSV."))).isNotEqualTo(hash);
+        String hash = TranslationTexts.inputHash("en", first, "", "");
+        assertThat(hash).hasSize(64).isEqualTo(TranslationTexts.inputHash("en", reordered, "", ""));
+        assertThat(TranslationTexts.inputHash("de", first, "", "")).isNotEqualTo(hash);
+        assertThat(TranslationTexts.inputHash("en", Map.of("whatChanged", "Tables export as TSV."), "", "")).isNotEqualTo(hash);
+    }
+
+    @Test
+    void aProjectContextIsPartOfTheInputAndOfTheCachedText() {
+        Map<String, String> texts = Map.of("whatChanged", "The whole console is in Vietnamese.");
+        String withoutContext = TranslationTexts.inputHash("en", texts, "", "");
+
+        assertThat(TranslationTexts.inputHash("en", texts, "The console is the web UI; the CLI stays English.", ""))
+                .isNotEqualTo(withoutContext)
+                .isNotEqualTo(TranslationTexts.inputHash("en", texts, "The CLI is a client.", ""));
+        // Without a context, a text is found as it was before contexts existed.
+        assertThat(TranslationTexts.textHash("Done.", "", ""))
+                .isEqualTo("ed251864987c367e9641fbdc89c1d83e9bf0fa2e3eecef8f301c79f619bfac81")
+                .isNotEqualTo(TranslationTexts.textHash("Done.", "The CLI is a client.", ""));
     }
 
     @Test
@@ -68,5 +83,33 @@ class TranslationTextsTest {
         assertThatThrownBy(() -> TranslationProviderConfiguration.create("google", "", "", timeout, mapper))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("disabled or deepl");
+    }
+
+    @Test
+    void theGlossaryVersionIsPartOfTheInputAndOfTheCachedText() {
+        Map<String, String> texts = Map.of("whatChanged", "The whole console is in Vietnamese.");
+        String withoutGlossary = TranslationTexts.inputHash("en", texts, "dbvault", "");
+
+        assertThat(TranslationTexts.inputHash("en", texts, "dbvault", "v1"))
+                .isNotEqualTo(withoutGlossary)
+                .isNotEqualTo(TranslationTexts.inputHash("en", texts, "dbvault", "v2"))
+                .isEqualTo(TranslationTexts.inputHash("en", texts, "dbvault", "v1"));
+        // Without a glossary, input hashes and texts are found exactly as before glossaries existed.
+        assertThat(TranslationTexts.textHash("Done.", "", ""))
+                .isEqualTo("ed251864987c367e9641fbdc89c1d83e9bf0fa2e3eecef8f301c79f619bfac81")
+                .isNotEqualTo(TranslationTexts.textHash("Done.", "", "v1"));
+        assertThat(TranslationTexts.textHash("Done.", "dbvault", "v1"))
+                .isNotEqualTo(TranslationTexts.textHash("Done.", "dbvault", ""));
+    }
+
+    @Test
+    void aDictionaryIsSortedAndItsVersionIsTheHashOfWhatIsSent() {
+        Map<String, String> entries = new TreeMap<>(Map.of("storage", "lưu trữ", "CLI", "CLI"));
+
+        GlossaryService.Dictionary dictionary = GlossaryService.Dictionary.of(entries);
+
+        assertThat(dictionary.tsv()).isEqualTo("CLI\tCLI\nstorage\tlưu trữ");
+        assertThat(dictionary.version()).isEqualTo(TranslationTexts.sha256Hex("CLI\tCLI\nstorage\tlưu trữ"));
+        assertThat(GlossaryService.Dictionary.of(new TreeMap<>()).version()).isEmpty();
     }
 }

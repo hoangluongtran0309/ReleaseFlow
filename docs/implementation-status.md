@@ -478,9 +478,109 @@ where it first appears; ADRs are linked from the slice they record.
   and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
   dependencies at high severity, allowing only listed advisories that no release fixes.
 
+### Notes bound to their evidence (V30–V31)
+
+- Notes bound to their evidence, the #15 part of
+  [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md), with Flyway `V30`:
+  - a Project context that administrators write on its own page and through
+    `GET`/`PUT /api/projects/{projectId}/context`, sent with every AI request for the
+    Project's changes and to DeepL as `context`, and part of the translation hash and
+    cache;
+  - an AI request that says whether the change is merged code or a tracker issue, and
+    instructions that forbid consequences, product locations, tracker-issue files, a
+    dependency's quoted changelog, and remarks about missing evidence in every field;
+  - a migration kind (`required`, `conditional`, `recommended`, `none`, or
+    `unspecified` for steps recorded before) and limitations in the neutral summary,
+    in Edit summary, translations, and templates, with presets that label a step by
+    its kind;
+  - a kind that does not match its step corrected rather than rejected, and a step
+    without a kind read as `unspecified`, both with a `MIGRATION_KIND_MISMATCH`
+    review trigger;
+  - approval refused with `409 change_summary_required` while a change with a title
+    of fewer than three words has no summary a person wrote, and too little
+    description (under ten words, or a context the AI found insufficient) for the AI's;
+  - dependency updates, known by a bot author or a `dependabot/` or `renovate/` head
+    branch (stored since Flyway `V31`), sent to the AI without their quoted release
+    notes, changelog, and commits, and breaking only when their own words say so, a
+    rule the prompt carries only for them;
+  - AI limitations kept to what the change says it does not do yet, with sentences
+    about the input or only about the change's scope dropped by a deterministic filter;
+  - an AI migration step that only says nothing needs doing dropped, so its kind is
+    `none`;
+  - every classification request at the same temperature, `0` unless
+    `RELEASEFLOW_AI_TEMPERATURE` names another in the provider's range or `default`, which
+    sends none for a model that accepts only its own
+    ([ADR-0038](adr/0038-configurable-ai-temperature.md)), and none for the rest of the
+    process once a model refuses it, after sending the refused request once more without it
+    ([ADR-0039](adr/0039-ai-temperature-fallback.md)).
+
+### A note per audience (V32)
+
+- The per-audience part of
+  [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) (#16), with Flyway
+  `V32`:
+  - a narrative per audience of `{relevance, headline, body}`, required for every
+    audience code by the response schema and parsed leniently: an unknown relevance is
+    `full`, a headline over 20 words or several lines, or one that remarks on missing
+    evidence, is dropped, so is each such sentence of a body, and a full narrative with
+    no text is left out;
+  - `V32` rewriting every narrative stored as a string to a full one without a headline;
+  - a note per audience that leaves out a change that is `none` for it unless the change
+    is breaking (`none` then reads as `brief`), counts and warns about what it shows, and
+    says so when nothing concerns its audience;
+  - template variables `headline` (falling back to `whatChanged`) and `relevance`, the
+    `brief` section, and presets that lead with the headline, keep detail lines inside
+    `{{^brief}}`, and always print a required step;
+  - headlines translated as `headline.<code>` beside `narrative.<code>`;
+  - Edit summary, page and API, with a relevance, a headline, and a body per audience,
+    still accepting a plain string;
+  - preset intents that say when a change is `none` for their audience, an operator
+    intent that names something to watch only when the evidence does, and a `support`
+    preset that registration seeds, which an Organization registered before it adds by
+    creating an audience coded `support` and resetting it to the preset.
+
+### Translation glossary (V33)
+
+- [ADR-0036](adr/0036-translation-glossary.md) (#14), with Flyway `V33`:
+  - an Organization glossary of kept terms and fixed translations per language pair, on
+    a Glossary page that members read and administrators edit, and through
+    `/api/glossary`, with `glossary_term_taken`, `glossary_limit`, and
+    `glossary_term_not_found`; at most 500 entries of 1 to 100 characters, uniqueness
+    exact, and suggested terms that are only offered;
+  - one DeepL v3 glossary per Organization with a dictionary per language pair, synced
+    by `GlossarySyncWorker` when an approval needs it, with bounded retries and `456`
+    final, so a DeepL API Free account serves one Organization's glossary;
+  - the pair's glossary version in the translation input hash and the cache key, so an
+    edit translates again at the next approval and an unchanged glossary sends nothing
+    twice, the release summary included;
+  - an untranslated guard for Vietnamese and non-Latin targets, which translates a
+    failing answer again without the glossary, or fails it;
+  - the glossary's outcome on each note and per language on the release page and `GET`,
+    never blocking approval or publication.
+
+### Security changes and note structure (V34)
+
+- [ADR-0037](adr/0037-security-changes-and-release-note-structure.md) (#17), with Flyway
+  `V34`:
+  - a security flag beside breaking, set by security labels and CVE identifiers, proposed
+    by the AI through one new `security_change` answer, never cleared by it, and always
+    reviewed; both review paths and their APIs confirm or correct it, and an older caller
+    that leaves it out confirms it;
+  - a 🔒 Security section after Breaking, in English and Vietnamese, counted once; a
+    breaking security change appears once, in Breaking, marked; operator, contributor,
+    and support notes always include a security change;
+  - an optional upgrade guide and a previous release on each release, defaulting to the
+    Project's most recently published one, with `invalid_upgrade_guide_url` and
+    `invalid_previous_release`; the breaking warning links the guide;
+  - a footer template per audience and language, with `version`, `previousVersion`,
+    `compareUrl`, `upgradeGuideUrl`, and `releaseUrl`, built offline from the Project's
+    one GitHub or GitLab source; the operator and contributor presets show the compare
+    and upgrade-guide links, and existing ones received them;
+  - the upgrade note for custom audience templates in the release-note guide.
+
 ## In progress
 
-- Nothing.
+- Nothing; the next slice starts from the planned work below.
 
 ## Planned
 
@@ -495,7 +595,8 @@ deliberately deferred list below, one reviewed slice at a time.
 - GitLab group-level webhooks, Linear projects and cycles, linked context from
   Linear or from more than one Jira source per Project, Jira issue types and
   statuses as classification signals, and queues or retries for work other than
-  enrichment, imports, polls, translation, and the automation outbox and actions.
+  enrichment, imports, polls, translation, glossary syncs, and the automation outbox and
+  actions.
 - Validating a repository with GitHub when it is connected, disconnecting or
   replacing a source, rotating a Linear signing secret without reconnecting, and
   secret or token rotation reminders.
@@ -504,6 +605,8 @@ deliberately deferred list below, one reviewed slice at a time.
   title and description follow the reader rather than staying English, localized
   dates and numbers beyond what the bundle's own patterns give, translation
   providers other than DeepL, and asynchronous note generation.
+- A glossary per Project, deleting an Organization's DeepL glossary, and an untranslated
+  guard for Latin-script languages other than Vietnamese.
 - Automation actions other than GitHub Releases, Slack, email, the public
   changelog, Notion, Confluence Cloud, Microsoft Teams, and Zendesk.
 - Confluence Data Center, Confluence OAuth, and reading a Notion, Confluence, or

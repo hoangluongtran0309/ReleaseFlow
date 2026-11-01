@@ -13,7 +13,7 @@ fetching a CSRF token (see [REST API](api.md#sessions-and-csrf)); `outputLanguag
 optional and defaults to English. An email address belongs to one account across the
 whole deployment, so registering it twice returns `409 email_already_registered`.
 Registration also seeds the Organization's [category catalog](changes.md#categories),
-its three preset [audiences](release-notes.md#audiences), and its public changelog
+its four preset [audiences](release-notes.md#audiences), and its public changelog
 address.
 
 ![Filling in the registration form, then signing in to the new Organization](assets/workspace/w-1-register.webp)

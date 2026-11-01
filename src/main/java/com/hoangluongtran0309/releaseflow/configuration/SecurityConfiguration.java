@@ -142,6 +142,11 @@ public class SecurityConfiguration {
                         .requestMatchers("/categories", "/categories/**", "/api/categories", "/api/categories/**",
                                 "/api/category-suggestions", "/api/category-suggestions/**")
                         .hasRole("ADMIN")
+                        // Members read the glossary; administrators change what every translation keeps.
+                        .requestMatchers(HttpMethod.POST, "/glossary/**", "/api/glossary/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/glossary/**")
+                        .hasRole("ADMIN")
                         // Connecting a source creates its webhook signing secret; an access token is a
                         // credential; an import reads a repository's history. All are administrator only.
                         .requestMatchers(HttpMethod.POST, "/projects/*/sources", "/api/projects/*/sources")
@@ -155,6 +160,11 @@ public class SecurityConfiguration {
                         .hasRole("ADMIN")
                         // Members read a Project's sensitive paths; administrators add to them.
                         .requestMatchers(HttpMethod.PUT, "/api/projects/*/sensitive-paths")
+                        .hasRole("ADMIN")
+                        // Members read a Project's context; administrators write it.
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/*/context")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/projects/*/context")
                         .hasRole("ADMIN")
                         // Saying a change never ships decides what every later release offers.
                         .requestMatchers("/api/projects/*/changes/*/exclusion", "/projects/*/changes/*/exclusion",

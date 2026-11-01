@@ -7,6 +7,7 @@ import java.util.List;
 record ChangeClassification(
         CategoryRef category,
         boolean breaking,
+        boolean security,
         boolean needsReview,
         List<String> reasons,
         List<ReviewTrigger> triggers

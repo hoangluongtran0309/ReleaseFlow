@@ -61,7 +61,24 @@
                               th:attr="aria-invalid=${#fields.hasErrors('summary')} ? 'true' : null,aria-describedby=${#fields.hasErrors('summary')} ? 'summary-error' : null"></textarea>
                     <span id="summary-error" class="field-error" th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}"></span>
                 </label>
-                <div><button type="submit" class="btn btn-primary" th:text="#{ui.releases.create}">Create release</button></div>
+                <label class="form-control"><span class="label-text font-medium"><span th:text="#{ui.releases.upgradeGuideUrl}">Upgrade guide</span>
+                        <span class="text-slate-500" th:text="#{ui.releases.optional}">(optional)</span></span>
+                    <input type="url" th:field="*{upgradeGuideUrl}" maxlength="2000" placeholder="https://docs.example.com/upgrade"
+                           class="input input-bordered w-full" th:errorclass="input-error"
+                           th:attr="aria-invalid=${#fields.hasErrors('upgradeGuideUrl')} ? 'true' : null,aria-describedby=${#fields.hasErrors('upgradeGuideUrl')} ? 'upgradeGuideUrl-error upgradeGuideUrl-hint' : 'upgradeGuideUrl-hint'">
+                    <span class="label-text-alt" id="upgradeGuideUrl-hint" th:text="#{ui.releases.upgradeGuideUrlHint}">The breaking-change warning links it.</span>
+                    <span id="upgradeGuideUrl-error" class="field-error" th:if="${#fields.hasErrors('upgradeGuideUrl')}" th:errors="*{upgradeGuideUrl}"></span>
+                </label>
+                <label class="form-control"><span class="label-text font-medium" th:text="#{ui.releases.previousRelease}">Previous release</span>
+                    <select th:field="*{previousReleaseId}" class="select select-bordered w-full" th:errorclass="select-error"
+                            th:attr="aria-invalid=${#fields.hasErrors('previousReleaseId')} ? 'true' : null,aria-describedby=${#fields.hasErrors('previousReleaseId')} ? 'previousReleaseId-error previousReleaseId-hint' : 'previousReleaseId-hint'">
+                        <option value="" th:text="#{ui.releases.noPreviousRelease}">None</option>
+                        <option th:each="option : ${previousReleases}" th:value="${option.id}" th:text="${option.version}">1.3.0</option>
+                    </select>
+                    <span class="label-text-alt" id="previousReleaseId-hint" th:text="#{ui.releases.previousReleaseHint}">Notes compare this release with it.</span>
+                    <span id="previousReleaseId-error" class="field-error" th:if="${#fields.hasErrors('previousReleaseId')}" th:errors="*{previousReleaseId}"></span>
+                </label>
+                <div class="sm:col-span-2"><button type="submit" class="btn btn-primary" th:text="#{ui.releases.create}">Create release</button></div>
             </form>
         </section>
 

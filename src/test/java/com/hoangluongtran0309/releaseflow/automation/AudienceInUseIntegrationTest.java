@@ -42,7 +42,7 @@ class AudienceInUseIntegrationTest extends AutomationIntegrationTestBase {
         mockMvc.perform(delete("/api/automation/rules/{ruleId}", ruleId).session(owner.session()).with(csrf()))
                 .andExpect(status().isNoContent());
         expectInUse(deleteAudience(owner, audienceId), "archived automation rule");
-        assertThat(audienceCount(owner)).isEqualTo(4);
+        assertThat(audienceCount(owner)).isEqualTo(5);
     }
 
     @Test
@@ -73,7 +73,7 @@ class AudienceInUseIntegrationTest extends AutomationIntegrationTestBase {
         mockMvc.perform(delete("/api/automation/rules/{ruleId}", ruleId).session(owner.session()).with(csrf()))
                 .andExpect(status().isNoContent());
         expectInUse(deleteAudience(owner, audienceId), "its history keeps it");
-        assertThat(audienceCount(owner)).isEqualTo(4);
+        assertThat(audienceCount(owner)).isEqualTo(5);
     }
 
     @Test

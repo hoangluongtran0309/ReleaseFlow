@@ -38,6 +38,14 @@ final class ReleaseNoteMarkdown {
     }
 
     /**
+     * An address as a link destination: the characters that would end or break one are
+     * percent-encoded, so a parenthesis in a person's URL cannot close the link early.
+     */
+    static String linkDestination(String url) {
+        return url.replace(" ", "%20").replace("(", "%28").replace(")", "%29").replace("<", "%3C").replace(">", "%3E");
+    }
+
+    /**
      * Backslash-escapes only what a CommonMark reader takes as raw HTML, so that text
      * such as {@code <target-id>} is shown as written everywhere a note is read rather
      * than dropped as an unknown tag. Code, autolinks, emphasis, links, and a {@code <}

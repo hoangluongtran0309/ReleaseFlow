@@ -88,8 +88,17 @@ Một trạng thái mà không endpoint nào tự trả, chẳng hạn một `4x
 
 ReleaseFlow chưa phát hành phiên bản nào. Phiên bản tuân theo Semantic Versioning, và một thay
 đổi không tương thích ở một endpoint được ghi là `BREAKING CHANGE`, làm tăng phiên bản major
-(xem [Releasing](../CONTRIBUTING.md#releasing)). `code` của một lỗi không bao giờ thay đổi. API
-không có tiền tố phiên bản và không có tài liệu OpenAPI; trang này và các hướng dẫn chính là
+(xem [Releasing](../CONTRIBUTING.md#releasing)). `code` của một lỗi không bao giờ thay đổi. Một
+bản phát hành minor chỉ thêm vào phản hồi: trường mới nằm bên cạnh trường mà bên gọi đang đọc
+chứ không đổi hình dạng của nó. Ví dụ, một thay đổi vẫn giữ `audienceNarratives` là map từ mã
+audience tới nội dung narrative, còn `audienceNarrativeDetails` bên cạnh cho biết `relevance`,
+`headline` và `body` của từng narrative ([Mỗi audience đọc gì](release-notes.md#what-each-audience-reads));
+Sửa tóm tắt nhận cả hai dạng trong `narratives`. Tương tự, một release có thêm `glossaries`, và
+mỗi note có thêm `glossaryStatus` và `glossaryReason`, bên cạnh các trường vốn có
+([Bảng thuật ngữ](release-notes.md#glossary)). Một thay đổi có thêm `security`, một release có
+thêm `upgradeGuideUrl`, `previousReleaseId` và `previousVersion`, và một audience có thêm
+`footerTemplateBody` và `footerTemplateVariants`; request bỏ các trường mới này vẫn chạy như trước
+([Phần cuối](release-notes.md#footer)). API không có tiền tố phiên bản và không có tài liệu OpenAPI; trang này và các hướng dẫn chính là
 phần mô tả của nó. Chỉ `GET /api/automation/runs` có phân trang; mọi danh sách khác, kể cả
 Change Inbox, trả về toàn bộ trong một lần.
 
@@ -142,6 +151,8 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision` | thành viên |
 | `GET /api/projects/{projectId}/sensitive-paths` | thành viên |
 | `PUT /api/projects/{projectId}/sensitive-paths` | quản trị viên |
+| `GET /api/projects/{projectId}/context` | thành viên |
+| `PUT /api/projects/{projectId}/context` | quản trị viên |
 | `GET /api/categories` | thành viên |
 | `POST /api/categories` | quản trị viên |
 | `PUT /api/categories/{categoryId}`, `DELETE /api/categories/{categoryId}` | quản trị viên |
@@ -178,6 +189,9 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `POST /api/audiences/preview` | quản trị viên |
 | `GET /api/organization/release-languages` | thành viên |
 | `PUT /api/organization/release-languages` | quản trị viên |
+| `GET /api/glossary`, `GET /api/glossary/suggestions` | thành viên |
+| `POST /api/glossary/kept-terms`, `DELETE /api/glossary/kept-terms/{termId}` | quản trị viên |
+| `POST /api/glossary/translations`, `DELETE /api/glossary/translations/{translationId}` | quản trị viên |
 
 ### Automation — [Automation](automation.md) {#automation--automation}
 
@@ -236,7 +250,9 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Audience | `400` | `template_invalid`, `template_narratives_path`, `template_language_not_targeted`, `invalid_release_languages` |
 | Audience | `404` | `audience_not_found` |
 | Audience | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
-| Release | `400` | `invalid_release_schedule` |
+| Bảng thuật ngữ | `404` | `glossary_term_not_found` |
+| Bảng thuật ngữ | `409` | `glossary_term_taken`, `glossary_limit` |
+| Release | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release` |
 | Release | `404` | `release_not_found`, `release_note_not_found` |
-| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
+| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
 | Automation | `400`, `404`, `409` | Xem [Automation](automation.md#rest) |

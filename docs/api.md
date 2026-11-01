@@ -90,8 +90,18 @@ A status no endpoint gives itself, such as a `4xx` from the server container, is
 ReleaseFlow has not published a release yet. Versions follow Semantic Versioning, and an
 incompatible change to an endpoint is recorded as a `BREAKING CHANGE` that raises the
 major version (see [Releasing](../CONTRIBUTING.md#releasing)). An error's `code` never
-changes. The API has no version prefix and no OpenAPI document; this page and the guides
-are its description. Only `GET /api/automation/runs` is paged; every other list,
+changes. A minor release only adds to a response: a new field goes beside the one clients
+already read rather than changing its shape. A change, for example, keeps
+`audienceNarratives` as a map from audience code to narrative text, and
+`audienceNarrativeDetails` beside it gives each narrative's `relevance`, `headline`, and
+`body` ([What each audience reads](release-notes.md#what-each-audience-reads)); Edit
+summary accepts either shape in `narratives`. Likewise a release gained `glossaries`, and
+each note `glossaryStatus` and `glossaryReason`, beside the fields it already had
+([Glossary](release-notes.md#glossary)). A change gained `security`, a release
+`upgradeGuideUrl`, `previousReleaseId`, and `previousVersion`, and an audience
+`footerTemplateBody` and `footerTemplateVariants`; a request that leaves one of their
+fields out keeps working as before ([Footer](release-notes.md#footer)). The API has no version prefix and no
+OpenAPI document; this page and the guides are its description. Only `GET /api/automation/runs` is paged; every other list,
 the Change Inbox included, returns everything at once.
 
 ## Endpoints
@@ -143,6 +153,8 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision` | member |
 | `GET /api/projects/{projectId}/sensitive-paths` | member |
 | `PUT /api/projects/{projectId}/sensitive-paths` | admin |
+| `GET /api/projects/{projectId}/context` | member |
+| `PUT /api/projects/{projectId}/context` | admin |
 | `GET /api/categories` | member |
 | `POST /api/categories` | admin |
 | `PUT /api/categories/{categoryId}`, `DELETE /api/categories/{categoryId}` | admin |
@@ -179,6 +191,9 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `POST /api/audiences/preview` | admin |
 | `GET /api/organization/release-languages` | member |
 | `PUT /api/organization/release-languages` | admin |
+| `GET /api/glossary`, `GET /api/glossary/suggestions` | member |
+| `POST /api/glossary/kept-terms`, `DELETE /api/glossary/kept-terms/{termId}` | admin |
+| `POST /api/glossary/translations`, `DELETE /api/glossary/translations/{translationId}` | admin |
 
 ### Automation — [Automation](automation.md)
 
@@ -237,7 +252,9 @@ Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
 | Audiences | `400` | `template_invalid`, `template_narratives_path`, `template_language_not_targeted`, `invalid_release_languages` |
 | Audiences | `404` | `audience_not_found` |
 | Audiences | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
-| Releases | `400` | `invalid_release_schedule` |
+| Glossary | `404` | `glossary_term_not_found` |
+| Glossary | `409` | `glossary_term_taken`, `glossary_limit` |
+| Releases | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release` |
 | Releases | `404` | `release_not_found`, `release_note_not_found` |
-| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
+| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
 | Automation | `400`, `404`, `409` | See [Automation](automation.md#rest) |

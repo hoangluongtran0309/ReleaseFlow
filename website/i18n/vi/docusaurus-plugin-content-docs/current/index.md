@@ -19,15 +19,16 @@ viết từ cùng một bộ dữ kiện đã review, thay vì viết tay lại 
    GitHub và GitLab còn import được 90 ngày gần nhất. Xem [Nguồn](sources.md).
 2. **Phân loại.** Các quy tắc giải thích được xếp mỗi thay đổi vào một category. AI (tùy
    chọn; OpenAI, Anthropic hoặc DeepSeek) viết bản tóm tắt trung lập và đề xuất category,
-   nhưng quy tắc luôn được ưu tiên, và thay đổi phá vỡ tương thích, không nhận diện được,
-   hoặc chạm vào tệp nhạy cảm luôn chờ một người review. Xem
+   nhưng quy tắc luôn được ưu tiên, và thay đổi phá vỡ tương thích, bảo mật, không nhận diện
+   được, hoặc chạm vào tệp nhạy cảm luôn chờ một người review. Xem
    [Thay đổi và review](changes.md).
 3. **Review.** Một release đi từ nháp, qua quyết định cho từng thay đổi, đến khi được duyệt.
    Những thay đổi thiếu ngữ cảnh, hoặc trông giống thay đổi trước đó, được đánh dấu kèm bằng
    chứng. Xem [Release](release-notes.md#releases).
 4. **Viết.** Mỗi audience (người vận hành, người đóng góp, người dùng cuối, hoặc audience
    của riêng bạn) có một release note, viết từ một template Mustache, với tối đa năm ngôn
-   ngữ do DeepL dịch. Xem [Audience](release-notes.md#audiences).
+   ngữ do DeepL dịch, thay đổi bảo mật nằm trong một mục riêng, và phần cuối có thể liên kết
+   trang so sánh với release trước. Xem [Audience](release-notes.md#audiences).
 5. **Publish.** Release note sau khi publish không thay đổi nữa, rồi được các quy tắc
    automation gửi tới GitHub Releases, Slack, email, Notion, Confluence, Microsoft Teams,
    Zendesk, hoặc một changelog công khai có RSS feed. Xem [Automation](automation.md).

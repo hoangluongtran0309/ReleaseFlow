@@ -198,6 +198,7 @@
                               th:title="#{ui.changes.suggestedCategoryTitle}"
                               th:text="#{ui.changes.suggestedCategory}">Suggested category</span>
                         <span class="badge badge-error font-semibold" th:if="${change.breaking}" th:text="#{ui.changes.breaking}">Breaking</span>
+                        <span class="badge badge-info font-semibold" th:if="${change.security}" th:text="#{ui.changes.security}">Security</span>
                         <span class="badge badge-warning font-semibold" th:if="${change.needsReview}" th:text="#{ui.changes.needsReview}">Needs review</span>
                         <span class="badge badge-success font-semibold" th:if="${change.reviewedAt != null}" th:text="#{ui.changes.reviewed}">Reviewed</span>
                         <span class="badge badge-soft badge-success font-semibold"
@@ -344,8 +345,9 @@
                             <div><dt class="font-semibold" th:text="#{ui.changes.whatChanged}">What changed</dt><dd class="whitespace-pre-line" th:text="${summary.whatChanged}">Adds CSV export to every table.</dd></div>
                             <div th:unless="${#strings.isEmpty(summary.whyChanged)}"><dt class="font-semibold" th:text="#{ui.changes.whyChanged}">Why</dt><dd class="whitespace-pre-line" th:text="${summary.whyChanged}">Users asked to download data.</dd></div>
                             <div th:unless="${#strings.isEmpty(summary.technicalDetail)}"><dt class="font-semibold" th:text="#{ui.changes.technicalDetail}">Technical detail</dt><dd class="whitespace-pre-line" th:text="${summary.technicalDetail}">Streams rows to avoid loading the table in memory.</dd></div>
-                            <div th:unless="${#strings.isEmpty(summary.migrationStep)}"><dt class="font-semibold" th:text="#{ui.changes.migration}">Migration</dt><dd class="whitespace-pre-line" th:text="${summary.migrationStep}">Nothing to do.</dd></div>
-                            <div th:each="narrative : ${change.audienceNarratives}"><dt class="font-semibold" th:text="#{ui.changes.narrativeFor(${audienceNames[narrative.key] ?: narrative.key})}">For operator</dt><dd class="whitespace-pre-line" th:text="${narrative.value}">Watch the export queue after deploying.</dd></div>
+                            <div th:unless="${#strings.isEmpty(summary.limitations)}"><dt class="font-semibold" th:text="#{ui.changes.limitations}">Limitations</dt><dd class="whitespace-pre-line" th:text="${summary.limitations}">Certificate validation is enforced only for MongoDB.</dd></div>
+                            <div th:unless="${#strings.isEmpty(summary.migrationStep)}"><dt class="font-semibold" th:text="#{ui.changes.migrationOfKind(#{|ui.enum.migrationKind.${summary.migrationKind.name()}|})}">Migration (required)</dt><dd class="whitespace-pre-line" th:text="${summary.migrationStep}">Rename EXPORT_DIR to EXPORT_PATH.</dd></div>
+                            <div th:each="narrative : ${change.audienceNarrativeDetails}"><dt class="font-semibold" th:text="#{ui.changes.narrativeForRelevance(${audienceNames[narrative.key] ?: narrative.key},#{|ui.enum.relevance.${narrative.value.relevance.name()}|})}">For operator (full)</dt><dd><p class="font-medium" th:unless="${#strings.isEmpty(narrative.value.headline)}" th:text="${narrative.value.headline}">Exports run in the background.</p><p class="whitespace-pre-line" th:unless="${#strings.isEmpty(narrative.value.body)}" th:text="${narrative.value.body}">Watch the export queue after deploying.</p></dd></div>
                             <p class="text-xs text-slate-500" th:if="${change.summaryEditorName != null}"
                                th:text="#{ui.changes.writtenBy(${change.summaryEditorName})}">Written by Mai Tran</p>
                         </dl>

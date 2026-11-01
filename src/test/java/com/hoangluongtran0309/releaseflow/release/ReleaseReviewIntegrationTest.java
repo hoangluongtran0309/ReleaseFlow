@@ -399,6 +399,65 @@ class ReleaseReviewIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT reviewed_by FROM changes WHERE id = ?", UUID.class, change)).isNull();
     }
 
+    // ADR-0037: a decision carries the security flag the reviewer saw; an older caller that
+    // leaves it out confirms the current one.
+    @Test
+    void aDecisionConfirmsOrCorrectsTheSecurityFlag() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID keyed = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
+                "fix: derive a key per target", "FIX", false, true, null);
+        UUID forgery = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 2,
+                "feat!: remove CSRF protection from the API", "FEATURE", true, true, null);
+        UUID plain = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 3,
+                "fix: handle empty tables", "FIX", false, true, null);
+        TestChanges.markSecurity(jdbcTemplate, keyed);
+        TestChanges.markSecurity(jdbcTemplate, forgery);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
+
+        decideSecurity(owner, projectId, releaseId, keyed, "APPROVE", "fix", false, false)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("classification_changed"));
+        decideSecurity(owner, projectId, releaseId, keyed, "APPROVE", "fix", false, true)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 1)].security").value(contains(true)))
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 1)].needsReview").value(contains(false)))
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 1)].classificationSource").value(contains("RULES")));
+        decide(owner, projectId, releaseId, forgery, "APPROVE", "feature", true, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 2)].security").value(contains(true)))
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 2)].breaking").value(contains(true)));
+        decideSecurity(owner, projectId, releaseId, plain, "EDIT", "fix", false, true)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 3)].security").value(contains(true)))
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 3)].classificationSource").value(contains("HUMAN")));
+        decideSecurity(owner, projectId, releaseId, keyed, "EDIT", "fix", false, false)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 1)].security").value(contains(false)))
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 1)].classificationSource").value(contains("HUMAN")));
+        action(owner, projectId, releaseId, "approve").andExpect(status().isOk());
+    }
+
+    private ResultActions decideSecurity(
+            Owner owner,
+            UUID projectId,
+            UUID releaseId,
+            UUID changeId,
+            String action,
+            String category,
+            boolean breaking,
+            boolean security
+    ) throws Exception {
+        return mockMvc.perform(put("/api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/decision",
+                        projectId, releaseId, changeId)
+                .session(owner.session())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"%s\",\"category\":\"%s\",\"breaking\":%s,\"security\":%s}"
+                        .formatted(action, category, breaking, security)));
+    }
+
     private ResultActions action(Owner owner, UUID projectId, UUID releaseId, String action) throws Exception {
         return mockMvc.perform(post("/api/projects/{projectId}/releases/{releaseId}/" + action, projectId, releaseId)
                 .session(owner.session())

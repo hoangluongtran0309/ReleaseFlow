@@ -127,6 +127,58 @@ refused by those triggers for every release past its draft.
 migration can be undone. Take a backup first; going back means restoring that backup
 with the older version, never starting the older version against the migrated database.
 
+### Upgrading with a reasoning model
+
+From 1.1.0 every classification request asks for the same temperature, `0` unless
+`RELEASEFLOW_AI_TEMPERATURE` names another
+([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
+[ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 sent none. A model that accepts
+only its default temperature refuses a request that names one: OpenAI's reasoning models
+and Claude models released after Opus 4.6 do.
+
+**No action is needed.** When the provider refuses the temperature, ReleaseFlow sends the
+same request once more without it, and leaves it out of every later request until it
+restarts ([ADR-0039](adr/0039-ai-temperature-fallback.md)). The log says so once:
+
+```text
+OpenAI model o4-mini refused the temperature, so classification requests leave it out until ReleaseFlow restarts. Set RELEASEFLOW_AI_TEMPERATURE=default to avoid the first refusal.
+```
+
+Each start costs one refused request. To skip it, set:
+
+```bash
+RELEASEFLOW_AI_TEMPERATURE=default
+```
+
+Requests then leave the temperature out from the first, as every request did before. With
+Docker Compose, put it in the `.env` beside the Compose file, which forwards it and sends `0`
+when it is not set. A deployment whose model accepts a temperature sends `0` and sees no
+refusal.
+
+### Upgrading to the glossary
+
+The version that adds the [glossary](release-notes.md#glossary) (Flyway `V33`) changes
+nothing until an administrator adds a term: an Organization without one sends DeepL the
+same requests as before, and no note is translated again. To keep terms after upgrading:
+
+1. Open **Glossary**, tick the suggested terms your readers keep in English, and keep
+   any others, one per entry as they should appear. Add a fixed translation for a term
+   that should always become the same words in one language.
+2. Return an approved release to draft and approve it again, or approve the next one:
+   translations made from then on use the glossary. Published notes never change.
+3. Check the release page: each language says whether the glossary was **Sent with every
+   translation**. That means DeepL received it, not that every term was kept, so read the
+   notes, and add a phrase DeepL translated, such as `container images`, as its own kept
+   term.
+
+**On DeepL API Free, one Organization gets the glossary.** ReleaseFlow uses one DeepL
+glossary per Organization, and an API Free account holds only as many as its plan allows:
+one, when this was tested. The first Organization to sync uses it; every other
+Organization's sync fails with `quota_exceeded` and its notes are translated without a
+glossary, which its release page and Glossary page say. A deployment that serves several
+Organizations with glossaries needs a DeepL plan that holds that many. A glossary created
+in the account by anything else takes a slot too.
+
 ## Published artifacts
 
 ReleaseFlow's own releases, as opposed to the ones it writes notes for, listed on the

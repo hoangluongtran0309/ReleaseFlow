@@ -45,6 +45,10 @@ public record ReviewTrigger(ReviewTriggerType type, String detail) {
         return new ReviewTrigger(ReviewTriggerType.LINKED_CONTEXT_UNAVAILABLE, status.name());
     }
 
+    static ReviewTrigger migrationKindMismatch(String returned) {
+        return new ReviewTrigger(ReviewTriggerType.MIGRATION_KIND_MISMATCH, returned.isBlank() ? null : returned);
+    }
+
     static ReviewTrigger duplicateCandidate(UUID earlierChangeId) {
         return new ReviewTrigger(ReviewTriggerType.DUPLICATE_CANDIDATE, earlierChangeId.toString());
     }
@@ -54,10 +58,8 @@ public record ReviewTrigger(ReviewTriggerType type, String detail) {
      * written into the stored JSON; the stored trigger keeps only its type and detail.
      */
     public String messageKey() {
-        if (type == ReviewTriggerType.CONTEXT_INSUFFICIENT) {
-            return detail == null
-                    ? "ui.reviewTrigger.CONTEXT_INSUFFICIENT.plain"
-                    : "ui.reviewTrigger.CONTEXT_INSUFFICIENT.detailed";
+        if (type == ReviewTriggerType.CONTEXT_INSUFFICIENT || type == ReviewTriggerType.MIGRATION_KIND_MISMATCH) {
+            return "ui.reviewTrigger." + type.name() + (detail == null ? ".plain" : ".detailed");
         }
         return "ui.reviewTrigger." + type.name();
     }

@@ -6,6 +6,7 @@ import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.audience.AudienceTemplateRenderException;
 import com.hoangluongtran0309.releaseflow.audience.AudienceView;
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLanguageService;
+import com.hoangluongtran0309.releaseflow.audience.ReleaseLinks;
 import com.hoangluongtran0309.releaseflow.change.ChangeExcludedException;
 import com.hoangluongtran0309.releaseflow.change.ChangeInboxService;
 import com.hoangluongtran0309.releaseflow.change.ChangeNotFoundException;
@@ -63,6 +64,7 @@ public class ReleaseService {
     private final AudienceService audienceService;
     private final ReleaseLanguageService releaseLanguageService;
     private final ReleaseNoteWriter noteWriter;
+    private final ReleaseLinkBuilder linkBuilder;
     private final OutputLanguageService outputLanguageService;
     private final ReleaseRepository releaseRepository;
     private final ReleaseChangeRepository releaseChangeRepository;
@@ -81,6 +83,7 @@ public class ReleaseService {
             AudienceService audienceService,
             ReleaseLanguageService releaseLanguageService,
             ReleaseNoteWriter noteWriter,
+            ReleaseLinkBuilder linkBuilder,
             OutputLanguageService outputLanguageService,
             ReleaseRepository releaseRepository,
             ReleaseChangeRepository releaseChangeRepository,
@@ -98,6 +101,7 @@ public class ReleaseService {
         this.audienceService = audienceService;
         this.releaseLanguageService = releaseLanguageService;
         this.noteWriter = noteWriter;
+        this.linkBuilder = linkBuilder;
         this.outputLanguageService = outputLanguageService;
         this.releaseRepository = releaseRepository;
         this.releaseChangeRepository = releaseChangeRepository;
@@ -152,10 +156,31 @@ public class ReleaseService {
         );
     }
 
+    /**
+     * The published releases of a Project, most recently published first: what a release
+     * may follow. The first is what a new release follows unless a person chooses.
+     */
+    @Transactional(readOnly = true)
+    List<ReleaseOption> previousCandidates(UUID organizationId, UUID projectId) {
+        projectService.get(organizationId, projectId);
+        return published(organizationId, projectId).stream()
+                .map(release -> new ReleaseOption(release.getId(), release.getVersion()))
+                .toList();
+    }
+
+    /**
+     * Creates a draft. Without a previous release named, it follows the Project's most
+     * recently published release, if any; that choice does not move when another release
+     * is published later.
+     */
     @Transactional
     ReleaseView createDraft(UUID organizationId, UUID projectId, NewReleaseRequest request) {
         projectService.get(organizationId, projectId);
         Instant plannedReleaseAt = request.plannedInstant();
+        String upgradeGuideUrl = ReleaseLinkBuilder.validatedUpgradeGuideUrl(request.getUpgradeGuideUrl());
+        UUID previousReleaseId = request.previousReleaseIdGiven()
+                ? previousRelease(organizationId, projectId, request.getPreviousReleaseId(), null)
+                : published(organizationId, projectId).stream().findFirst().map(Release::getId).orElse(null);
         if (releaseRepository.existsByOrganizationIdAndProjectIdAndVersionIgnoreCase(
                 organizationId,
                 projectId,
@@ -173,6 +198,7 @@ public class ReleaseService {
                 now
         );
         release.schedule(plannedReleaseAt, now);
+        release.link(upgradeGuideUrl, previousReleaseId, now);
         try {
             releaseRepository.saveAndFlush(release);
         } catch (DataIntegrityViolationException exception) {
@@ -199,7 +225,16 @@ public class ReleaseService {
         )) {
             throw new ReleaseVersionTakenException();
         }
-        release.edit(request.getVersion(), request.getSummary(), clock.instant());
+        // A field the caller left out keeps its value.
+        String upgradeGuideUrl = request.upgradeGuideUrlGiven()
+                ? ReleaseLinkBuilder.validatedUpgradeGuideUrl(request.getUpgradeGuideUrl())
+                : release.getUpgradeGuideUrl();
+        UUID previousReleaseId = request.previousReleaseIdGiven()
+                ? previousRelease(organizationId, projectId, request.getPreviousReleaseId(), releaseId)
+                : release.getPreviousReleaseId();
+        Instant now = clock.instant();
+        release.edit(request.getVersion(), request.getSummary(), now);
+        release.link(upgradeGuideUrl, previousReleaseId, now);
         try {
             releaseRepository.flush();
         } catch (DataIntegrityViolationException exception) {
@@ -333,7 +368,8 @@ public class ReleaseService {
                 throw new InvalidChangeReviewException("error.invalid_change_review.approveUnknown");
             }
             if (!change.category().equalsIgnoreCase(request.getCategory())
-                    || change.breaking() != request.getBreaking()) {
+                    || change.breaking() != request.getBreaking()
+                    || (request.getSecurity() != null && change.security() != request.getSecurity())) {
                 throw new ClassificationChangedException();
             }
         }
@@ -359,6 +395,13 @@ public class ReleaseService {
         long decided = reviewRepository.countByReleaseIdAndOrganizationId(releaseId, approver.organizationId());
         if (decided != changes.size() || changes.stream().anyMatch(ChangeView::needsReview)) {
             throw new ReleaseReviewIncompleteException();
+        }
+        List<String> titleOnly = changes.stream()
+                .filter(ReleaseNotePreview::needsSummary)
+                .map(ChangeView::reference)
+                .toList();
+        if (!titleOnly.isEmpty()) {
+            throw new ChangeSummaryRequiredException(titleOnly);
         }
         Instant now = clock.instant();
         List<AudienceReleaseNote> notes = writeNotes(release, changes, now);
@@ -546,12 +589,13 @@ public class ReleaseService {
             return List.of();
         }
         String language = outputLanguageService.outputLanguage(organizationId).tag();
+        ReleaseLinks links = links(release);
         return audienceService.list(organizationId).stream()
                 .map(audience -> new AudienceNotePreview(
                         audience.code(),
                         audience.displayName(),
-                        render(release, release.getSummary(), changes, audience.templateBody(), audience.code(), language,
-                                audience.displayName())
+                        render(release.getSummary(), changes, audience.templateBody(), audience.footerTemplateBody(), links,
+                                audience.code(), language, audience.displayName())
                 ))
                 .toList();
     }
@@ -572,14 +616,16 @@ public class ReleaseService {
     }
 
     // One note per current audience and release note language, from a snapshot of the
-    // audience's template for that language.
+    // audience's template and footer for that language.
     private List<AudienceReleaseNote> writeNotes(Release release, List<ChangeView> changes, Instant now) {
         List<AudienceView> audiences = audienceService.list(release.getOrganizationId());
         List<AudienceReleaseNote> notes = new ArrayList<>();
+        ReleaseLinks links = links(release);
         for (String language : releaseLanguageService.targetLanguages(release.getOrganizationId())) {
             ReleaseNoteWriter.Localized localized = noteWriter.localize(release, changes, language, false);
             for (AudienceView audience : audiences) {
                 String template = audience.templateFor(language);
+                String footer = audience.footerFor(language);
                 notes.add(new AudienceReleaseNote(
                         UUID.randomUUID(),
                         release,
@@ -588,9 +634,11 @@ public class ReleaseService {
                         audience.displayName(),
                         language,
                         template,
-                        render(release, localized.summary(), localized.changes(), template, audience.code(), language,
+                        footer,
+                        render(localized.summary(), localized.changes(), template, footer, links, audience.code(), language,
                                 audience.displayName()),
                         localized.status(),
+                        localized.glossary(),
                         now
                 ));
             }
@@ -604,39 +652,75 @@ public class ReleaseService {
      */
     private void rerenderNotes(Release release, List<ChangeView> changes, String onlyLanguage, boolean retry, Instant now) {
         Map<String, ReleaseNoteWriter.Localized> byLanguage = new LinkedHashMap<>();
+        ReleaseLinks links = links(release);
         for (AudienceReleaseNote note : notes(release)) {
             if (!note.isAutoRerender() || (onlyLanguage != null && !onlyLanguage.equals(note.getLanguage()))) {
                 continue;
             }
             ReleaseNoteWriter.Localized localized = byLanguage.computeIfAbsent(note.getLanguage(),
                     language -> noteWriter.localize(release, changes, language, retry));
-            note.rerender(render(release, localized.summary(), localized.changes(), note.getTemplateBodySnapshot(),
-                    note.getAudienceCode(), note.getLanguage(), note.getAudienceName()), localized.status(), now);
+            note.rerender(render(localized.summary(), localized.changes(), note.getTemplateBodySnapshot(),
+                    note.getFooterTemplateSnapshot(), links, note.getAudienceCode(), note.getLanguage(),
+                    note.getAudienceName()), localized.status(), localized.glossary(), now);
         }
         noteRepository.flush();
     }
 
     private static String render(
-            Release release,
             String summary,
             List<ChangeView> changes,
             String templateBody,
+            String footerBody,
+            ReleaseLinks links,
             String audienceCode,
             String language,
             String audienceName
     ) {
         try {
-            return ReleaseNoteDigest.render(
-                    release.getVersion(),
-                    summary,
-                    changes,
-                    templateBody,
-                    audienceCode,
-                    language
-            );
+            return ReleaseNoteDigest.render(summary, changes, templateBody, footerBody, links, audienceCode, language);
         } catch (AudienceTemplateRenderException exception) {
             throw new ReleaseNoteRenderException(audienceName, exception);
         }
+    }
+
+    // The release's version, the one it follows, and its links, from the database alone.
+    private ReleaseLinks links(Release release) {
+        return linkBuilder.links(
+                release.getOrganizationId(),
+                release.getProjectId(),
+                release.getVersion(),
+                previousVersion(release),
+                release.getUpgradeGuideUrl()
+        );
+    }
+
+    private String previousVersion(Release release) {
+        return release.getPreviousReleaseId() == null
+                ? null
+                : releaseRepository.findByIdAndOrganizationIdAndProjectId(
+                        release.getPreviousReleaseId(), release.getOrganizationId(), release.getProjectId())
+                .map(Release::getVersion)
+                .orElse(null);
+    }
+
+    private List<Release> published(UUID organizationId, UUID projectId) {
+        return releaseRepository.findAllByOrganizationIdAndProjectIdAndStatusOrderByPublishedAtDescIdDesc(
+                organizationId, projectId, ReleaseStatus.PUBLISHED);
+    }
+
+    // A release may follow only a published release of its own Project, never itself.
+    private UUID previousRelease(UUID organizationId, UUID projectId, UUID previousReleaseId, UUID releaseId) {
+        if (previousReleaseId == null) {
+            return null;
+        }
+        boolean published = !previousReleaseId.equals(releaseId) && releaseRepository
+                .findByIdAndOrganizationIdAndProjectId(previousReleaseId, organizationId, projectId)
+                .filter(Release::isPublished)
+                .isPresent();
+        if (!published) {
+            throw new InvalidPreviousReleaseException();
+        }
+        return previousReleaseId;
     }
 
     private List<AudienceReleaseNote> notes(Release release) {
@@ -668,6 +752,7 @@ public class ReleaseService {
     }
 
     private ReleaseView view(Release release, List<ChangeView> changes) {
+        String previousVersion = previousVersion(release);
         List<ReleaseDecisionView> decisions = reviewRepository
                 .findAllByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
                 .stream()
@@ -675,10 +760,10 @@ public class ReleaseService {
                 .toList();
         List<AudienceNoteView> notes = notes(release).stream().map(AudienceReleaseNote::view).toList();
         if (!release.isPublished()) {
-            return view(release, changes, decisions, ReleaseNotePreview.sections(changes), null, notes);
+            return view(release, previousVersion, changes, decisions, ReleaseNotePreview.sections(changes), null, notes);
         }
         if (!notes.isEmpty()) {
-            return view(release, changes, decisions, List.of(), null, notes);
+            return view(release, previousVersion, changes, decisions, List.of(), null, notes);
         }
         // Published before audiences existed: shown from its single legacy note.
         LegacyReleaseNote legacy = legacyNoteRepository
@@ -690,6 +775,7 @@ public class ReleaseService {
                 .orElseThrow(() -> new IllegalStateException("Published release " + release.getId() + " has no note."));
         return view(
                 release,
+                previousVersion,
                 changes,
                 decisions,
                 objectMapper.readValue(legacy.getSections(), SECTIONS),
@@ -700,6 +786,7 @@ public class ReleaseService {
 
     private static ReleaseView view(
             Release release,
+            String previousVersion,
             List<ChangeView> changes,
             List<ReleaseDecisionView> decisions,
             List<ReleaseNoteSection> sections,
@@ -715,6 +802,9 @@ public class ReleaseService {
                 release.getCreatedAt(),
                 release.getUpdatedAt(),
                 release.getPlannedReleaseAt(),
+                release.getUpgradeGuideUrl(),
+                release.getPreviousReleaseId(),
+                previousVersion,
                 changes,
                 decisions,
                 decisions.size(),
@@ -724,7 +814,8 @@ public class ReleaseService {
                 release.getPublishedAt(),
                 release.getPublisherName(),
                 markdown,
-                notes
+                notes,
+                ReleaseView.glossaries(notes)
         );
     }
 

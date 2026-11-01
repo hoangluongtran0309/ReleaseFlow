@@ -6,42 +6,109 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
- * The three audiences every Organization starts with. Display names and the labels in
+ * The four audiences every Organization starts with. Display names and the labels in
  * the templates follow the Organization's output language (English or Vietnamese,
  * otherwise English); the communication intents are instructions for the AI and stay
- * in English. V13 seeds the same values for Organizations that existed before.
+ * in English, and each ends by saying when a change is none for its audience
+ * (ADR-0035). V13 seeded the values of its time for Organizations that existed before;
+ * they keep their templates until an administrator resets a preset, and can add an
+ * audience coded {@code support} themselves and reset it to this preset, which makes it one.
+ *
+ * <p>Operators and contributors upgrade, so their footers link the comparison with the
+ * previous release and the upgrade guide, each only when there is one (ADR-0037). Neither
+ * links the release itself: a published note is often that release's own page. The
+ * end-user and support footers are blank. V34 gave existing operator and contributor
+ * audiences the same footers.
  */
 final class AudiencePresets {
 
     static final String OPERATOR = "operator";
     static final String CONTRIBUTOR = "contributor";
     static final String END_USER = "end_user";
+    static final String SUPPORT = "support";
 
-    static final String OPERATOR_INTENT = "Focus on operational risk, rollback, and what to watch after deploy. "
-            + "Keep concrete numbers and failure modes.";
+    // A note names something to watch only when the evidence does: asked for in general,
+    // the AI invented advice nobody gave.
+    static final String OPERATOR_INTENT = "Focus on operational risk, rollback, and what changes in how the product "
+            + "is deployed, configured, or run. Keep concrete numbers and failure modes. Name something to watch "
+            + "after deploying only when the change or the project context names it. "
+            + "A change is none for operators when it changes nothing about deploying, configuring, or running the "
+            + "product, such as a test-only, CI-only, or documentation-only change.";
     static final String CONTRIBUTOR_INTENT = "Focus on implementation detail and what other developers must change "
-            + "in their own code. Technical vocabulary is expected.";
+            + "in their own code. Technical vocabulary is expected. "
+            + "A change is none for contributors only when it touches nothing developers build, test, or call, "
+            + "such as a change to deployment settings alone.";
     static final String END_USER_INTENT = "Plain language, no jargon and no technical metrics. "
-            + "Say only what the person will notice while using the product.";
+            + "Say only what the person will notice while using the product. "
+            + "A change is none for end users when they cannot see it: build, CI, dependency, test, and internal "
+            + "changes.";
+    static final String SUPPORT_INTENT = "Write for the support team: what customers may notice or ask about, "
+            + "what to tell them, and whether a step is required or only advisable. Plain, precise language. "
+            + "A change is none for support when customers cannot notice it: build, CI, dependency, test, and "
+            + "internal changes.";
 
+    // A migration step is labelled by its kind (ADR-0035), and a required one is printed
+    // whatever the relevance. One recorded before kinds existed keeps the neutral label,
+    // so it is never presented as required.
+    private static final String REQUIRED_LINE = """
+            {{#migrationRequired}}
+              - %s: {{migrationStep}}
+            {{/migrationRequired}}
+            """;
+    private static final String OTHER_MIGRATION_LINES = """
+            {{#migrationConditional}}
+              - %1$s: {{migrationStep}}
+            {{/migrationConditional}}
+            {{#migrationRecommended}}
+              - %2$s: {{migrationStep}}
+            {{/migrationRecommended}}
+            {{#migrationUnspecified}}
+              - %3$s: {{migrationStep}}
+            {{/migrationUnspecified}}
+            """;
+    // A brief change keeps its headline and a required step; the detail lines are for full ones.
     private static final String DETAILED_BODY = """
-            - **{{whatChanged}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            - **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            {{^brief}}
             {{#whyChanged}}
               - %s: {{.}}
             {{/whyChanged}}
             {{#technicalDetail}}
               - %s: {{.}}
             {{/technicalDetail}}
-            {{#migrationStep}}
+            {{#limitations}}
               - %s: {{.}}
-            {{/migrationStep}}
+            {{/limitations}}
+            {{/brief}}
+            %s{{^brief}}
+            %s{{/brief}}
             """;
+    // End users read a step only when they cannot do without it.
     private static final String PLAIN_BODY = """
-            - **{{whatChanged}}**{{#narrative}} — {{.}}{{/narrative}}
+            - **{{headline}}**{{#narrative}} — {{.}}{{/narrative}}
+            %s""";
+    // Support learns whether a step is required or only advisable, and what is not done yet.
+    private static final String SUPPORT_BODY = """
+            - **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            %s{{^brief}}
+            %s{{#limitations}}
+              - %s: {{.}}
+            {{/limitations}}
+            {{/brief}}
+            """;
+    // The release-wide lines an upgrader reads after the changes.
+    private static final String UPGRADER_FOOTER = """
+            {{#compareUrl}}
+            **%s:** [{{previousVersion}}...{{version}}]({{compareUrl}})
+            {{/compareUrl}}
+
+            {{#upgradeGuideUrl}}
+            **%s:** [%s]({{upgradeGuideUrl}})
+            {{/upgradeGuideUrl}}
             """;
     private static final String BUNDLE = "messages/audience-presets";
 
-    record Preset(String code, String displayName, String communicationIntent, String templateBody) {
+    record Preset(String code, String displayName, String communicationIntent, String templateBody, String footerBody) {
     }
 
     private AudiencePresets() {
@@ -54,22 +121,49 @@ final class AudiencePresets {
                 ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES)
         );
         String why = labels.getString("label.why");
-        String migration = labels.getString("label.migration");
+        String upgraderFooter = UPGRADER_FOOTER.formatted(
+                labels.getString("label.compare"),
+                labels.getString("label.upgradeGuide"),
+                labels.getString("label.upgradeGuide.link")
+        );
+        String limitations = labels.getString("label.limitations");
+        String required = REQUIRED_LINE.formatted(labels.getString("label.migration.required"));
+        String otherMigration = OTHER_MIGRATION_LINES.formatted(
+                labels.getString("label.migration.conditional"),
+                labels.getString("label.migration.recommended"),
+                labels.getString("label.migration")
+        );
         return List.of(
                 new Preset(
                         OPERATOR,
                         labels.getString("operator.displayName"),
                         OPERATOR_INTENT,
-                        DETAILED_BODY.formatted(why, labels.getString("label.detail"), migration)
+                        DETAILED_BODY.formatted(why, labels.getString("label.detail"), limitations, required, otherMigration),
+                        upgraderFooter
                 ),
                 new Preset(
                         CONTRIBUTOR,
                         labels.getString("contributor.displayName"),
                         CONTRIBUTOR_INTENT,
-                        DETAILED_BODY.formatted(why, labels.getString("label.implementation"), migration)
+                        DETAILED_BODY.formatted(why, labels.getString("label.implementation"), limitations, required,
+                                otherMigration),
+                        upgraderFooter
                 ),
-                new Preset(END_USER, labels.getString("end_user.displayName"), END_USER_INTENT, PLAIN_BODY)
+                new Preset(END_USER, labels.getString("end_user.displayName"), END_USER_INTENT, PLAIN_BODY.formatted(required),
+                        ""),
+                new Preset(
+                        SUPPORT,
+                        labels.getString("support.displayName"),
+                        SUPPORT_INTENT,
+                        SUPPORT_BODY.formatted(required, otherMigration, limitations),
+                        ""
+                )
         );
+    }
+
+    /** Whether an audience with this code can be reset to a shipped preset; codes are the same in every language. */
+    static boolean shipped(String code) {
+        return find(code, "en").isPresent();
     }
 
     static Optional<Preset> find(String code, String languageTag) {

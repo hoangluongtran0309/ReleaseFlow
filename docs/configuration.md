@@ -72,12 +72,26 @@ See [Changes and review](changes.md).
 ## AI
 
 AI is optional. Choose one provider and give it a key and a model. There is no default
-model; pick one that supports structured JSON output.
+model; pick one that supports structured JSON output. Every classification request asks
+for the same temperature, `0` unless `RELEASEFLOW_AI_TEMPERATURE` says otherwise, which
+keeps one change's answer as stable as the model allows (see
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) and
+[ADR-0038](adr/0038-configurable-ai-temperature.md)). A model that accepts only its default
+temperature refuses a request that names one: an OpenAI reasoning model, or a Claude model
+released after Opus 4.6, which Anthropic accepts only `1.0` from. Such a model works without
+any setting: the refused request is sent once more without the temperature, and later
+requests leave it out until ReleaseFlow restarts, with one warning in the log
+([ADR-0039](adr/0039-ai-temperature-fallback.md)). Only a 400 about the temperature does
+this: one whose `error.param` is `temperature` from OpenAI or DeepSeek, or an
+`invalid_request_error` whose message names `temperature` from Anthropic. A number set here
+falls back the same way. `RELEASEFLOW_AI_TEMPERATURE=default` leaves the temperature out from
+the first request, so the refusal never happens.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (empty: no AI) | `openai`, `anthropic`, or `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Bound on each AI request |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature of every classification request: a number from `0` to `2` for `openai` and `deepseek`, or from `0` to `1` for `anthropic`; `default` sends none, so the model uses its own. Unset or blank means `0`. A model that refuses the temperature is sent none for the rest of the process |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (empty) | OpenAI key and model |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI API address |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (empty) | Anthropic key and model |
@@ -86,8 +100,9 @@ model; pick one that supports structured JSON output.
 | `RELEASEFLOW_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek API address |
 
 Startup fails when the selected provider lacks its key or model, when the provider name is
-unknown, or when a provider's key or model is set while `RELEASEFLOW_AI_PROVIDER` is
-empty. See [AI classification and summaries](changes.md#ai-classification-and-summaries).
+unknown, when a provider's key or model is set while `RELEASEFLOW_AI_PROVIDER` is
+empty, or when `RELEASEFLOW_AI_TEMPERATURE` is neither `default` nor a number in the
+selected provider's range; the message names the variable and the range. See [AI classification and summaries](changes.md#ai-classification-and-summaries).
 
 ## Translation
 
@@ -95,7 +110,7 @@ empty. See [AI classification and summaries](changes.md#ai-classification-and-su
 | --- | --- | --- |
 | `RELEASEFLOW_TRANSLATION_PROVIDER` | `disabled` | `deepl` turns on translation of release notes. A value other than `disabled` or `deepl` stops startup, and so does `disabled` while `RELEASEFLOW_DEEPL_API_KEY` is set |
 | `RELEASEFLOW_TRANSLATION_TIMEOUT` | `PT30S` | Bound on each translation request |
-| `RELEASEFLOW_DEEPL_API_KEY` | (empty) | DeepL key; a key ending in `:fx` uses the free API. Required with `deepl`, and a key set while the provider is not `deepl` stops startup, so turning translation off means clearing the key too |
+| `RELEASEFLOW_DEEPL_API_KEY` | (empty) | DeepL key; a key ending in `:fx` uses the free API. Required with `deepl`, and a key set while the provider is not `deepl` stops startup, so turning translation off means clearing the key too. Each Organization with a [glossary](release-notes.md#glossary) uses one of the account's DeepL glossaries, and an API Free plan holds one |
 | `RELEASEFLOW_DEEPL_BASE_URL` | (empty) | Overrides the host chosen from the key |
 
 See [Release note languages](release-notes.md#release-note-languages).

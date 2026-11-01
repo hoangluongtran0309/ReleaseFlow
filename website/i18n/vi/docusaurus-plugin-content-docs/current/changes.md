@@ -41,10 +41,21 @@ Việc phân loại dùng các quy tắc cố định:
   là Documentation, bất kể tiêu đề nói gì;
 - dấu `!` sau type trong tiêu đề, nhãn `breaking-change`, hoặc footer `BREAKING CHANGE:` trong
   mô tả đánh dấu thay đổi là phá vỡ tương thích;
+- nhãn `security`, `security-fix`, `security fix` hoặc `vulnerability`, viết hoa hay thường
+  đều được, hoặc một mã CVE như `CVE-2026-12345` trong tiêu đề, mô tả hay một nhãn, đánh dấu
+  thay đổi là **thay đổi bảo mật**;
 - mọi trường hợp khác là Unknown.
 
-Thay đổi phá vỡ tương thích và thay đổi Unknown luôn cần review, và mọi thay đổi có trigger
-review cũng vậy:
+Bảo mật là một cờ nằm cạnh category, giống phá vỡ tương thích, không bao giờ là một category
+riêng: một bản sửa lỗi bảo mật vẫn là Fix ở mọi nơi dùng category, và release note liệt kê nó
+trong mục 🔒 Bảo mật (xem [Mỗi audience đọc gì](release-notes.md#what-each-audience-reads)).
+Các từ như `auth`, `password` hay `encryption` tự chúng không đánh dấu thay đổi là bảo mật;
+chúng vẫn là bằng chứng [đường dẫn nhạy cảm](#sensitive-paths) hoặc từ nhạy cảm. Một thay đổi
+được ghi nhận trước khi có cờ bảo mật không phải là thay đổi bảo mật cho tới khi một người đánh
+dấu nó.
+
+Thay đổi phá vỡ tương thích, thay đổi bảo mật và thay đổi Unknown luôn cần review, và mọi thay
+đổi có trigger review cũng vậy:
 
 | Trigger | Khi nào |
 | --- | --- |
@@ -56,6 +67,7 @@ review cũng vậy:
 | Không đủ ngữ cảnh | [Điểm ngữ cảnh](#review-signals) thấp hơn ngưỡng |
 | Có thể trùng với một thay đổi trước đó | Thay đổi trông giống một thay đổi trước đó (xem [Tín hiệu review](#review-signals)) |
 | AI đề xuất một category mới | Không có category nào trong danh mục phù hợp (xem [Category](#categories)) |
+| Đã chỉnh loại bước chuyển đổi | Loại bước chuyển đổi AI trả về không khớp với bước đó, nên ReleaseFlow đã chỉnh lại (xem [Phân loại bằng AI](#ai-classification-and-summaries)) |
 
 ![Một thay đổi Unknown: hai label bug và enhancement mâu thuẫn và nó chạm vào file nhạy cảm, nên nó chờ một người chọn category](assets/changes/c-6-unknown.webp)
 
@@ -122,28 +134,98 @@ chọn một model hỗ trợ đầu ra JSON có cấu trúc. Ứng dụng khôn
 không có nhà cung cấp nào, thay đổi chỉ được phân loại bằng quy tắc.
 
 Khi có nhà cung cấp, worker xử lý thay đổi hỏi AI **một lần** cho mỗi thay đổi mới, sau khi đã
-biết các tệp thay đổi của nó. Nó gửi tiêu đề pull request, nhãn, nhánh đích, tối đa 4000 ký tự
-của mô tả, ngôn ngữ đầu ra của Organization, các [category](#categories) đang hoạt động của
-Organization, category mà quy tắc đã chọn (nếu có), các issue Jira mà thay đổi nhắc tới dưới
-dạng bằng chứng không tin cậy, cùng mã và ý định truyền đạt của từng
-[audience](release-notes.md#audiences). Nó không gửi tác giả, và request tới OpenAI đặt
-`store: false`. Câu trả lời gồm một mã category trong danh mục (hoặc đề xuất một category mới khi
-không có cái nào phù hợp), một cờ phá vỡ tương thích, việc có nên để người review hay không, một
-**bản tóm tắt trung lập** (thay đổi gì, vì sao, chi tiết kỹ thuật, bước migrate), và một
-**narrative** cho từng audience, tất cả viết bằng ngôn ngữ đầu ra. Narrative nào thiếu thì đơn
-giản là bỏ qua. Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, và API
-thay đổi trả về chúng dưới dạng `neutralSummary` và `audienceNarratives` kèm
-`contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
+biết các tệp thay đổi của nó. Nó gửi tiêu đề, nhãn, nhánh đích, tối đa 4000 ký tự của mô tả,
+và cho biết đó là code đã merge (pull request hoặc merge request) hay một issue mà tracker đã
+hoàn tất (Linear, Jira); kèm theo ngôn ngữ đầu ra của Organization, các
+[category](#categories) đang hoạt động của Organization, category mà quy tắc đã chọn (nếu có),
+các issue Jira mà thay đổi nhắc tới dưới dạng bằng chứng không tin cậy, mã và ý định truyền đạt
+của từng [audience](release-notes.md#audiences), và [ngữ cảnh Project](#project-context). Nó
+không gửi tác giả, và request tới OpenAI đặt `store: false`. Câu trả lời gồm một mã category trong
+danh mục (hoặc đề xuất một category mới khi không có cái nào phù hợp), một cờ phá vỡ tương thích,
+một cờ bảo mật (thay đổi có làm khác một thuộc tính bảo mật, hay sửa hoặc gây ra một lỗ hổng
+không), việc có nên để người review hay không, một **bản tóm tắt trung lập**, và một **narrative** cho
+từng audience, tất cả viết bằng ngôn ngữ đầu ra. Bản tóm tắt trung lập gồm: thay đổi gì (một
+câu), vì sao, chi tiết kỹ thuật, bước chuyển đổi kèm loại của nó, và giới hạn: những gì thay đổi
+cố ý chưa làm. Narrative của mỗi audience có mức liên quan (`none`, `brief` hoặc `full`), một dòng
+tiêu đề và phần nội dung; release note bỏ qua thay đổi có mức `none` với audience của nó, trừ khi
+thay đổi đó phá vỡ tương thích (xem [Mỗi audience đọc gì](release-notes.md#what-each-audience-reads)).
+Narrative nào thiếu hoặc rỗng thì đơn giản là bỏ qua.
+
+Một **dependency update**, tức thay đổi có tác giả là `dependabot[bot]` hoặc `renovate[bot]`,
+hoặc có head branch bắt đầu bằng `dependabot/` hay `renovate/`, được gửi cho AI mà không kèm
+những gì nó trích từ upstream: các phần tử `<details>` và `<blockquote>`, blockquote Markdown, và
+các mục "Release notes", "Changelog", "Commits" đều bị bỏ, chỉ còn lại thứ được nâng phiên bản
+và từ phiên bản nào lên phiên bản nào. Bản thân thay đổi vẫn giữ nguyên mô tả. Nó chỉ phá vỡ
+tương thích, hoặc có bước chuyển đổi, khi chính lời của nó nói vậy; AI chỉ được dặn điều này
+với một dependency update, nên thay đổi khác mà AI không chắc vẫn bị đánh dấu phá vỡ tương thích
+và được đưa đi review.
+
+AI được yêu cầu chỉ nói điều có trong bằng chứng, ở mọi trường: không nêu hậu quả mà thay đổi
+không mô tả (crash, ngừng dịch vụ, không khởi động được), không nêu vị trí trong sản phẩm mà
+thay đổi hay ngữ cảnh Project không nhắc tới, không lấy changelog của một dependency được trích
+lại để nói như thay đổi của chính dự án này, không nêu tệp hay code cho một tracker issue mà nội
+dung của nó không nhắc tới, và không bình luận về những gì bằng chứng còn thiếu, chỗ đó để trống.
+
+Một bước chuyển đổi có loại:
+
+| Loại | Ý nghĩa |
+| --- | --- |
+| `REQUIRED` | Bản cài đặt hiện có ngừng hoạt động, hoặc mất một lớp bảo vệ, cho tới khi làm bước này |
+| `CONDITIONAL` | Chỉ một số bản cài đặt cần, và bước này nói rõ là bản nào |
+| `RECOMMENDED` | Nên làm, nhưng không làm cũng không hỏng gì |
+| `NONE` | Không có bước nào |
+| `UNSPECIFIED` | Bước được ghi trước khi có loại, hoặc bởi bên gọi không nêu loại; không bao giờ được coi là bắt buộc |
+
+Loại không khớp với bước sẽ được chỉnh lại chứ không bị loại bỏ, vì mỗi thay đổi chỉ được hỏi
+AI một lần: `none` mà có bước thì thành `recommended`, loại khác mà không có bước thì thành
+`none`, còn bước không có loại thì là `UNSPECIFIED`. Thay đổi đó khi ấy có trigger review
+**Đã chỉnh loại bước chuyển đổi**, để một người kiểm lại bước này. Bước do AI viết mà chỉ nói
+rằng không cần làm gì, như "No immediate action is required" hay "No migration required", sẽ
+bị bỏ trước, nên loại là `NONE`; bước vẫn yêu cầu điều gì đó ("No action is required unless you
+enable verification", "Rename the setting; no further action is required") thì được giữ.
+
+Giới hạn chỉ là những gì chính nội dung của thay đổi nói rằng nó cố ý chưa làm. Câu mà AI viết
+vào đó để nói về dữ liệu đầu vào, như "Rollback steps are not provided" hay "The version is not
+specified", sẽ bị bỏ, và câu chỉ nói phạm vi của thay đổi, như "This does not affect the CLI"
+hay "It only affects the CI environment", cũng vậy, vì mức liên quan của từng đối tượng đọc đã
+cho biết thay đổi quan trọng với ai. Giới hạn như "Certificate validation is enforced only for
+MongoDB" được giữ, và trường giới hạn bị thiếu thì coi là trống. Mọi request đều dùng
+cùng một temperature, là `0` trừ khi bản triển khai đặt `RELEASEFLOW_AI_TEMPERATURE`, để cùng
+một thay đổi dao động ít nhất trong khả năng của model (xem [Cấu hình](configuration.md#ai)).
+
+Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, mỗi narrative kèm mức liên
+quan và dòng tiêu đề, và API thay đổi trả về chúng dưới dạng `neutralSummary`,
+`audienceNarratives` (nội dung narrative của từng audience, theo mã audience) và
+`audienceNarrativeDetails` (mỗi mã audience một object có `relevance`, `headline` và `body`),
+kèm `contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
 giờ bị câu trả lời AI sau đó thay thế.
 
 ![Tóm tắt trung lập của một thay đổi, tiếp theo là một đoạn viết cho từng audience](assets/changes/c-5-summary.webp)
 
+### Ngữ cảnh Project {#project-context}
+
+AI không biết gì về sản phẩm ngoài thay đổi đang được hỏi. **Ngữ cảnh** của một Project cho nó
+biết những điều nó không tự đoán được: phần nào là client và phần nào là server, setting nằm ở
+đâu, người dùng mở tính năng bằng cách nào, và những gì cố ý giữ tiếng Anh. Mở **Ngữ cảnh
+Project** trên thẻ của Project, hoặc gọi `GET /api/projects/{projectId}/context`, trả về
+`context` và người sửa lần cuối. Mọi thành viên đều đọc được; chỉ quản trị viên mới viết, trên
+trang hoặc bằng `PUT /api/projects/{projectId}/context` với `{"context": "..."}`. Đây là văn
+bản thuần, tối đa 2000 ký tự; dài hơn thì trả về `400 validation_failed`, và để trống thì xoá nó.
+
+Mọi request AI cho một thay đổi của Project đều gửi kèm ngữ cảnh này, như thông tin đúng về sản
+phẩm từ quản trị viên, không bao giờ như chỉ dẫn. Một lần sửa áp dụng cho những thay đổi được
+phân loại sau đó, kể cả khi hỏi lại AI; những thay đổi đã phân loại vẫn giữ nội dung AI đã viết.
+Nó cũng là `context` gửi cho DeepL khi dịch nội dung của Project (xem
+[Ngôn ngữ của release note](release-notes.md#release-note-languages)); DeepL không dịch và không
+tính phí phần này. Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
+
 Quy tắc luôn được ưu tiên:
 
 - category mà quy tắc đã chọn được giữ nguyên;
-- AI có thể đánh dấu một thay đổi là phá vỡ tương thích nhưng không bao giờ gỡ cờ đó;
-- thay đổi phá vỡ tương thích, Unknown và có trigger, cùng những thay đổi AI đề nghị review, đều
-  ở lại trạng thái cần review.
+- AI có thể đánh dấu một thay đổi là phá vỡ tương thích hoặc bảo mật nhưng không bao giờ gỡ cờ
+  nào trong hai cờ đó;
+- thay đổi phá vỡ tương thích, bảo mật, Unknown và có trigger, cùng những thay đổi AI đề nghị
+  review, đều ở lại trạng thái cần review.
 
 Ngoài những trường hợp đó, câu trả lời của AI quyết định thay đổi, và một thay đổi Unknown có
 thể nhận category từ AI.
@@ -170,22 +252,25 @@ cách đó khi đã có nhà cung cấp.
 
 ## Review của con người {#human-review}
 
-Mỗi thay đổi trong Hộp thay đổi có một biểu mẫu review điền sẵn category và cờ phá vỡ tương
-thích hiện tại. Thay đổi cần review hiển thị biểu mẫu ngay; các thay đổi khác hiển thị nó trong
+Mỗi thay đổi trong Hộp thay đổi có một biểu mẫu review điền sẵn category, cờ phá vỡ tương
+thích và cờ bảo mật hiện tại. Thay đổi cần review hiển thị biểu mẫu ngay; các thay đổi khác hiển thị nó trong
 mục **Sửa phân loại**. Người review giữ nguyên hoặc đổi các giá trị rồi bấm **Xác nhận
 review**. ReleaseFlow lưu đúng các giá trị đã gửi, gỡ nhu cầu review, và ghi lại người review
 cùng thời điểm. Người review chọn một category đang hoạt động trong danh mục, vì thay đổi đã
-review không thể là Unknown, và có thể gỡ cờ phá vỡ tương thích do quy tắc hoặc AI đặt.
+review không thể là Unknown, có thể gỡ cờ phá vỡ tương thích hoặc cờ bảo mật do quy tắc hoặc AI
+đặt, và có thể đánh dấu bảo mật cho một thay đổi chưa ai đánh dấu.
 
-Xác nhận mà không thay đổi gì sẽ giữ nguồn phân loại ban đầu (quy tắc hoặc AI). Đổi category
-hoặc cờ phá vỡ tương thích sẽ khiến người review trở thành nguồn phân loại, hiển thị là "Sửa lại
+Xác nhận mà không thay đổi gì sẽ giữ nguồn phân loại ban đầu (quy tắc hoặc AI). Đổi category,
+cờ phá vỡ tương thích hoặc cờ bảo mật sẽ khiến người review trở thành nguồn phân loại, hiển thị là "Sửa lại
 bởi". Một thay đổi có thể được review lại; lần review gần nhất được giữ.
 
 ![Một thay đổi sau khi một người sửa category thành Fix: thẻ ghi ai đã sửa](assets/changes/c-8-correct.webp)
 
 REST client gọi `POST /api/projects/{projectId}/changes/{changeId}/review` với phiên đăng nhập,
-CSRF token và `{"category": "fix", "breaking": false}`. Category là một mã trong danh mục,
-không phân biệt hoa thường. Lời gọi trả về thay đổi đã cập nhật; `400 invalid_change_review` cho
+CSRF token và `{"category": "fix", "breaking": false, "security": true}`. Category là một mã
+trong danh mục, không phân biệt hoa thường. Có thể bỏ `security`, như các client viết trước khi
+có nó: khi đó review xác nhận cờ mà thay đổi đang có, còn `false` tường minh sẽ gỡ cờ. Mọi thay
+đổi API trả về đều có `security`. Lời gọi trả về thay đổi đã cập nhật; `400 invalid_change_review` cho
 `unknown`, một category đã lưu trữ, hoặc một mã không có trong danh mục; `400 validation_failed`
 khi thiếu trường; và `404 change_not_found` cho thay đổi của Organization khác.
 

@@ -12,7 +12,8 @@ import java.util.UUID;
 /**
  * Records a person's review of one change. The Change Inbox and a release's review both
  * use it, so every review settles a change the same way. The category must be an active
- * category of the Organization's catalog other than Unknown.
+ * category of the Organization's catalog other than Unknown. A request that leaves the
+ * security flag out confirms the one the change has (ADR-0037).
  */
 @Service
 public class ChangeReviewService {
@@ -39,7 +40,8 @@ public class ChangeReviewService {
                 .filter(value -> !value.isUnknown())
                 .orElseThrow(InvalidChangeReviewException::new);
 
-        change.review(category, request.getBreaking(), reviewer.userId(), reviewer.displayName(), clock.instant());
+        boolean security = request.getSecurity() == null ? change.isSecurity() : request.getSecurity();
+        change.review(category, request.getBreaking(), security, reviewer.userId(), reviewer.displayName(), clock.instant());
         return ChangeView.from(change);
     }
 }

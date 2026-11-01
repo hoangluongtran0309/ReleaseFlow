@@ -29,12 +29,27 @@ class ChangeAiMergeTest {
     }
 
     @Test
+    void aCorrectedMigrationKindAddsATriggerSoAPersonChecksTheStep() {
+        ChangeAiMerge.ClassifiedChange merged = merge(
+                rules(TestCategories.FIX, false, List.of()),
+                answer(new AiClassification(TestCategories.FIX, false, false, false, SUMMARY, Map.of(), null, 90, List.of(), "none"))
+        );
+
+        assertThat(merged.classification().category()).isEqualTo(TestCategories.FIX);
+        assertThat(merged.classification().needsReview()).isTrue();
+        assertThat(merged.classification().triggers()).containsExactly(ReviewTrigger.migrationKindMismatch("none"));
+        assertThat(ReviewTrigger.migrationKindMismatch("").detail()).isNull();
+        assertThat(ReviewTrigger.migrationKindMismatch("none").messageKey())
+                .isEqualTo("ui.reviewTrigger.MIGRATION_KIND_MISMATCH.detailed");
+    }
+
+    @Test
     void aProposedCategoryKeepsTheChangeUnknownAndAddsATrigger() {
         CategorySuggestionDraft draft = new CategorySuggestionDraft("SECURITY", "Security", CategoryGroup.FIX, "None fits.");
 
         ChangeAiMerge.ClassifiedChange merged = merge(
                 rules(TestCategories.UNKNOWN, false, List.of()),
-                answer(new AiClassification(TestCategories.UNKNOWN, false, false, SUMMARY, Map.of(), draft, 90, List.of()))
+                answer(new AiClassification(TestCategories.UNKNOWN, false, false, false, SUMMARY, Map.of(), draft, 90, List.of(), null))
         );
 
         assertThat(merged.classification().category()).isEqualTo(TestCategories.UNKNOWN);
@@ -86,7 +101,7 @@ class ChangeAiMergeTest {
 
         ChangeAiMerge.ClassifiedChange merged = merge(
                 rules(TestCategories.FEATURE, false, List.of()),
-                answer(new AiClassification(TestCategories.UNKNOWN, false, false, SUMMARY, Map.of(), draft, 90, List.of()))
+                answer(new AiClassification(TestCategories.UNKNOWN, false, false, false, SUMMARY, Map.of(), draft, 90, List.of(), null))
         );
 
         assertThat(merged.classification().category()).isEqualTo(TestCategories.FEATURE);
@@ -166,6 +181,50 @@ class ChangeAiMergeTest {
     }
 
     @Test
+    void theAiCanMarkAChangeSecurityButNeverClearWhatARuleFound() {
+        ChangeAiMerge.ClassifiedChange added = merge(
+                rules(TestCategories.FIX, false, List.of()),
+                answer(new AiClassification(TestCategories.FIX, false, true, false, SUMMARY, Map.of(), null, 90, List.of(),
+                        null))
+        );
+        ChangeAiMerge.ClassifiedChange kept = merge(
+                securityRules(TestCategories.FIX),
+                answer(new AiClassification(TestCategories.FIX, false, false, false, SUMMARY, Map.of(), null, 90, List.of(),
+                        null))
+        );
+
+        assertThat(added.classification().security()).isTrue();
+        assertThat(added.classification().needsReview()).isTrue();
+        assertThat(added.classification().reasons()).contains("AI marked it a security change");
+        assertThat(kept.classification().security()).isTrue();
+        assertThat(kept.classification().needsReview()).isTrue();
+        assertThat(kept.classification().reasons()).doesNotContain("AI marked it a security change");
+    }
+
+    @Test
+    void aSecurityChangeTheAiCategorizedStillNeedsReview() {
+        ChangeAiMerge.ClassifiedChange merged = merge(
+                rules(TestCategories.UNKNOWN, false, List.of()),
+                answer(new AiClassification(TestCategories.FIX, false, true, false, SUMMARY, Map.of(), null, 90, List.of(),
+                        null))
+        );
+
+        assertThat(merged.classification().category()).isEqualTo(TestCategories.FIX);
+        assertThat(merged.source()).isEqualTo(ClassificationSource.AI);
+        assertThat(merged.classification().needsReview()).isTrue();
+    }
+
+    @Test
+    void aFailureKeepsTheRulesSecurityFlag() {
+        AiOutcome failed = new AiOutcome(AiProvider.OPENAI, "gpt-test", null, null, "OpenAI returned HTTP 500.");
+
+        ChangeAiMerge.ClassifiedChange merged = merge(securityRules(TestCategories.FIX), failed);
+
+        assertThat(merged.classification().security()).isTrue();
+        assertThat(merged.classification().needsReview()).isTrue();
+    }
+
+    @Test
     void aFailureKeepsTheRulesAndForcesReview() {
         AiOutcome failed = new AiOutcome(AiProvider.ANTHROPIC, "claude-test", null, null, "Anthropic returned HTTP 500.");
 
@@ -182,14 +241,19 @@ class ChangeAiMergeTest {
         return new ChangeClassification(
                 category,
                 breaking,
+                false,
                 breaking || category.isUnknown() || !triggers.isEmpty(),
                 List.of("Title type \"feat\""),
                 triggers
         );
     }
 
+    private static ChangeClassification securityRules(CategoryRef category) {
+        return new ChangeClassification(category, false, true, true, List.of("Security label \"security\""), List.of());
+    }
+
     private static AiOutcome succeeded(CategoryRef category, boolean breaking, boolean needsReview) {
-        return answer(new AiClassification(category, breaking, needsReview, SUMMARY, Map.of(), null, 90, List.of()));
+        return answer(new AiClassification(category, breaking, false, needsReview, SUMMARY, Map.of(), null, 90, List.of(), null));
     }
 
     private static ChangeAiMerge.ClassifiedChange merge(ChangeClassification rules, AiOutcome ai) {

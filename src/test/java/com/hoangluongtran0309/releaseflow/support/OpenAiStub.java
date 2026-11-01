@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,6 +28,8 @@ public final class OpenAiStub implements AutoCloseable {
     private final HttpServer server;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final List<RecordedRequest> requests = new CopyOnWriteArrayList<>();
+    // What a model that takes only its own temperature answers to a request that names one.
+    private volatile String temperatureRefusal;
     private volatile StubResponse response = new StubResponse(200, completion("feature", false, false, "Adds a capability."), Duration.ZERO);
 
     private OpenAiStub() {
@@ -56,6 +59,18 @@ public final class OpenAiStub implements AutoCloseable {
         response = new StubResponse(status, body, delay);
     }
 
+    /**
+     * Answers 400 with {@code errorBody} to every request whose body has a {@code temperature},
+     * as a model that accepts only its own does, and as before to any other.
+     */
+    public void refuseTemperature(String errorBody) {
+        temperatureRefusal = errorBody;
+    }
+
+    private boolean refusesTemperature(String requestBody) {
+        return temperatureRefusal != null && OBJECT_MAPPER.readTree(requestBody).has("temperature");
+    }
+
     /** A valid answer whose what_changed is {@code summary}; the AI does not ask for review. */
     public void respondWithClassification(String category, boolean breaking, String summary) {
         respondWithClassification(category, breaking, false, summary);
@@ -70,17 +85,25 @@ public final class OpenAiStub implements AutoCloseable {
         respond(200, completionWithContent(OBJECT_MAPPER.writeValueAsString(Map.of(
                 "category", "UNKNOWN",
                 "breaking_change", false,
+                "security_change", false,
                 "needs_human_review", true,
                 "neutral_core", Map.of(
                         "what_changed", "Rotates the signing keys.",
                         "why_changed", "",
                         "technical_detail", "",
-                        "migration_step", ""
+                        "migration_step", "",
+                        "migration_kind", "none",
+                        "limitations", ""
                 ),
                 "suggested_category", Map.of("code", code, "display_name", name, "group", group, "rationale", rationale),
                 "context_sufficiency", Map.of("score", 80, "reasons", List.of()),
                 "narratives", Map.of()
         ))));
+    }
+
+    /** A valid answer that marks the change as a security change, or not. */
+    public void respondWithSecurity(String category, boolean security, String summary) {
+        respond(200, completionWithContent(classification(category, false, security, false, summary, Map.of())));
     }
 
     /** A valid answer that also explains the change to the given audiences. */
@@ -94,6 +117,7 @@ public final class OpenAiStub implements AutoCloseable {
 
     public void reset() {
         requests.clear();
+        temperatureRefusal = null;
         respondWithClassification("feature", false, "Adds a capability.");
     }
 
@@ -112,18 +136,37 @@ public final class OpenAiStub implements AutoCloseable {
             String summary,
             Map<String, String> narratives
     ) {
+        return classification(category, breaking, false, needsReview, summary, narratives);
+    }
+
+    /** A valid answer that also says whether the change is a security change (ADR-0037). */
+    public static String classification(
+            String category,
+            boolean breaking,
+            boolean security,
+            boolean needsReview,
+            String summary,
+            Map<String, String> narratives
+    ) {
         return OBJECT_MAPPER.writeValueAsString(Map.of(
                 "category", category,
                 "breaking_change", breaking,
+                "security_change", security,
                 "needs_human_review", needsReview,
                 "neutral_core", Map.of(
                         "what_changed", summary,
                         "why_changed", "Requested by users.",
                         "technical_detail", "Handled in the exporter.",
-                        "migration_step", ""
+                        "migration_step", "",
+                        "migration_kind", "none",
+                        "limitations", ""
                 ),
                 "context_sufficiency", Map.of("score", 90, "reasons", List.of()),
-                "narratives", narratives
+                // The shape of ADR-0035: each audience a relevance, a headline, and a body.
+                "narratives", narratives.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        narrative -> Map.of("relevance", "full", "headline", "", "body", narrative.getValue())
+                ))
         ));
     }
 
@@ -153,7 +196,9 @@ public final class OpenAiStub implements AutoCloseable {
                 exchange.getRequestHeaders().getFirst("Authorization"),
                 body
         ));
-        StubResponse current = response;
+        StubResponse current = refusesTemperature(body)
+                ? new StubResponse(400, temperatureRefusal, Duration.ZERO)
+                : response;
         try {
             Thread.sleep(current.delay());
         } catch (InterruptedException exception) {

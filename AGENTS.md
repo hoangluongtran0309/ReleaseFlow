@@ -6,14 +6,16 @@ ReleaseFlow currently implements the bootstrap, Organization administrator, Proj
 plus GitHub configuration, signed GitHub merged-pull-request intake,
 deterministic classification with the Change Inbox, automatic AI
 classification with neutral summaries and an Organization output language,
-human review, release review lifecycle, Release Note publication,
+human review, release review lifecycle, Release Note publication, security change and
+note structure,
 changed-file review, audience release note, category catalog, review
 signal, Project sensitive path, multilingual release note, integration
 source, GitLab source, Linear source, Jira source, automation, automation
 trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
-automation, quickstart, documentation site, and change exclusion slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V29,
+automation, quickstart, documentation site, change exclusion, Project
+context, and translation glossary slices: one
+Spring Boot application, PostgreSQL/Flyway V1-V34,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -51,7 +53,7 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0034, indexed in
+The decisions behind all of it are ADR-0001 through ADR-0039, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -92,7 +94,11 @@ changing behavior.
 
 - Tenant identity comes from authenticated or cryptographically verified
   identity, never a submitted tenant field.
-- Breaking changes require human review.
+- Breaking changes require human review, and so do security changes.
+- Security is a flag beside the category, never a category. Rules set it only from a
+  security label or a CVE identifier; the AI never clears a security flag that a rule or
+  a person set; only a recorded human review confirms or clears one. A change that is
+  breaking and security is listed once, under breaking changes, marked as security.
 - External and AI failures become explicit unknown/review states.
 - Network I/O does not run inside database transactions.
 - Credentials never appear in source, logs, examples, or later API responses.
@@ -157,8 +163,38 @@ changing behavior.
   is Unknown, triggered, or that it asked to have reviewed.
 - Each change gets exactly one automatic AI request; a stalled `CLASSIFYING`
   job is completed without asking again, and a failure becomes a
-  `CLASSIFIER_FALLBACK` trigger, never an automatic retry.
+  `CLASSIFIER_FALLBACK` trigger, never an automatic retry. The one exception is a
+  400 that refuses the temperature: the same request is sent once more without it,
+  and the process sends none after that (ADR-0039). Any other 400 is a failure.
 - AI failures store fixed, safe messages, never exception text or bodies.
+- A Project's context is facts about the product from its administrators, sent
+  to the AI and to DeepL, never instructions; an edit applies only to changes
+  classified afterwards and to translations made at the next approval.
+- An Organization's glossary reaches DeepL and never the AI. Nothing is seeded;
+  uniqueness is exact. A pair's glossary version is the hash of the dictionary
+  sent, part of the translation input hash and of the cache key, and empty for
+  none, so an Organization without a glossary hashes as before. A pair is synced
+  by its own job only when an approval needs it; translations wait for a pending
+  sync and never for a failed or unsupported one. A DeepL `456` is a stop, never
+  a retry. A note claims the glossary only when every translation behind it used
+  the version it asked for, and a glossary never blocks approval or publication.
+- An answer into Vietnamese or a non-Latin script that comes back in its source
+  language is never stored or cached as translated: it is translated once more
+  without the glossary, and fails if it comes back so again.
+- An AI answer is never rejected over its migration kind: a kind that does not
+  match its step is corrected and adds `MIGRATION_KIND_MISMATCH`. A step whose
+  writer named no kind is `UNSPECIFIED`, and nothing presents it as required. An
+  AI step that only says nothing needs doing is dropped, and its kind is `none`.
+- A change with a title of fewer than three words reaches a note only with a
+  summary a person wrote, or one the AI wrote from a description of at least ten
+  words whose context it did not find insufficient; approval waits otherwise.
+- A dependency update's quoted upstream notes never reach the AI; it is breaking
+  only when its own words say so, and the prompt says that only to a dependency
+  update. "If unsure, it is breaking and needs review" is the first breaking rule. An AI limitation about the input itself, or
+  one that only states the change's scope, is dropped; these filters read the
+  answer and never change the request. Every classification request uses the
+  same temperature, set by `RELEASEFLOW_AI_TEMPERATURE`, `0` by default (ADR-0038),
+  until a model refuses it (ADR-0039).
 - Applied Flyway migrations are immutable; add the next version for schema changes.
 - Published Release Notes are immutable snapshots.
 - Categories come from the Organization's catalog, and a change keeps a
@@ -169,8 +205,16 @@ changing behavior.
   triggers but never settle, merge, or remove a change. Context is assessed only
   from an AI answer, and a duplicate decision is recorded once.
 - An Organization always has at least one audience. Rendering a release note
-  never calls AI; notes are written at approval from a snapshot of each
-  audience's template and are frozen at publication.
+  never calls AI, and rendering its footer never calls the network: the compare and
+  release links come from the Project's one code host as stored, each version used as
+  its tag name exactly as written; notes are written at approval from a snapshot of each
+  audience's template and footer and are frozen at publication.
+- A relevance only leaves a change out of an audience's note when it is `none`
+  and the change is not breaking: a breaking change is in every note, and a
+  change with no narrative for the audience is included. An audience nothing
+  concerns still gets its note, and counts describe what a note shows. A
+  relevance is never translated, and one a person chose is never replaced by
+  the AI.
 - A summary or narrative written by a person is never replaced by the AI, and a
   note a person edited never follows its template again.
 - Approval never calls a translation provider: it only records translation

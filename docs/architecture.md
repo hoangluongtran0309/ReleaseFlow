@@ -17,7 +17,7 @@ readable classes and gains internal layers only when implemented behavior needs 
 | `change` | Webhook intake, imports and polls, change processing, classification, AI, review, the Change Inbox, sensitive paths, and review signals |
 | `category` | The category catalog and AI proposals |
 | `audience` | Audiences, their templates, and the release note languages |
-| `translation` | Translation jobs, the cache, and the DeepL client |
+| `translation` | Translation jobs, the cache, the Organization glossary and its DeepL sync, and the DeepL client |
 | `release` | The release lifecycle, release notes, and publication |
 | `automation` | Rules, triggers, runs, and every delivery action |
 | `changelog` | The anonymous public changelog |
@@ -103,6 +103,7 @@ projects
   organization_id (FK -> organizations.id)
   name
   created_at
+  context (V30, at most 2000 characters), context_updated_by (composite FK -> app_users), context_updater_name, context_updated_at
 
 project_sensitive_paths (V16)
   project_id (PK; composite FK with organization_id -> projects, ON DELETE CASCADE)
@@ -140,19 +141,19 @@ changes
   pull_request_number (the provider's own number: a pull request, a merge
     request, a Linear issue, or the number in a Jira key)
   title, description, author_login (null when the source names no creator), labels (text[])
-  target_branch + merge_commit_sha (a code host's change only), merged_at, url
+  target_branch + merge_commit_sha (a code host's change only), head_branch (V31, a code host's change only, when named), merged_at, url
   delivery_id (the delivery that recorded the change, when the provider named one)
   received_at
   processing_status (PROCESSING | COMPLETED)
   changed_file_status (COLLECTED | UNAVAILABLE | NOT_SUPPORTED), changed_files (jsonb)
   review_triggers (jsonb array of {type, detail})
   category (code), category_display_name, category_group (snapshot of the catalog category)
-  breaking, needs_review, classification_reasons (text[])
+  breaking, security (V34), needs_review, classification_reasons (text[])
   classification_source (RULES | AI | SUGGESTION | HUMAN), ai_status (NOT_REQUESTED | SUCCEEDED | FAILED)
   ai_provider, ai_model, ai_failure, ai_attempted_at
   reviewed_by (composite FK with organization_id -> app_users), reviewer_name, reviewed_at
   excluded_by (V29, composite FK -> app_users), excluder_name, excluded_at, exclusion_reason (all or none)
-  neutral_summary (jsonb), content_language, audience_narratives (jsonb, keyed by audience code)
+  neutral_summary (jsonb; migrationKind and limitations since ADR-0035), content_language, audience_narratives (jsonb, keyed by audience code)
   summary_edited_by (composite FK with organization_id -> app_users), summary_editor_name, summary_edited_at
   context_score (0-100), context_status (SUFFICIENT | INSUFFICIENT), context_reasons (jsonb); null when not assessed
   linked_context_status (NOT_SUPPORTED | NOT_CONFIGURED | NOT_FOUND | PARTIAL | UNAVAILABLE | COLLECTED; null before V21)
@@ -198,11 +199,12 @@ audience_definitions
   organization_id (FK -> organizations.id); (id, organization_id) unique
   code ([a-z][a-z0-9_]*, unique per Organization, fixed), display_name
   communication_intent, template_body (Mustache, at most 10000 characters)
+  footer_template_body (V34, Mustache over the release's values; blank adds nothing)
   preset, created_at, updated_at
 
 audience_template_variants (V17)
   id (UUID PK); (audience_id, organization_id) FK -> audience_definitions, ON DELETE CASCADE
-  language, template_body; audience_id + language unique
+  language, template_body, footer_template_body (V34); audience_id + language unique
 
 organization_translation_settings (V17)
   organization_id (PK)
@@ -212,13 +214,33 @@ translation_jobs (V17, V28)
   id (UUID PK); change_id composite FK -> changes, ON DELETE CASCADE
   release_id (V28) composite FK -> releases, ON DELETE CASCADE; exactly one of the two
   source_language, target_language, input_hash; change_id or release_id + target_language + input_hash unique
-  input (jsonb), output (jsonb, exactly when SUCCEEDED)
+  input (jsonb), context (V30, the Project's context it was asked with), output (jsonb, exactly when SUCCEEDED)
+  glossary_version (V33, the pair's glossary version it asked for; empty for none)
+  glossary_outcome (V33: applied | unsupported_language_pair | glossary_sync_failed | glossary_answer_untranslated)
   status (PENDING | RUNNING | SUCCEEDED | FAILED), attempts, next_attempt_at, claimed_at
   last_error, created_at, completed_at
 
 translation_cache (V17)
-  organization_id + source_language + target_language + text_hash (PK)
+  organization_id + source_language + target_language + text_hash (PK; the hash covers the context and
+    the glossary version the text was translated with, if any)
   translated_text, created_at
+
+glossary_kept_terms (V33)
+  id (UUID PK); organization_id; term (1-100 characters, one line); organization_id + term unique
+  created_by (composite FK -> app_users), creator_name, created_at
+
+glossary_translations (V33)
+  id (UUID PK); organization_id; source_language, target_language (primary languages, different)
+  source_term, target_term; organization_id + source_language + target_language + source_term unique
+  created_by (composite FK -> app_users), creator_name, created_at
+
+translation_glossaries (V33)
+  organization_id (PK; locked by a sync), deepl_glossary_id, created_at
+
+glossary_syncs (V33)
+  organization_id + source_language + target_language (PK)
+  wanted_version, synced_version, status (PENDING | RUNNING | SYNCED | UNSUPPORTED | FAILED)
+  attempts, next_attempt_at, claimed_at, last_error, updated_at
 
 releases
   id (UUID PK)
@@ -227,6 +249,9 @@ releases
   status (DRAFT | IN_REVIEW | APPROVED | PUBLISHED)
   version unique per Project, ignoring case
   created_at, updated_at, planned_release_at
+  upgrade_guide_url (V34, absolute http or https, at most 2000 characters)
+  previous_release_id (V34, composite FK with organization_id, project_id -> releases;
+    releases_previous_release_published: only a published release, never itself)
   approved_at, approved_by (composite FK -> app_users), approver_name
   published_at, published_by (composite FK -> app_users), publisher_name
 
@@ -247,9 +272,10 @@ release_audience_notes (written while APPROVED, immutable once PUBLISHED)
   id (UUID PK); release_id + audience_id + language unique (V17)
   (release_id, organization_id, project_id) FK -> releases, ON DELETE CASCADE
   (audience_id, organization_id) FK -> audience_definitions (blocks deleting a used audience)
-  audience_code, audience_name, language, template_body_snapshot
+  audience_code, audience_name, language, template_body_snapshot, footer_template_snapshot (V34)
   content, auto_rerender, last_edited_by (composite FK -> app_users), last_editor_name
   translation_status (READY | PENDING | FAILED, V17)
+  glossary_status (NONE | PENDING | APPLIED | NOT_APPLIED, V33), glossary_reason (exactly when NOT_APPLIED)
   created_at, updated_at
 
 release_notes (legacy, immutable; releases published before V13)
@@ -523,6 +549,7 @@ short transaction that first checks the claim is still its own. Retries are boun
 | `ChangeProcessingWorker` | second | `change_processing_jobs` | Enrich and classify a change |
 | `SourceSyncWorker` | second | `source_sync_jobs` | History imports, and Jira polls that `JiraPollScheduler` books |
 | `TranslationWorker` | second | `translation_jobs` | DeepL translations of change summaries and release summaries |
+| `GlossarySyncWorker` | second | `glossary_syncs` | Send a language pair's glossary dictionary to DeepL, one sync per Organization at a time |
 | `AutomationWorker` | second | `automation_publish_jobs`, `automation_action_runs` | Turn publications into runs, then deliver one action at a time |
 | `AutomationTriggerWorker` | `RELEASEFLOW_AUTOMATION_TRIGGER_DELAY` (15 s) | `automation_rules`, `automation_runs` | Book runs for due schedules and reminders; it never calls a provider |
 
@@ -678,6 +705,7 @@ network I/O itself.
 | No file list | The files could not be listed | `CHANGED_FILES_UNAVAILABLE` review trigger |
 | Sensitive word | The source has no files at all, and the title or description contains `breaking change`, `migration`, `security`, `auth`, `credential`, `password`, or `encryption` | One `SENSITIVE_KEYWORD` review trigger per match |
 | Linked issues | Commits could not be read, or Jira would not show a mentioned issue | `LINKED_CONTEXT_UNAVAILABLE` review trigger |
+| Migration kind | The AI's migration kind did not match its step, and the parser corrected it | `MIGRATION_KIND_MISMATCH` review trigger, added by `ChangeAiMerge` |
 
 A source that cannot report files at all is not a source whose files failed to
 arrive. `ChangedFileStatus.NOT_SUPPORTED` says so, and the keyword scan stands in
@@ -749,14 +777,77 @@ All three share `AiClassificationPrompt` (instructions, response schema, and
 the user JSON) and `AiClassificationParser`, which rejects an incomplete or
 mistyped answer as a whole. The request names the Organization's audiences
 (code and communication intent, from `AudienceService.briefs`), and the
-response schema is built for each request with one required narrative string
-per audience code, which OpenAI strict mode and Anthropic Structured Outputs
-enforce. The parser reads only the requested codes; a missing, empty, or
-mistyped narrative is left out without failing the answer. Every provider refuses to run inside a transaction
+response schema is built for each request with one required narrative object
+per audience code (`relevance` of `none`, `brief`, or `full`, a `headline`, and a
+`body`; ADR-0035), which OpenAI strict mode and Anthropic Structured Outputs
+enforce. The parser reads only the requested codes; a missing or mistyped
+narrative is left out without failing the answer, an unknown relevance reads as
+`full`, a headline over 20 words or several lines is dropped, `Limitations`
+drops a headline, or a sentence of a body, that remarks on the input, and a
+plain string is a full body. A narrative that says no more than having none
+(`AudienceNarrative.saysNothing`: full, with neither headline nor body) is left out. Every provider refuses to run inside a transaction
 and turns timeouts, HTTP errors, refusals, truncation, and invalid JSON into a
 fixed message that never contains a key or a response body. See
 [ADR-0009](adr/0009-automatic-ai-classification.md), which supersedes
 [ADR-0004](adr/0004-openai-classification-as-reviewed-suggestion.md).
+
+ADR-0035 binds the answer to its evidence. The user JSON names the item `change`,
+with `kind` set to `tracker_issue` when its source is Linear or Jira
+(`SourceType.isIssueTracker`) and `code_change` otherwise, and carries the
+Project's context as `project_context`, or null. The worker and a retry read
+it through `ProjectService.context` before the call, outside any transaction.
+The instructions forbid, in every field, consequences, product locations, and
+tracker-issue files the evidence does not state, a dependency's quoted
+changelog presented as this project's change, and remarks about missing
+evidence. `neutral_core` gains `migration_kind` and `limitations`. The parser
+never rejects an answer over the kind: `none` with a step becomes `recommended`,
+any other kind (or none at all) without a step becomes `none`, a step with an
+unknown kind becomes `recommended` and one with no kind `unspecified`, and the answer records what the AI returned
+so `ChangeAiMerge` adds a `MIGRATION_KIND_MISMATCH` trigger. Before the kind is read,
+`MigrationSteps.stated` empties a step that only says nothing needs doing ("No
+immediate action is required", "No migration required") unless the verdict is
+qualified or another clause still asks something, so its kind becomes `none`. A missing
+`limitations` reads as empty, and `Limitations.stated` drops every sentence of it that
+talks about the input ("not provided", "not specified", "no information", and their kin
+in English and Vietnamese) or only states the change's scope ("does not affect", "has
+no impact on", "only affects") rather than what the change does not do yet. Both read
+only the answer, so the request, and replays recorded from it, are unchanged. `NeutralSummary` stores both;
+a summary stored before them reads its step as `UNSPECIFIED` (`MigrationKind`),
+which no template or label treats as required.
+
+A dependency update is recognized by `DependencyUpdates` from the author
+(`dependabot[bot]`, `renovate[bot]`) or the head branch (`dependabot/`, `renovate/`),
+which `MergedPullRequest` reads from GitHub's `head.ref` and GitLab's `source_branch`, in
+deliveries and imports alike, and `changes.head_branch` keeps (Flyway `V31`; only a code
+host's change has one). `AiClassificationRequest.of` sends such a change's description
+without its `<details>` and `<blockquote>` elements, Markdown blockquotes, and "Release
+notes", "Changelog", and "Commits" sections, and marks it `dependency_update`; the stored
+description is untouched. `AiClassificationPrompt.system` adds `DEPENDENCY_RULE` (breaking,
+or a migration step, only when the change's own words say so) to the instructions only for
+such a change, after the first rule: when unsure whether a change is breaking, set
+`breaking_change` and `needs_human_review`. Both clients send the temperature that
+`AiClassifierConfiguration.temperature` reads from `RELEASEFLOW_AI_TEMPERATURE` at startup:
+`AiClassificationPrompt.TEMPERATURE` (`0`) when it is empty, a number within
+`AiProvider.maxTemperature()`, or none for `default`, which leaves the field out of the
+request for a model that accepts only its own (ADR-0038). Without a provider the value is
+not read; with one, a value that is not `default` or a number in the range stops startup.
+A 400 that refuses the temperature (`error.param` of `temperature` for the Chat Completions
+API, an `invalid_request_error` whose message names `temperature` for Anthropic) sends the
+same request once more without it and sets the client's `temperatureRefused` flag, so every
+later request of the process leaves it out; the first thread to set it logs one warning.
+The error body is read only to decide this. Any other failure, the second request's
+included, becomes the change's failure as before (ADR-0039).
+
+### Project context
+
+`projects.context` (Flyway `V30`, at most 2000 characters, with who changed it
+last and when) is written by administrators through
+`PUT /api/projects/{projectId}/context` and the page
+`/projects/{projectId}/context`, both limited to administrators by URL rule in
+`SecurityConfiguration`; members read it with `GET`. `ProjectService` owns it, so
+`change` and `translation` read it through `ProjectService.context` with the
+principal's or the job's Organization ID. Nothing is classified again when it
+changes.
 
 The change worker calls the AI automatically (see Change processing).
 `ChangeAiMerge` combines the rules with the answer:
@@ -879,8 +970,8 @@ Flyway `V14` enforces the catalog with these constraints:
 
 `ChangeReviewService` settles one change in a single transaction. It loads the
 change by ID, Organization ID, and Project ID, and requires a concrete
-category. It then stores the category and breaking flag exactly as the
-reviewer submitted them, sets `needs_review = false`, and records
+category. It then stores the category, breaking flag, and security flag exactly as
+the reviewer submitted them, sets `needs_review = false`, and records
 `reviewed_by`, `reviewer_name`, and `reviewed_at`. Because the reviewer
 submits explicit values rather than approving whatever is current, a stale
 page cannot confirm a classification it did not show. Any change may be
@@ -888,9 +979,10 @@ reviewed, including one already settled by rules or by an earlier review; the
 latest review is kept.
 
 Confirming unchanged values keeps the classification source (`RULES` or `AI`).
-Changing either value sets it to `HUMAN`. A reviewer may clear a breaking
-flag: the invariant that breaking changes require human review is met by the
-recorded review itself.
+Changing any value sets it to `HUMAN`. A reviewer may clear a breaking or security
+flag: the invariant that they require human review is met by the recorded review
+itself. `ChangeReviewRequest.security` is optional, for callers written before ADR-0037:
+null confirms the flag the change has.
 
 Flyway `V6` adds a unique `(id, organization_id)` key on `app_users` so that
 `changes_reviewer_fk` keeps reviewers inside the change's Organization. It
@@ -950,8 +1042,9 @@ processing can be added, including one that still needs review.
 composite foreign keys on `(id, organization_id, project_id)` make the
 database reject a change joining a release of another Project or tenant.
 
-A decision is `APPROVE` or `EDIT` and carries the category and breaking flag
-the reviewer saw. `APPROVE` must match the change's current classification
+A decision is `APPROVE` or `EDIT` and carries the category, breaking flag, and
+security flag the reviewer saw; a decision without `security` confirms the current one.
+`APPROVE` must match the change's current classification
 (`409 classification_changed` otherwise) and cannot confirm an Unknown
 change. Both actions call `ChangeReviewService.review`, so the change records
 the reviewer exactly as an Inbox review does, and a `release_change_reviews`
@@ -998,17 +1091,35 @@ action runs each hold a foreign key to the audience; before deleting,
 last word, and a violation of any of the three found by the delete itself is
 reported the same way. An archived rule's actions are not removed to make room,
 because run history has to keep naming what it delivered to.
-`AudiencePresets` holds the three shipped audiences, with names and template
-labels from `messages/audience-presets{,_vi}.properties`. V13 seeds the same
-values for Organizations that existed before, and a migration test compares
-them.
+`AudiencePresets` holds the four shipped audiences (`operator`, `contributor`,
+`end_user`, and `support`), with names and template labels from
+`messages/audience-presets{,_vi}.properties`. Registration seeds all four. V13
+seeded the first three, with the values of its time, for Organizations that existed
+before, which keep their templates and intents until a preset is reset, and can add
+`support` themselves; a migration test compares them with those values.
+`resetToPreset` takes the shipped audience with the audience's code, whether
+registration seeded it or an administrator added it, and sets `preset`, so an
+added `support` follows the preset in later language variants and resets; a code
+nothing ships is refused with `audience_not_preset`, and the Audiences page offers
+the reset exactly when `AudiencePresets.shipped` holds for the code. Each intent
+ends by saying when a change is `none` for its audience, and the operator intent
+names something to watch only when the change or the Project context does. The
+shipped templates lead with `**{{headline}}**`, label a migration step by its kind
+through the `migration<Kind>` sections, keeping the neutral label for
+`unspecified`, keep their detail lines inside `{{^brief}}`, and print a required
+step outside it; the end-user one prints a step only when it is required.
 
 `AudienceTemplate` wraps JMustache in standards mode with strict sections,
 empty strings as false, and no escaping, because the output is Markdown. It
 validates a template on save by compiling it and rendering sample values, and
 renders one `AudienceItem` (`whatChanged`, `whyChanged`, `technicalDetail`,
-`migrationStep`, `narrative`, `reference`, `pullRequestNumber`, `pullRequestUrl`,
-`linkedIssues`). `reference` comes from `ChangeView.reference()`: `#n` for GitHub, `!n`
+`migrationStep`, `migrationKind`, `limitations`, `narrative`, `headline`,
+`relevance`, `reference`, `pullRequestNumber`, `pullRequestUrl`, `linkedIssues`),
+whose context adds one boolean section per migration kind (`migrationRequired`,
+`migrationConditional`, `migrationRecommended`, `migrationUnspecified`) and
+`brief`, since Mustache cannot compare values. `headline` falls back to
+`whatChanged`, so it always has a value, and `relevance` is `brief` or `full`.
+`audience` cannot see `MigrationKind` or `Relevance`, so each arrives as its value. `reference` comes from `ChangeView.reference()`: `#n` for GitHub, `!n`
 for GitLab, and for Jira and Linear the issue key read from the issue address
 ReleaseFlow stored, falling back to `#n`. The Change Inbox and release pages show the
 same label.
@@ -1016,14 +1127,31 @@ same label.
 escaped, link targets are sanitized and marked
 `rel="nofollow noopener noreferrer"`, and images become links.
 
-`ReleaseNoteDigest` is a pure function that writes one audience's note:
+`ReleaseNoteDigest` is a pure function that writes one audience's note from the
+changes that concern it (`concerns`): every breaking change, and every other
+change whose `AudienceNarrative` for the audience is not `NONE`. A change with no
+narrative for the audience is `FULL`, and `NONE` on a breaking change reads as
+`BRIEF` (ADR-0035). The note has:
 
 - the title and the escaped release summary;
-- "What's New", with a count per section joined by the bundle's list pattern,
-  and a breaking warning;
-- sections by category group in the order breaking (the flag), features,
+- "What's New", with a count per section of what the note shows, joined by the
+  bundle's list pattern, and a breaking warning;
+- sections in the order breaking (the flag), security (the flag, ADR-0037), features,
   fixes, performance, documentation, maintenance, other, each item rendered by
-  the template and its headings demoted two levels outside fenced code.
+  the template and its headings demoted two levels outside fenced code;
+- the audience's footer, rendered once with `AudienceTemplate.renderFooter`.
+
+Placement is exclusive: a breaking change is in Breaking, a security change that is not
+breaking in Security, and any other in its group's section, so the counts add up to the
+total. A change that is both gets the bundle's `securityMarker` after its list marker,
+whatever the template prints. `concerns` also keeps a security change for the
+`operator`, `contributor`, and `support` codes, where `NONE` reads as `BRIEF`. The
+breaking warning uses `breakingWarning.guide`, which links the release's upgrade guide,
+when it has one.
+
+When nothing concerns the audience, the note is the title, the summary, and the
+bundle's `nothingForAudience` line; approval still writes it, and an automation
+action delivers it like any other.
 
 Labels come from `messages/release-note{,_vi}.properties`, chosen by the note's
 language with an English fallback, and counts use `java.text` choice formats.
@@ -1040,16 +1168,31 @@ translation, keep what the AI or a person wrote.
 
 - **Approval** renders one `AudienceReleaseNote` per audience and release note
   language from the current changes, snapshots the audience's code, name,
-  template for that language, and the language, and inserts the notes after the
+  template and footer for that language, and the language, and inserts the notes after the
   release row is flushed as approved (see
   [Release note languages and translation](#release-note-languages-and-translation)). A render failure aborts approval with
-  `409 release_note_render_failed`.
+  `409 release_note_render_failed`. Before that, `ReleaseNotePreview.needsSummary`
+  finds every change whose title, without its Conventional Commit prefix, issue keys,
+  and `#n` or `!n`, has fewer than three words, and that has neither a summary a person
+  wrote nor an AI summary of a description of at least ten words (HTML comments not
+  counted) with a context the AI did not find insufficient, and
+  approval answers `409 change_summary_required` naming their references (ADR-0035).
+  The release page marks them **Needs a summary** and opens their **Edit summary**.
 - **Editing a note** is allowed only while approved. It stores the text and the
   editor and turns off `auto_rerender`.
 - **Editing a summary** is allowed during review or after approval, for a
   change of the release. It calls `ChangeSummaryService.edit`, which keeps
-  narratives only for current audience codes, and then renders every automatic
-  note again from its stored template.
+  narratives only for current audience codes, and only those that say more than
+  having none, and then renders every automatic note again from its stored
+  template and footer. `ChangeSummaryRequest.Narrative` binds `narratives[<code>].relevance`,
+  `.headline`, and `.body` from the page, and from JSON either that object or a
+  plain string (a delegating `@JsonCreator`), which is a full body. A person's
+  headline is collapsed onto one line.
+- **Storage.** `changes.audience_narratives` holds one `AudienceNarrative` object
+  per audience code; Flyway `V32` rewrote each string stored before as
+  `{"relevance": "FULL", "headline": "", "body": <string>}`. `ChangeView` returns them
+  as `audienceNarrativeDetails`, and keeps `audienceNarratives` as audience code to body
+  so REST clients written before keep working.
 - **Returning to draft** deletes the notes.
 - **Publishing** requires notes (`409 release_notes_missing`).
 - **Previews** render the current changes with the current templates and store
@@ -1060,6 +1203,51 @@ updates only while the release is approved. An update may change only the
 content and the edit record, and deletes are rejected once the release is
 published. `release_audience_notes_edit_recorded` ties `auto_rerender` to the
 editor columns.
+
+## Security changes and release-wide note structure
+
+ADR-0037 adds a security flag beside breaking and a footer per audience; see
+[ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
+
+- **Rules.** `ChangeClassifier` sets `security` for a label equal, ignoring case and
+  surrounding whitespace, to `security`, `security-fix`, `security fix`, or
+  `vulnerability`, and for `CVE-\d{4}-\d{4,}` (case-insensitive) in the title, the
+  description, or a label, and records the match as a reason. Security forces review like
+  breaking.
+- **AI.** The response schema requires one boolean, `security_change`, and the
+  instructions say what it means; nothing else in the request changed. The parser rejects
+  an answer without a boolean there, like `breaking_change`. `ChangeAiMerge` stores the
+  rule result OR the AI's, so the AI can add the flag but never clear what a rule found,
+  and a security change stays in review. A person's review is never asked of the AI again
+  (`isAiEligible`), so the AI never clears what a person set either.
+- **Database.** Flyway `V34` adds `changes.security` (false for every change recorded
+  before) and redefines `changes_review_required` so a security change leaves review only
+  with a recorded review.
+- **Releases.** `upgrade_guide_url` is checked by `ReleaseLinkBuilder.validatedUpgradeGuideUrl`
+  (`400 invalid_upgrade_guide_url`), and `previous_release_id` must be a published
+  release of the same Project (`400 invalid_previous_release`), which the composite
+  foreign key and the `releases_previous_release_published` trigger hold in the database
+  too. `ReleaseRequest` records whether each field was sent, so an older caller's update
+  keeps both and a create without `previousReleaseId` takes the Project's most recently
+  published release by `published_at`. The pages always send both.
+- **Footers.** An audience and each language variant have a `footer_template_body`;
+  `AudienceTemplate.validateFooter` compiles and renders it with `ReleaseLinks.SAMPLE`,
+  under the same compiler, with the `template_invalid` contract and the form field the
+  exception names. JMustache in standards mode looks a name up only in the innermost
+  context, so each footer value is a `FooterValue`: it prints as its text, and as a
+  section it renders its body, only when not empty, in a scope that still holds every
+  footer value and prints as its own text for `{{.}}`. Registration seeds the shipped
+  footers, `resetToPreset` restores them in every language, and `V34` gave existing
+  operator and contributor audiences the same text (a migration test compares them).
+  Approval snapshots the footer into `footer_template_snapshot`; notes written before
+  have a blank one.
+- **Links.** `ReleaseLinkBuilder` reads the Project's sources from the database and keeps
+  GitHub and GitLab ones; with exactly one, it builds `compareUrl` from the previous
+  release's version and this one's, and `releaseUrl` from this one's, each a path segment
+  encoded by `UriUtils` and used as the tag name exactly as written. It makes no provider
+  call, so rendering a note, a preview included, never touches the network.
+  `ReleaseNoteDigest` escapes the versions for Markdown and percent-encodes the
+  parentheses of the upgrade guide before the footer sees them.
 
 ## Release note languages and translation
 
@@ -1077,18 +1265,22 @@ ADR-0015 writes a note per audience and **release note language**; see
   missing variants for every target language whose primary language differs
   from the output language: the shipped template in that language for a preset,
   a copy of the main template otherwise.
-- **Jobs.** The `translation` package depends on no other domain package.
+- **Jobs.** The `translation` package depends on no other domain package but
+  `project`, for the Project's context (ADR-0035).
   `TranslationService.ensure` touches only the database, so approval can call it
   in its transaction. It returns the texts at once when the source and target
   share a primary language or all are blank, returns the existing job's state
-  for the same change, target, and `input_hash` (SHA-256 of the source language
-  and the texts sorted by key), and otherwise creates a `translation_jobs` row:
+  for the same change, target, and `input_hash` (SHA-256 of the source language,
+  the texts sorted by key, and the Project's context when there is one), and
+  otherwise creates a `translation_jobs` row that keeps that context
+  (`translation_jobs.context`, Flyway `V30`):
   `SUCCEEDED` when every text is in `translation_cache`, `FAILED`
   (`translation_disabled`) without a provider, and `PENDING` otherwise.
 - **Worker.** `TranslationWorker` runs every second. It claims one due job with
   `FOR UPDATE SKIP LOCKED`, looks its texts up in the cache, and sends only the
   missing ones to `DeepLTranslator` outside any transaction: `POST
-  /v2/translate` with `DeepL-Auth-Key`, batches of at most 50 texts and 120 KiB,
+  /v2/translate` with `DeepL-Auth-Key`, the job's context as `context` when it has
+  one, batches of at most 50 texts and 120 KiB,
   source as the primary language and English or Portuguese targets with a
   region. A 429, a 5xx, or a network failure is retried up to five attempts with
   `min(300, 2^attempt)` seconds of backoff; 403, 456, other 4xx, and a response
@@ -1099,7 +1291,10 @@ ADR-0015 writes a note per audience and **release note language**; see
 - **Notes.** `ReleaseNoteWriter` localizes the release's changes for one
   language: a summarized change in another language is replaced by
   `ChangeView.withContent` with its translated summary and narratives once
-  ready, and keeps its own text otherwise. The release's own summary goes through
+  ready, and keeps its own text otherwise. A narrative's body and headline are
+  the texts `narrative.<code>` and `headline.<code>`; its relevance is kept from
+  the source. A blank headline is not sent, so a narrative without one hashes as
+  it did before headlines existed. The release's own summary goes through
   `TranslationService.ensureForRelease`, a job whose `release_id` is set, from the
   Organization's output language; the note prints the translation and the release
   keeps what was typed. The note takes the worst state of its changes and its summary
@@ -1112,6 +1307,39 @@ ADR-0015 writes a note per audience and **release note language**; see
   summary renders every automatic note again, which queues the new text.
   `retryTranslations` restarts the failed jobs of an approved release's current
   texts. Editing a note by hand makes it `READY`.
+- **Glossary.** ADR-0036 adds an Organization glossary; see
+  [ADR-0036](adr/0036-translation-glossary.md). Its page and API controllers sit in
+  `audience`, beside the release note languages they read, so `translation` still
+  depends on no domain package but `project`. `GlossaryService` keeps kept terms and
+  fixed translations (`glossary_kept_terms`, `glossary_translations`, Flyway `V33`) and
+  builds a pair's dictionary: every kept term mapped to itself and the pair's fixed
+  translations over them, sorted, as TSV. Its **version** is the SHA-256 of that TSV,
+  empty for none, and `TranslationTexts.inputHash` and `textHash` add it beside the
+  context only when it is not empty, so an Organization without a glossary hashes as
+  before. `ensure` records the version on the job and, while the job is pending, sets the
+  pair's `glossary_syncs` row to want it, locked and inserted with `ON CONFLICT DO
+  NOTHING`. `lockNextDue` skips a job whose pair is `PENDING` or `RUNNING` for its version.
+  `GlossarySyncWorker` claims a due row with `SKIP LOCKED`, only while no other pair of the
+  Organization is `RUNNING`, under the lock of `translation_glossaries`, and outside any
+  transaction asks `GET /v3/languages?resource=glossary` (a pair is supported when both
+  languages are listed; `features` is not read), then `POST /v3/glossaries` or `PUT
+  /v3/glossaries/{id}/dictionaries`, creating the glossary again on a `404`. A claim syncs
+  the dictionary as it stands, so an edit since the want cannot loop. 429, every 5xx, and
+  network failures are retried like translations; 456, the plan's glossaries, and every
+  other 4xx fail at once. The translation worker sends `glossary_id` only when the row is
+  `SYNCED` at the job's version and the attempt is not the last, records the outcome on
+  the job, and caches a text under the version it was translated with. A `400` with a
+  glossary sends the dictionary again and retries. `UntranslatedGuard` checks every answer
+  for Vietnamese and non-Latin targets after removing kept terms, fixed targets, code
+  spans, URLs, paths, and capitalized identifiers; an answer that fails with the glossary
+  is translated again without it in the same attempt
+  (`glossary_answer_untranslated`), and one that fails without it fails the job with
+  `untranslated` and is never cached. `ReleaseNoteWriter` combines the jobs' outcomes per
+  language (`NOT_APPLIED` over `PENDING` over `APPLIED` over `NONE`) into
+  `release_audience_notes.glossary_status`, and `ReleaseView.glossaries` reports it per
+  language. `retryTranslations` also restarts a failed sync and re-translates jobs that went
+  without their glossary for a reason other than an unsupported pair. The glossary never
+  reaches the AI request.
 - **Publication.** `publish` refuses a release with a note that is not ready
   (`409 translations_not_ready`), and the `releases_publish_ready_notes`
   trigger refuses it in the database too. Notes are unique per release,

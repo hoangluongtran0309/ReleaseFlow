@@ -75,7 +75,7 @@ public class AudiencePageController {
             return "redirect:/audiences/" + audience.id();
         } catch (InvalidAudienceTemplateException exception) {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
-            bindingResult.rejectValue("templateBody", exception.messageKey(), exception.arguments(), null);
+            bindingResult.rejectValue(exception.field(), exception.messageKey(), exception.arguments(), null);
         } catch (AudienceConflictException exception) {
             response.setStatus(HttpStatus.CONFLICT.value());
             if ("audience_code_taken".equals(exception.code())) {
@@ -107,7 +107,7 @@ public class AudiencePageController {
             return "redirect:/audiences/" + audienceId;
         } catch (InvalidAudienceTemplateException exception) {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
-            bindingResult.rejectValue("templateBody", exception.messageKey(), exception.arguments(), null);
+            bindingResult.rejectValue(exception.field(), exception.messageKey(), exception.arguments(), null);
         }
         return render(principal, audienceId, model, response);
     }
@@ -158,14 +158,17 @@ public class AudiencePageController {
             HttpServletResponse response
     ) {
         try {
-            audienceService.updateTemplate(principal.organizationId(), audienceId, language, request.getTemplateBody());
+            audienceService.updateTemplate(principal.organizationId(), audienceId, language, request.getTemplateBody(),
+                    request.getFooterTemplateBody());
             UiNotice.flash(redirect, UiNotice.success("ui.audiences.templateSaved"));
             return "redirect:/audiences/" + audienceId + "#language-templates";
         } catch (InvalidAudienceTemplateException exception) {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
             model.addAttribute("variantLanguage", language);
             model.addAttribute("variantBody", request.getTemplateBody());
+            model.addAttribute("variantFooter", request.getFooterTemplateBody());
             model.addAttribute("variantError", UiNotice.error(exception));
+            model.addAttribute("variantErrorField", exception.field());
         }
         return render(principal, audienceId, model, response);
     }
@@ -208,10 +211,10 @@ public class AudiencePageController {
             HttpServletResponse response
     ) {
         try {
-            model.addAttribute("preview", audienceService.preview(request.getTemplateBody()));
+            model.addAttribute("preview", audienceService.preview(request.getTemplateBody(), request.getFooterTemplateBody()));
         } catch (InvalidAudienceTemplateException exception) {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
-            bindingResult.rejectValue("templateBody", exception.messageKey(), exception.arguments(), null);
+            bindingResult.rejectValue(exception.field(), exception.messageKey(), exception.arguments(), null);
         }
         return render(principal, audienceId, model, response);
     }
@@ -220,6 +223,7 @@ public class AudiencePageController {
         UUID organizationId = principal.organizationId();
         model.addAttribute("audiences", audienceService.list(organizationId));
         model.addAttribute("variables", AudienceItem.VARIABLES);
+        model.addAttribute("footerVariables", ReleaseLinks.VARIABLES);
         model.addAttribute("maxAudiences", AudienceService.MAX_AUDIENCES);
         ReleaseLanguageSettings languages = releaseLanguageService.settings(organizationId);
         model.addAttribute("releaseLanguages", languages);
@@ -230,6 +234,7 @@ public class AudiencePageController {
         if (selectedId != null) {
             AudienceView selected = audienceService.get(organizationId, selectedId);
             model.addAttribute("selected", selected);
+            model.addAttribute("resettable", AudiencePresets.shipped(selected.code()));
             if (!model.containsAttribute(FORM)) {
                 model.addAttribute(FORM, form(selected));
             }
@@ -261,6 +266,7 @@ public class AudiencePageController {
         form.setDisplayName(audience.displayName());
         form.setCommunicationIntent(audience.communicationIntent());
         form.setTemplateBody(audience.templateBody());
+        form.setFooterTemplateBody(audience.footerTemplateBody());
         return form;
     }
 }

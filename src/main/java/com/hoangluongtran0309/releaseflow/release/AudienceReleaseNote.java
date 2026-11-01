@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.release;
 
+import com.hoangluongtran0309.releaseflow.translation.GlossaryUse;
 import com.hoangluongtran0309.releaseflow.translation.TranslationState;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,10 +14,11 @@ import java.util.UUID;
 
 /**
  * The note one audience gets in one language for an approved or published release. It
- * is rendered at approval from a snapshot of the audience's template for that language,
- * and follows later summary edits and translations until a person edits it; then it is
- * manual and never rendered again. The database allows writes only while the release is
- * approved, and publication only once every note is ready, so a published note is final.
+ * is rendered at approval from a snapshot of the audience's template and footer for that
+ * language, and follows later summary edits and translations until a person edits it;
+ * then it is manual and never rendered again. The database allows writes only while the
+ * release is approved, and publication only once every note is ready, so a published note
+ * is final.
  */
 @Entity
 @Table(name = "release_audience_notes")
@@ -49,6 +51,10 @@ class AudienceReleaseNote {
     @Column(name = "template_body_snapshot", nullable = false, columnDefinition = "text", updatable = false)
     private String templateBodySnapshot;
 
+    // Blank for a note written before footers existed (ADR-0037, V34).
+    @Column(name = "footer_template_snapshot", nullable = false, columnDefinition = "text", updatable = false)
+    private String footerTemplateSnapshot = "";
+
     @Column(nullable = false, columnDefinition = "text")
     private String content;
 
@@ -58,6 +64,14 @@ class AudienceReleaseNote {
     @Enumerated(EnumType.STRING)
     @Column(name = "translation_status", nullable = false, length = 10)
     private TranslationState.Status translationStatus;
+
+    // What the translations behind the note did with the glossary (ADR-0036).
+    @Enumerated(EnumType.STRING)
+    @Column(name = "glossary_status", nullable = false, length = 20)
+    private GlossaryUse.Status glossaryStatus = GlossaryUse.Status.NONE;
+
+    @Column(name = "glossary_reason", length = 40)
+    private String glossaryReason;
 
     @Column(name = "last_edited_by")
     private UUID lastEditedBy;
@@ -82,8 +96,10 @@ class AudienceReleaseNote {
             String audienceName,
             String language,
             String templateBodySnapshot,
+            String footerTemplateSnapshot,
             String content,
             TranslationState.Status translationStatus,
+            GlossaryUse glossary,
             Instant createdAt
     ) {
         this.id = id;
@@ -95,9 +111,12 @@ class AudienceReleaseNote {
         this.audienceName = audienceName;
         this.language = language;
         this.templateBodySnapshot = templateBodySnapshot;
+        this.footerTemplateSnapshot = footerTemplateSnapshot;
         this.content = content;
         this.autoRerender = true;
         this.translationStatus = translationStatus;
+        this.glossaryStatus = glossary.status();
+        this.glossaryReason = glossary.reason();
         this.createdAt = createdAt;
         this.updatedAt = createdAt;
     }
@@ -106,19 +125,29 @@ class AudienceReleaseNote {
      * Replaces the content of a note that still follows its template, with how far its
      * translations have come; a manual note is kept.
      */
-    void rerender(String content, TranslationState.Status translationStatus, Instant at) {
-        if (!autoRerender || (this.content.equals(content) && this.translationStatus == translationStatus)) {
+    void rerender(String content, TranslationState.Status translationStatus, GlossaryUse glossary, Instant at) {
+        if (!autoRerender || (this.content.equals(content) && this.translationStatus == translationStatus
+                && glossary().equals(glossary))) {
             return;
         }
         this.content = content;
         this.translationStatus = translationStatus;
+        this.glossaryStatus = glossary.status();
+        this.glossaryReason = glossary.reason();
         this.updatedAt = at;
+    }
+
+    GlossaryUse glossary() {
+        return new GlossaryUse(glossaryStatus, glossaryReason);
     }
 
     /** A person's text, ready as written. The note never follows its template again. */
     void edit(String content, UUID editor, String editorName, Instant at) {
         this.content = content;
         this.translationStatus = TranslationState.Status.READY;
+        // The glossary does not apply to words a person wrote.
+        this.glossaryStatus = GlossaryUse.Status.NONE;
+        this.glossaryReason = null;
         this.autoRerender = false;
         this.lastEditedBy = editor;
         this.lastEditorName = editorName;
@@ -136,7 +165,9 @@ class AudienceReleaseNote {
                 autoRerender,
                 lastEditorName,
                 updatedAt,
-                translationStatus
+                translationStatus,
+                glossaryStatus,
+                glossaryReason
         );
     }
 
@@ -166,5 +197,9 @@ class AudienceReleaseNote {
 
     String getTemplateBodySnapshot() {
         return templateBodySnapshot;
+    }
+
+    String getFooterTemplateSnapshot() {
+        return footerTemplateSnapshot;
     }
 }
