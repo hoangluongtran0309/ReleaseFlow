@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
@@ -69,9 +69,9 @@
              2.21.7 or later. -->
         <jackson-bom.version>3.1.7</jackson-bom.version>
         <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
-        <alpinejs.version>3.17.4</alpinejs.version>
+        <alpinejs.version>3.17.5</alpinejs.version>
         <anthropic-java.version>2.73.0</anthropic-java.version>
-        <commonmark.version>0.30.1</commonmark.version>
+        <commonmark.version>0.31.0</commonmark.version>
         <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
         <frontend-maven-plugin.nodeVersion>v22.22.3</frontend-maven-plugin.nodeVersion>
         <frontend-maven-plugin.npmVersion>10.9.8</frontend-maven-plugin.npmVersion>
