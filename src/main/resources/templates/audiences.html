@@ -212,8 +212,11 @@
 
             <section class="surface-card p-6" id="audience-actions" th:if="${selected != null}">
                 <h2 class="section-heading" th:text="#{ui.audiences.manageHeading}">Manage audience</h2>
-                <details class="mt-3" th:if="${selected.preset}" id="reset-audience">
+                <details class="mt-3" th:if="${resettable}" id="reset-audience">
                     <summary class="cursor-pointer font-semibold text-indigo-700" th:text="#{ui.audiences.resetSummary}">Reset to preset</summary>
+                    <p class="mt-2 text-sm text-slate-600" th:if="${!selected.preset}" th:text="#{ui.audiences.resetAdoptCopy}">
+                        A shipped audience has this code.
+                    </p>
                     <p class="mt-2 text-sm text-slate-600" th:text="#{ui.audiences.resetCopy}">
                         The name, intent, and template return to the shipped version.
                     </p>

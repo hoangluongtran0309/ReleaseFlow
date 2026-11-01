@@ -1096,7 +1096,12 @@ because run history has to keep naming what it delivered to.
 `messages/audience-presets{,_vi}.properties`. Registration seeds all four. V13
 seeded the first three, with the values of its time, for Organizations that existed
 before, which keep their templates and intents until a preset is reset, and can add
-`support` themselves; a migration test compares them with those values. Each intent
+`support` themselves; a migration test compares them with those values.
+`resetToPreset` takes the shipped audience with the audience's code, whether
+registration seeded it or an administrator added it, and sets `preset`, so an
+added `support` follows the preset in later language variants and resets; a code
+nothing ships is refused with `audience_not_preset`, and the Audiences page offers
+the reset exactly when `AudiencePresets.shipped` holds for the code. Each intent
 ends by saying when a change is `none` for its audience, and the operator intent
 names something to watch only when the change or the Project context does. The
 shipped templates lead with `**{{headline}}**`, label a migration step by its kind

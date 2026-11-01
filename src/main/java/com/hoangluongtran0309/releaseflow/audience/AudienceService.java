@@ -201,21 +201,21 @@ public class AudienceService {
     }
 
     /**
-     * Restores a shipped audience's name, intent, template, and footer in the current output
-     * language, and each of its language templates and footers to the shipped version in
-     * that language.
+     * Restores the name, intent, template, and footer of the shipped audience with this
+     * audience's code in the current output language, and each of its language templates
+     * and footers to the shipped version in that language. An audience an administrator
+     * added under a shipped code, such as {@code support} in an Organization registered
+     * before that preset, becomes a preset here, so its later language templates and resets
+     * follow the preset too (ADR-0035). A code nothing ships is refused.
      */
     @Transactional
     public AudienceView resetToPreset(UUID organizationId, UUID audienceId) {
         AudienceDefinition audience = find(organizationId, audienceId);
-        if (!audience.isPreset()) {
-            throw AudienceConflictException.notPreset();
-        }
         OutputLanguage language = outputLanguageService.outputLanguage(organizationId);
         AudiencePresets.Preset preset = AudiencePresets.find(audience.getCode(), language.tag())
                 .orElseThrow(AudienceConflictException::notPreset);
         Instant now = clock.instant();
-        audience.update(preset.displayName(), preset.communicationIntent(), preset.templateBody(), preset.footerBody(), now);
+        audience.resetTo(preset, now);
         variantRepository.findAllByOrganizationIdOrderByLanguageAsc(organizationId).stream()
                 .filter(variant -> variant.getAudienceId().equals(audienceId))
                 .forEach(variant -> variant.update(variantBody(audience, variant.getLanguage()),

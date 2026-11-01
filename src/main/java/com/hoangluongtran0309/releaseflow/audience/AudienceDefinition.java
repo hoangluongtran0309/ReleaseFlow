@@ -39,7 +39,8 @@ class AudienceDefinition {
     @Column(name = "footer_template_body", nullable = false, columnDefinition = "text")
     private String footerTemplateBody;
 
-    @Column(nullable = false, updatable = false)
+    // Set at registration, or when an audience whose code has a shipped preset is reset to it.
+    @Column(nullable = false)
     private boolean preset;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -80,6 +81,12 @@ class AudienceDefinition {
         this.templateBody = templateBody;
         this.footerTemplateBody = footerTemplateBody;
         this.updatedAt = at;
+    }
+
+    /** Takes a shipped preset's values; from then on the audience follows that preset. */
+    void resetTo(AudiencePresets.Preset shipped, Instant at) {
+        update(shipped.displayName(), shipped.communicationIntent(), shipped.templateBody(), shipped.footerBody(), at);
+        this.preset = true;
     }
 
     AudienceView view(Map<String, String> templateVariants, Map<String, String> footerVariants) {
