@@ -536,7 +536,8 @@ where it first appears; ADRs are linked from the slice they record.
     still accepting a plain string;
   - preset intents that say when a change is `none` for their audience, an operator
     intent that names something to watch only when the evidence does, and a `support`
-    preset that registration seeds.
+    preset that registration seeds, which an Organization registered before it adds by
+    creating an audience coded `support` and resetting it to the preset.
 
 ### Translation glossary (V33)
 

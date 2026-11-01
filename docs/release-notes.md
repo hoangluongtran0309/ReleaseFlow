@@ -179,7 +179,8 @@ automation run's history. A rule that is enabled or disabled can be pointed at a
 audience first. An archived rule cannot be changed, and run history keeps the
 audience it delivered to, so either keeps the audience for good; a refusal says
 which of these holds it. A preset can be reset to its shipped version in the current
-output language. See [ADR-0011](adr/0011-audience-release-notes.md).
+output language, and so can an audience your team added under a shipped code (`operator`,
+`contributor`, `end_user`, or `support`), which becomes a preset from then on. See [ADR-0011](adr/0011-audience-release-notes.md).
 
 Every audience endpoint is for administrators only:
 
@@ -209,7 +210,7 @@ audience then has none, so callers written before footers keep working.
 | The Organization already has 20 audiences | `409 audience_limit` |
 | Deleting the last audience | `409 audience_last` |
 | Deleting an audience that has release notes, that an automation rule's action delivers to (enabled, disabled, or archived), or that a run's history names | `409 audience_in_use`; `detail` says which |
-| Resetting an audience your team created | `409 audience_not_preset` |
+| Resetting an audience whose code no shipped audience has | `409 audience_not_preset` |
 | A language template for a language that is not a release note language | `400 template_language_not_targeted` |
 | An unknown or foreign audience | `404 audience_not_found` |
 

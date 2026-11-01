@@ -174,7 +174,9 @@ nó: một release note, một hành động của quy tắc automation, hoặc 
 tắc đang bật hay đã tắt có thể được đổi sang audience khác trước. Quy tắc đã lưu trữ thì không
 sửa được, và lịch sử chạy giữ audience mà nó đã giao tới, nên cả hai giữ audience đó mãi mãi;
 lời từ chối nói rõ thứ nào đang giữ nó. Một audience mẫu có thể được đặt lại về phiên bản đi
-kèm, theo ngôn ngữ đầu ra hiện tại. Xem [ADR-0011](adr/0011-audience-release-notes.md).
+kèm, theo ngôn ngữ đầu ra hiện tại, và một audience nhóm của bạn thêm với mã của một audience đi
+kèm (`operator`, `contributor`, `end_user` hoặc `support`) cũng vậy, và từ đó trở thành audience
+mẫu. Xem [ADR-0011](adr/0011-audience-release-notes.md).
 
 Mọi endpoint audience chỉ dành cho quản trị viên:
 
@@ -204,7 +206,7 @@ trước khi có phần cuối vẫn chạy được.
 | Organization đã có 20 audience | `409 audience_limit` |
 | Xoá audience cuối cùng | `409 audience_last` |
 | Xoá một audience đã có release note, đang được hành động của một quy tắc automation giao tới (bật, tắt hay đã lưu trữ), hoặc có trong lịch sử chạy | `409 audience_in_use`; `detail` nói rõ lý do nào |
-| Đặt lại một audience do nhóm của bạn tự tạo | `409 audience_not_preset` |
+| Đặt lại một audience mà không audience đi kèm nào có mã của nó | `409 audience_not_preset` |
 | Template cho một ngôn ngữ không nằm trong các ngôn ngữ release note | `400 template_language_not_targeted` |
 | Audience không tồn tại hoặc thuộc Organization khác | `404 audience_not_found` |
 

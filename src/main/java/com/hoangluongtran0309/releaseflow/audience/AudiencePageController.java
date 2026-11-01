@@ -234,6 +234,7 @@ public class AudiencePageController {
         if (selectedId != null) {
             AudienceView selected = audienceService.get(organizationId, selectedId);
             model.addAttribute("selected", selected);
+            model.addAttribute("resettable", AudiencePresets.shipped(selected.code()));
             if (!model.containsAttribute(FORM)) {
                 model.addAttribute(FORM, form(selected));
             }
