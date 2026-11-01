@@ -6,7 +6,7 @@
 # database too; that port is private and must never be published.
 
 # ---- Build stage ------------------------------------------------------------
-FROM eclipse-temurin:21-jdk@sha256:23cc5734ff46e776f51ce66eb9ee08444fd47caabec0a95b7eb6e94be2d3696d AS build
+FROM eclipse-temurin:21-jdk@sha256:ebfbb18d11ff163ee83b21258acf12248af48d22a0fdfdc68fa1a1516c05976a AS build
 WORKDIR /app
 
 # Resolve Maven dependencies before copying sources so source-only changes
@@ -26,7 +26,7 @@ RUN ./mvnw -B --no-transfer-progress clean package -DskipTests -Prelease \
     -Drevision="${RELEASEFLOW_VERSION}"
 
 # ---- Runtime stage ----------------------------------------------------------
-FROM eclipse-temurin:21-jre-ubi10-minimal@sha256:11fefe6ccb04bfee5f342b99c7a06c6140f26b0656d04a2cbc61dec7f9a36778 AS runtime
+FROM eclipse-temurin:21-jre-ubi10-minimal@sha256:981554315ec8b9d55b35307d3e514e22a409277ae932a5c73ba5605bfeb71eef AS runtime
 ARG RELEASEFLOW_VERSION=0.0.0-SNAPSHOT
 # The commit the image was built from. Without it, the base image's own revision label
 # would be inherited and name a commit of somebody else's repository.
