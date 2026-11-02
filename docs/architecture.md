@@ -1096,7 +1096,12 @@ because run history has to keep naming what it delivered to.
 `messages/audience-presets{,_vi}.properties`. Registration seeds all four. V13
 seeded the first three, with the values of its time, for Organizations that existed
 before, which keep their templates and intents until a preset is reset, and can add
-`support` themselves; a migration test compares them with those values. Each intent
+`support` themselves; a migration test compares them with those values.
+`resetToPreset` takes the shipped audience with the audience's code, whether
+registration seeded it or an administrator added it, and sets `preset`, so an
+added `support` follows the preset in later language variants and resets; a code
+nothing ships is refused with `audience_not_preset`, and the Audiences page offers
+the reset exactly when `AudiencePresets.shipped` holds for the code. Each intent
 ends by saying when a change is `none` for its audience, and the operator intent
 names something to watch only when the change or the Project context does. The
 shipped templates lead with `**{{headline}}**`, label a migration step by its kind
@@ -1329,7 +1334,11 @@ ADR-0015 writes a note per audience and **release note language**; see
   spans, URLs, paths, and capitalized identifiers; an answer that fails with the glossary
   is translated again without it in the same attempt
   (`glossary_answer_untranslated`), and one that fails without it fails the job with
-  `untranslated` and is never cached. `ReleaseNoteWriter` combines the jobs' outcomes per
+  `untranslated` and is never cached. `TranslationJob.succeed` then passes each text of
+  its output, from DeepL or the cache, through `SourceForms.restore` (ADR-0040): a
+  placeholder or lowercase hyphenated identifier of the source that the translation has in
+  another letter case alone, and matches unambiguously, gets the source's form back; the
+  cache keeps DeepL's answer, and a lost placeholder is only logged. `ReleaseNoteWriter` combines the jobs' outcomes per
   language (`NOT_APPLIED` over `PENDING` over `APPLIED` over `NONE`) into
   `release_audience_notes.glossary_status`, and `ReleaseView.glossaries` reports it per
   language. `retryTranslations` also restarts a failed sync and re-translates jobs that went

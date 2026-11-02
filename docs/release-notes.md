@@ -18,7 +18,7 @@ Organization starts with four presets, named in its output language
 | `end_user` | plain language, what people notice | the headline and the narrative, and a migration step only when it is required | none |
 | `support` | what customers may ask about, and what to tell them | the headline with the link and narrative, the migration step under its kind, and limitations | none |
 
-![The Audiences page: the three presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
+![The Audiences page: the four presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
 
 An audience has a **code** (lowercase letters, digits, and underscores,
 starting with a letter; fixed once created), a **display name**, a
@@ -86,6 +86,8 @@ as `brief`; for an end-user or a custom audience it follows its relevance like a
 change, unless it is also breaking. See
 [ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
 
+![An operator note: the breaking-change warning links the upgrade guide, then the breaking change and the 🔒 Security section](assets/release-notes/rn-12-operator-note.webp)
+
 The counts and the breaking-change warning describe what the note shows, and every
 change counts once, in the section it is listed in. An audience that nothing in the release concerns still gets its note: the title,
 the release summary, and one line saying that nothing in the release concerns it.
@@ -93,7 +95,7 @@ Approval still writes one note per audience and language, and an automation acti
 delivers that note like any other. See
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
-![Editing an audience's template and saving it](assets/release-notes/rn-2-template.webp)
+![An audience's template and footer in the editor, and its preview: a sample change followed by the footer](assets/release-notes/rn-2-template.webp)
 
 ### Footer
 
@@ -141,6 +143,8 @@ Neither links `releaseUrl`: a published note is often the GitHub release itself,
 install link would point to the page it is on. A note keeps the footer it was approved
 with, like its template.
 
+![The end of the same operator note: its footer links the upgrade guide](assets/release-notes/rn-12-operator-note-footer.webp)
+
 ### Upgrading custom audience templates
 
 Audiences created before 1.1.0 keep their own templates; nothing rewrites them. The
@@ -179,7 +183,8 @@ automation run's history. A rule that is enabled or disabled can be pointed at a
 audience first. An archived rule cannot be changed, and run history keeps the
 audience it delivered to, so either keeps the audience for good; a refusal says
 which of these holds it. A preset can be reset to its shipped version in the current
-output language. See [ADR-0011](adr/0011-audience-release-notes.md).
+output language, and so can an audience your team added under a shipped code (`operator`,
+`contributor`, `end_user`, or `support`), which becomes a preset from then on. See [ADR-0011](adr/0011-audience-release-notes.md).
 
 Every audience endpoint is for administrators only:
 
@@ -209,7 +214,7 @@ audience then has none, so callers written before footers keep working.
 | The Organization already has 20 audiences | `409 audience_limit` |
 | Deleting the last audience | `409 audience_last` |
 | Deleting an audience that has release notes, that an automation rule's action delivers to (enabled, disabled, or archived), or that a run's history names | `409 audience_in_use`; `detail` says which |
-| Resetting an audience your team created | `409 audience_not_preset` |
+| Resetting an audience whose code no shipped audience has | `409 audience_not_preset` |
 | A language template for a language that is not a release note language | `400 template_language_not_targeted` |
 | An unknown or foreign audience | `404 audience_not_found` |
 
@@ -274,7 +279,7 @@ summary after approval translates the new text. See
 
 ![Seconds after approval: the Vietnamese note is Translating and still shows the untranslated text](assets/release-notes/rn-3-translating.webp)
 
-![The same note once its translations arrived: the release summary and every change are in Vietnamese](assets/release-notes/rn-4-translated.webp)
+![The same note once its translations arrived: the release summary and every change are in Vietnamese, and the glossary was Sent with every translation](assets/release-notes/rn-4-translated.webp)
 
 ```text
 GET  /api/organization/release-languages
@@ -305,6 +310,8 @@ holds at most 500 entries, and uniqueness is exact: "Image" and "image" are two 
 A lowercase entry usually keeps the capitalized word at the start of a sentence too, so
 add another form only for one DeepL still changes.
 
+![The Glossary page: the terms kept as written in every language, the fixed en → vi translations, and the DeepL sync state of the pair](assets/release-notes/rn-10-glossary.webp)
+
 A glossary steers DeepL; it does not bind every word. DeepL can still translate a kept
 term inside a longer phrase: with "image", "secret", and "container" kept, dbvault's notes
 still got "container images", "emulator image", and "repository secrets" translated, and
@@ -332,6 +339,8 @@ with every translation into that language, not that DeepL kept every term; read 
 and add a phrase DeepL translated as its own kept term. Retry translations tries a failed sync again. The glossary never reaches the
 AI.
 
+![The notes of an approved release: the glossary was Sent with every translation into vi](assets/release-notes/rn-11-glossary-state.webp)
+
 A translation that comes back in its source language is not stored as one. For a
 Vietnamese note, a sentence with at least three words left to translate and no Vietnamese
 diacritic fails; for a language in another script, such as Japanese or Russian, a
@@ -340,6 +349,17 @@ like `MongoDB` are left out of the count. A failing answer is translated once mo
 the glossary, and if it fails again the note is **Not translated**, like any failed
 translation. Other Latin-script languages have no such check yet. See
 [ADR-0036](adr/0036-translation-glossary.md).
+
+With a glossary, DeepL changes the letter case of some code-like words: `<backup-id>` came
+back as `<BACKUP-id>`, and `dbvault-cli` as `dbvault-CLI`. A translation therefore keeps
+the source's **placeholders** (`<`, a letter, then letters, digits, hyphens, or
+underscores, then `>`) and its **hyphenated names written in lowercase** as the source
+writes them: where a translation differs from one in letter case alone, the source's form
+is put back, and nothing else changes. A word the source writes in two cases is left as
+DeepL wrote it. This happens when a translation is recorded, from DeepL or from the cache,
+so a translation cached earlier is corrected at the next approval without a request, and
+nothing that is sent changes. A placeholder DeepL drops is left out and logged. See
+[ADR-0040](adr/0040-translation-placeholders.md).
 
 ```text
 GET    /api/glossary
@@ -463,6 +483,8 @@ again. Notes reflect the changes at approval: to pick up a classification
 corrected later in the Change Inbox, return the release to draft and approve it
 again. See [ADR-0010](adr/0010-release-review-lifecycle.md) and
 [ADR-0011](adr/0011-audience-release-notes.md).
+
+![Edit summary on a release's Review tab: the migration kind and limitations, then each audience's relevance, headline, and narrative](assets/release-notes/rn-13-edit-summary.webp)
 
 REST clients use the same rules:
 

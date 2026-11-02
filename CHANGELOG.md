@@ -12,6 +12,8 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-01
+
 ### Added
 
 - Security changes have a section of their own. A change gains a security flag beside
@@ -48,7 +50,10 @@ section into the version's entry, and the GitHub release is written from it.
   a pair DeepL cannot serve, or a failed sync, never blocks a release. A Vietnamese or
   non-Latin answer that comes back in the source language is translated again without the
   glossary, or fails, rather than being stored
-  ([ADR-0036](docs/adr/0036-translation-glossary.md)). See
+  ([ADR-0036](docs/adr/0036-translation-glossary.md)). A translation keeps the
+  placeholders (`<backup-id>`) and lowercase hyphenated names (`dbvault-cli`) of its source
+  as written, which DeepL changes the case of when it uses a glossary, without changing
+  any request ([ADR-0040](docs/adr/0040-translation-placeholders.md)). See
   [Upgrading to the glossary](docs/operations.md#upgrading-to-the-glossary) for adding
   terms, and for the one glossary a DeepL API Free account holds.
 - A Project context: what administrators say about the product (what is a client and
@@ -186,6 +191,7 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.1.0
 [1.0.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.0

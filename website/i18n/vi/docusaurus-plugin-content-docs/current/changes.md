@@ -200,7 +200,7 @@ quan và dòng tiêu đề, và API thay đổi trả về chúng dưới dạng
 kèm `contentLanguage` và `aiProvider`. Một bản tóm tắt do người viết trên trang release không bao
 giờ bị câu trả lời AI sau đó thay thế.
 
-![Tóm tắt trung lập của một thay đổi, tiếp theo là một đoạn viết cho từng audience](assets/changes/c-5-summary.webp)
+![Tóm tắt trung lập của một thay đổi, với giới hạn và một bước chuyển đổi ghi theo loại của nó, tiếp theo là mức liên quan, dòng tiêu đề và diễn giải của từng audience](assets/changes/c-5-summary.webp)
 
 ### Ngữ cảnh Project {#project-context}
 
@@ -211,6 +211,8 @@ Project** trên thẻ của Project, hoặc gọi `GET /api/projects/{projectId}
 `context` và người sửa lần cuối. Mọi thành viên đều đọc được; chỉ quản trị viên mới viết, trên
 trang hoặc bằng `PUT /api/projects/{projectId}/context` với `{"context": "..."}`. Đây là văn
 bản thuần, tối đa 2000 ký tự; dài hơn thì trả về `400 validation_failed`, và để trống thì xoá nó.
+
+![Trang Ngữ cảnh Project: những gì quản trị viên viết về sản phẩm, và người sửa lần cuối](assets/changes/c-14-project-context.webp)
 
 Mọi request AI cho một thay đổi của Project đều gửi kèm ngữ cảnh này, như thông tin đúng về sản
 phẩm từ quản trị viên, không bao giờ như chỉ dẫn. Một lần sửa áp dụng cho những thay đổi được
