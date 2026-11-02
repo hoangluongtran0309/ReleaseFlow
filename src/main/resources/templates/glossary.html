@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
+<head>
+    <title th:text="#{ui.glossary.title}">Glossary</title>
+</head>
+<body>
+<p layout:fragment="page-title" th:text="#{ui.glossary.title}">Glossary</p>
+<div layout:fragment="content">
+    <header class="page-header">
+        <div>
+            <p class="page-eyebrow" th:text="#{ui.glossary.eyebrow}">Translation</p>
+            <h1 class="page-heading" th:text="#{ui.glossary.title}">Glossary</h1>
+            <p class="page-subtitle" th:text="#{ui.glossary.subtitle}">
+                Product terms DeepL keeps as written, and translations it always uses, in every release note it translates.
+            </p>
+        </div>
+    </header>
+
+    <div class="mb-6" th:if="${pageNotice != null}" th:insert="~{fragments/alert :: notice(${pageNotice})}"></div>
+
+    <section class="surface-card p-6" id="glossary-pairs">
+        <h2 class="section-heading" th:text="#{ui.glossary.pairsHeading}">DeepL</h2>
+        <p class="section-copy" th:text="#{ui.glossary.pairsCopy}">
+            Each language pair is synced to DeepL at the next approval that needs it. A pair DeepL cannot serve, or a failed sync, never stops a translation: the release page says which notes went without the glossary.
+        </p>
+        <p class="section-copy" th:if="${#lists.isEmpty(glossary.pairs)}" th:text="#{ui.glossary.noPairs}">
+            Release notes are written in one language only, so nothing is translated.
+        </p>
+        <div class="mt-4" th:unless="${#lists.isEmpty(glossary.pairs)}">
+            <table class="stacking-table">
+                <thead><tr><th th:text="#{ui.glossary.column.pair}">Languages</th><th th:text="#{ui.glossary.column.entries}">Entries</th>
+                    <th th:text="#{ui.glossary.column.status}">Status</th></tr></thead>
+                <tbody>
+                <tr th:each="pair : ${glossary.pairs}" th:id="|pair-${pair.sourceLanguage}-${pair.targetLanguage}|">
+                    <td class="font-semibold" th:data-heading="#{ui.glossary.column.pair}">
+                        <span th:text="#{ui.glossary.pair(${pair.sourceLanguage}, ${pair.targetLanguage})}">en → vi</span>
+                    </td>
+                    <td th:data-heading="#{ui.glossary.column.entries}" th:text="${pair.entryCount}">12</td>
+                    <td th:data-heading="#{ui.glossary.column.status}">
+                        <span class="badge badge-sm"
+                              th:classappend="${pair.status == 'synced'} ? 'badge-success badge-soft' : (${pair.problem()} ? 'badge-warning' : 'badge-ghost')"
+                              th:text="#{|ui.glossary.pairStatus.${pair.status}|}">Synced</span>
+                        <p class="mt-1 text-xs text-slate-600" th:if="${pair.status == 'failed'}">
+                            <span th:text="#{ui.glossary.syncFailed}">The last sync failed:</span>
+                            <code th:text="${pair.error}">quota_exceeded</code>
+                        </p>
+                        <p class="mt-1 text-xs text-slate-600" th:if="${pair.error == 'quota_exceeded'}"
+                           th:text="#{ui.glossary.quotaExceeded}">The DeepL account holds as many glossaries as its plan allows.</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="surface-card mt-6 p-6" id="kept-terms">
+        <h2 class="section-heading" th:text="#{ui.glossary.keptHeading}">Kept as written</h2>
+        <p class="section-copy" th:text="#{ui.glossary.keptCopy}">
+            These terms stay in English in every language. DeepL still writes the sentence around them, and may adapt a term's form to the language.
+        </p>
+        <p class="section-copy" th:if="${#lists.isEmpty(glossary.keptTerms)}" th:text="#{ui.glossary.noKeptTerms}">No term is kept yet.</p>
+        <ul class="mt-4 flex flex-wrap gap-2" th:unless="${#lists.isEmpty(glossary.keptTerms)}">
+            <li class="badge badge-lg gap-1" th:each="term : ${glossary.keptTerms}" th:id="|kept-${term.id}|">
+                <span th:text="${term.term}">console</span>
+                <form method="post" class="contents" th:if="${viewer.admin}"
+                      th:action="@{/glossary/kept-terms/{id}/delete(id=${term.id})}">
+                    <button type="submit" class="btn btn-ghost btn-xs btn-circle"
+                            th:aria-label="#{ui.glossary.deleteTerm(${term.term})}" aria-label="Delete console">
+                        <svg class="icon" aria-hidden="true"><use th:href="@{/svg/ui-icons.svg#close}"></use></svg>
+                    </button>
+                </form>
+            </li>
+        </ul>
+
+        <form class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start" th:if="${viewer.admin}"
+              method="post" th:action="@{/glossary/kept-terms}" th:object="${keptTermForm}" novalidate>
+            <label class="form-control">
+                <span class="label-text font-medium" th:text="#{ui.glossary.keptField}">Term to keep</span>
+                <input type="text" name="terms" required autocomplete="off" th:maxlength="${termLimit}"
+                       th:value="${#lists.isEmpty(keptTermForm.terms)} ? '' : ${keptTermForm.terms[0]}"
+                       class="input input-bordered w-full"
+                       th:classappend="${#fields.hasErrors('terms') or #fields.hasErrors('terms[0]')} ? 'input-error'"
+                       th:attr="aria-invalid=${#fields.hasErrors('terms') or #fields.hasErrors('terms[0]')} ? 'true' : null,aria-describedby=${#fields.hasErrors('terms') or #fields.hasErrors('terms[0]')} ? 'kept-error' : 'kept-hint'">
+                <span id="kept-hint" class="mt-1 text-xs text-slate-500"
+                      th:text="#{ui.glossary.keptHint(${termLimit})}">At most 100 characters on one line, as you want it written.</span>
+                <span id="kept-error" class="field-error" th:if="${#fields.hasErrors('terms') or #fields.hasErrors('terms[0]')}">
+                    <th:block th:each="error : ${#fields.errors('terms')}" th:text="${error}">Enter a term.</th:block>
+                    <th:block th:each="error : ${#fields.errors('terms[0]')}" th:text="${error}">Enter a term.</th:block>
+                </span>
+            </label>
+            <button type="submit" class="btn btn-primary sm:mt-7" th:text="#{ui.glossary.addTerm}">Keep term</button>
+        </form>
+
+        <form class="mt-6" th:if="${viewer.admin and !#lists.isEmpty(suggestions)}" id="glossary-suggestions"
+              method="post" th:action="@{/glossary/suggestions}" novalidate>
+            <fieldset>
+                <legend class="text-sm font-semibold" th:text="#{ui.glossary.suggestionsHeading}">Suggested terms</legend>
+                <p class="mt-1 text-xs text-slate-500" th:text="#{ui.glossary.suggestionsCopy}">
+                    Terms common in software release notes. Nothing is added until you choose.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                    <label class="flex items-center gap-2 text-sm" th:each="suggestion, state : ${suggestions}">
+                        <input type="checkbox" class="checkbox checkbox-sm" name="terms" th:value="${suggestion}">
+                        <span th:text="${suggestion}">CLI</span>
+                    </label>
+                </div>
+            </fieldset>
+            <button type="submit" class="btn btn-outline btn-sm mt-4" th:text="#{ui.glossary.acceptSuggestions}">Keep the chosen terms</button>
+        </form>
+    </section>
+
+    <section class="surface-card mt-6 p-6" id="fixed-translations">
+        <h2 class="section-heading" th:text="#{ui.glossary.fixedHeading}">Fixed translations</h2>
+        <p class="section-copy" th:text="#{ui.glossary.fixedCopy}">
+            A term that always becomes the same words in one language. It wins over a kept term with the same text, for its languages only.
+        </p>
+        <p class="section-copy" th:if="${#lists.isEmpty(glossary.translations)}" th:text="#{ui.glossary.noTranslations}">No fixed translation yet.</p>
+        <div class="mt-4" th:unless="${#lists.isEmpty(glossary.translations)}">
+            <table class="stacking-table">
+                <thead><tr><th th:text="#{ui.glossary.column.pair}">Languages</th><th th:text="#{ui.glossary.column.sourceTerm}">Term</th>
+                    <th th:text="#{ui.glossary.column.targetTerm}">Always becomes</th>
+                    <th th:if="${viewer.admin}"><span class="sr-only" th:text="#{ui.glossary.column.actions}">Actions</span></th></tr></thead>
+                <tbody>
+                <tr th:each="translation : ${glossary.translations}" th:id="|translation-${translation.id}|">
+                    <td th:data-heading="#{ui.glossary.column.pair}"
+                        th:text="#{ui.glossary.pair(${translation.sourceLanguage}, ${translation.targetLanguage})}">en → vi</td>
+                    <td class="font-semibold" th:data-heading="#{ui.glossary.column.sourceTerm}" th:text="${translation.sourceTerm}">storage</td>
+                    <td th:data-heading="#{ui.glossary.column.targetTerm}" th:lang="${translation.targetLanguage}"
+                        th:text="${translation.targetTerm}">lưu trữ</td>
+                    <td th:if="${viewer.admin}" th:data-heading="#{ui.glossary.column.actions}">
+                        <form method="post" class="flex justify-end" th:action="@{/glossary/translations/{id}/delete(id=${translation.id})}">
+                            <button type="submit" class="btn btn-outline btn-sm"
+                                    th:aria-label="#{ui.glossary.deleteTranslation(${translation.sourceTerm})}"
+                                    th:text="#{ui.glossary.delete}">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <form class="mt-5 grid gap-4 sm:grid-cols-[minmax(0,7rem)_minmax(0,7rem)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start"
+              th:if="${viewer.admin}" method="post" th:action="@{/glossary/translations}" th:object="${translationForm}" novalidate>
+            <th:block th:replace="~{fragments/form :: errorSummary(true)}"></th:block>
+            <label class="form-control"><span class="label-text font-medium" th:text="#{ui.glossary.sourceLanguage}">From</span>
+                <input type="text" th:field="*{sourceLanguage}" required maxlength="3" autocomplete="off"
+                       class="input input-bordered w-full font-mono" th:errorclass="input-error"
+                       th:attr="aria-invalid=${#fields.hasErrors('sourceLanguage')} ? 'true' : null,aria-describedby=${#fields.hasErrors('sourceLanguage')} ? 'sourceLanguage-error' : null">
+                <span th:replace="~{fragments/form :: fieldError('sourceLanguage', 'sourceLanguage-error')}"></span>
+            </label>
+            <label class="form-control"><span class="label-text font-medium" th:text="#{ui.glossary.targetLanguage}">Into</span>
+                <input type="text" th:field="*{targetLanguage}" required maxlength="3" autocomplete="off"
+                       class="input input-bordered w-full font-mono"
+                       th:classappend="${#fields.hasErrors('targetLanguage') or #fields.hasErrors('differentLanguages')} ? 'input-error'"
+                       th:attr="aria-invalid=${#fields.hasErrors('targetLanguage') or #fields.hasErrors('differentLanguages')} ? 'true' : null,aria-describedby=${#fields.hasErrors('differentLanguages')} ? 'differentLanguages-error' : (${#fields.hasErrors('targetLanguage')} ? 'targetLanguage-error' : null)">
+                <span th:replace="~{fragments/form :: fieldError('targetLanguage', 'targetLanguage-error')}"></span>
+                <span th:replace="~{fragments/form :: fieldError('differentLanguages', 'differentLanguages-error')}"></span>
+            </label>
+            <label class="form-control"><span class="label-text font-medium" th:text="#{ui.glossary.sourceTerm}">Term</span>
+                <input type="text" th:field="*{sourceTerm}" required autocomplete="off" th:maxlength="${termLimit}"
+                       class="input input-bordered w-full" th:errorclass="input-error"
+                       th:attr="aria-invalid=${#fields.hasErrors('sourceTerm')} ? 'true' : null,aria-describedby=${#fields.hasErrors('sourceTerm')} ? 'sourceTerm-error' : null">
+                <span th:replace="~{fragments/form :: fieldError('sourceTerm', 'sourceTerm-error')}"></span>
+            </label>
+            <label class="form-control"><span class="label-text font-medium" th:text="#{ui.glossary.targetTerm}">Always becomes</span>
+                <input type="text" th:field="*{targetTerm}" required autocomplete="off" th:maxlength="${termLimit}"
+                       class="input input-bordered w-full" th:errorclass="input-error"
+                       th:attr="aria-invalid=${#fields.hasErrors('targetTerm')} ? 'true' : null,aria-describedby=${#fields.hasErrors('targetTerm')} ? 'targetTerm-error' : null">
+                <span th:replace="~{fragments/form :: fieldError('targetTerm', 'targetTerm-error')}"></span>
+            </label>
+            <button type="submit" class="btn btn-primary sm:mt-7" th:text="#{ui.glossary.addTranslation}">Add translation</button>
+        </form>
+
+        <p class="mt-4 text-xs text-slate-500">
+            <span th:text="#{ui.glossary.entryCount(${glossary.entryCount()}, ${glossary.entryLimit})}">12 of 500 entries.</span>
+            <span th:unless="${viewer.admin}" th:text="#{ui.glossary.adminOnly}">Only organization administrators can change it.</span>
+        </p>
+    </section>
+</div>
+</body>
+</html>

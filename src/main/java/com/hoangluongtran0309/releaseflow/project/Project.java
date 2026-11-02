@@ -24,6 +24,19 @@ class Project {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    // What administrators say about the product, for the AI and translation (ADR-0035).
+    @Column(nullable = false, length = ProjectContextRequest.LIMIT)
+    private String context = "";
+
+    @Column(name = "context_updated_by")
+    private UUID contextUpdatedBy;
+
+    @Column(name = "context_updater_name", length = 120)
+    private String contextUpdaterName;
+
+    @Column(name = "context_updated_at")
+    private Instant contextUpdatedAt;
+
     protected Project() {
     }
 
@@ -48,5 +61,24 @@ class Project {
 
     Instant getCreatedAt() {
         return createdAt;
+    }
+
+    void replaceContext(String value, UUID editor, String name, Instant at) {
+        this.context = value;
+        this.contextUpdatedBy = editor;
+        this.contextUpdaterName = name;
+        this.contextUpdatedAt = at;
+    }
+
+    String getContext() {
+        return context;
+    }
+
+    String getContextUpdaterName() {
+        return contextUpdaterName;
+    }
+
+    Instant getContextUpdatedAt() {
+        return contextUpdatedAt;
     }
 }

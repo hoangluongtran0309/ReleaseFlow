@@ -30,16 +30,51 @@ final class TranslationTexts {
         return kept;
     }
 
-    /** SHA-256 of the source language and the texts sorted by key, so equal input hashes equally. */
-    static String inputHash(String sourceLanguage, Map<String, String> texts) {
+    /**
+     * SHA-256 of the source language, the texts sorted by key, the context, and the
+     * version of the pair's glossary, so equal input hashes equally. A blank context or
+     * version is left out, so input without them hashes as it did before they existed.
+     */
+    static String inputHash(String sourceLanguage, Map<String, String> texts, String context, String glossaryVersion) {
         Map<String, Object> canonical = new TreeMap<>();
         canonical.put("source", sourceLanguage);
         canonical.put("texts", new TreeMap<>(texts));
+        if (!context.isBlank()) {
+            canonical.put("context", context);
+        }
+        if (!glossaryVersion.isBlank()) {
+            canonical.put("glossary", glossaryVersion);
+        }
         return sha256(CANONICAL.writeValueAsString(canonical));
     }
 
-    static String textHash(String text) {
-        return sha256(text);
+    /**
+     * What a cached translation is found by. A text translated with a context, or with a
+     * glossary, is cached apart from the same text translated with another, or with none:
+     * {@code glossaryVersion} is the version the translation actually used.
+     */
+    static String textHash(String text, String context, String glossaryVersion) {
+        if (context.isBlank() && glossaryVersion.isBlank()) {
+            return sha256(text);
+        }
+        Map<String, String> canonical = new TreeMap<>();
+        if (!context.isBlank()) {
+            canonical.put("context", context);
+        }
+        if (!glossaryVersion.isBlank()) {
+            canonical.put("glossary", glossaryVersion);
+        }
+        canonical.put("text", text);
+        return sha256(CANONICAL.writeValueAsString(canonical));
+    }
+
+    /** The primary language of a tag, which is what a glossary pair is named by: {@code vi} for {@code vi-VN}. */
+    static String primary(String languageTag) {
+        return Locale.forLanguageTag(languageTag).getLanguage();
+    }
+
+    static String sha256Hex(String value) {
+        return sha256(value);
     }
 
     /** Two tags with the same primary language, such as {@code vi} and {@code vi-VN}, need no translation. */

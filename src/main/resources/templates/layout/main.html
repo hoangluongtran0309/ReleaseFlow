@@ -151,6 +151,10 @@
                    th:with="active=${#strings.startsWith(currentPath, '/projects') and !#strings.contains(currentPath, '/releases')}"
                    th:classappend="${active} ? 'is-active'"
                    th:attr="aria-current=${active} ? 'page'"><svg class="app-nav-icon icon" aria-hidden="true"><use th:href="@{/svg/ui-icons.svg#settings}"></use></svg><span th:text="#{ui.nav.projects}">Projects</span></a>
+                <a th:href="@{/glossary}" class="app-nav-link"
+                   th:with="active=${#strings.startsWith(currentPath, '/glossary')}"
+                   th:classappend="${active} ? 'is-active'"
+                   th:attr="aria-current=${active} ? 'page'"><svg class="app-nav-icon icon" aria-hidden="true"><use th:href="@{/svg/ui-icons.svg#glossary}"></use></svg><span th:text="#{ui.nav.glossary}">Glossary</span></a>
                 <a th:href="@{/members}" class="app-nav-link" th:if="${viewer != null and viewer.admin}"
                    th:with="active=${#strings.startsWith(currentPath, '/members')}"
                    th:classappend="${active} ? 'is-active'"

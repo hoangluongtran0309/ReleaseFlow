@@ -17,11 +17,15 @@ import tools.jackson.databind.node.ObjectNode;
 import java.net.http.HttpClient;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.OptionalDouble;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The Chat Completions API as served by OpenAI and by DeepSeek. OpenAI enforces the
  * response schema (Structured Outputs); DeepSeek only guarantees a JSON object, so
- * the schema is spelled out in the prompt and checked by the shared parser.
+ * the schema is spelled out in the prompt and checked by the shared parser. A model that
+ * refuses the temperature gets the same request once more without it, and none after that
+ * (ADR-0039).
  */
 final class OpenAiCompatibleClassifier implements AiChangeClassifier {
 
@@ -29,6 +33,9 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
 
     private final AiProvider provider;
     private final String model;
+    private final OptionalDouble temperature;
+    // Set once the model refused the temperature; nothing clears it but a restart.
+    private final AtomicBoolean temperatureRefused = new AtomicBoolean();
     private final Duration timeout;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -38,12 +45,14 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
             AiProvider provider,
             String apiKey,
             String model,
+            OptionalDouble temperature,
             String baseUrl,
             Duration timeout,
             ObjectMapper objectMapper
     ) {
         this.provider = provider;
         this.model = model;
+        this.temperature = temperature;
         this.timeout = timeout;
         this.objectMapper = objectMapper;
         this.parser = new AiClassificationParser(objectMapper);
@@ -61,21 +70,25 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
     static OpenAiCompatibleClassifier openAi(
             String apiKey,
             String model,
+            OptionalDouble temperature,
             String baseUrl,
             Duration timeout,
             ObjectMapper objectMapper
     ) {
-        return new OpenAiCompatibleClassifier(AiProvider.OPENAI, apiKey, model, baseUrl, timeout, objectMapper);
+        return new OpenAiCompatibleClassifier(AiProvider.OPENAI, apiKey, model, temperature, baseUrl, timeout,
+                objectMapper);
     }
 
     static OpenAiCompatibleClassifier deepSeek(
             String apiKey,
             String model,
+            OptionalDouble temperature,
             String baseUrl,
             Duration timeout,
             ObjectMapper objectMapper
     ) {
-        return new OpenAiCompatibleClassifier(AiProvider.DEEPSEEK, apiKey, model, baseUrl, timeout, objectMapper);
+        return new OpenAiCompatibleClassifier(AiProvider.DEEPSEEK, apiKey, model, temperature, baseUrl, timeout,
+                objectMapper);
     }
 
     @Override
@@ -91,15 +104,22 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
     @Override
     public AiClassification classify(AiClassificationRequest request) {
         AiChangeClassifier.requireNoTransaction();
-        String responseBody;
+        return parse(request, send(request, temperature.isPresent() && !temperatureRefused.get()));
+    }
+
+    private String send(AiClassificationRequest request, boolean withTemperature) {
         try {
-            responseBody = restClient.post()
+            return restClient.post()
                     .uri("/chat/completions")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody(request))
+                    .body(requestBody(request, withTemperature))
                     .retrieve()
                     .body(String.class);
         } catch (RestClientResponseException exception) {
+            if (withTemperature && refusesTemperature(exception)) {
+                temperatureRefused();
+                return send(request, false);
+            }
             throw failure(request, provider.getLabel() + " returned HTTP " + exception.getStatusCode().value() + ".");
         } catch (ResourceAccessException exception) {
             throw failure(request, causedByTimeout(exception)
@@ -108,13 +128,40 @@ final class OpenAiCompatibleClassifier implements AiChangeClassifier {
         } catch (RestClientException exception) {
             throw failure(request, "Could not reach " + provider.getLabel() + ".");
         }
-        return parse(request, responseBody);
     }
 
-    private String requestBody(AiClassificationRequest request) {
+    /**
+     * A 400 whose {@code error.param} is {@code temperature}, which is how the Chat Completions
+     * API names the parameter it refused (ADR-0039). The body is read for this alone.
+     */
+    private boolean refusesTemperature(RestClientResponseException exception) {
+        if (exception.getStatusCode().value() != 400) {
+            return false;
+        }
+        try {
+            JsonNode param = objectMapper.readTree(exception.getResponseBodyAsString()).path("error").path("param");
+            return param.isString() && "temperature".equals(param.stringValue());
+        } catch (JacksonException unreadable) {
+            return false;
+        }
+    }
+
+    private void temperatureRefused() {
+        if (temperatureRefused.compareAndSet(false, true)) {
+            log.warn("{} model {} refused the temperature, so classification requests leave it out until ReleaseFlow "
+                            + "restarts. Set RELEASEFLOW_AI_TEMPERATURE=default to avoid the first refusal.",
+                    provider.getLabel(), model);
+        }
+    }
+
+    private String requestBody(AiClassificationRequest request, boolean withTemperature) {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", model);
-        String system = AiClassificationPrompt.SYSTEM;
+        // Left out for a model that accepts only its default, or once it refused one.
+        if (withTemperature) {
+            body.put("temperature", temperature.getAsDouble());
+        }
+        String system = AiClassificationPrompt.system(request);
         ObjectNode schema = AiClassificationPrompt.responseSchema(request, objectMapper);
         if (provider == AiProvider.OPENAI) {
             body.put("store", false);

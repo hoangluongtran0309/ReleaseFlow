@@ -49,7 +49,8 @@ final class MergedMergeRequest {
                 ),
                 mergeCommitSha(attributes, attributes.path("last_commit").path("id"), "object_attributes"),
                 mergedAt(attributes, webhookInstant(attributes.path("updated_at")), "object_attributes"),
-                FIELDS.webUrl(attributes.path("url"), "object_attributes.url")
+                FIELDS.webUrl(attributes.path("url"), "object_attributes.url"),
+                FIELDS.optionalBranch(attributes.path("source_branch"))
         );
     }
 
@@ -74,7 +75,8 @@ final class MergedMergeRequest {
                 ),
                 mergeCommitSha(mergeRequest, mergeRequest.path("sha"), ""),
                 mergedAt(mergeRequest, FIELDS.optionalInstant(mergeRequest.path("updated_at")), ""),
-                FIELDS.webUrl(mergeRequest.path("web_url"), "web_url")
+                FIELDS.webUrl(mergeRequest.path("web_url"), "web_url"),
+                FIELDS.optionalBranch(mergeRequest.path("source_branch"))
         );
     }
 

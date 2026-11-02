@@ -72,12 +72,26 @@ Xem [Thay đổi và review](changes.md).
 ## AI {#ai}
 
 AI không bắt buộc. Chọn một nhà cung cấp và cung cấp key cùng model. Không có model mặc định;
-chọn một model hỗ trợ đầu ra JSON có cấu trúc.
+chọn một model hỗ trợ đầu ra JSON có cấu trúc. Mọi request phân loại đều dùng cùng một
+temperature, là `0` trừ khi `RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác, giúp câu trả lời cho
+cùng một thay đổi ổn định nhất trong khả năng của model (xem
+[ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) và
+[ADR-0038](adr/0038-configurable-ai-temperature.md)). Model chỉ nhận temperature mặc định từ
+chối request có ghi temperature: model suy luận của OpenAI, hoặc model Claude ra mắt sau
+Opus 4.6, mà Anthropic chỉ nhận giá trị `1.0`. Model như vậy vẫn hoạt động mà không cần đặt gì:
+request bị từ chối được gửi lại một lần nữa không có temperature, và các request sau không gửi
+temperature cho đến khi ReleaseFlow khởi động lại, kèm một cảnh báo trong log
+([ADR-0039](adr/0039-ai-temperature-fallback.md)). Chỉ lỗi 400 về temperature mới dẫn đến việc
+này: lỗi có `error.param` là `temperature` từ OpenAI hoặc DeepSeek, hoặc
+`invalid_request_error` có thông báo nêu tên `temperature` từ Anthropic. Một số được đặt ở đây
+cũng được xử lý như vậy. `RELEASEFLOW_AI_TEMPERATURE=default` không gửi temperature ngay từ
+request đầu tiên, nên không có lần từ chối nào.
 
 | Biến | Mặc định | Tác dụng |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (trống: không dùng AI) | `openai`, `anthropic` hoặc `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Thời gian tối đa cho mỗi request tới AI |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature của mọi request phân loại: một số từ `0` đến `2` với `openai` và `deepseek`, hoặc từ `0` đến `1` với `anthropic`; `default` không gửi temperature, để model dùng giá trị của chính nó. Không đặt hoặc để trống nghĩa là `0`. Model từ chối temperature sẽ không được gửi temperature cho đến hết tiến trình |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (trống) | Key và model của OpenAI |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | Địa chỉ API của OpenAI |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (trống) | Key và model của Anthropic |
@@ -86,8 +100,10 @@ chọn một model hỗ trợ đầu ra JSON có cấu trúc.
 | `RELEASEFLOW_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Địa chỉ API của DeepSeek |
 
 Ứng dụng không khởi động được khi nhà cung cấp đã chọn thiếu key hoặc model, khi tên nhà cung cấp
-không hợp lệ, hoặc khi key hay model của một nhà cung cấp được đặt trong khi
-`RELEASEFLOW_AI_PROVIDER` để trống. Xem
+không hợp lệ, khi key hay model của một nhà cung cấp được đặt trong khi
+`RELEASEFLOW_AI_PROVIDER` để trống, hoặc khi `RELEASEFLOW_AI_TEMPERATURE` không phải `default`
+cũng không phải một số trong khoảng của nhà cung cấp đã chọn; thông báo lỗi nêu tên biến và
+khoảng giá trị. Xem
 [Phân loại và tóm tắt bằng AI](changes.md#ai-classification-and-summaries).
 
 ## Dịch thuật {#translation}
@@ -96,7 +112,7 @@ không hợp lệ, hoặc khi key hay model của một nhà cung cấp được
 | --- | --- | --- |
 | `RELEASEFLOW_TRANSLATION_PROVIDER` | `disabled` | `deepl` bật tính năng dịch release note. Một giá trị khác `disabled` và `deepl` làm ứng dụng không khởi động, và `disabled` cũng vậy khi `RELEASEFLOW_DEEPL_API_KEY` đang được đặt |
 | `RELEASEFLOW_TRANSLATION_TIMEOUT` | `PT30S` | Thời gian tối đa cho mỗi request dịch |
-| `RELEASEFLOW_DEEPL_API_KEY` | (trống) | Key của DeepL; key kết thúc bằng `:fx` dùng API miễn phí. Bắt buộc với `deepl`, và một key được đặt khi provider không phải `deepl` làm ứng dụng không khởi động, nên muốn tắt dịch thì phải xoá cả key |
+| `RELEASEFLOW_DEEPL_API_KEY` | (trống) | Key của DeepL; key kết thúc bằng `:fx` dùng API miễn phí. Bắt buộc với `deepl`, và một key được đặt khi provider không phải `deepl` làm ứng dụng không khởi động, nên muốn tắt dịch thì phải xoá cả key. Mỗi Organization có [bảng thuật ngữ](release-notes.md#glossary) dùng một glossary của tài khoản DeepL, và gói API Free chỉ có một |
 | `RELEASEFLOW_DEEPL_BASE_URL` | (trống) | Ghi đè host được chọn dựa trên key |
 
 Xem [Ngôn ngữ release note](release-notes.md#release-note-languages).

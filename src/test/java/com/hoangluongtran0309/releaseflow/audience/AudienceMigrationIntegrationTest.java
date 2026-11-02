@@ -10,6 +10,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -112,18 +115,56 @@ class AudienceMigrationIntegrationTest extends PostgreSqlIntegrationTest {
                         row.getString("code"),
                         row.getString("display_name"),
                         row.getString("communication_intent"),
-                        row.getString("template_body")
+                        row.getString("template_body"),
+                        // V13 knew no footers; V34 added them.
+                        ""
                 ),
                 organizationId
         );
     }
 
-    // V13 seeded the presets as they were before the `reference` variable existed.
+    // V13 seeded the templates and intents of its time, before the `reference` variable,
+    // migration kinds, limitations, and relevance existed, and only the first three
+    // audiences; names are still the shipped ones.
+    private static final Map<String, String> V13_INTENTS = Map.of(
+            AudiencePresets.OPERATOR, "Focus on operational risk, rollback, and what to watch after deploy. "
+                    + "Keep concrete numbers and failure modes.",
+            AudiencePresets.CONTRIBUTOR, "Focus on implementation detail and what other developers must change "
+                    + "in their own code. Technical vocabulary is expected.",
+            AudiencePresets.END_USER, "Plain language, no jargon and no technical metrics. "
+                    + "Say only what the person will notice while using the product."
+    );
+    private static final String V13_DETAILED = """
+            - **{{whatChanged}}** ([#{{pullRequestNumber}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}
+            {{#whyChanged}}
+              - %s: {{.}}
+            {{/whyChanged}}
+            {{#technicalDetail}}
+              - %s: {{.}}
+            {{/technicalDetail}}
+            {{#migrationStep}}
+              - %s: {{.}}
+            {{/migrationStep}}
+            """;
+    private static final String V13_PLAIN = """
+            - **{{whatChanged}}**{{#narrative}} — {{.}}{{/narrative}}
+            """;
+
     private static List<AudiencePresets.Preset> presets(String language) {
+        ResourceBundle labels = ResourceBundle.getBundle("messages/audience-presets", Locale.forLanguageTag(language),
+                ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES));
+        Map<String, String> templates = Map.of(
+                AudiencePresets.OPERATOR, V13_DETAILED.formatted(
+                        labels.getString("label.why"), labels.getString("label.detail"), labels.getString("label.migration")),
+                AudiencePresets.CONTRIBUTOR, V13_DETAILED.formatted(
+                        labels.getString("label.why"), labels.getString("label.implementation"),
+                        labels.getString("label.migration")),
+                AudiencePresets.END_USER, V13_PLAIN
+        );
         return AudiencePresets.forLanguage(language).stream()
+                .filter(preset -> templates.containsKey(preset.code()))
                 .map(preset -> new AudiencePresets.Preset(preset.code(), preset.displayName(),
-                        preset.communicationIntent(),
-                        preset.templateBody().replace("[{{reference}}]", "[#{{pullRequestNumber}}]")))
+                        V13_INTENTS.get(preset.code()), templates.get(preset.code()), ""))
                 .sorted((left, right) -> left.code().compareTo(right.code()))
                 .toList();
     }

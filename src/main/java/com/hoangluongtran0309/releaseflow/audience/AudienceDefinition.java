@@ -35,7 +35,12 @@ class AudienceDefinition {
     @Column(name = "template_body", nullable = false, columnDefinition = "text")
     private String templateBody;
 
-    @Column(nullable = false, updatable = false)
+    // Rendered once per note after its changes; blank adds nothing (ADR-0037, V34).
+    @Column(name = "footer_template_body", nullable = false, columnDefinition = "text")
+    private String footerTemplateBody;
+
+    // Set at registration, or when an audience whose code has a shipped preset is reset to it.
+    @Column(nullable = false)
     private boolean preset;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -54,6 +59,7 @@ class AudienceDefinition {
             String displayName,
             String communicationIntent,
             String templateBody,
+            String footerTemplateBody,
             boolean preset,
             Instant createdAt
     ) {
@@ -63,21 +69,29 @@ class AudienceDefinition {
         this.displayName = displayName;
         this.communicationIntent = communicationIntent;
         this.templateBody = templateBody;
+        this.footerTemplateBody = footerTemplateBody;
         this.preset = preset;
         this.createdAt = createdAt;
         this.updatedAt = createdAt;
     }
 
-    void update(String displayName, String communicationIntent, String templateBody, Instant at) {
+    void update(String displayName, String communicationIntent, String templateBody, String footerTemplateBody, Instant at) {
         this.displayName = displayName;
         this.communicationIntent = communicationIntent;
         this.templateBody = templateBody;
+        this.footerTemplateBody = footerTemplateBody;
         this.updatedAt = at;
     }
 
-    AudienceView view(Map<String, String> templateVariants) {
-        return new AudienceView(id, code, displayName, communicationIntent, templateBody, preset, createdAt, updatedAt,
-                templateVariants);
+    /** Takes a shipped preset's values; from then on the audience follows that preset. */
+    void resetTo(AudiencePresets.Preset shipped, Instant at) {
+        update(shipped.displayName(), shipped.communicationIntent(), shipped.templateBody(), shipped.footerBody(), at);
+        this.preset = true;
+    }
+
+    AudienceView view(Map<String, String> templateVariants, Map<String, String> footerVariants) {
+        return new AudienceView(id, code, displayName, communicationIntent, templateBody, footerTemplateBody, preset,
+                createdAt, updatedAt, templateVariants, footerVariants);
     }
 
     UUID getId() {
@@ -94,6 +108,10 @@ class AudienceDefinition {
 
     String getTemplateBody() {
         return templateBody;
+    }
+
+    String getFooterTemplateBody() {
+        return footerTemplateBody;
     }
 
     String getCommunicationIntent() {

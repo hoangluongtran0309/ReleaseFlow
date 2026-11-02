@@ -57,6 +57,10 @@ class Change {
     @Column(name = "target_branch", length = 255)
     private String targetBranch;
 
+    // The branch a code host's change was merged from, when its source named one (V31).
+    @Column(name = "head_branch", length = 255, updatable = false)
+    private String headBranch;
+
     @Column(name = "merge_commit_sha", length = 64)
     private String mergeCommitSha;
 
@@ -101,6 +105,10 @@ class Change {
 
     @Column(nullable = false)
     private boolean breaking;
+
+    // Beside breaking, never a category: a security fix is still a fix (ADR-0037, V34).
+    @Column(nullable = false)
+    private boolean security;
 
     @Column(name = "needs_review", nullable = false)
     private boolean needsReview;
@@ -184,7 +192,7 @@ class Change {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "audience_narratives", columnDefinition = "jsonb")
-    private Map<String, String> audienceNarratives;
+    private Map<String, AudienceNarrative> audienceNarratives;
 
     @Column(name = "summary_edited_by")
     private UUID summaryEditedBy;
@@ -238,11 +246,13 @@ class Change {
         change.authorLogin = pullRequest.authorLogin();
         change.labels = pullRequest.labels().toArray(String[]::new);
         change.targetBranch = pullRequest.targetBranch();
+        change.headBranch = pullRequest.headBranch();
         change.mergeCommitSha = pullRequest.mergeCommitSha();
         change.mergedAt = pullRequest.mergedAt();
         change.url = pullRequest.url();
         change.setCategory(CategoryRef.UNKNOWN);
         change.breaking = false;
+        change.security = false;
         change.needsReview = true;
         change.classificationReasons = new String[]{"Waiting for changed files"};
         change.classificationSource = ClassificationSource.RULES;
@@ -252,6 +262,10 @@ class Change {
         change.deliveryId = deliveryId;
         change.receivedAt = receivedAt;
         return change;
+    }
+
+    String getHeadBranch() {
+        return headBranch;
     }
 
     MergedPullRequest pullRequest() {
@@ -265,7 +279,8 @@ class Change {
                 targetBranch,
                 mergeCommitSha,
                 mergedAt,
-                url
+                url,
+                headBranch
         );
     }
 
@@ -361,6 +376,7 @@ class Change {
         classification.triggers().stream().filter(trigger -> !triggers.contains(trigger)).forEach(triggers::add);
         setCategory(classification.category());
         this.breaking = classification.breaking();
+        this.security = classification.security();
         this.needsReview = classification.needsReview() || !triggers.isEmpty();
         this.classificationReasons = classification.reasons().toArray(String[]::new);
         this.reviewTriggers = triggers;
@@ -397,17 +413,25 @@ class Change {
         }
     }
 
-    // Stores exactly what the reviewer confirmed. Changing either value makes the
+    // Stores exactly what the reviewer confirmed. Changing any of the values makes the
     // reviewer the source of the classification.
-    void review(CategoryRef reviewedCategory, boolean reviewedBreaking, UUID reviewer, String name, Instant at) {
+    void review(
+            CategoryRef reviewedCategory,
+            boolean reviewedBreaking,
+            boolean reviewedSecurity,
+            UUID reviewer,
+            String name,
+            Instant at
+    ) {
         if (isProcessing()) {
             throw new ChangeProcessingException();
         }
-        if (!reviewedCategory.code().equals(category) || reviewedBreaking != breaking) {
+        if (!reviewedCategory.code().equals(category) || reviewedBreaking != breaking || reviewedSecurity != security) {
             this.classificationSource = ClassificationSource.HUMAN;
         }
         setCategory(reviewedCategory);
         this.breaking = reviewedBreaking;
+        this.security = reviewedSecurity;
         this.needsReview = false;
         this.reviewedBy = reviewer;
         this.reviewerName = name;
@@ -483,7 +507,7 @@ class Change {
      */
     void editSummary(
             NeutralSummary summary,
-            Map<String, String> narratives,
+            Map<String, AudienceNarrative> narratives,
             String language,
             UUID editor,
             String name,
@@ -583,6 +607,10 @@ class Change {
         return breaking;
     }
 
+    boolean isSecurity() {
+        return security;
+    }
+
     boolean isNeedsReview() {
         return needsReview;
     }
@@ -651,7 +679,7 @@ class Change {
         return contentLanguage;
     }
 
-    Map<String, String> getAudienceNarratives() {
+    Map<String, AudienceNarrative> getAudienceNarratives() {
         return audienceNarratives == null ? Map.of() : Map.copyOf(audienceNarratives);
     }
 

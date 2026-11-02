@@ -15,10 +15,12 @@ test.describe('workspace pages', () => {
       ['releases', `/releases?project=${project.id}`],
       ['projects', '/projects'],
       ['sensitive paths', `/projects/${project.id}/sensitive-paths`],
+      ['project context', `/projects/${project.id}/context`],
       ['members', '/members'],
       ['audiences', '/audiences'],
       ['new audience', '/audiences/new'],
       ['categories', '/categories'],
+      ['glossary', '/glossary'],
       ['automation', '/automation'],
     ];
 

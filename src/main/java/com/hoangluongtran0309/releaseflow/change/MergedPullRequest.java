@@ -11,7 +11,8 @@ import java.util.Set;
  * A change as the pipeline records it: a merged pull or merge request, or a completed
  * issue. {@code externalId} is how the source names it, and is what makes the change
  * idempotent; {@code number} is what a person sees. A source without a merge commit or a
- * target branch leaves those null.
+ * target branch leaves those null, and so does one that names no head branch: only a code
+ * host's change has the branch it was merged from.
  */
 record MergedPullRequest(
         String externalId,
@@ -23,13 +24,31 @@ record MergedPullRequest(
         String targetBranch,
         String mergeCommitSha,
         Instant mergedAt,
-        String url
+        String url,
+        String headBranch
 ) {
 
     private static final PayloadFields FIELDS = new PayloadFields("pull request");
 
     MergedPullRequest {
         labels = List.copyOf(labels);
+    }
+
+    /** A change whose source names no branch it was merged from, such as a tracker's issue. */
+    MergedPullRequest(
+            String externalId,
+            int number,
+            String title,
+            String description,
+            String authorLogin,
+            List<String> labels,
+            String targetBranch,
+            String mergeCommitSha,
+            Instant mergedAt,
+            String url
+    ) {
+        this(externalId, number, title, description, authorLogin, labels, targetBranch, mergeCommitSha, mergedAt, url,
+                null);
     }
 
     static MergedPullRequest from(JsonNode pullRequest) {
@@ -52,7 +71,8 @@ record MergedPullRequest(
                 ),
                 FIELDS.commitSha(pullRequest.path("merge_commit_sha"), "pull_request.merge_commit_sha"),
                 FIELDS.instant(pullRequest.path("merged_at"), "pull_request.merged_at"),
-                FIELDS.webUrl(pullRequest.path("html_url"), "pull_request.html_url")
+                FIELDS.webUrl(pullRequest.path("html_url"), "pull_request.html_url"),
+                FIELDS.optionalBranch(pullRequest.path("head").path("ref"))
         );
     }
 

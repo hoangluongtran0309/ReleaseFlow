@@ -19,6 +19,7 @@ import com.hoangluongtran0309.releaseflow.account.UiLocaleApiController;
 import com.hoangluongtran0309.releaseflow.audience.AudienceApiController;
 import com.hoangluongtran0309.releaseflow.audience.AudienceConflictException;
 import com.hoangluongtran0309.releaseflow.audience.AudienceNotFoundException;
+import com.hoangluongtran0309.releaseflow.audience.GlossaryApiController;
 import com.hoangluongtran0309.releaseflow.audience.InvalidAudienceTemplateException;
 import com.hoangluongtran0309.releaseflow.audience.InvalidReleaseLanguagesException;
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLanguageApiController;
@@ -71,8 +72,11 @@ import com.hoangluongtran0309.releaseflow.project.SourceTokenRejectedException;
 import com.hoangluongtran0309.releaseflow.project.SourceUnavailableException;
 import com.hoangluongtran0309.releaseflow.release.ChangeNotReleasableException;
 import com.hoangluongtran0309.releaseflow.release.ClassificationChangedException;
+import com.hoangluongtran0309.releaseflow.release.InvalidPreviousReleaseException;
 import com.hoangluongtran0309.releaseflow.release.InvalidReleaseScheduleException;
+import com.hoangluongtran0309.releaseflow.release.InvalidUpgradeGuideUrlException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseApiController;
+import com.hoangluongtran0309.releaseflow.release.ChangeSummaryRequiredException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseEmptyException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNotFoundException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteNotFoundException;
@@ -83,6 +87,8 @@ import com.hoangluongtran0309.releaseflow.release.ReleaseReviewIncompleteExcepti
 import com.hoangluongtran0309.releaseflow.release.ReleaseStatusException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseVersionTakenException;
 import com.hoangluongtran0309.releaseflow.release.TranslationsNotReadyException;
+import com.hoangluongtran0309.releaseflow.translation.GlossaryConflictException;
+import com.hoangluongtran0309.releaseflow.translation.GlossaryTermNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -113,6 +119,7 @@ import java.util.Map;
         ReleaseApiController.class,
         AudienceApiController.class,
         CategoryApiController.class,
+        GlossaryApiController.class,
         SensitivePathApiController.class,
         ReleaseLanguageApiController.class,
         SourceImportApiController.class,
@@ -251,6 +258,11 @@ public class ApiExceptionHandler {
         return localized(HttpStatus.CONFLICT, "release_review_incomplete", exception);
     }
 
+    @ExceptionHandler(ChangeSummaryRequiredException.class)
+    ResponseEntity<ProblemDetail> changeSummaryRequired(ChangeSummaryRequiredException exception) {
+        return localized(HttpStatus.CONFLICT, "change_summary_required", exception);
+    }
+
     @ExceptionHandler(ClassificationChangedException.class)
     ResponseEntity<ProblemDetail> classificationChanged(ClassificationChangedException exception) {
         return localized(HttpStatus.CONFLICT, "classification_changed", exception);
@@ -259,6 +271,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidReleaseScheduleException.class)
     ResponseEntity<ProblemDetail> invalidReleaseSchedule(InvalidReleaseScheduleException exception) {
         return localized(HttpStatus.BAD_REQUEST, "invalid_release_schedule", exception);
+    }
+
+    @ExceptionHandler(InvalidUpgradeGuideUrlException.class)
+    ResponseEntity<ProblemDetail> invalidUpgradeGuideUrl(InvalidUpgradeGuideUrlException exception) {
+        return localized(HttpStatus.BAD_REQUEST, "invalid_upgrade_guide_url", exception);
+    }
+
+    @ExceptionHandler(InvalidPreviousReleaseException.class)
+    ResponseEntity<ProblemDetail> invalidPreviousRelease(InvalidPreviousReleaseException exception) {
+        return localized(HttpStatus.BAD_REQUEST, "invalid_previous_release", exception);
     }
 
     @ExceptionHandler(ReleasePublishedException.class)
@@ -383,6 +405,16 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(CategoryConflictException.class)
     ResponseEntity<ProblemDetail> categoryConflict(CategoryConflictException exception) {
+        return localized(HttpStatus.CONFLICT, exception.code(), exception);
+    }
+
+    @ExceptionHandler(GlossaryTermNotFoundException.class)
+    ResponseEntity<ProblemDetail> glossaryTermNotFound(GlossaryTermNotFoundException exception) {
+        return localized(HttpStatus.NOT_FOUND, "glossary_term_not_found", exception);
+    }
+
+    @ExceptionHandler(GlossaryConflictException.class)
+    ResponseEntity<ProblemDetail> glossaryConflict(GlossaryConflictException exception) {
         return localized(HttpStatus.CONFLICT, exception.code(), exception);
     }
 

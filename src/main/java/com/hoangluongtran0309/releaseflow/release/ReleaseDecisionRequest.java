@@ -6,9 +6,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * A decision on one change of a release in review. Both actions carry the category and
- * breaking flag the reviewer saw, so a stale page never approves a classification it did
- * not show.
+ * A decision on one change of a release in review. Both actions carry the category,
+ * breaking flag, and security flag the reviewer saw, so a stale page never approves a
+ * classification it did not show. A caller written before ADR-0037 may leave security
+ * out, which confirms the current value.
  */
 public class ReleaseDecisionRequest {
 
@@ -20,6 +21,8 @@ public class ReleaseDecisionRequest {
 
     @NotNull(message = "{validation.breaking.required}")
     private Boolean breaking;
+
+    private Boolean security;
 
     @Size(max = 2000, message = "{validation.note.tooLong}")
     private String note;
@@ -48,6 +51,14 @@ public class ReleaseDecisionRequest {
         this.breaking = breaking;
     }
 
+    public Boolean getSecurity() {
+        return security;
+    }
+
+    public void setSecurity(Boolean security) {
+        this.security = security;
+    }
+
     public String getNote() {
         return note;
     }
@@ -60,6 +71,7 @@ public class ReleaseDecisionRequest {
         ChangeReviewRequest review = new ChangeReviewRequest();
         review.setCategory(category);
         review.setBreaking(breaking);
+        review.setSecurity(security);
         return review;
     }
 }

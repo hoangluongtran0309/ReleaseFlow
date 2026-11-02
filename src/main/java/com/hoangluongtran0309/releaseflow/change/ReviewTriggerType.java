@@ -19,5 +19,7 @@ public enum ReviewTriggerType {
     /** The issue tracker could not explain everything the change mentions. */
     LINKED_CONTEXT_UNAVAILABLE,
     /** An earlier change looks the same; the detail is that change's ID. */
-    DUPLICATE_CANDIDATE
+    DUPLICATE_CANDIDATE,
+    /** The AI's migration kind did not match its step and was corrected; the detail is what it returned. */
+    MIGRATION_KIND_MISMATCH
 }

@@ -29,6 +29,11 @@ public enum SourceType {
         return this == JIRA;
     }
 
+    /** Whether a change of this type is an issue a tracker completed rather than merged code. */
+    public boolean isIssueTracker() {
+        return this == LINEAR || this == JIRA;
+    }
+
     /** Whether a delivery of this type has to prove itself, which only a webhook does. */
     public boolean hasWebhook() {
         return !isPolled();

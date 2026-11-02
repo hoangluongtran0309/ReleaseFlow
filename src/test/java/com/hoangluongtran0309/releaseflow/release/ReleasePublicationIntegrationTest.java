@@ -100,8 +100,8 @@ class ReleasePublicationIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.approvedAt", notNullValue()))
                 .andExpect(jsonPath("$.decisions.length()").value(2))
                 .andExpect(jsonPath("$.markdown").doesNotExist())
-                .andExpect(jsonPath("$.notes.length()").value(3))
-                .andExpect(jsonPath("$.notes[*].audienceName").value(contains("Contributor", "End user", "Operator")))
+                .andExpect(jsonPath("$.notes.length()").value(4))
+                .andExpect(jsonPath("$.notes[*].audienceName").value(contains("Contributor", "End user", "Operator", "Support")))
                 .andExpect(jsonPath("$.notes[2].content").value(OPERATOR_NOTE));
 
         // A later correction of an included change must not alter the published notes.
@@ -123,7 +123,7 @@ class ReleasePublicationIntegrationTest extends PostgreSqlIntegrationTest {
 
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM release_audience_notes WHERE release_id = ?", Integer.class, releaseId
-        )).isEqualTo(3);
+        )).isEqualTo(4);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM release_notes WHERE release_id = ?", Integer.class, releaseId
         )).isZero();

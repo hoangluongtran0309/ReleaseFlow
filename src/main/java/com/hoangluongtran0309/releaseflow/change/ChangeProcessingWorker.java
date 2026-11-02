@@ -7,9 +7,11 @@ import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.category.CategoryRef;
 import com.hoangluongtran0309.releaseflow.category.CategoryService;
 import com.hoangluongtran0309.releaseflow.category.CategorySuggestionService;
+import com.hoangluongtran0309.releaseflow.project.ProjectService;
 import com.hoangluongtran0309.releaseflow.project.SourceAccess;
 import com.hoangluongtran0309.releaseflow.source.ChangedFiles;
 import com.hoangluongtran0309.releaseflow.source.SourceCredentials;
+import com.hoangluongtran0309.releaseflow.source.SourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +56,7 @@ class ChangeProcessingWorker {
     private final AiClassifiers aiClassifiers;
     private final OutputLanguageService outputLanguageService;
     private final AudienceService audienceService;
+    private final ProjectService projectService;
     private final CategoryService categoryService;
     private final CategorySuggestionService suggestionService;
     private final ClassificationSettings settings;
@@ -73,6 +76,7 @@ class ChangeProcessingWorker {
             AiClassifiers aiClassifiers,
             OutputLanguageService outputLanguageService,
             AudienceService audienceService,
+            ProjectService projectService,
             CategoryService categoryService,
             CategorySuggestionService suggestionService,
             ClassificationSettings settings,
@@ -91,6 +95,7 @@ class ChangeProcessingWorker {
         this.aiClassifiers = aiClassifiers;
         this.outputLanguageService = outputLanguageService;
         this.audienceService = audienceService;
+        this.projectService = projectService;
         this.categoryService = categoryService;
         this.suggestionService = suggestionService;
         this.settings = settings;
@@ -142,7 +147,7 @@ class ChangeProcessingWorker {
                     }
                     job.claim(now);
                     return new Claim(job.getId(), job.getOrganizationId(), job.getProjectId(), change.getSourceId(),
-                            job.getChangeId(), job.getAttempts(), now, change.pullRequest());
+                            change.getSourceType(), job.getChangeId(), job.getAttempts(), now, change.pullRequest());
                 }));
         if (claim.isEmpty()) {
             return false;
@@ -217,6 +222,7 @@ class ChangeProcessingWorker {
     ) {
         OutputLanguage language = outputLanguageService.outputLanguage(claim.organizationId());
         List<AudienceBrief> audiences = audienceService.briefs(claim.organizationId());
+        String projectContext = projectService.context(claim.organizationId(), claim.projectId());
         try {
             AiClassification answer = ai.classify(AiClassificationRequest.of(
                     claim.changeId(),
@@ -226,7 +232,9 @@ class ChangeProcessingWorker {
                     rulesCategory,
                     catalog,
                     audiences,
-                    settings.contextThreshold()
+                    settings.contextThreshold(),
+                    claim.sourceType(),
+                    projectContext
             ));
             return AiOutcome.succeeded(ai, answer, language);
         } catch (AiClassificationException exception) {
@@ -361,12 +369,13 @@ class ChangeProcessingWorker {
             UUID organizationId,
             UUID projectId,
             UUID sourceId,
+            SourceType sourceType,
             UUID changeId,
             int attempt,
             Instant claimedAt,
             MergedPullRequest pullRequest
     ) {
         // Marks a job that was completed while claiming it.
-        static final Claim FINISHED = new Claim(null, null, null, null, null, 0, null, null);
+        static final Claim FINISHED = new Claim(null, null, null, null, null, null, 0, null, null);
     }
 }

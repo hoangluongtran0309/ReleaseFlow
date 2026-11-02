@@ -75,9 +75,15 @@ public final class TestChanges {
         return id;
     }
 
+    /** Marks a change as a security change, as a rule or the AI would; it must still need review. */
+    public static void markSecurity(JdbcTemplate jdbcTemplate, UUID changeId) {
+        jdbcTemplate.update("UPDATE changes SET security = true WHERE id = ?", changeId);
+    }
+
     /**
      * Records a successful AI summary with the given narratives (a JSON object keyed by
-     * audience code), as the worker would.
+     * audience code), as the worker would. A narrative given as a plain string is stored
+     * as a full one without a headline, as V32 rewrote them.
      */
     public static void summarize(JdbcTemplate jdbcTemplate, UUID changeId, String whatChanged, String narrativesJson) {
         jdbcTemplate.update(
@@ -86,7 +92,12 @@ public final class TestChanges {
                         SET ai_status = 'SUCCEEDED', ai_provider = 'openai', ai_model = 'gpt-test', ai_attempted_at = now(),
                             neutral_summary = jsonb_build_object('whatChanged', ?::text, 'whyChanged', 'Users asked.',
                                 'technicalDetail', 'Streams rows.', 'migrationStep', ''),
-                            audience_narratives = ?::jsonb,
+                            audience_narratives = (
+                                SELECT coalesce(jsonb_object_agg(narrative.key, CASE
+                                    WHEN jsonb_typeof(narrative.value) = 'string'
+                                        THEN jsonb_build_object('relevance', 'FULL', 'headline', '', 'body', narrative.value)
+                                    ELSE narrative.value END), '{}'::jsonb)
+                                FROM jsonb_each(?::jsonb) AS narrative),
                             content_language = 'en'
                         WHERE id = ?
                         """,

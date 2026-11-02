@@ -128,10 +128,37 @@
                                       th:attr="aria-invalid=${#fields.hasErrors('summary')} ? 'true' : null,aria-describedby=${#fields.hasErrors('summary')} ? 'summary-error' : null"></textarea>
                             <span id="summary-error" class="field-error" th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}"></span>
                         </label>
+                        <label class="form-control"><span class="label-text font-medium"><span th:text="#{ui.release.upgradeGuideUrl}">Upgrade guide</span>
+                                <span class="text-slate-500" th:text="#{ui.release.optional}">(optional)</span></span>
+                            <input type="url" th:field="*{upgradeGuideUrl}" maxlength="2000" placeholder="https://docs.example.com/upgrade"
+                                   class="input input-bordered w-full sm:max-w-xl" th:errorclass="input-error"
+                                   th:attr="aria-invalid=${#fields.hasErrors('upgradeGuideUrl')} ? 'true' : null,aria-describedby=${#fields.hasErrors('upgradeGuideUrl')} ? 'upgradeGuideUrl-error upgradeGuideUrl-hint' : 'upgradeGuideUrl-hint'">
+                            <span class="label-text-alt" id="upgradeGuideUrl-hint" th:text="#{ui.release.upgradeGuideUrlHint}">The breaking-change warning links it.</span>
+                            <span id="upgradeGuideUrl-error" class="field-error" th:if="${#fields.hasErrors('upgradeGuideUrl')}" th:errors="*{upgradeGuideUrl}"></span>
+                        </label>
+                        <label class="form-control"><span class="label-text font-medium" th:text="#{ui.release.previousRelease}">Previous release</span>
+                            <select th:field="*{previousReleaseId}" class="select select-bordered w-full sm:max-w-xl" th:errorclass="select-error"
+                                    th:attr="aria-invalid=${#fields.hasErrors('previousReleaseId')} ? 'true' : null,aria-describedby=${#fields.hasErrors('previousReleaseId')} ? 'previousReleaseId-error previousReleaseId-hint' : 'previousReleaseId-hint'">
+                                <option value="" th:text="#{ui.release.noPreviousRelease}">None</option>
+                                <option th:each="option : ${previousReleases}" th:value="${option.id}" th:text="${option.version}">1.3.0</option>
+                            </select>
+                            <span class="label-text-alt" id="previousReleaseId-hint" th:text="#{ui.release.previousReleaseHint}">Notes compare this release with it.</span>
+                            <span id="previousReleaseId-error" class="field-error" th:if="${#fields.hasErrors('previousReleaseId')}" th:errors="*{previousReleaseId}"></span>
+                        </label>
                         <div><button type="submit" class="btn btn-primary btn-sm" th:text="#{ui.release.saveDetails}">Save details</button></div>
                     </form>
                     <th:block th:unless="${draft}">
                         <p class="mt-3 whitespace-pre-line text-sm text-slate-700" th:text="${release.summary != null} ? ${release.summary} : #{ui.release.noSummary}">Summary</p>
+                        <dl class="mt-3 grid gap-1 text-sm" id="release-links">
+                            <div class="flex flex-wrap gap-2"><dt class="font-medium" th:text="#{ui.release.previousRelease}">Previous release</dt>
+                                <dd class="text-slate-700" th:text="${release.previousVersion != null} ? ${release.previousVersion} : #{ui.release.noPreviousRelease}">1.3.0</dd></div>
+                            <div class="flex flex-wrap gap-2"><dt class="font-medium" th:text="#{ui.release.upgradeGuideUrl}">Upgrade guide</dt>
+                                <dd class="min-w-0 break-all text-slate-700">
+                                    <a class="link" th:if="${release.upgradeGuideUrl != null}" th:href="${release.upgradeGuideUrl}" target="_blank"
+                                       rel="noopener noreferrer" th:text="${release.upgradeGuideUrl}">https://docs.example.com/upgrade</a>
+                                    <span th:unless="${release.upgradeGuideUrl != null}" th:text="#{ui.release.noUpgradeGuide}">None</span>
+                                </dd></div>
+                        </dl>
                         <p class="mt-2 text-xs text-slate-500" th:text="#{ui.release.returnToEdit}">Return the release to draft to change it.</p>
                     </th:block>
 
@@ -169,6 +196,7 @@
                                     <div class="mt-1 flex flex-wrap gap-1.5">
                                         <span class="badge badge-ghost badge-sm" th:text="${change.categoryName}">Feature</span>
                                         <span class="badge badge-error badge-sm" th:if="${change.breaking}" th:text="#{ui.release.breaking}">Breaking</span>
+                                        <span class="badge badge-info badge-sm" th:if="${change.security}" th:text="#{ui.release.security}">Security</span>
                                         <span class="badge badge-warning badge-sm" th:if="${change.needsReview}" th:text="#{ui.release.needsReview}">Needs review</span>
                                     </div>
                                 </div>
@@ -211,6 +239,7 @@
                                                 <span class="font-medium" th:text="${change.title}">fix: handle empty tables</span>
                                                 <span class="badge badge-ghost badge-sm ml-1" th:text="${change.categoryName}">Fix</span>
                                                 <span class="badge badge-error badge-sm" th:if="${change.breaking}" th:text="#{ui.release.breaking}">Breaking</span>
+                                                <span class="badge badge-info badge-sm" th:if="${change.security}" th:text="#{ui.release.security}">Security</span>
                                                 <span class="badge badge-warning badge-sm" th:if="${change.needsReview}" th:text="#{ui.release.needsReview}">Needs review</span>
                                             </span>
                                         </label>
@@ -238,7 +267,10 @@
                                         <div class="mt-1 flex flex-wrap gap-1.5">
                                             <span class="badge badge-ghost badge-sm" th:text="${change.categoryName}">Feature</span>
                                             <span class="badge badge-error badge-sm" th:if="${change.breaking}" th:text="#{ui.release.breaking}">Breaking</span>
+                                            <span class="badge badge-info badge-sm" th:if="${change.security}" th:text="#{ui.release.security}">Security</span>
                                             <span class="badge badge-warning badge-sm" th:if="${change.needsReview}" th:text="#{ui.release.needsReview}">Needs review</span>
+                                            <a class="badge badge-warning badge-sm" th:if="${inReview and release.needsSummary(change.id)}"
+                                               th:href="|#summary-${change.id}|" th:text="#{ui.release.needsSummary}">Needs a summary</a>
                                         </div>
                                         <p class="mt-1 text-xs text-slate-500" th:unless="${#lists.isEmpty(change.reasons)}"
                                            th:text="${#strings.listJoin(change.reasons, '; ')}">Conventional Commit type feat</p>
@@ -254,11 +286,13 @@
                                    th:text="${decision.note}">Checked with the docs team.</p>
 
                                 <details class="mt-3" th:if="${inReview or approved}" th:id="|summary-${change.id}|"
-                                         th:with="summary=${change.neutralSummary},summaryFailing=${failingSummaryChangeId == change.id}"
-                                         th:open="${summaryFailing}">
+                                         th:with="summary=${change.neutralSummary},summaryFailing=${failingSummaryChangeId == change.id},
+                                                  titleOnly=${inReview and release.needsSummary(change.id)}"
+                                         th:open="${summaryFailing or titleOnly}">
                                     <summary class="cursor-pointer text-sm font-semibold text-indigo-700" th:text="#{ui.release.editSummary}">Edit summary</summary>
                                     <p class="mt-2 text-xs text-slate-500">
-                                        <th:block th:if="${summary == null}" th:text="#{ui.release.noSummaryYet}">This change has no summary yet.</th:block>
+                                        <th:block th:if="${summary == null and !titleOnly}" th:text="#{ui.release.noSummaryYet}">This change has no summary yet.</th:block>
+                                        <th:block th:if="${titleOnly}" th:text="#{ui.release.needsSummaryHint}">Its title is too short to stand alone in a note, and its description gives too little to summarize.</th:block>
                                         <th:block th:if="${change.summaryEditorName != null}" th:text="#{ui.release.lastWrittenBy(${change.summaryEditorName})}">Last written by Mai Tran.</th:block>
                                         <th:block th:if="${approved}" th:text="#{ui.release.savingUpdatesNotes}">Saving updates the release notes.</th:block>
                                     </p>
@@ -293,12 +327,50 @@
                                                       th:text="${summaryFailing} ? *{migrationStep} : (${summary != null} ? ${summary.migrationStep} : '')"></textarea>
                                             <th:block th:if="${summaryFailing}"><th:block th:replace="~{fragments/form :: fieldError('migrationStep', |summary-${change.id}-migrationStep-error|)}"></th:block></th:block>
                                         </label>
-                                        <label class="form-control" th:each="audience : ${audiences}">
-                                            <span class="label-text font-medium" th:text="#{ui.release.narrativeFor(${audience.displayName})}">For Operator</span>
-                                            <textarea th:name="|narratives[${audience.code}]|" rows="2" maxlength="2000"
-                                                      class="textarea textarea-bordered textarea-sm w-full"
-                                                      th:text="${summaryFailing} ? ${summaryRequest.narratives.get(audience.code)} : ${change.narrative(audience.code)}"></textarea>
+                                        <label class="form-control" th:with="sentKind=${summaryFailing} ? *{migrationKind} : (${summary != null} ? ${summary.migrationKind} : null),
+                                                                             kindFailing=${summaryFailing and #fields.hasErrors('migrationKindMatchingStep')}">
+                                            <span class="label-text font-medium" th:text="#{ui.release.migrationKind}">Migration kind</span>
+                                            <select name="migrationKind" class="select select-bordered select-sm w-full sm:max-w-xs"
+                                                    th:classappend="${kindFailing} ? 'select-error'"
+                                                    th:attr="aria-invalid=${kindFailing} ? 'true' : null,aria-describedby=${kindFailing} ? |summary-${change.id}-migrationKind-error| : null">
+                                                <option th:each="kind : ${migrationKinds}" th:value="${kind.name()}"
+                                                        th:selected="${sentKind != null ? sentKind == kind : kind.name() == 'NONE'}"
+                                                        th:text="#{|ui.enum.migrationKind.${kind.name()}|}">None</option>
+                                            </select>
+                                            <th:block th:if="${summaryFailing}"><th:block th:replace="~{fragments/form :: fieldError('migrationKindMatchingStep', |summary-${change.id}-migrationKind-error|)}"></th:block></th:block>
                                         </label>
+                                        <label class="form-control"><span class="label-text font-medium" th:text="#{ui.release.limitations}">Limitations</span>
+                                            <textarea name="limitations" rows="2" maxlength="2000" class="textarea textarea-bordered textarea-sm w-full"
+                                                      th:classappend="${summaryFailing and #fields.hasErrors('limitations')} ? 'textarea-error'"
+                                                      th:attr="aria-invalid=${summaryFailing and #fields.hasErrors('limitations')} ? 'true' : null,aria-describedby=${summaryFailing and #fields.hasErrors('limitations')} ? |summary-${change.id}-limitations-error| : null"
+                                                      th:text="${summaryFailing} ? *{limitations} : (${summary != null} ? ${summary.limitations} : '')"></textarea>
+                                            <th:block th:if="${summaryFailing}"><th:block th:replace="~{fragments/form :: fieldError('limitations', |summary-${change.id}-limitations-error|)}"></th:block></th:block>
+                                        </label>
+                                        <fieldset class="grid gap-2 rounded-box border border-base-300 p-3" th:each="audience : ${audiences}"
+                                                  th:with="written=${summaryFailing} ? ${summaryRequest.narratives.get(audience.code)} : ${change.audienceNarrative(audience.code)},
+                                                           fieldId=|summary-${change.id}-${audience.code}|">
+                                            <legend class="px-1 text-sm font-medium" th:text="#{ui.release.narrativeFor(${audience.displayName})}">For Operator</legend>
+                                            <label class="form-control"><span class="label-text" th:text="#{ui.release.relevance}">Relevance</span>
+                                                <select th:name="|narratives[${audience.code}].relevance|" class="select select-bordered select-sm w-full sm:max-w-xs">
+                                                    <option th:each="relevance : ${relevances}" th:value="${relevance.name()}"
+                                                            th:selected="${written != null ? written.relevance == relevance : relevance.name() == 'FULL'}"
+                                                            th:text="#{|ui.enum.relevance.${relevance.name()}|}">Full</option>
+                                                </select>
+                                            </label>
+                                            <div class="form-control">
+                                                <label class="label-text" th:for="|${fieldId}-headline|" th:text="#{ui.release.headline}">Headline</label>
+                                                <input type="text" th:id="|${fieldId}-headline|" th:name="|narratives[${audience.code}].headline|" maxlength="2000"
+                                                       class="input input-bordered input-sm w-full" th:attr="aria-describedby=|${fieldId}-headline-hint|"
+                                                       th:value="${written != null ? written.headline : ''}">
+                                                <span class="mt-1 text-xs text-slate-500" th:id="|${fieldId}-headline-hint|"
+                                                      th:text="#{ui.release.headlineHint}">Leave it empty to use what changed.</span>
+                                            </div>
+                                            <label class="form-control"><span class="label-text" th:text="#{ui.release.narrativeBody}">Narrative</span>
+                                                <textarea th:name="|narratives[${audience.code}].body|" rows="2" maxlength="2000"
+                                                          class="textarea textarea-bordered textarea-sm w-full"
+                                                          th:text="${written != null ? written.body : ''}"></textarea>
+                                            </label>
+                                        </fieldset>
                                         <div><button type="submit" class="btn btn-primary btn-sm" th:text="#{ui.release.saveSummary}">Save summary</button></div>
                                     </form>
                                 </details>
@@ -312,6 +384,7 @@
                                         <input type="hidden" name="action" value="APPROVE">
                                         <input type="hidden" name="category" th:value="${change.category}">
                                         <input type="hidden" name="breaking" th:value="${change.breaking}">
+                                        <input type="hidden" name="security" th:value="${change.security}">
                                         <label class="form-control sm:max-w-sm"><span class="label-text"><span th:text="#{ui.release.note}">Note</span>
                                             <span class="text-slate-500" th:text="#{ui.release.optional}">(optional)</span></span>
                                             <input type="text" name="note" maxlength="2000" class="input input-bordered input-sm w-full"
@@ -333,6 +406,7 @@
                                             <input type="hidden" name="action" value="EDIT">
                                             <!--/* An unticked box sends nothing; the marker tells the binder it means false. */-->
                                             <input type="hidden" name="_breaking" value="on">
+                                            <input type="hidden" name="_security" value="on">
                                             <label class="form-control"><span class="label-text font-medium" th:text="#{ui.release.category}">Category</span>
                                                 <select name="category" class="select select-bordered select-sm w-full" required
                                                         th:with="categoryFailing=${decisionFailing and sentAction == 'EDIT' and #fields.hasErrors('category')}"
@@ -347,6 +421,10 @@
                                             <label class="label cursor-pointer justify-start gap-2">
                                                 <input type="checkbox" name="breaking" value="true" class="checkbox checkbox-sm" th:checked="${change.breaking}">
                                                 <span class="label-text" th:text="#{ui.release.breakingChange}">Breaking change</span>
+                                            </label>
+                                            <label class="label cursor-pointer justify-start gap-2">
+                                                <input type="checkbox" name="security" value="true" class="checkbox checkbox-sm" th:checked="${change.security}">
+                                                <span class="label-text" th:text="#{ui.release.securityChange}">Security change</span>
                                             </label>
                                             <label class="form-control sm:col-span-2"><span class="label-text"><span th:text="#{ui.release.note}">Note</span>
                                                 <span class="text-slate-500" th:text="#{ui.release.optional}">(optional)</span></span>
@@ -439,6 +517,7 @@
                             </form>
                         </span>
                     </div>
+                    <div th:replace="~{fragments/release-glossary :: glossary(${release}, true)}"></div>
                     <div class="tabs tabs-border mt-4" role="radiogroup" th:aria-label="#{ui.release.audiencesAndLanguages}" aria-label="Audiences and languages">
                         <th:block th:each="note, state : ${release.notes}">
                             <input type="radio" name="note-tabs" class="tab"

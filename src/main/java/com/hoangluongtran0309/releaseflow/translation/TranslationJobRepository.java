@@ -24,10 +24,19 @@ interface TranslationJobRepository extends JpaRepository<TranslationJob, UUID> {
     );
 
     // SKIP LOCKED lets several workers claim different jobs without waiting on each other.
+    // A job waits while the glossary version it asked for is being synced (ADR-0036); the
+    // sync is bounded, so the wait is too.
     @Query(value = """
-            SELECT * FROM translation_jobs
-            WHERE status = 'PENDING' AND next_attempt_at <= :now
-            ORDER BY next_attempt_at, created_at
+            SELECT * FROM translation_jobs j
+            WHERE j.status = 'PENDING' AND j.next_attempt_at <= :now
+              AND NOT EXISTS (
+                  SELECT 1 FROM glossary_syncs s
+                  WHERE s.organization_id = j.organization_id
+                    AND s.source_language = lower(split_part(j.source_language, '-', 1))
+                    AND s.target_language = lower(split_part(j.target_language, '-', 1))
+                    AND s.wanted_version = j.glossary_version
+                    AND s.status IN ('PENDING', 'RUNNING'))
+            ORDER BY j.next_attempt_at, j.created_at
             LIMIT 1
             FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)

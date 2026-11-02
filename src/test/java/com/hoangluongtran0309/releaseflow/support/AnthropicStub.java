@@ -26,6 +26,8 @@ public final class AnthropicStub implements AutoCloseable {
     private final HttpServer server;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final List<RecordedRequest> requests = new CopyOnWriteArrayList<>();
+    // What a model that takes only its own temperature answers to a request that names one.
+    private volatile String temperatureRefusal;
     private volatile int status = 200;
     private volatile String body = message(OpenAiStub.classification("feature", false, false, "Adds a capability."), "end_turn");
 
@@ -53,6 +55,18 @@ public final class AnthropicStub implements AutoCloseable {
         this.body = body;
     }
 
+    /**
+     * Answers 400 with {@code errorBody} to every request whose body has a {@code temperature},
+     * as a model that accepts only its own does, and as before to any other.
+     */
+    public void refuseTemperature(String errorBody) {
+        temperatureRefusal = errorBody;
+    }
+
+    private boolean refusesTemperature(String requestBody) {
+        return temperatureRefusal != null && OBJECT_MAPPER.readTree(requestBody).has("temperature");
+    }
+
     public void respondWithClassification(String category, boolean breaking, boolean needsReview, String summary) {
         respond(200, message(OpenAiStub.classification(category, breaking, needsReview, summary), "end_turn"));
     }
@@ -63,6 +77,7 @@ public final class AnthropicStub implements AutoCloseable {
 
     public void reset() {
         requests.clear();
+        temperatureRefusal = null;
         respondWithClassification("feature", false, false, "Adds a capability.");
     }
 
@@ -94,9 +109,10 @@ public final class AnthropicStub implements AutoCloseable {
                 exchange.getRequestHeaders().getFirst("anthropic-version"),
                 requestBody
         ));
-        byte[] payload = body.getBytes(StandardCharsets.UTF_8);
+        boolean refused = refusesTemperature(requestBody);
+        byte[] payload = (refused ? temperatureRefusal : body).getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "application/json");
-        exchange.sendResponseHeaders(status, payload.length);
+        exchange.sendResponseHeaders(refused ? 400 : status, payload.length);
         exchange.getResponseBody().write(payload);
         exchange.close();
     }

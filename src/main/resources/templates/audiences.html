@@ -146,6 +146,18 @@
                         </span>
                         <span id="templateBody-error" class="field-error" th:if="${#fields.hasErrors('templateBody')}" th:errors="*{templateBody}"></span>
                     </div>
+                    <div class="form-control">
+                        <label class="label-text font-medium" for="footerTemplateBody"><span th:text="#{ui.audiences.footer}">Footer</span>
+                            <span class="text-slate-500" th:text="#{ui.audiences.optional}">(optional)</span></label>
+                        <textarea th:field="*{footerTemplateBody}" rows="6" spellcheck="false"
+                                  class="textarea textarea-bordered w-full font-mono text-xs" th:errorclass="textarea-error"
+                                  th:attr="aria-invalid=${#fields.hasErrors('footerTemplateBody')} ? 'true' : null,aria-describedby=${#fields.hasErrors('footerTemplateBody')} ? 'footerTemplateBody-error footerTemplateBody-hint' : 'footerTemplateBody-hint'"></textarea>
+                        <span class="label-text-alt" id="footerTemplateBody-hint">
+                            <span th:text="#{ui.audiences.footerHint}">Mustache renders once, after the changes. It may use:</span>
+                            <code class="font-mono" th:each="variable : ${footerVariables}" th:text="${'{{' + variable + '}}'} + ' '">{{version}}</code>
+                        </span>
+                        <span id="footerTemplateBody-error" class="field-error" th:if="${#fields.hasErrors('footerTemplateBody')}" th:errors="*{footerTemplateBody}"></span>
+                    </div>
                     <div class="flex flex-wrap gap-2">
                         <button type="submit" class="btn btn-primary btn-sm"
                                 th:text="${selected != null} ? #{ui.audiences.save} : #{ui.audiences.create}">Save audience</button>
@@ -164,15 +176,24 @@
                       th:if="${#lists.contains(releaseLanguages.targetLanguages, variant.key)}"
                       th:id="|template-${variant.key}|"
                       th:action="@{/audiences/{id}/templates/{language}(id=${selected.id},language=${variant.key})}"
-                      th:with="failing=${variantLanguage == variant.key}" novalidate>
+                      th:with="failing=${variantLanguage == variant.key and variantErrorField == 'templateBody'},footerFailing=${variantLanguage == variant.key and variantErrorField == 'footerTemplateBody'}" novalidate>
                     <label class="label-text label-required font-medium" th:for="|template-body-${variant.key}|"
                            th:text="#{ui.audiences.templateFor(${variant.key})}">Template (vi)</label>
                     <textarea name="templateBody" rows="8" required spellcheck="false" th:id="|template-body-${variant.key}|"
                               class="textarea textarea-bordered w-full font-mono text-xs"
                               th:classappend="${failing} ? 'textarea-error'"
                               th:attr="aria-invalid=${failing} ? 'true' : null,aria-describedby=${failing} ? |template-body-${variant.key}-error| : null"
-                              th:text="${failing} ? ${variantBody} : ${variant.value}"></textarea>
+                              th:text="${variantLanguage == variant.key} ? ${variantBody} : ${variant.value}"></textarea>
                     <span class="field-error" th:if="${failing}" th:id="|template-body-${variant.key}-error|"
+                          th:text="${#messages.msgWithParams(variantError.key(), variantError.args())}">This template is not valid Mustache.</span>
+                    <label class="label-text mt-2 font-medium" th:for="|footer-body-${variant.key}|"
+                           th:text="#{ui.audiences.footerFor(${variant.key})}">Footer (vi)</label>
+                    <textarea name="footerTemplateBody" rows="5" spellcheck="false" th:id="|footer-body-${variant.key}|"
+                              class="textarea textarea-bordered w-full font-mono text-xs"
+                              th:classappend="${footerFailing} ? 'textarea-error'"
+                              th:attr="aria-invalid=${footerFailing} ? 'true' : null,aria-describedby=${footerFailing} ? |footer-body-${variant.key}-error| : null"
+                              th:text="${variantLanguage == variant.key} ? ${variantFooter} : ${selected.footerFor(variant.key)}"></textarea>
+                    <span class="field-error" th:if="${footerFailing}" th:id="|footer-body-${variant.key}-error|"
                           th:text="${#messages.msgWithParams(variantError.key(), variantError.args())}">This template is not valid Mustache.</span>
                     <div><button type="submit" class="btn btn-outline btn-sm"
                                  th:text="#{ui.audiences.saveTemplateFor(${variant.key})}">Save vi template</button></div>
@@ -191,8 +212,11 @@
 
             <section class="surface-card p-6" id="audience-actions" th:if="${selected != null}">
                 <h2 class="section-heading" th:text="#{ui.audiences.manageHeading}">Manage audience</h2>
-                <details class="mt-3" th:if="${selected.preset}" id="reset-audience">
+                <details class="mt-3" th:if="${resettable}" id="reset-audience">
                     <summary class="cursor-pointer font-semibold text-indigo-700" th:text="#{ui.audiences.resetSummary}">Reset to preset</summary>
+                    <p class="mt-2 text-sm text-slate-600" th:if="${!selected.preset}" th:text="#{ui.audiences.resetAdoptCopy}">
+                        A shipped audience has this code.
+                    </p>
                     <p class="mt-2 text-sm text-slate-600" th:text="#{ui.audiences.resetCopy}">
                         The name, intent, and template return to the shipped version.
                     </p>

@@ -6,10 +6,11 @@ import com.samskivert.mustache.MustacheException;
 
 
 /**
- * An audience's Mustache template, which renders one change as Markdown. Rendering is
- * pure: it never calls AI or anything else outside the process. Values are inserted
- * as they are, because the output is Markdown rather than HTML; the Markdown preview
- * escapes HTML when it is displayed.
+ * An audience's Mustache templates: the item template renders one change as Markdown, and
+ * the footer renders once per note from the release's own values (ADR-0037). Rendering is
+ * pure: it never calls AI, the network, or anything else outside the process. Values are
+ * inserted as they are, because the output is Markdown rather than HTML; the Markdown
+ * preview escapes HTML when it is displayed.
  */
 public final class AudienceTemplate {
 
@@ -138,6 +139,50 @@ public final class AudienceTemplate {
     public static String sample(String body) {
         validate(body);
         return render(body, AudienceItem.SAMPLE);
+    }
+
+    /**
+     * Rejects a footer that is too long or does not compile and render with sample release
+     * values. A blank footer is valid and adds nothing. A footer sees only the release's
+     * values, so a change's variable is as unknown to it as any other.
+     */
+    public static void validateFooter(String body) {
+        if (body == null || body.isBlank()) {
+            return;
+        }
+        if (body.length() > MAX_LENGTH) {
+            throw InvalidAudienceTemplateException.footer("error.template_invalid.tooLong", MAX_LENGTH);
+        }
+        try {
+            COMPILER.compile(body).execute(ReleaseLinks.SAMPLE.context());
+        } catch (MustacheException | IllegalArgumentException exception) {
+            if (exception.getMessage() == null) {
+                throw InvalidAudienceTemplateException.footer("error.template_invalid.unreadable");
+            }
+            throw InvalidAudienceTemplateException.footer("error.template_invalid.mustache", describe(exception));
+        }
+    }
+
+    /**
+     * Renders a note's footer, stripped; a blank footer renders as an empty string.
+     *
+     * @throws AudienceTemplateRenderException if the footer cannot be rendered
+     */
+    public static String renderFooter(String body, ReleaseLinks links) {
+        if (body == null || body.isBlank()) {
+            return "";
+        }
+        try {
+            return COMPILER.compile(body).execute(links.context()).strip();
+        } catch (MustacheException | IllegalArgumentException exception) {
+            throw new AudienceTemplateRenderException(exception);
+        }
+    }
+
+    /** The footer rendered with sample release values, as shown by the editor's preview. */
+    public static String sampleFooter(String body) {
+        validateFooter(body);
+        return renderFooter(body, ReleaseLinks.SAMPLE);
     }
 
     private static String describe(RuntimeException exception) {

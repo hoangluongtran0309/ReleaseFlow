@@ -37,6 +37,12 @@ record PayloadFields(String subject) {
         return node.stringValue();
     }
 
+    // A branch name too long to store is left out rather than cut, so it is never misread.
+    String optionalBranch(JsonNode node) {
+        String branch = optionalText(node);
+        return branch == null || branch.length() > TARGET_BRANCH_MAX_LENGTH ? null : branch;
+    }
+
     String optionalText(JsonNode node) {
         if (!node.isString() || node.stringValue().isBlank()) {
             return null;

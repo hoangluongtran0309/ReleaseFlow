@@ -64,9 +64,11 @@ class AudiencePageIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("audiences"))
                 .andExpect(content().string(containsString("href=\"/audiences\"")))
-                .andExpect(content().string(matchesPattern("(?s).*id=\"audience-list\".*Contributor.*End user.*Operator.*")))
-                .andExpect(content().string(containsString("3 of 20 audiences")))
+                .andExpect(content().string(matchesPattern("(?s).*id=\"audience-list\".*Contributor.*End user.*Operator.*Support.*")))
+                .andExpect(content().string(containsString("4 of 20 audiences")))
                 .andExpect(content().string(containsString("data-variable=\"narrative\"")))
+                .andExpect(content().string(containsString("data-variable=\"headline\"")))
+                .andExpect(content().string(containsString("data-variable=\"brief\"")))
                 .andExpect(content().string(containsString("x-data=\"audienceEditor()\"")))
                 .andExpect(content().string(containsString("Reset to preset")));
 
@@ -113,13 +115,53 @@ class AudiencePageIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(content().string(containsString("Display name is required.")));
         mockMvc.perform(post(audiencePath + "/reset-to-preset").session(admin.session()).with(csrf()))
                 .andExpect(status().isConflict())
-                .andExpect(content().string(containsString("Only a shipped audience can be reset.")));
+                .andExpect(content().string(containsString("No shipped audience has this code, so there is nothing to reset it to.")));
         mockMvc.perform(post(audiencePath + "/delete").session(admin.session()).with(csrf()))
                 .andExpect(redirectedUrl("/audiences"))
                 .andExpect(flash().attribute(UiNotice.FLASH_ATTRIBUTE, UiNotice.success("ui.audiences.deleted")));
         mockMvc.perform(get(audiencePath).session(admin.session()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(containsString("Audience was not found.")));
+    }
+
+    // ADR-0035: an audience added under a shipped code, as an Organization registered
+    // before the support preset does, is offered the reset; one under any other code is not.
+    @Test
+    void thePageOffersTheResetForAnAudienceAddedUnderAShippedCode() throws Exception {
+        Admin admin = registerAndLogin();
+        jdbcTemplate.update("DELETE FROM audience_definitions WHERE organization_id = ? AND code = 'support'",
+                admin.organizationId());
+        String support = mockMvc.perform(post("/audiences").session(admin.session()).with(csrf())
+                        .param("code", "support")
+                        .param("displayName", "Helpdesk")
+                        .param("templateBody", "{{whatChanged}}"))
+                .andExpect(redirectedUrlPattern("/audiences/*"))
+                .andReturn().getResponse().getRedirectedUrl();
+        String board = mockMvc.perform(post("/audiences").session(admin.session()).with(csrf())
+                        .param("code", "board")
+                        .param("displayName", "Board")
+                        .param("templateBody", "{{whatChanged}}"))
+                .andReturn().getResponse().getRedirectedUrl();
+
+        mockMvc.perform(get(support).session(admin.session()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"reset-audience\"")))
+                .andExpect(content().string(containsString("action=\"" + support + "/reset-to-preset\"")))
+                .andExpect(content().string(containsString("A shipped audience has this code.")));
+        mockMvc.perform(get(board).session(admin.session()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("id=\"reset-audience\""))));
+
+        mockMvc.perform(post(support + "/reset-to-preset").session(admin.session()).with(csrf()))
+                .andExpect(redirectedUrl(support))
+                .andExpect(flash().attribute(UiNotice.FLASH_ATTRIBUTE, UiNotice.success("ui.audiences.reset")));
+        mockMvc.perform(get(support).session(admin.session()))
+                .andExpect(content().string(containsString("A shipped audience. Its code is fixed")))
+                .andExpect(content().string(containsString("id=\"reset-audience\"")))
+                .andExpect(content().string(not(containsString("A shipped audience has this code."))));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT display_name FROM audience_definitions WHERE organization_id = ? AND code = 'support'",
+                String.class, admin.organizationId())).isEqualTo("Support");
     }
 
     @Test
@@ -143,7 +185,8 @@ class AudiencePageIntegrationTest extends PostgreSqlIntegrationTest {
     @Test
     void theNewAudienceActionIsARealDisabledControlAtTheLimit() throws Exception {
         Admin admin = registerAndLogin();
-        for (int index = 3; index < AudienceService.MAX_AUDIENCES; index++) {
+        // Registration seeds the four presets.
+        for (int index = 4; index < AudienceService.MAX_AUDIENCES; index++) {
             NewAudienceRequest request = new NewAudienceRequest();
             request.setCode("audience_" + index);
             request.setDisplayName("Audience " + index);

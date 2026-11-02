@@ -81,6 +81,7 @@ class GitLabWebhookIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(change.getAuthorLogin()).isEqualTo("mai-dev");
         assertThat(change.getLabels()).containsExactly("feature", "ui");
         assertThat(change.getTargetBranch()).isEqualTo("main");
+        assertThat(change.getHeadBranch()).isEqualTo("feature/csv");
         assertThat(change.getMergeCommitSha()).isEqualTo(MERGE_SHA);
         assertThat(change.getUrl()).isEqualTo("https://gitlab.com/acme/group/app/-/merge_requests/42");
         assertThat(change.getMergedAt()).isEqualTo(Instant.parse("2026-09-10T09:14:22Z"));

@@ -19,14 +19,15 @@ notes written from the same reviewed facts instead of rewritten by hand three ti
    GitHub and GitLab can also import the last 90 days. See [Sources](sources.md).
 2. **Classify.** Explainable rules sort every change into a category. Optional AI
    (OpenAI, Anthropic, or DeepSeek) writes a neutral summary and suggests a category,
-   but the rules always win, and breaking, unrecognized, or sensitive-file changes always
-   wait for a person. See [Changes and review](changes.md).
+   but the rules always win, and breaking, security, unrecognized, or sensitive-file
+   changes always wait for a person. See [Changes and review](changes.md).
 3. **Review.** A release moves from draft through a decision on every change to
    approval. Changes with too little context, or that look like earlier ones, are flagged
    with the evidence. See [Releases](release-notes.md#releases).
 4. **Write.** One note per audience (operators, contributors, end users, or your own),
-   from a Mustache template, in up to five languages translated by DeepL. See
-   [Audiences](release-notes.md#audiences).
+   from a Mustache template, in up to five languages translated by DeepL, with security
+   changes in a section of their own and a footer that can link the comparison with the
+   previous release. See [Audiences](release-notes.md#audiences).
 5. **Publish.** Published notes are frozen, then delivered by automation rules to GitHub
    Releases, Slack, email, Notion, Confluence, Microsoft Teams, Zendesk, or a public
    changelog with an RSS feed. See [Automation](automation.md).

@@ -84,18 +84,18 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         TestChanges.summarize(jdbcTemplate, change, "Tables export as CSV.", NARRATIVES);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
 
         mockMvc.perform(get(releaseApi(projectId, releaseId) + "/note-previews").session(owner.session()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].audienceCode").value(contains("contributor", "end_user", "operator")))
+                .andExpect(jsonPath("$[*].audienceCode").value(contains("contributor", "end_user", "operator", "support")))
                 .andExpect(jsonPath("$[2].content").value(OPERATOR_NOTE));
 
         approve(owner, projectId, releaseId)
-                .andExpect(jsonPath("$.notes.length()").value(3))
-                .andExpect(jsonPath("$.notes[*].audienceName").value(contains("Contributor", "End user", "Operator")))
+                .andExpect(jsonPath("$.notes.length()").value(4))
+                .andExpect(jsonPath("$.notes[*].audienceName").value(contains("Contributor", "End user", "Operator", "Support")))
                 .andExpect(jsonPath("$.notes[0].content", containsString(
                         "([#1](https://github.com/acme/releaseflow/pull/1)) — Use ExportJob instead of TableExporter.\n"
                                 + "  - Why: Users asked.\n  - Implementation: Streams rows.\n")))
@@ -107,7 +107,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.notes[2].autoRerender").value(true));
 
         mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes").session(owner.session()))
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$.length()").value(4));
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT template_body_snapshot FROM release_audience_notes WHERE release_id = ? AND audience_code = 'operator'",
                 String.class, releaseId
@@ -115,7 +115,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    void aFourthAudienceGetsItsOwnNoteWithoutAnyCodeChange() throws Exception {
+    void anotherAudienceGetsItsOwnNoteWithoutAnyCodeChange() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         mockMvc.perform(post("/api/audiences")
                         .session(owner.session())
@@ -128,12 +128,12 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isCreated());
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         TestChanges.summarize(jdbcTemplate, change, "Tables export as CSV.", NARRATIVES);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
 
         approve(owner, projectId, releaseId)
-                .andExpect(jsonPath("$.notes.length()").value(4))
+                .andExpect(jsonPath("$.notes.length()").value(5))
                 .andExpect(jsonPath("$.notes[2].audienceCode").value("leadership"))
                 .andExpect(jsonPath("$.notes[2].content", containsString(
                         "## ✨ New Features\n\n* Tables export as CSV. (Customers asked for this most.)\n")));
@@ -143,7 +143,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void notesCanBeEditedOnlyWhileTheReleaseIsApproved() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
         editNote(owner, projectId, releaseId, UUID.randomUUID(), "# Mine")
@@ -172,9 +172,9 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         UUID outside = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 2,
-                "fix: other", "FIX", false, false, null);
+                "fix: other export bug", "FIX", false, false, null);
         UUID releaseId = createDraft(owner, projectId, "1.4.0");
         addChanges(owner, projectId, releaseId, "{\"changeIds\":[\"%s\"]}".formatted(change));
 
@@ -186,7 +186,12 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         editSummary(owner, projectId, releaseId, change, "Tables export as CSV.", Map.of("end_user", "Download any table."))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.changes[0].neutralSummary.whatChanged").value("Tables export as CSV."))
+                // Callers written before ADR-0035 send and read a plain string, which is a full
+                // body without a headline.
                 .andExpect(jsonPath("$.changes[0].audienceNarratives.end_user").value("Download any table."))
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.end_user.body").value("Download any table."))
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.end_user.relevance").value("FULL"))
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.end_user.headline").value(""))
                 .andExpect(jsonPath("$.changes[0].summaryEditorName").value("Mai Tran"))
                 .andExpect(jsonPath("$.changes[0].contentLanguage").value("en"));
         editSummary(owner, projectId, releaseId, outside, "Not in this release.", Map.of())
@@ -205,6 +210,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 Map.of("end_user", "Save tables as spreadsheets.", "unknown_audience", "Dropped."))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.changes[0].audienceNarratives.unknown_audience").doesNotExist())
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.unknown_audience").doesNotExist())
                 .andExpect(jsonPath("$.notes[0].content", containsString("- **Any table exports as CSV.** ([#1]")))
                 .andExpect(jsonPath("$.notes[1].content", containsString("- **Any table exports as CSV.** — Save tables as spreadsheets.")))
                 .andExpect(jsonPath("$.notes[2].content").value("# Kept by hand\n"));
@@ -216,7 +222,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void returningToDraftDropsTheNotesAndApprovingAgainWritesNewOnes() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         approve(owner, projectId, releaseId);
 
@@ -225,7 +231,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.notes.length()").value(0));
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM release_audience_notes", Integer.class)).isZero();
 
-        approve(owner, projectId, releaseId).andExpect(jsonPath("$.notes.length()").value(3));
+        approve(owner, projectId, releaseId).andExpect(jsonPath("$.notes.length()").value(4));
     }
 
     @Test
@@ -233,7 +239,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         TestChanges.summarize(jdbcTemplate, change, "Tables export as CSV.", NARRATIVES);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0/rc 1");
         String approved = approve(owner, projectId, releaseId).andReturn().getResponse().getContentAsString();
@@ -260,7 +266,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void approvedReleasesWithoutNotesCannotBePublished() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         approve(owner, projectId, releaseId);
         jdbcTemplate.update("DELETE FROM release_audience_notes WHERE release_id = ?", releaseId);
@@ -274,7 +280,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void aTemplateThatCannotRenderBlocksApproval() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         // Only a template changed outside the application can fail; saving validates it.
         jdbcTemplate.update("UPDATE audience_definitions SET template_body = '{{userImpact}}' WHERE code = 'end_user'");
@@ -295,7 +301,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void anAudienceWithNotesCannotBeDeleted() throws Exception {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
-        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add export", "FEATURE", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1, "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         String approved = approve(owner, projectId, releaseId).andReturn().getResponse().getContentAsString();
         String operator = JsonPath.read(approved, "$.notes[2].audienceId");
@@ -312,7 +318,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         // The note keeps the name and template it was written with.
         mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes").session(owner.session()))
                 .andExpect(jsonPath("$[2].audienceName").value("Operator"))
-                .andExpect(jsonPath("$[2].content", containsString("- **add export** ([#1]")));
+                .andExpect(jsonPath("$[2].content", containsString("- **add table export** ([#1]")));
     }
 
     @Test
@@ -321,7 +327,7 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner other = registerAndLogin("other@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         String approved = approve(owner, projectId, releaseId).andReturn().getResponse().getContentAsString();
         UUID note = UUID.fromString(JsonPath.read(approved, "$.notes[0].id"));
@@ -368,25 +374,31 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         Owner owner = registerAndLogin("owner@example.com");
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         String releasePath = "/projects/" + projectId + "/releases/" + releaseId;
         action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
 
         mockMvc.perform(get(releasePath).session(owner.session()))
                 .andExpect(content().string(containsString("id=\"summary-" + change + "\"")))
-                .andExpect(content().string(containsString("name=\"narratives[end_user]\"")))
+                .andExpect(content().string(containsString("name=\"narratives[end_user].relevance\"")))
+                .andExpect(content().string(containsString("name=\"narratives[end_user].headline\"")))
+                .andExpect(content().string(containsString("name=\"narratives[end_user].body\"")))
                 .andExpect(content().string(containsString("aria-label=\"Release note preview\"")));
         mockMvc.perform(post(releasePath + "/changes/" + change + "/summary").session(owner.session()).with(csrf())
                         .param("whatChanged", "")
-                        .param("narratives[end_user]", "x"))
+                        .param("narratives[end_user].body", "x"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Describe what changed.")));
         mockMvc.perform(post(releasePath + "/changes/" + change + "/summary").session(owner.session()).with(csrf())
                         .param("whatChanged", "Tables export as <b>CSV</b>.")
                         .param("whyChanged", "Users asked.")
-                        .param("narratives[end_user]", "Download any table.\r\n")
-                        .param("narratives[operator]", ""))
+                        .param("narratives[end_user].relevance", "FULL")
+                        .param("narratives[end_user].headline", "")
+                        .param("narratives[end_user].body", "Download any table.\r\n")
+                        .param("narratives[operator].relevance", "FULL")
+                        .param("narratives[operator].body", "")
+                        .param("narratives[contributor].relevance", "NONE"))
                 .andExpect(redirectedUrl(releasePath));
         mockMvc.perform(get(releasePath).session(owner.session()))
                 .andExpect(content().string(containsString("Last written by Mai Tran.")))
@@ -406,8 +418,150 @@ class AudienceReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("A release note cannot be empty.")));
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT audience_narratives ->> 'end_user' FROM changes WHERE id = ?", String.class, change
+                "SELECT audience_narratives -> 'end_user' ->> 'body' FROM changes WHERE id = ?", String.class, change
         )).isEqualTo("Download any table.");
+        // A full narrative with nothing in it is no narrative; none is kept, so the note leaves the change out.
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT jsonb_exists(audience_narratives, 'operator') FROM changes WHERE id = ?", Boolean.class, change)).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT audience_narratives -> 'contributor' ->> 'relevance' FROM changes WHERE id = ?", String.class, change
+        )).isEqualTo("NONE");
+    }
+
+    @Test
+    void aChangeWithOnlyAShortTitleWaitsForAPersonToWriteItsSummary() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID bare = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 28, "fix", "FIX", false, false, null);
+        TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 29, "feat: add table export", "FEATURE", false, false, null);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
+
+        decideAllAndApprove(owner, projectId, releaseId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("change_summary_required"))
+                .andExpect(jsonPath("$.detail", containsString("#28")))
+                .andExpect(jsonPath("$.detail", not(containsString("#29"))));
+        mockMvc.perform(get("/projects/{p}/releases/{r}", projectId, releaseId).session(owner.session()))
+                .andExpect(content().string(containsString(">Needs a summary</a>")))
+                .andExpect(content().string(containsString("Its title is too short to stand alone in a note, and its description gives too little")));
+
+        summary(owner, projectId, releaseId, bare, """
+                {"whatChanged":"Exports are written to EXPORT_PATH.","migrationStep":"Rename EXPORT_DIR to EXPORT_PATH.",
+                 "migrationKind":"NONE"}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_failed"));
+        summary(owner, projectId, releaseId, bare, """
+                {"whatChanged":"Exports are written to EXPORT_PATH.","migrationStep":"Rename EXPORT_DIR to EXPORT_PATH.",
+                 "migrationKind":"REQUIRED","limitations":"Imports still read from IMPORT_DIR."}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[?(@.pullRequestNumber == 28)].neutralSummary.migrationKind")
+                        .value(contains("REQUIRED")));
+
+        approveRemaining(owner, projectId, releaseId)
+                .andExpect(jsonPath("$.notes[2].content", containsString(
+                        "  - Limitations: Imports still read from IMPORT_DIR.\n"
+                                + "  - Required step: Rename EXPORT_DIR to EXPORT_PATH.\n")));
+    }
+
+    // ADR-0035: Edit summary takes a relevance, a headline, and a body per audience, and the
+    // notes follow them.
+    @Test
+    void editSummaryTakesARelevanceAHeadlineAndABodyForEachAudience() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
+                "feat: add table export", "FEATURE", false, false, null);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
+
+        summary(owner, projectId, releaseId, change, """
+                {"whatChanged":"Tables export as CSV.","whyChanged":"Users asked.","technicalDetail":"Rows stream.",
+                 "narratives":{
+                   "operator":{"relevance":"BRIEF","headline":"  Exports\\nqueue in the background. ","body":"Watch the queue."},
+                   "end_user":{"relevance":"NONE","headline":"","body":""},
+                   "contributor":"Call ExportJob instead.",
+                   "support":{"relevance":"FULL","headline":"","body":""}}}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.operator.relevance").value("BRIEF"))
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.operator.headline").value("Exports queue in the background."))
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.end_user.relevance").value("NONE"))
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.contributor.body").value("Call ExportJob instead."))
+                .andExpect(jsonPath("$.changes[0].audienceNarrativeDetails.support").doesNotExist())
+                // The field callers read before keeps one body string per audience.
+                .andExpect(jsonPath("$.changes[0].audienceNarratives.operator").value("Watch the queue."))
+                .andExpect(jsonPath("$.changes[0].audienceNarratives.end_user").value(""))
+                .andExpect(jsonPath("$.changes[0].audienceNarratives.contributor").value("Call ExportJob instead."));
+
+        approveRemaining(owner, projectId, releaseId)
+                .andExpect(jsonPath("$.notes[0].content", containsString("- **Tables export as CSV.** ([#1]")))
+                .andExpect(jsonPath("$.notes[0].content", containsString("— Call ExportJob instead.")))
+                .andExpect(jsonPath("$.notes[0].content", containsString("  - Why: Users asked.")))
+                .andExpect(jsonPath("$.notes[1].content", containsString("Nothing in this release concerns this audience.")))
+                .andExpect(jsonPath("$.notes[1].content", not(containsString("Tables export"))))
+                .andExpect(jsonPath("$.notes[2].content", containsString("- **Exports queue in the background.** ([#1]")))
+                .andExpect(jsonPath("$.notes[2].content", not(containsString("Why: Users asked."))));
+    }
+
+    @Test
+    void anUnknownRelevanceIsRefused() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
+                "feat: add table export", "FEATURE", false, false, null);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
+
+        summary(owner, projectId, releaseId, change, """
+                {"whatChanged":"Tables export as CSV.","narratives":{"operator":{"relevance":"OFTEN","body":"x"}}}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("malformed_request"));
+    }
+
+    @Test
+    void aSummaryThatNamesNoMigrationKindKeepsItsStepUnspecified() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
+                "feat: add table export", "FEATURE", false, false, null);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+        action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
+
+        summary(owner, projectId, releaseId, change, """
+                {"whatChanged":"Tables export as CSV.","migrationStep":"No direct action is required."}""")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes[0].neutralSummary.migrationKind").value("UNSPECIFIED"))
+                .andExpect(jsonPath("$.changes[0].neutralSummary.limitations").value(""));
+
+        approveRemaining(owner, projectId, releaseId)
+                .andExpect(jsonPath("$.notes[2].content", containsString("  - Migration: No direct action is required.\n")))
+                .andExpect(jsonPath("$.notes[2].content", not(containsString("Required step"))));
+    }
+
+    @Test
+    void aSummaryStoredBeforeMigrationKindsPrintsItsStepUnderTheNeutralLabel() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner);
+        UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 25,
+                "fix: derive a key per target", "FIX", false, false, null);
+        TestChanges.summarize(jdbcTemplate, change, "Each target has its own key.", NARRATIVES);
+        jdbcTemplate.update("""
+                UPDATE changes SET neutral_summary = neutral_summary || '{"migrationStep":"No direct action is required."}'
+                WHERE id = ?""", change);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
+
+        approve(owner, projectId, releaseId)
+                .andExpect(jsonPath("$.changes[0].neutralSummary.migrationKind").value("UNSPECIFIED"))
+                .andExpect(jsonPath("$.notes[2].content", containsString("  - Migration: No direct action is required.\n")))
+                .andExpect(jsonPath("$.notes[2].content", not(containsString("Required step"))));
+    }
+
+    private ResultActions summary(Owner owner, UUID projectId, UUID releaseId, UUID changeId, String body) throws Exception {
+        return mockMvc.perform(put(releaseApi(projectId, releaseId) + "/changes/{changeId}/summary", changeId)
+                .session(owner.session())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
     }
 
     private ResultActions editNote(Owner owner, UUID projectId, UUID releaseId, UUID noteId, String content) throws Exception {

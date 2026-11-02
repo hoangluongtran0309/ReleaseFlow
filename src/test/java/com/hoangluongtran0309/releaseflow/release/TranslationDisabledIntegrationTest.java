@@ -62,10 +62,10 @@ class TranslationDisabledIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isOk());
         UUID projectId = createProject(owner);
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
-                "feat: add export", "FEATURE", false, false, null);
+                "feat: add table export", "FEATURE", false, false, null);
         TestChanges.summarize(jdbcTemplate, change, "Tables export as CSV.", "{}");
         UUID untranslated = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 2,
-                "feat: add import", "FEATURE", false, false, null);
+                "feat: add table import", "FEATURE", false, false, null);
         UUID releaseId = createDraft(owner, projectId);
 
         action(owner, projectId, releaseId, "request-review").andExpect(status().isOk());
@@ -78,7 +78,7 @@ class TranslationDisabledIntegrationTest extends PostgreSqlIntegrationTest {
         }
         String approved = action(owner, projectId, releaseId, "approve")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.notes.length()").value(6))
+                .andExpect(jsonPath("$.notes.length()").value(8))
                 .andExpect(jsonPath("$.notes[?(@.language == 'en')].translationStatus").value(everyItem(is("READY"))))
                 .andExpect(jsonPath("$.notes[?(@.language == 'vi')].translationStatus").value(everyItem(is("FAILED"))))
                 .andReturn().getResponse().getContentAsString();

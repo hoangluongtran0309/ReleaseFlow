@@ -40,6 +40,10 @@ public abstract class PostgreSqlIntegrationTest {
         supportJdbcTemplate.update("DELETE FROM automation_publish_jobs");
         supportJdbcTemplate.update("DELETE FROM automation_rule_actions");
         supportJdbcTemplate.update("DELETE FROM automation_rules");
+        supportJdbcTemplate.update("DELETE FROM glossary_syncs");
+        supportJdbcTemplate.update("DELETE FROM translation_glossaries");
+        supportJdbcTemplate.update("DELETE FROM glossary_kept_terms");
+        supportJdbcTemplate.update("DELETE FROM glossary_translations");
         supportJdbcTemplate.update("DELETE FROM translation_jobs");
         supportJdbcTemplate.update("DELETE FROM translation_cache");
         supportJdbcTemplate.update("DELETE FROM organization_translation_settings");

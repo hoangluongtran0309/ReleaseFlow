@@ -18,7 +18,11 @@ import java.util.stream.Collectors;
 /**
  * Explainable, fixed rules. A documentation-only file list outranks a title type, which
  * outranks labels; anything the rules do not recognize is Unknown. Unknown, breaking,
- * and triggered changes always need human review.
+ * security, and triggered changes always need human review.
+ *
+ * <p>Security is a flag beside the category, set only by evidence that says so without an
+ * AI: a security label, or a CVE identifier in the title, description, or a label
+ * (ADR-0037). Broad words such as "auth" stay sensitive-path or keyword evidence.
  *
  * <p>Each rule names a group and a preferred category code. The Organization's catalog
  * decides the result: the preferred category if it is active, otherwise the first active
@@ -61,6 +65,8 @@ final class ChangeClassifier {
             Map.entry("refactor", MAINTENANCE)
     );
     private static final Set<String> BREAKING_LABELS = Set.of("breaking-change", "breaking change", "breaking");
+    private static final Set<String> SECURITY_LABELS = Set.of("security", "security-fix", "security fix", "vulnerability");
+    private static final Pattern CVE = Pattern.compile("\\bCVE-\\d{4}-\\d{4,}\\b", Pattern.CASE_INSENSITIVE);
 
     private ChangeClassifier() {
     }
@@ -80,6 +86,7 @@ final class ChangeClassifier {
         List<String> reasons = new ArrayList<>();
         List<ReviewTrigger> triggers = new ArrayList<>();
         boolean breaking = false;
+        boolean security = false;
 
         if (files.isCollected()) {
             sensitivePaths.matches(files.files()).stream()
@@ -119,7 +126,10 @@ final class ChangeClassifier {
         Map<String, CategoryRef> labelCategories = new LinkedHashMap<>();
         for (String label : pullRequest.labels()) {
             String name = label.strip().toLowerCase(Locale.ROOT);
-            if (BREAKING_LABELS.contains(name)) {
+            if (SECURITY_LABELS.contains(name)) {
+                security = true;
+                reasons.add("Security label \"" + label + "\"");
+            } else if (BREAKING_LABELS.contains(name)) {
                 breaking = true;
                 reasons.add("Breaking label \"" + label + "\"");
             } else if (LABELS.containsKey(name)) {
@@ -134,6 +144,12 @@ final class ChangeClassifier {
         if (pullRequest.description() != null && BREAKING_FOOTER.matcher(pullRequest.description()).find()) {
             breaking = true;
             reasons.add("BREAKING CHANGE footer");
+        }
+
+        String cve = cve(pullRequest);
+        if (cve != null) {
+            security = true;
+            reasons.add("CVE identifier \"" + cve + "\"");
         }
 
         Set<String> labelCodes = labelCategories.values().stream().map(CategoryRef::code).collect(Collectors.toSet());
@@ -158,10 +174,28 @@ final class ChangeClassifier {
         return new ChangeClassification(
                 category,
                 breaking,
-                breaking || category.isUnknown() || !triggers.isEmpty(),
+                security,
+                breaking || security || category.isUnknown() || !triggers.isEmpty(),
                 reasons,
                 triggers
         );
+    }
+
+    // The first CVE identifier in the title, the description, or a label, as written.
+    private static String cve(MergedPullRequest pullRequest) {
+        List<String> texts = new ArrayList<>();
+        texts.add(pullRequest.title());
+        texts.add(pullRequest.description());
+        texts.addAll(pullRequest.labels());
+        for (String text : texts) {
+            if (text != null) {
+                Matcher matcher = CVE.matcher(text);
+                if (matcher.find()) {
+                    return matcher.group();
+                }
+            }
+        }
+        return null;
     }
 
     // The preferred category if active, else the first active one of its group by code.

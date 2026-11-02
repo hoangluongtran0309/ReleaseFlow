@@ -326,6 +326,61 @@ class ChangeClassifierTest {
     }
 
     // An ordinary source file: no sensitive path and no documentation-only rule.
+    @ParameterizedTest
+    @ValueSource(strings = {"security", " Security-Fix ", "security fix", "VULNERABILITY"})
+    void securityLabelsMarkTheChangeAndRequireReview(String label) {
+        ChangeClassification classification = classify(pullRequest("fix: derive a key per target", List.of(label), null));
+
+        assertThat(classification.category()).isEqualTo(TestCategories.FIX);
+        assertThat(classification.security()).isTrue();
+        assertThat(classification.breaking()).isFalse();
+        assertThat(classification.needsReview()).isTrue();
+        assertThat(classification.reasons()).contains("Security label \"" + label + "\"");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "fix: patch CVE-2026-12345 in the parser|security-advisory|-|CVE-2026-12345",
+            "fix: patch the parser|-|Fixes cve-2025-1234 reported upstream.|cve-2025-1234",
+            "fix: patch the parser|CVE-2024-123456|-|CVE-2024-123456"
+    })
+    void aCveIdentifierInTheTitleDescriptionOrALabelMarksTheChange(String title, String label, String description,
+                                                                   String cve) {
+        ChangeClassification classification = classify(pullRequest(
+                title,
+                "-".equals(label) ? List.of() : List.of(label),
+                "-".equals(description) ? null : description
+        ));
+
+        assertThat(classification.security()).isTrue();
+        assertThat(classification.needsReview()).isTrue();
+        assertThat(classification.reasons()).contains("CVE identifier \"" + cve + "\"");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "fix: harden auth tokens",
+            "fix: rotate the password hash and the encryption key",
+            "fix: mention CVE-26-1 and CVE-2026-123 in docs"
+    })
+    void broadWordsAndMalformedIdentifiersDoNotMarkSecurity(String title) {
+        ChangeClassification classification = classify(pullRequest(title, List.of("auth", "secure"), null));
+
+        assertThat(classification.security()).isFalse();
+        assertThat(classification.category()).isEqualTo(TestCategories.FIX);
+        assertThat(classification.needsReview()).isFalse();
+    }
+
+    @Test
+    void aChangeCanBeBothBreakingAndSecurity() {
+        ChangeClassification classification = classify(pullRequest("feat!: drop CSRF protection from the API",
+                List.of("security"), null));
+
+        assertThat(classification.breaking()).isTrue();
+        assertThat(classification.security()).isTrue();
+        assertThat(classification.category()).isEqualTo(TestCategories.FEATURE);
+    }
+
     private static ChangeClassification classify(MergedPullRequest pullRequest) {
         return classify(pullRequest, TestCategories.CATALOG);
     }

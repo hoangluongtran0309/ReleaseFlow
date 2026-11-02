@@ -43,6 +43,7 @@
         <span class="badge badge-success badge-soft font-semibold" th:text="#{ui.releaseNote.published}">Published</span>
         <h2 class="mt-3 text-2xl font-bold" th:text="#{ui.releaseNote.notesHeading}">Release notes</h2>
         <p class="section-copy" th:text="#{ui.releaseNote.notesCopy}">One note per audience and language.</p>
+        <div th:replace="~{fragments/release-glossary :: glossary(${release}, false)}"></div>
         <div class="tabs tabs-border mt-4" role="radiogroup" th:aria-label="#{ui.releaseNote.tabsLabel}" aria-label="Audiences and languages">
             <th:block th:each="note, state : ${release.notes}">
                 <input type="radio" name="note-tabs" class="tab"

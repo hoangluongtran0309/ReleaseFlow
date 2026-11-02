@@ -63,7 +63,8 @@ public class AudienceApiController {
             @PathVariable String language,
             @RequestBody AudienceTemplateRequest request
     ) {
-        return audienceService.updateTemplate(principal.organizationId(), audienceId, language, request.getTemplateBody());
+        return audienceService.updateTemplate(principal.organizationId(), audienceId, language, request.getTemplateBody(),
+                request.getFooterTemplateBody());
     }
 
     @DeleteMapping("/{audienceId}")
@@ -79,6 +80,6 @@ public class AudienceApiController {
 
     @PostMapping("/preview")
     AudiencePreview preview(@RequestBody AudiencePreviewRequest request) {
-        return audienceService.preview(request.getTemplateBody());
+        return audienceService.preview(request.getTemplateBody(), request.getFooterTemplateBody());
     }
 }
