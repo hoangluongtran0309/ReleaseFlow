@@ -350,6 +350,17 @@ the glossary, and if it fails again the note is **Not translated**, like any fai
 translation. Other Latin-script languages have no such check yet. See
 [ADR-0036](adr/0036-translation-glossary.md).
 
+With a glossary, DeepL changes the letter case of some code-like words: `<backup-id>` came
+back as `<BACKUP-id>`, and `dbvault-cli` as `dbvault-CLI`. A translation therefore keeps
+the source's **placeholders** (`<`, a letter, then letters, digits, hyphens, or
+underscores, then `>`) and its **hyphenated names written in lowercase** as the source
+writes them: where a translation differs from one in letter case alone, the source's form
+is put back, and nothing else changes. A word the source writes in two cases is left as
+DeepL wrote it. This happens when a translation is recorded, from DeepL or from the cache,
+so a translation cached earlier is corrected at the next approval without a request, and
+nothing that is sent changes. A placeholder DeepL drops is left out and logged. See
+[ADR-0040](adr/0040-translation-placeholders.md).
+
 ```text
 GET    /api/glossary
 GET    /api/glossary/suggestions

@@ -336,6 +336,16 @@ lời không đạt được dịch lại một lần không có bảng thuật 
 trạng thái **Chưa dịch**, như mọi bản dịch thất bại. Các ngôn ngữ chữ Latin khác chưa có bước kiểm
 tra này. Xem [ADR-0036](adr/0036-translation-glossary.md).
 
+Khi có bảng thuật ngữ, DeepL đổi chữ hoa chữ thường của một số từ dạng mã: `<backup-id>` trở
+thành `<BACKUP-id>`, và `dbvault-cli` thành `dbvault-CLI`. Vì vậy bản dịch giữ nguyên các
+**placeholder** của bản gốc (`<`, một chữ cái, rồi chữ cái, chữ số, gạch nối hoặc gạch dưới, rồi
+`>`) và các **tên có gạch nối viết thường** đúng như bản gốc viết: chỗ nào bản dịch chỉ khác
+chúng ở chữ hoa chữ thường thì được đưa về dạng của bản gốc, và không gì khác thay đổi. Một từ mà
+bản gốc viết theo hai cách được để nguyên như DeepL viết. Việc này diễn ra khi bản dịch được ghi
+lại, dù lấy từ DeepL hay từ cache, nên bản dịch đã cache trước đó được sửa ở lần duyệt tới mà
+không gửi yêu cầu nào, và không gì được gửi đi thay đổi. Placeholder mà DeepL làm mất thì để
+nguyên là mất và được ghi vào log. Xem [ADR-0040](adr/0040-translation-placeholders.md).
+
 ```text
 GET    /api/glossary
 GET    /api/glossary/suggestions

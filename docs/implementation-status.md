@@ -556,7 +556,10 @@ where it first appears; ADRs are linked from the slice they record.
   - an untranslated guard for Vietnamese and non-Latin targets, which translates a
     failing answer again without the glossary, or fails it;
   - the glossary's outcome on each note and per language on the release page and `GET`,
-    never blocking approval or publication.
+    never blocking approval or publication;
+  - [ADR-0040](adr/0040-translation-placeholders.md): placeholders and lowercase
+    hyphenated identifiers keep their source's letter case in every recorded translation,
+    fresh or cached, without changing any request.
 
 ### Security changes and note structure (V34)
 
