@@ -224,9 +224,9 @@ Before requesting review:
 GitHub Actions enforces the automated part of this gate on every pull request
 to `develop` and `main`: the pull request title must follow the commit
 convention above, and the workflows below must pass. A fix into a release under way
-is checked on its own pull request too: `CI` and `Docs` also run for a pull request
-into a `release/**` or `hotfix/**` branch, before a release candidate is tagged from
-it. Keep new actions pinned to a commit SHA and new images to a digest.
+is checked on its own pull request too: `CI`, `Container`, and `Docs` also run for a
+pull request into a `release/**` or `hotfix/**` branch, before a release candidate is
+tagged from it. Keep new actions pinned to a commit SHA and new images to a digest.
 
 By contributing, you agree that your contribution is licensed under the
 [Apache License 2.0](LICENSE), the same licence as the rest of the project. There
@@ -242,7 +242,7 @@ Merges into `main` represent a reviewed release decision.
 | `CodeQL` | push and pull request to `develop` and `main`, and weekly | Java and JavaScript analysis |
 | `Dependency Review` | pull requests only | Fails pull requests that add high or critical vulnerabilities |
 | `Secret Scan` | push and pull request, and weekly | Gitleaks over the complete Git history |
-| `Container` | push and pull request | Image build, Trivy high/critical scan, Compose smoke test, the management port proven private, all four metric families reaching Prometheus, the Grafana dashboard provisioned, and the quickstart bundle run against the image |
+| `Container` | push to `develop` and `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | Image build, Trivy high/critical scan, Compose smoke test, the management port proven private, all four metric families reaching Prometheus, the Grafana dashboard provisioned, and the quickstart bundle run against the image |
 | `Docs` | push to `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | The documentation site's dependency audit (`scripts/ci/audit-website.sh`), a build in both languages that fails on any broken link, and, from `main` only, publication to GitHub Pages |
 | `Release` | a `v<version>` tag | See [Releasing](#releasing) |
 

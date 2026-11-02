@@ -1810,8 +1810,8 @@ database volume whose `.env` is gone. See
 [ADR-0031](adr/0031-quickstart-bundle.md).
 
 GitHub Actions workflows in `.github/workflows` gate pushes and pull requests
-to `develop` and `main`, and `ci.yml` and `docs.yml` also pull requests into
-`release/**` and `hotfix/**`: tests, audits, and the Playwright browser and accessibility
+to `develop` and `main`, and `ci.yml`, `container.yml`, and `docs.yml` also pull
+requests into `release/**` and `hotfix/**`: tests, audits, and the Playwright browser and accessibility
 suite (`ci.yml`), CodeQL, dependency review, a full-history Gitleaks scan, and a
 container workflow that builds the
 image, scans it with Trivy, and smoke tests the Compose stack. Actions are
