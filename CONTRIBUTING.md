@@ -105,8 +105,13 @@ npm run e2e
 
 It brings the stack up itself and checks the release pipeline, invitations, and every
 page, at 360 px in the light theme and 1440 px in the dark one, and **fails on any WCAG 2
-A/AA, 2.1 A/AA or 2.2 AA violation Axe can see**. Point it at an application already
-running with `RELEASEFLOW_E2E_BASE_URL`. A new or changed page keeps it green.
+A/AA, 2.1 A/AA or 2.2 AA violation Axe can see**. The stack it starts reads the database
+and the master key from `.env` but never an AI or DeepL setting: it blanks every
+provider, key, and model itself, as CI's `.env` has none, so a `.env` that names a
+provider cannot send the suite's changes to a paid service. For the same reason it never
+reuses an application that is already answering; stop that one first. Point it at an
+application already running with `RELEASEFLOW_E2E_BASE_URL`, whose settings are then its
+own: start it without a provider. A new or changed page keeps it green.
 
 ## Documentation
 
