@@ -59,6 +59,8 @@ public final class DeepLStub implements AutoCloseable {
     private volatile boolean dropPlaceholdersWithGlossary;
     private volatile int maxGlossaries = 1;
     private volatile Set<String> glossaryLanguages = Set.of("en", "vi", "de", "fr", "ja");
+    private volatile Map<List<String>, String> recorded;
+    private final List<String> unrecorded = new CopyOnWriteArrayList<>();
 
     private DeepLStub() {
         try {
@@ -120,6 +122,20 @@ public final class DeepLStub implements AutoCloseable {
         dropPlaceholdersWithGlossary = true;
     }
 
+    /**
+     * Answers each text from answers DeepL really gave, keyed by its source language, target
+     * language, and text as sent ({@code ["EN", "VI", text]}). A text with no recorded answer
+     * comes back unchanged and is listed by {@link #unrecorded()}.
+     */
+    public void answerFrom(Map<List<String>, String> answers) {
+        recorded = Map.copyOf(answers);
+    }
+
+    /** Every text sent while answering from recorded answers that had none, in order. */
+    public List<String> unrecorded() {
+        return List.copyOf(unrecorded);
+    }
+
     /** Refuses the next {@code times} translations sent with a glossary with a {@code 400}. */
     public void refuseGlossary(int times) {
         glossaryRefusalsLeft.set(times);
@@ -165,6 +181,8 @@ public final class DeepLStub implements AutoCloseable {
         maxGlossaries = 1;
         glossaryLanguages = Set.of("en", "vi", "de", "fr", "ja");
         glossaries.clear();
+        recorded = null;
+        unrecorded.clear();
     }
 
     public List<RecordedRequest> requests() {
@@ -247,6 +265,18 @@ public final class DeepLStub implements AutoCloseable {
             entries = glossary.get(pair);
         }
         List<Map<String, String>> translations = new ArrayList<>();
+        Map<List<String>, String> answers = recorded;
+        if (answers != null) {
+            for (String text : texts) {
+                String answer = answers.get(List.of(body.path("source_lang").stringValue(), target, text));
+                if (answer == null) {
+                    unrecorded.add(text);
+                }
+                translations.add(Map.of("detected_source_language", "EN", "text", answer == null ? text : answer));
+            }
+            send(exchange, 200, OBJECT_MAPPER.writeValueAsString(Map.of("translations", translations)));
+            return;
+        }
         for (String text : texts) {
             String translated = text;
             if (!untranslated && !(glossaryId != null && untranslatedWithGlossary)) {

@@ -1,0 +1,269 @@
+{
+ "organizationName": "dbvault",
+ "projectName": "dbvault",
+ "outputLanguage": "en",
+ "projectContext": "dbvault is a self-hosted service that backs up and restores databases.\n\nThe server is the dbvault application. It runs the backups and restores, keeps the targets (the databases to back up), where backups are stored, and the history of every backup and restore. People use it through its web console; scripts use its HTTP API. A change to the server reaches people when they upgrade the server.\n\ndbvault-cli is a separate command-line client of the server, with its own repository and releases. It runs on the user's machine and calls the server's HTTP API; it keeps no backups of its own. Its settings are in ~/.config/dbvault/cli.properties (server, username); DBVAULT_URL overrides the server, and the password comes from DBVAULT_PASSWORD or a prompt. A change to the CLI does not change the server.\n\nConsole language: the console is in English or Vietnamese. A person chooses the language with the language link in the sidebar or on the sign-in page, or by adding ?lang=en or ?lang=vi to any console page. The choice is kept in a cookie in that browser. The browser's language is only a fallback, used until a choice is made. The language is not a setting of the account.\n\nEnglish by design: the HTTP API, dbvault-cli, logs, and notifications stay in English whatever the console's language, and so does the reason a database client or a dbvault rule gives for refusing something.",
+ "glossary": {
+  "keptTerms": [
+   "console",
+   "CLI",
+   "image",
+   "images",
+   "base image",
+   "base images",
+   "digest",
+   "digests",
+   "pull request",
+   "pull requests",
+   "PR",
+   "PRs",
+   "merge request",
+   "merge requests",
+   "exit code",
+   "exit codes",
+   "webhook",
+   "webhooks",
+   "release note",
+   "release notes",
+   "secret",
+   "secrets",
+   "repository",
+   "dashboard",
+   "container",
+   "containers",
+   "token",
+   "tokens",
+   "endpoint",
+   "endpoints",
+   "workflow",
+   "workflows",
+   "migration",
+   "migrations",
+   "artifact",
+   "artifacts",
+   "engine",
+   "engines",
+   "flash message",
+   "flash messages",
+   "container image",
+   "container images",
+   "emulator image",
+   "emulator images",
+   "repository secret",
+   "repository secrets",
+   "Console",
+   "Repository secrets"
+  ],
+  "translations": [
+   {
+    "sourceLanguage": "en",
+    "targetLanguage": "vi",
+    "sourceTerm": "storage",
+    "targetTerm": "lưu trữ"
+   },
+   {
+    "sourceLanguage": "en",
+    "targetLanguage": "vi",
+    "sourceTerm": "backup target",
+    "targetTerm": "đích sao lưu"
+   },
+   {
+    "sourceLanguage": "en",
+    "targetLanguage": "vi",
+    "sourceTerm": "target",
+    "targetTerm": "đích"
+   },
+   {
+    "sourceLanguage": "en",
+    "targetLanguage": "vi",
+    "sourceTerm": "targets",
+    "targetTerm": "đích"
+   },
+   {
+    "sourceLanguage": "en",
+    "targetLanguage": "vi",
+    "sourceTerm": "database target",
+    "targetTerm": "đích cơ sở dữ liệu"
+   },
+   {
+    "sourceLanguage": "en",
+    "targetLanguage": "vi",
+    "sourceTerm": "database targets",
+    "targetTerm": "đích cơ sở dữ liệu"
+   }
+  ]
+ },
+ "releaseLanguages": [
+  "en",
+  "vi"
+ ],
+ "categories": [
+  {
+   "code": "DOCUMENTATION",
+   "displayName": "Documentation",
+   "group": "DOCUMENTATION",
+   "active": true
+  },
+  {
+   "code": "FEATURE",
+   "displayName": "Feature",
+   "group": "FEATURE",
+   "active": true
+  },
+  {
+   "code": "FIX",
+   "displayName": "Fix",
+   "group": "FIX",
+   "active": true
+  },
+  {
+   "code": "MAINTENANCE",
+   "displayName": "Maintenance",
+   "group": "MAINTENANCE",
+   "active": true
+  },
+  {
+   "code": "PERFORMANCE",
+   "displayName": "Performance",
+   "group": "PERFORMANCE",
+   "active": true
+  },
+  {
+   "code": "SECURITY",
+   "displayName": "Security",
+   "group": "FIX",
+   "active": true
+  },
+  {
+   "code": "UNKNOWN",
+   "displayName": "Unknown",
+   "group": "OTHER",
+   "active": true
+  }
+ ],
+ "sensitivePathAdditions": [
+  "**/crypto/**",
+  "**/restore/**"
+ ],
+ "sources": [
+  {
+   "type": "GITHUB",
+   "repository": "hoangtulangtoc/dbvault"
+  },
+  {
+   "type": "GITLAB",
+   "projectPath": "dbvault1/dbvault-cli",
+   "apiBaseUrl": "https://gitlab.com"
+  },
+  {
+   "type": "LINEAR",
+   "workspaceUrl": "https://linear.app/dbvault"
+  },
+  {
+   "type": "JIRA",
+   "siteUrl": "https://hoangluongtran0309.atlassian.net",
+   "projectKey": "DBV"
+  }
+ ],
+ "audiences": [
+  {
+   "code": "operator",
+   "preset": true,
+   "configuration": "reset to preset",
+   "addedBeforeIntake": false
+  },
+  {
+   "code": "contributor",
+   "preset": true,
+   "configuration": "reset to preset",
+   "addedBeforeIntake": false
+  },
+  {
+   "code": "end_user",
+   "preset": true,
+   "configuration": "reset to preset",
+   "addedBeforeIntake": false
+  },
+  {
+   "code": "support",
+   "preset": true,
+   "configuration": "reset to preset",
+   "addedBeforeIntake": true
+  },
+  {
+   "code": "dba",
+   "preset": false,
+   "displayName": "Database administrators",
+   "communicationIntent": "Write for the DBAs who run dbvault against their databases: what touches stored data, schema, credentials, or restore behaviour, what they must check after upgrading, and how to roll back. Name engines (MySQL, PostgreSQL) and versions where they matter. A change is none for DBAs when it touches no stored data, schema, credentials, or restore behaviour and leaves nothing to check after upgrading, such as a console-only, documentation-only, or CI-only change.",
+   "templates": {
+    "main": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Required step: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - If it applies to you: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Recommended step: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Migration: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Limitations: {{.}}\n{{/limitations}}\n{{#linkedIssues}}\n  - Tracked in [{{key}}]({{url}}): {{title}} ({{status}})\n{{/linkedIssues}}\n{{/brief}}\n",
+    "vi": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Bước bắt buộc: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - Nếu áp dụng cho bạn: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Bước khuyến nghị: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Cách chuyển đổi: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Giới hạn: {{.}}\n{{/limitations}}\n{{#linkedIssues}}\n  - Theo dõi tại [{{key}}]({{url}}): {{title}} ({{status}})\n{{/linkedIssues}}\n{{/brief}}\n"
+   },
+   "footers": {
+    "main": "{{#compareUrl}}\n**Compare:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n",
+    "vi": "{{#compareUrl}}\n**So sánh:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n"
+   },
+   "capturedCreatedAt": "2026-10-16T03:24:53.725720Z"
+  },
+  {
+   "code": "aut_r4_probe",
+   "preset": false,
+   "displayName": "Support team",
+   "communicationIntent": "Write for the dbvault support engineers who answer customers: what customers will notice, what they need to do, and what to tell them. Skip implementation detail. A change is none for support when customers cannot notice it: build, CI, dependency, test, and internal changes.",
+   "templates": {
+    "main": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - What customers must do: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - If it applies to the customer: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - What to recommend to customers: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Migration: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Limitations: {{.}}\n{{/limitations}}\n{{/brief}}\n",
+    "vi": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Khách hàng cần làm: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - Nếu áp dụng cho khách hàng: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Nên khuyên khách hàng: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Cách chuyển đổi: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Giới hạn: {{.}}\n{{/limitations}}\n{{/brief}}\n"
+   },
+   "footers": {
+    "main": "{{#upgradeGuideUrl}}\n**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n",
+    "vi": "{{#upgradeGuideUrl}}\n**Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n"
+   },
+   "capturedCreatedAt": "2026-10-17T05:45:30.567279Z"
+  }
+ ],
+ "timeline": [
+  {
+   "capturedAt": "2026-10-15T16:08:03.247009Z",
+   "event": "release",
+   "value": "v0.1.0"
+  },
+  {
+   "capturedAt": "2026-10-16T03:24:44.908990Z",
+   "event": "release languages",
+   "value": [
+    "en",
+    "vi"
+   ]
+  },
+  {
+   "capturedAt": "2026-10-16T03:24:53.725720Z",
+   "event": "audience added",
+   "value": "dba"
+  },
+  {
+   "capturedAt": "2026-10-16T04:40:18.509124Z",
+   "event": "release",
+   "value": "v0.2.0"
+  },
+  {
+   "capturedAt": "2026-10-16T14:10:15.357210Z",
+   "event": "release",
+   "value": "v0.3.0"
+  },
+  {
+   "capturedAt": "2026-10-17T01:35:31.388073Z",
+   "event": "release",
+   "value": "v1.0.0"
+  },
+  {
+   "capturedAt": "2026-10-17T05:45:30.567279Z",
+   "event": "audience added",
+   "value": "aut_r4_probe"
+  },
+  {
+   "capturedAt": "2026-10-20T08:22:44.843122Z",
+   "event": "release",
+   "value": "v1.1.0"
+  }
+ ]
+}
