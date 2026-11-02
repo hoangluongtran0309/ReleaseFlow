@@ -94,6 +94,20 @@ time:
 ./mvnw verify      # unit and PostgreSQL integration tests, then packaging
 ```
 
+`./mvnw verify` includes the golden release notes test,
+`GoldenReleaseNotesIntegrationTest`. It sets up dbvault, the project ReleaseFlow is tested
+against end to end, from `src/test/resources/golden/dbvault/`, approves its five releases
+v0.1.0 to v1.1.0 with AI off and DeepL answered from the answers it really gave, and
+compares every note, English and Vietnamese, byte for byte with the note ReleaseFlow 1.1.0
+wrote. When it fails, a pull request has changed what a note says or how it is laid out,
+and the failure shows the difference by release, audience, and language; or it has changed
+what ReleaseFlow sends DeepL, and the failure lists the texts DeepL never answered. Either
+is a regression unless the pull request means it. **The inputs, recorded answers, and
+snapshots come from the dbvault workspace and are refreshed only from there:** never edit
+them by hand, and never update a snapshot to make the test pass. A note that changes on
+purpose is rendered again in the workspace, which generates a new package to replace the
+directory as a whole; the test checks the package's `MANIFEST.sha256` before it runs.
+
 The browser suite drives the demo Compose stack, so `.env` must be filled in first (see
 [Run the demo stack](README.md#run-the-demo-stack)):
 

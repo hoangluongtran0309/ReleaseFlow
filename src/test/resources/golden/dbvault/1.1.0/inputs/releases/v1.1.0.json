@@ -1,0 +1,283 @@
+{
+ "version": "v1.1.0",
+ "summary": "The whole console in Vietnamese, a clear CLI error for a mistyped server address, and container images pinned by digest.",
+ "capturedApprovedAt": "2026-10-20T08:22:44.843122Z",
+ "upgradeGuideUrl": null,
+ "previousVersion": "v1.0.0",
+ "publish": true,
+ "languages": [
+  "en",
+  "vi"
+ ],
+ "members": [
+  {
+   "source": "GITLAB",
+   "reference": "!9"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#48"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#53"
+  }
+ ],
+ "decisions": [
+  {
+   "source": "GITHUB",
+   "reference": "#53",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#48",
+   "action": "EDIT",
+   "capturedAction": "EDIT",
+   "category": "SECURITY",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": "Pinning images by digest is supply-chain hardening."
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!9",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FIX",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  }
+ ],
+ "summariesWrittenAtApproval": [],
+ "atApproval": [
+  {
+   "source": "GITLAB",
+   "reference": "!9",
+   "category": "FIX",
+   "breaking": false,
+   "security": false,
+   "title": "fix: reject a server address that is not an http(s) URL (DBV-44)",
+   "neutralSummary": {
+    "whatChanged": "The CLI now rejects server addresses that are not valid http(s) URLs, showing a clear message and exit code 2 instead of an internal error.",
+    "whyChanged": "Previously, a malformed server address (like one missing the scheme) caused an unclear internal error and exit code 1, confusing users.",
+    "technicalDetail": "Parsing now requires server addresses (from DBVAULT_URL or server= in CLI config) to start with http:// or https:// and include a host. Invalid formats trigger exit code 2 and a specific error message; the README documents this behavior. ServerCommandsTest covers these cases with new tests.",
+    "migrationStep": "Ensure all configuration and environment variables use a complete server address, including http(s) scheme and host, to avoid startup errors.",
+    "migrationKind": "UNSPECIFIED",
+    "limitations": ""
+   },
+   "narratives": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#48",
+   "category": "SECURITY",
+   "breaking": false,
+   "security": false,
+   "title": "build(docker): pin base images by digest",
+   "neutralSummary": {
+    "whatChanged": "All container base images in Dockerfiles and docker-compose.yml are now pinned by digest, and Dependabot configuration was updated to watch for changes to these digests. Related deployment documentation was updated.",
+    "whyChanged": "To ensure rebuilds always use the exact same base images unless intentionally updated, improving reproducibility and security.",
+    "technicalDetail": "Dockerfiles specify the platform index digest for each base, including maven, docker CLI, Eclipse Temurin, and Postgres; Dependabot is configured to create PRs when a new digest is available.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#53",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(ui): finish the Vietnamese console (DBV-31)",
+   "neutralSummary": {
+    "whatChanged": "The console interface now fully supports both English and Vietnamese across all pages and messages, with language selection per browser session.",
+    "whyChanged": "To meet customer requests for Vietnamese language support and provide a localized user experience as described in DBV-31.",
+    "technicalDetail": "All console user-facing text is now managed using language bundles and MessageFormat for argument patterns. Flash messages, form checks, and live job status are localized based on the browser language. Automated tests verify translations, message formatting, and key consistency between bundles, while English is retained for HTTP API, CLI, logs, and notifications as per ADR-042.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  }
+ ],
+ "glossaries": [
+  {
+   "language": "vi",
+   "status": "APPLIED",
+   "reason": null
+  }
+ ],
+ "notes": [
+  {
+   "audience": "contributor",
+   "language": "en",
+   "file": "snapshots/v1.1.0/contributor.en.md",
+   "sha256": "eef8c09ce9c60f378c75d9d772fff498a7634129e24994c095e9fda26775708e",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "contributor",
+   "language": "vi",
+   "file": "snapshots/v1.1.0/contributor.vi.md",
+   "sha256": "a9aecc2bb821f743e7b36949256dd53764ad91a33f6b5b9cbaddc4a71eea06bf",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "dba",
+   "language": "en",
+   "file": "snapshots/v1.1.0/dba.en.md",
+   "sha256": "df8ef0e3b9f7385a9b7eca089eecc959dd39029d216798a1a0aa8aa01f5e4e14",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "dba",
+   "language": "vi",
+   "file": "snapshots/v1.1.0/dba.vi.md",
+   "sha256": "f99f319176486bde90fe401a638a90120c29e05d40d5da9baf5588fa25c81452",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "end_user",
+   "language": "en",
+   "file": "snapshots/v1.1.0/end_user.en.md",
+   "sha256": "086fa4e081a94acfb2578b3e98ea5180d81909d775e383e379941f772324ba16",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "end_user",
+   "language": "vi",
+   "file": "snapshots/v1.1.0/end_user.vi.md",
+   "sha256": "7dc7239f6ef9dfa8ae33a5d46ff0ad8269a0b1c9fc1777e8efec7a2f712b6e3d",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "operator",
+   "language": "en",
+   "file": "snapshots/v1.1.0/operator.en.md",
+   "sha256": "f4316b96785493d3221eec35b79b430a66fe14efacfc1715fbbd349cf047e53e",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "operator",
+   "language": "vi",
+   "file": "snapshots/v1.1.0/operator.vi.md",
+   "sha256": "697cdce7faa967df80092ff9e3f5c8500dd71f0fc81cf4e9264eca28b30fda9b",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "support",
+   "language": "en",
+   "file": "snapshots/v1.1.0/support.en.md",
+   "sha256": "ecb29111bc194f28dcd18ac65bdab591b54580790a5833f2d3921df068e0efa4",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "support",
+   "language": "vi",
+   "file": "snapshots/v1.1.0/support.vi.md",
+   "sha256": "d4e8ffb30686eeb683a841e36b1ad65adf7aeff99a816254511aa3667c753488",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "aut_r4_probe",
+   "language": "en",
+   "file": "snapshots/v1.1.0/aut_r4_probe.en.md",
+   "sha256": "36a209ab980787975ffad8f7f8e197bc193fd3fe7ef225437e0c15bd1ac3ae0b",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "aut_r4_probe",
+   "language": "vi",
+   "file": "snapshots/v1.1.0/aut_r4_probe.vi.md",
+   "sha256": "0f5d0197dadae5cb9b6358bd6fa830c72019f1b829015ea21564be5cb81f8a4d",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  }
+ ]
+}

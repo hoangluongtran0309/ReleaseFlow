@@ -1,0 +1,54 @@
+CLI	CLI
+Console	Console
+PR	PR
+PRs	PRs
+Repository secrets	Repository secrets
+artifact	artifact
+artifacts	artifacts
+backup target	đích sao lưu
+base image	base image
+base images	base images
+console	console
+container	container
+container image	container image
+container images	container images
+containers	containers
+dashboard	dashboard
+database target	đích cơ sở dữ liệu
+database targets	đích cơ sở dữ liệu
+digest	digest
+digests	digests
+emulator image	emulator image
+emulator images	emulator images
+endpoint	endpoint
+endpoints	endpoints
+engine	engine
+engines	engines
+exit code	exit code
+exit codes	exit codes
+flash message	flash message
+flash messages	flash messages
+image	image
+images	images
+merge request	merge request
+merge requests	merge requests
+migration	migration
+migrations	migrations
+pull request	pull request
+pull requests	pull requests
+release note	release note
+release notes	release notes
+repository	repository
+repository secret	repository secret
+repository secrets	repository secrets
+secret	secret
+secrets	secrets
+storage	lưu trữ
+target	đích
+targets	đích
+token	token
+tokens	tokens
+webhook	webhook
+webhooks	webhooks
+workflow	workflow
+workflows	workflows
