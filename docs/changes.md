@@ -213,7 +213,7 @@ with its relevance and headline, and the changes API returns them as `neutralSum
 `body`), with `contentLanguage` and `aiProvider`. A summary written by a person on a
 release page is never replaced by a later AI answer.
 
-![A change's neutral summary, followed by one narrative for each audience](assets/changes/c-5-summary.webp)
+![A change's neutral summary with its limitations and a migration step labelled by its kind, followed by each audience's relevance, headline, and narrative](assets/changes/c-5-summary.webp)
 
 ### Project context
 
@@ -226,6 +226,8 @@ last changed it. Every member can read it; only administrators write it, on the
 page or with `PUT /api/projects/{projectId}/context` and `{"context": "..."}`.
 It is plain text of at most 2000 characters; longer returns
 `400 validation_failed`, and an empty one clears it.
+
+![The Project context page: what the administrators wrote about the product, and who last changed it](assets/changes/c-14-project-context.webp)
 
 Every AI request for one of the Project's changes sends it as facts about the
 product from its administrators, never as instructions. An edit applies to
