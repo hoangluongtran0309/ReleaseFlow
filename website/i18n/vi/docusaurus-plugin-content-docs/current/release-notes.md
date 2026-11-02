@@ -17,7 +17,7 @@ trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu 
 | `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | dòng tiêu đề và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc | không có |
 | `support` | những gì khách hàng có thể hỏi, và nên trả lời họ thế nào | dòng tiêu đề kèm liên kết và narrative, bước chuyển đổi dưới nhãn theo loại của nó, và giới hạn | không có |
 
-![Trang Audiences: ba preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
+![Trang Audiences: bốn preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
 
 Một audience có một **mã** (chữ thường, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái; cố định
 sau khi tạo), một **tên hiển thị**, một **ý định truyền đạt** mà AI làm theo khi viết narrative
@@ -85,13 +85,15 @@ với người dùng cuối hoặc một audience tự tạo, nó theo mức li�
 nó cũng phá vỡ tương thích. Xem
 [ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
 
+![Một note operator: cảnh báo thay đổi phá vỡ liên kết tới hướng dẫn nâng cấp, rồi thay đổi phá vỡ đó và mục 🔒 Bảo mật](assets/release-notes/rn-12-operator-note.webp)
+
 Các con số và cảnh báo phá vỡ tương thích mô tả đúng những gì note hiển thị, và mỗi thay đổi chỉ
 được đếm một lần, trong mục mà nó được liệt kê. Audience không liên quan tới bất cứ thay đổi nào trong release vẫn có note của mình: tiêu đề,
 tóm tắt release, và một dòng nói rằng release này không có gì liên quan tới họ. Việc duyệt vẫn viết
 một note cho mỗi audience và ngôn ngữ, và một hành động automation giao note đó như mọi note khác.
 Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
-![Sửa template của một audience rồi lưu lại](assets/release-notes/rn-2-template.webp)
+![Template và phần cuối của một audience trong trình sửa, cùng bản xem trước: một thay đổi mẫu rồi tới phần cuối](assets/release-notes/rn-2-template.webp)
 
 ### Phần cuối {#footer}
 
@@ -137,6 +139,8 @@ nâng cấp** (`Upgrade guide`) liên kết **Đọc trước khi nâng cấp** 
 liên kết `releaseUrl`: một note đã publish thường chính là trang GitHub release, nơi một liên kết
 cài đặt sẽ trỏ về đúng trang đang mở. Một note giữ phần cuối mà nó được duyệt cùng, như template
 của nó.
+
+![Phần cuối của cùng note operator đó: liên kết tới hướng dẫn nâng cấp](assets/release-notes/rn-12-operator-note-footer.webp)
 
 ### Nâng cấp template của audience tự tạo {#upgrading-custom-audience-templates}
 
@@ -266,7 +270,7 @@ sẽ dịch văn bản mới. Xem [ADR-0015](adr/0015-multilingual-release-notes
 
 ![Vài giây sau khi duyệt: note tiếng Việt đang dịch và vẫn hiện văn bản chưa dịch](assets/release-notes/rn-3-translating.webp)
 
-![Cùng note đó khi bản dịch đã về: tóm tắt release và mọi thay đổi đều bằng tiếng Việt](assets/release-notes/rn-4-translated.webp)
+![Cùng note đó khi bản dịch đã về: tóm tắt release và mọi thay đổi đều bằng tiếng Việt, và bảng thuật ngữ Đã gửi kèm mọi bản dịch](assets/release-notes/rn-4-translated.webp)
 
 ```text
 GET  /api/organization/release-languages
@@ -294,6 +298,8 @@ mới được giữ. Một thuật ngữ dài 1 đến 100 ký tự trên một
 phải khác nhau chính xác từng ký tự: "Image" và "image" là hai mục. Mục viết thường thường
 cũng giữ được từ viết hoa ở đầu câu, nên chỉ thêm dạng khác cho từ mà DeepL vẫn đổi.
 
+![Trang Bảng thuật ngữ: các thuật ngữ giữ nguyên trong mọi ngôn ngữ, các bản dịch cố định en → vi, và trạng thái đồng bộ DeepL của cặp ngôn ngữ đó](assets/release-notes/rn-10-glossary.webp)
+
 Bảng thuật ngữ định hướng DeepL chứ không ràng buộc từng chữ. DeepL vẫn có thể dịch một thuật ngữ
 giữ nguyên nằm trong một cụm dài hơn: dù đã giữ nguyên "image", "secret" và "container", note của
 dbvault vẫn bị dịch "container images", "emulator image" và "repository secrets", và một lần cả
@@ -319,6 +325,8 @@ kèm mọi bản dịch** nghĩa là bảng thuật ngữ đã được gửi c�
 phải DeepL đã giữ đúng mọi thuật ngữ; đọc lại note, và thêm cụm mà DeepL đã dịch thành một thuật
 ngữ giữ nguyên riêng. **Chạy lại bản
 dịch** sẽ thử đồng bộ thất bại thêm lần nữa. Bảng thuật ngữ không bao giờ được gửi cho AI.
+
+![Các note của một release đã duyệt: bảng thuật ngữ Đã gửi kèm mọi bản dịch sang vi](assets/release-notes/rn-11-glossary-state.webp)
 
 Bản dịch trả về bằng ngôn ngữ nguồn không được lưu như một bản dịch. Với note tiếng Việt, một câu
 còn ít nhất ba từ cần dịch mà không có dấu tiếng Việt nào sẽ bị coi là chưa dịch; với một ngôn ngữ
@@ -437,6 +445,8 @@ vẫn theo template sẽ được dựng lại. Release note phản ánh các th
 lấy một phân loại được sửa sau đó trong Hộp thay đổi, đưa release về nháp rồi duyệt lại. Xem
 [ADR-0010](adr/0010-release-review-lifecycle.md) và
 [ADR-0011](adr/0011-audience-release-notes.md).
+
+![Sửa tóm tắt trên tab Review của một release: loại bước chuyển đổi và giới hạn, rồi mức liên quan, dòng tiêu đề và diễn giải của từng audience](assets/release-notes/rn-13-edit-summary.webp)
 
 REST client tuân theo cùng các quy tắc:
 
