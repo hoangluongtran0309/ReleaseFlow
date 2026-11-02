@@ -53,7 +53,7 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0039, indexed in
+The decisions behind all of it are ADR-0001 through ADR-0040, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -181,6 +181,12 @@ changing behavior.
 - An answer into Vietnamese or a non-Latin script that comes back in its source
   language is never stored or cached as translated: it is translated once more
   without the glossary, and fails if it comes back so again.
+- A translation keeps its source's placeholders (`<backup-id>`) and lowercase hyphenated
+  identifiers (`dbvault-cli`) as written: when a job succeeds, a token that differs from
+  the source in letter case alone, and matches it unambiguously, gets the source's form
+  back, and nothing else changes. The guard judges DeepL's raw answer first, the cache
+  keeps that raw answer, and no request, input hash, text hash, or cache key changes. A
+  lost placeholder is logged, never retried or failed (ADR-0040).
 - An AI answer is never rejected over its migration kind: a kind that does not
   match its step is corrected and adds `MIGRATION_KIND_MISMATCH`. A step whose
   writer named no kind is `UNSPECIFIED`, and nothing presents it as required. An

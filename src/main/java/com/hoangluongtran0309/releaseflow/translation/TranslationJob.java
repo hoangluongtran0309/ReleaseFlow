@@ -8,9 +8,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,6 +25,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "translation_jobs")
 class TranslationJob {
+
+    private static final Logger log = LoggerFactory.getLogger(TranslationJob.class);
 
     @Id
     private UUID id;
@@ -134,9 +139,26 @@ class TranslationJob {
         return status == Status.RUNNING && claim.equals(claimedAt);
     }
 
+    /**
+     * Records the translations, each with its source's placeholders and lowercase hyphenated
+     * identifiers written as in the source (ADR-0040), whether DeepL just answered or the
+     * cache did; the cache keeps DeepL's own answer. A placeholder a translation lost is left
+     * so, and logged.
+     */
     void succeed(Map<String, String> translated, String glossaryOutcome, Instant now) {
+        Map<String, String> restored = new LinkedHashMap<>();
+        translated.forEach((key, translation) -> {
+            String source = input.get(key);
+            restored.put(key, SourceForms.restore(source, translation));
+            List<String> lost = SourceForms.lostPlaceholders(source, translation);
+            if (!lost.isEmpty()) {
+                log.warn("The {} translation of {} {} ({}) lost placeholder(s) {}; it is kept as DeepL wrote it.",
+                        targetLanguage, releaseId != null ? "release" : "change", releaseId != null ? releaseId : changeId,
+                        key, lost);
+            }
+        });
         this.status = Status.SUCCEEDED;
-        this.output = new LinkedHashMap<>(translated);
+        this.output = restored;
         this.glossaryOutcome = glossaryOutcome;
         this.lastError = null;
         this.completedAt = now;
