@@ -105,8 +105,13 @@ npm run e2e
 
 It brings the stack up itself and checks the release pipeline, invitations, and every
 page, at 360 px in the light theme and 1440 px in the dark one, and **fails on any WCAG 2
-A/AA, 2.1 A/AA or 2.2 AA violation Axe can see**. Point it at an application already
-running with `RELEASEFLOW_E2E_BASE_URL`. A new or changed page keeps it green.
+A/AA, 2.1 A/AA or 2.2 AA violation Axe can see**. The stack it starts reads the database
+and the master key from `.env` but never an AI or DeepL setting: it blanks every
+provider, key, and model itself, as CI's `.env` has none, so a `.env` that names a
+provider cannot send the suite's changes to a paid service. For the same reason it never
+reuses an application that is already answering; stop that one first. Point it at an
+application already running with `RELEASEFLOW_E2E_BASE_URL`, whose settings are then its
+own: start it without a provider. A new or changed page keeps it green.
 
 ## Documentation
 
@@ -218,8 +223,10 @@ Before requesting review:
 
 GitHub Actions enforces the automated part of this gate on every pull request
 to `develop` and `main`: the pull request title must follow the commit
-convention above, and the workflows below must pass. Keep new actions pinned to a
-commit SHA and new images to a digest.
+convention above, and the workflows below must pass. A fix into a release under way
+is checked on its own pull request too: `CI`, `Container`, and `Docs` also run for a
+pull request into a `release/**` or `hotfix/**` branch, before a release candidate is
+tagged from it. Keep new actions pinned to a commit SHA and new images to a digest.
 
 By contributing, you agree that your contribution is licensed under the
 [Apache License 2.0](LICENSE), the same licence as the rest of the project. There
@@ -231,12 +238,12 @@ Merges into `main` represent a reviewed release decision.
 
 | Workflow | Runs on | Checks |
 | --- | --- | --- |
-| `CI` | push and pull request to `develop` and `main` | Conventional pull request title (pull requests only), actionlint, ShellCheck, a whole release run against a local remote, the quickstart under bash 3.2, `npm audit --audit-level=high`, the browser and accessibility suite, `./mvnw clean verify`, and a check that no version override has outlived its reason |
-| `CodeQL` | the same, and weekly | Java and JavaScript analysis |
+| `CI` | push to `develop` and `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | Conventional pull request title (pull requests only), actionlint, ShellCheck, a whole release run against a local remote, the quickstart under bash 3.2, `npm audit --audit-level=high`, the browser and accessibility suite, `./mvnw clean verify`, and a check that no version override has outlived its reason |
+| `CodeQL` | push and pull request to `develop` and `main`, and weekly | Java and JavaScript analysis |
 | `Dependency Review` | pull requests only | Fails pull requests that add high or critical vulnerabilities |
 | `Secret Scan` | push and pull request, and weekly | Gitleaks over the complete Git history |
-| `Container` | push and pull request | Image build, Trivy high/critical scan, Compose smoke test, the management port proven private, all four metric families reaching Prometheus, the Grafana dashboard provisioned, and the quickstart bundle run against the image |
-| `Docs` | push to `main`, and pull request to `develop` and `main` | The documentation site's dependency audit (`scripts/ci/audit-website.sh`), a build in both languages that fails on any broken link, and, from `main` only, publication to GitHub Pages |
+| `Container` | push to `develop` and `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | Image build, Trivy high/critical scan, Compose smoke test, the management port proven private, all four metric families reaching Prometheus, the Grafana dashboard provisioned, and the quickstart bundle run against the image |
+| `Docs` | push to `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | The documentation site's dependency audit (`scripts/ci/audit-website.sh`), a build in both languages that fails on any broken link, and, from `main` only, publication to GitHub Pages |
 | `Release` | a `v<version>` tag | See [Releasing](#releasing) |
 
 Dependabot proposes weekly updates to `develop`, except a new major version of the Java

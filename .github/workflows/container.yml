@@ -4,7 +4,9 @@ on:
   push:
     branches: [develop, main]
   pull_request:
-    branches: [develop, main]
+    # A release fix is where a start-up failure matters most, so its pull request builds and
+    # smoke tests the image too.
+    branches: [develop, main, "release/**", "hotfix/**"]
   workflow_dispatch:
 
 permissions:
