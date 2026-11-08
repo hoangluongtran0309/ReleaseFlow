@@ -19,6 +19,11 @@ import java.util.UUID;
  * language whose pair has a glossary, whether its notes' translations used it.
  * {@code previousVersion} is the version of {@code previousReleaseId}, the published
  * release this one follows, which the notes compare against (ADR-0037).
+ * {@code linkedIssues} holds each linked issue of its changes as of review, and
+ * {@code linkedIssueRead} the state of reading them ({@code null} before a review was
+ * requested); {@code foldingSuggestions} holds, while in review, each tracker change a
+ * code change of the release may carry, and {@code foldDecisions} what people decided
+ * (ADR-0041).
  */
 public record ReleaseView(
         UUID id,
@@ -42,7 +47,11 @@ public record ReleaseView(
         String publisherName,
         String markdown,
         List<AudienceNoteView> notes,
-        List<ReleaseGlossaryView> glossaries
+        List<ReleaseGlossaryView> glossaries,
+        List<LinkedIssueStatusView> linkedIssues,
+        String linkedIssueRead,
+        List<FoldingSuggestion> foldingSuggestions,
+        List<FoldDecisionView> foldDecisions
 ) {
 
     public ReleaseView {
@@ -51,6 +60,19 @@ public record ReleaseView(
         preview = List.copyOf(preview);
         notes = List.copyOf(notes);
         glossaries = List.copyOf(glossaries);
+        linkedIssues = List.copyOf(linkedIssues);
+        foldingSuggestions = List.copyOf(foldingSuggestions);
+        foldDecisions = List.copyOf(foldDecisions);
+    }
+
+    /** The linked issues still open while their change ships, whose status nobody accepted (ADR-0041). */
+    public List<LinkedIssueStatusView> openLinkedIssues() {
+        return linkedIssues.stream().filter(LinkedIssueStatusView::warning).toList();
+    }
+
+    /** The folding suggestions for one tracker change of this release. */
+    public List<FoldingSuggestion> foldingSuggestionsFor(UUID trackerChangeId) {
+        return foldingSuggestions.stream().filter(suggestion -> suggestion.trackerChangeId().equals(trackerChangeId)).toList();
     }
 
     /**

@@ -27,6 +27,7 @@ public abstract class PostgreSqlIntegrationTest {
         // Tests drive the change worker explicitly instead of racing its schedule.
         registry.add("releaseflow.processing.enabled", () -> "false");
         registry.add("releaseflow.translation.worker-enabled", () -> "false");
+        registry.add("releaseflow.linked-issues.worker-enabled", () -> "false");
         registry.add("releaseflow.automation.worker-enabled", () -> "false");
         registry.add("releaseflow.automation.trigger-worker-enabled", () -> "false");
     }

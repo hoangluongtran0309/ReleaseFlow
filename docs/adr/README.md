@@ -28,7 +28,7 @@ they describe.
 | [0016](0016-integration-sources-and-history-import.md) | Integration sources and history import | Accepted | 2026-09-15 | |
 | [0017](0017-gitlab-sources.md) | GitLab sources and provider seams | Accepted | 2026-09-16 | |
 | [0018](0018-linear-sources.md) | Linear sources | Accepted | 2026-09-16 | |
-| [0019](0019-jira-sources-and-linked-context.md) | Jira sources and linked context | Accepted | 2026-09-17 | |
+| [0019](0019-jira-sources-and-linked-context.md) | Jira sources and linked context | Accepted | 2026-09-17 | Amended by [0041](0041-linked-context-and-folding.md) (branch and Linear keys, status at review) |
 | [0020](0020-automation-rules-and-runs.md) | Automation rules and runs | Accepted | 2026-09-19 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers) |
 | [0021](0021-scheduled-and-signed-automation-triggers.md) | Scheduled and signed automation triggers | Accepted | 2026-09-20 | |
 | [0022](0022-public-changelog.md) | A public changelog | Accepted | 2026-09-20 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers) |

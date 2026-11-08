@@ -1,7 +1,5 @@
 package com.hoangluongtran0309.releaseflow.audience;
 
-import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +32,7 @@ public record AudienceItem(
         String reference,
         int pullRequestNumber,
         String pullRequestUrl,
-        List<LinkedIssue> linkedIssues
+        List<NoteIssue> linkedIssues
 ) {
 
     /** The variables a template may use, in the order the editor offers them. */
@@ -79,8 +77,8 @@ public record AudienceItem(
             "#101",
             101,
             "https://github.com/acme/app/pull/101",
-            List.of(new LinkedIssue("APP-7", "Publish release notes per audience", "", "Story", "Done",
-                    "https://acme.atlassian.net/browse/APP-7"))
+            List.of(new NoteIssue("APP-7", "Publish release notes per audience", "Story", "Done", "In Progress",
+                    "Done", "https://acme.atlassian.net/browse/APP-7"))
     );
 
     public AudienceItem {
@@ -98,13 +96,16 @@ public record AudienceItem(
         linkedIssues = linkedIssues == null ? List.of() : List.copyOf(linkedIssues);
     }
 
-    private static Map<String, Object> issue(LinkedIssue issue) {
+    // Every value is a SectionValue, so {{#status}} ({{status}}){{/status}} prints only a status there is.
+    private static Map<String, Object> issue(NoteIssue issue) {
         Map<String, Object> context = new LinkedHashMap<>();
-        context.put("key", issue.key());
-        context.put("title", issue.title());
-        context.put("type", issue.type());
-        context.put("status", issue.status());
-        context.put("url", issue.url());
+        context.put("key", new SectionValue(issue.key(), context));
+        context.put("title", new SectionValue(issue.title(), context));
+        context.put("type", new SectionValue(issue.type(), context));
+        context.put("status", new SectionValue(issue.status(), context));
+        context.put("recordedStatus", new SectionValue(issue.recordedStatus(), context));
+        context.put("statusAtReview", new SectionValue(issue.statusAtReview(), context));
+        context.put("url", new SectionValue(issue.url(), context));
         return context;
     }
 

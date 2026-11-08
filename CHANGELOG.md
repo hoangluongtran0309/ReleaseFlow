@@ -12,6 +12,33 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+### Added
+
+- Linear issues link to GitHub and GitLab changes as Jira issues do: an identifier such
+  as `OPS-7` of the Project's Linear team is read from Linear and shown under linked
+  issues. The team's key is read once and kept; a team whose key cannot be read marks
+  the change's linked issues incomplete.
+- Issue keys are found in a pull or merge request's head branch, such as
+  `feature/DBV-47-retention-preview`, and in a description or commit where a tracker's
+  key is followed by a hyphen and a word, such as `Spec: DBV-12-quartz`
+  ([ADR-0041](docs/adr/0041-linked-context-and-folding.md)).
+- Requesting review reads every issue linked to the release's changes again, in the
+  background, with bounded retries. The Review tab lists each issue still open while its
+  change ships, and **Show this status** lets a member choose to print that status.
+- The Review tab suggests folding a Jira or Linear change into the code change of the
+  same release that names its key or that a person confirmed as its duplicate. A member
+  accepts by rejecting the tracker change from the release, an administrator may exclude
+  it with a prefilled reason instead, or the suggestion is dismissed; each is decided once.
+- Templates get `recordedStatus` and `statusAtReview` for each linked issue.
+
+### Changed
+
+- `{{status}}` of a linked issue is now its status as of the release's review, and it can
+  be empty: an issue that is not finished, or whose tracker did not say, shows no status
+  unless a person accepted it. A custom template that prints `({{status}})` prints `()`
+  then; wrap it as `{{#status}} ({{status}}){{/status}}`, as the
+  [release-note guide](docs/release-notes.md#upgrading-custom-audience-templates) shows.
+
 ## [1.1.0] - 2026-11-01
 
 ### Added

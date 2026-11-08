@@ -13,4 +13,7 @@ interface DuplicateCandidateRepository extends JpaRepository<DuplicateCandidate,
     Optional<DuplicateCandidate> findByIdAndOrganizationIdAndProjectId(UUID id, UUID organizationId, UUID projectId);
 
     boolean existsByChangeIdAndDuplicateOfId(UUID changeId, UUID duplicateOfId);
+
+    List<DuplicateCandidate> findAllByOrganizationIdAndProjectIdAndStatus(
+            UUID organizationId, UUID projectId, DuplicateCandidateStatus status);
 }

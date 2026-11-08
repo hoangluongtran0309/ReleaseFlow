@@ -581,6 +581,25 @@ where it first appears; ADRs are linked from the slice they record.
     and upgrade-guide links, and existing ones received them;
   - the upgrade note for custom audience templates in the release-note guide.
 
+### Linked context and folding (V35)
+
+- [ADR-0041](adr/0041-linked-context-and-folding.md) (#19), with Flyway `V35`:
+  - issue keys in a change's head branch, followed by `-`, `/`, or `_`; in a description
+    or commit, a tracker's own key followed by `-` and a lowercase word; the strict rule
+    kept in titles and target branches;
+  - Linear identifiers linked from GitHub and GitLab changes like Jira keys, over
+    GraphQL, with each team's key read once and kept in `external_team_key`; a key that
+    cannot be read adds `LINKED_CONTEXT_UNAVAILABLE`;
+  - each linked issue's tracker and status category;
+  - a read of every linked issue of a release when its review is requested, by
+    `LinkedIssueReadWorker` from `linked_issue_reads` with five bounded attempts; notes
+    get `status`, `recordedStatus`, and `statusAtReview`, empty for an open status unless
+    a person accepted it with **Show this status**, a warning that never blocks;
+  - folding suggestions on the Review tab from a linked key or a confirmed duplicate,
+    accepted by rejecting the tracker change from the release or excluding it with a
+    reason (administrators), or dismissed, each recorded once in
+    `release_fold_decisions`.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.
@@ -596,10 +615,11 @@ deliberately deferred list below, one reviewed slice at a time.
 - Source providers other than GitHub, GitLab, Linear, and Jira Cloud (Jira
   Server or Data Center), Jira webhooks, and automatic AI retries.
 - GitLab group-level webhooks, Linear projects and cycles, linked context from
-  Linear or from more than one Jira source per Project, Jira issue types and
-  statuses as classification signals, and queues or retries for work other than
-  enrichment, imports, polls, translation, glossary syncs, and the automation outbox and
-  actions.
+  more than one Jira source or Linear team per Project, Jira issue types and
+  statuses as classification signals, a reviewer's own "fold into…" action for a pair
+  nothing ties together, and queues or retries for work other than
+  enrichment, imports, polls, translation, glossary syncs, reads at review, and the
+  automation outbox and actions.
 - Validating a repository with GitHub when it is connected, disconnecting or
   replacing a source, rotating a Linear signing secret without reconnecting, and
   secret or token rotation reminders.

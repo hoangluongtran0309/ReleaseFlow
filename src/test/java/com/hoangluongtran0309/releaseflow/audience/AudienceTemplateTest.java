@@ -1,6 +1,5 @@
 package com.hoangluongtran0309.releaseflow.audience;
 
-import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -229,9 +228,9 @@ class AudienceTemplateTest {
         String template = "- {{whatChanged}}{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}";
         AudienceItem linked = new AudienceItem("Export.", "", "", "", "", "", "", "", null, "#12", 12, "https://github.com/acme/app/pull/12",
                 List.of(
-                        new LinkedIssue("APP-7", "Export tables", "never shown", "Story", "Done",
+                        new NoteIssue("APP-7", "Export tables", "Story", "Done", "In Progress", "Done",
                                 "https://acme.atlassian.net/browse/APP-7"),
-                        new LinkedIssue("APP-8", "Stream rows", "", "Task", "Done",
+                        new NoteIssue("APP-8", "Stream rows", "Task", "Done", "Done", "",
                                 "https://acme.atlassian.net/browse/APP-8")
                 ));
 
@@ -262,11 +261,33 @@ class AudienceTemplateTest {
     void theShippedPresetsIgnoreLinkedIssues() {
         AudienceItem linked = new AudienceItem(ITEM.whatChanged(), ITEM.whyChanged(), ITEM.technicalDetail(),
                 ITEM.migrationStep(), ITEM.migrationKind(), ITEM.limitations(), ITEM.narrative(), ITEM.headline(), ITEM.relevance(), ITEM.reference(), ITEM.pullRequestNumber(), ITEM.pullRequestUrl(),
-                List.of(new LinkedIssue("APP-7", "Export tables", "", "Story", "Done",
+                List.of(new NoteIssue("APP-7", "Export tables", "Story", "Done", "Done", "Done",
                         "https://acme.atlassian.net/browse/APP-7")));
 
         AudiencePresets.forLanguage("en").forEach(preset -> assertThat(AudienceTemplate.render(preset.templateBody(), linked))
                 .isEqualTo(AudienceTemplate.render(preset.templateBody(), ITEM)));
+    }
+
+    // ADR-0041: a status a note may not show is empty, and a section over it prints nothing.
+    @Test
+    void aStatusInItsOwnSectionPrintsNothingWhenItIsEmpty() {
+        String template = "{{#linkedIssues}}- [{{key}}]({{url}}): {{title}}{{#status}} ({{status}}){{/status}}\n{{/linkedIssues}}";
+        AudienceItem item = new AudienceItem("Export.", "", "", "", "", "", "", "", null, "#12", 12, "https://github.com/acme/app/pull/12",
+                List.of(
+                        new NoteIssue("APP-7", "Export tables", "Story", "Done", "In Progress", "Done",
+                                "https://acme.atlassian.net/browse/APP-7"),
+                        new NoteIssue("APP-8", "Stream rows", "Task", "", "", "",
+                                "https://acme.atlassian.net/browse/APP-8")
+                ));
+
+        AudienceTemplate.validate(template);
+        assertThat(AudienceTemplate.render(template, item)).isEqualTo(
+                "- [APP-7](https://acme.atlassian.net/browse/APP-7): Export tables (Done)\n"
+                        + "- [APP-8](https://acme.atlassian.net/browse/APP-8): Stream rows\n");
+        assertThat(AudienceTemplate.render("{{#linkedIssues}}{{recordedStatus}}/{{statusAtReview}}{{^statusAtReview}}unread{{/statusAtReview}};{{/linkedIssues}}", item))
+                .isEqualTo("In Progress/Done;/unread;");
+        // A bare status prints its parentheses even when the status is empty, as before.
+        assertThat(AudienceTemplate.render("{{#linkedIssues}}({{status}}){{/linkedIssues}}", item)).isEqualTo("(Done)()");
     }
 
     @Test
