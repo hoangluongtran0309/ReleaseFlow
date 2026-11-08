@@ -34,10 +34,20 @@ found="$(printf '%s' "${report}" | node -e '
   });
 ')"
 
+# Whether an advisory is a listed exception. Compared in the shell: piping the list into
+# grep -q could cut printf off mid-write, which pipefail would read as "not listed".
+listed() {
+  local allowed
+  for allowed in "${ALLOWED[@]}"; do
+    [ "${allowed}" = "$1" ] && return 0
+  done
+  return 1
+}
+
 failed=0
 while read -r id package severity; do
   [ -n "${id}" ] || continue
-  if printf '%s\n' "${ALLOWED[@]}" | grep -qx "${id}"; then
+  if listed "${id}"; then
     echo "ok - ${id} (${package}, ${severity}) is a listed exception."
   else
     echo "not ok - ${id} (${package}, ${severity}); update the dependency, or list it with its reason."
