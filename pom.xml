@@ -62,7 +62,7 @@
              Tomcat 11.0.27 and Jackson 3.1.7 and 2.21.7, past every fix an override
              pulled in, so none is needed. -->
         <alpinejs.version>3.17.5</alpinejs.version>
-        <anthropic-java.version>2.73.0</anthropic-java.version>
+        <anthropic-java.version>3.5.0</anthropic-java.version>
         <commonmark.version>0.31.0</commonmark.version>
         <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
         <frontend-maven-plugin.nodeVersion>v22.22.3</frontend-maven-plugin.nodeVersion>
