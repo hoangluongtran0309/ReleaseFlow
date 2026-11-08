@@ -88,7 +88,7 @@ pass "a second stamp keeps one [Unreleased] and orders the links newest first"
 
 [ "$("${repository_root}/scripts/changelog.sh" section 1.0.1 "${changelog}")" = "$(printf '### Fixed\n\n- A bug.')" ] \
   || fail "section prints the entry without its heading"
-[ "$("${repository_root}/scripts/changelog.sh" section 1.0.0 - < "${changelog}" | head -n 1)" = "The first release." ] \
+[ "$("${repository_root}/scripts/changelog.sh" section 1.0.0 - < "${changelog}" | sed -n 1p)" = "The first release." ] \
   || fail "section reads standard input"
 pass "section prints one entry, from a file or standard input"
 
@@ -143,8 +143,11 @@ pass "start --dry-run shows the change and makes none"
 
 scripts/release.sh start 1.0.0 >/dev/null
 git rev-parse --quiet --verify refs/remotes/origin/release/1.0.0 >/dev/null || fail "start pushes release/1.0.0"
-git show origin/release/1.0.0:CHANGELOG.md | grep -qxF "## [1.0.0] - ${today}" || fail "start dates the entry"
-git show origin/release/1.0.0:CHANGELOG.md | grep -qxF "[1.0.0]: ${URL}/releases/tag/v1.0.0" \
+# Read whole, then searched: grep -q stops at its first match, and git show writing into the
+# closed pipe would fail the check under pipefail.
+release_changelog="$(git show origin/release/1.0.0:CHANGELOG.md)"
+grep -qxF "## [1.0.0] - ${today}" <<< "${release_changelog}" || fail "start dates the entry"
+grep -qxF "[1.0.0]: ${URL}/releases/tag/v1.0.0" <<< "${release_changelog}" \
   || fail "start links the entry to the GitHub repository"
 [ "$(git log -1 --format=%s origin/release/1.0.0)" = "chore(release): prepare 1.0.0" ] || fail "start commits"
 grep -q -- "pr create --base main --head release/1.0.0" "${work}/gh.log" || fail "start opens the pull request"
@@ -189,7 +192,8 @@ grep -qF "Commit the fix" <<<"${output}" || fail "a hotfix asks for the fix firs
 add_unreleased_fix CHANGELOG.md "The bug."
 git commit --quiet --all --message "fix: the bug"
 scripts/release.sh start 1.0.1 --hotfix >/dev/null
-git show origin/hotfix/1.0.1:CHANGELOG.md | grep -qxF "## [1.0.1] - ${today}" || fail "a hotfix dates its entry"
+hotfix_changelog="$(git show origin/hotfix/1.0.1:CHANGELOG.md)"
+grep -qxF "## [1.0.1] - ${today}" <<< "${hotfix_changelog}" || fail "a hotfix dates its entry"
 pass "a hotfix branches from main, waits for the fix, then dates its entry"
 
 echo "All release checks passed."
