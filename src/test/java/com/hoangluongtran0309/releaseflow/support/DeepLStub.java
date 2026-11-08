@@ -40,6 +40,7 @@ public final class DeepLStub implements AutoCloseable {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern DICTIONARIES = Pattern.compile("/v3/glossaries/([^/]+)/dictionaries");
     private static final Pattern GLOSSARY = Pattern.compile("/v3/glossaries/([^/]+)");
+    private static final Pattern PLACEHOLDER = Pattern.compile("<([\\p{L}][\\p{L}\\p{N}_]*)([\\p{L}\\p{N}_-]*)>");
 
     private final HttpServer server;
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -54,8 +55,12 @@ public final class DeepLStub implements AutoCloseable {
     private volatile boolean dropOne;
     private volatile boolean untranslatedWithGlossary;
     private volatile boolean untranslated;
+    private volatile boolean upperPlaceholdersWithGlossary;
+    private volatile boolean dropPlaceholdersWithGlossary;
     private volatile int maxGlossaries = 1;
     private volatile Set<String> glossaryLanguages = Set.of("en", "vi", "de", "fr", "ja");
+    private volatile Map<List<String>, String> recorded;
+    private final List<String> unrecorded = new CopyOnWriteArrayList<>();
 
     private DeepLStub() {
         try {
@@ -103,6 +108,34 @@ public final class DeepLStub implements AutoCloseable {
         untranslated = true;
     }
 
+    /**
+     * Uppercases the part of each placeholder before its first hyphen in a translation sent
+     * with a glossary, as DeepL was measured to do: {@code <backup-id>} becomes
+     * {@code <BACKUP-id>}, {@code <count>} becomes {@code <COUNT>}.
+     */
+    public void upperPlaceholdersWithGlossary() {
+        upperPlaceholdersWithGlossary = true;
+    }
+
+    /** Leaves every placeholder out of a translation sent with a glossary. */
+    public void dropPlaceholdersWithGlossary() {
+        dropPlaceholdersWithGlossary = true;
+    }
+
+    /**
+     * Answers each text from answers DeepL really gave, keyed by its source language, target
+     * language, and text as sent ({@code ["EN", "VI", text]}). A text with no recorded answer
+     * comes back unchanged and is listed by {@link #unrecorded()}.
+     */
+    public void answerFrom(Map<List<String>, String> answers) {
+        recorded = Map.copyOf(answers);
+    }
+
+    /** Every text sent while answering from recorded answers that had none, in order. */
+    public List<String> unrecorded() {
+        return List.copyOf(unrecorded);
+    }
+
     /** Refuses the next {@code times} translations sent with a glossary with a {@code 400}. */
     public void refuseGlossary(int times) {
         glossaryRefusalsLeft.set(times);
@@ -143,9 +176,13 @@ public final class DeepLStub implements AutoCloseable {
         dropOne = false;
         untranslatedWithGlossary = false;
         untranslated = false;
+        upperPlaceholdersWithGlossary = false;
+        dropPlaceholdersWithGlossary = false;
         maxGlossaries = 1;
         glossaryLanguages = Set.of("en", "vi", "de", "fr", "ja");
         glossaries.clear();
+        recorded = null;
+        unrecorded.clear();
     }
 
     public List<RecordedRequest> requests() {
@@ -228,6 +265,18 @@ public final class DeepLStub implements AutoCloseable {
             entries = glossary.get(pair);
         }
         List<Map<String, String>> translations = new ArrayList<>();
+        Map<List<String>, String> answers = recorded;
+        if (answers != null) {
+            for (String text : texts) {
+                String answer = answers.get(List.of(body.path("source_lang").stringValue(), target, text));
+                if (answer == null) {
+                    unrecorded.add(text);
+                }
+                translations.add(Map.of("detected_source_language", "EN", "text", answer == null ? text : answer));
+            }
+            send(exchange, 200, OBJECT_MAPPER.writeValueAsString(Map.of("translations", translations)));
+            return;
+        }
         for (String text : texts) {
             String translated = text;
             if (!untranslated && !(glossaryId != null && untranslatedWithGlossary)) {
@@ -239,6 +288,12 @@ public final class DeepLStub implements AutoCloseable {
                 }
                 String upper = target.toUpperCase(Locale.ROOT);
                 translated = "[" + upper + "] " + (upper.startsWith("VI") ? VIETNAMESE_MARKER : "") + translated;
+            }
+            if (glossaryId != null && dropPlaceholdersWithGlossary) {
+                translated = PLACEHOLDER.matcher(translated).replaceAll("");
+            } else if (glossaryId != null && upperPlaceholdersWithGlossary) {
+                translated = PLACEHOLDER.matcher(translated).replaceAll(match -> Matcher.quoteReplacement(
+                        "<" + match.group(1).toUpperCase(Locale.ROOT) + match.group(2) + ">"));
             }
             translations.add(Map.of("detected_source_language", "EN", "text", translated));
         }

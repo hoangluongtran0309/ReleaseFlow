@@ -270,13 +270,25 @@ class ReleaseNoteDigestTest {
     void escapesWhatTheTrackerWroteAboutALinkedIssue() {
         ChangeView change = change(1, "feat: export", TestCategories.FEATURE, false, 1, null, Map.of(),
                 List.of(new LinkedIssue("APP-7", "Export *all* [tables](x)", "secret description", "Story_type",
-                        "<Done>", "https://acme.atlassian.net/browse/APP-7")));
+                        "<Done>", "https://acme.atlassian.net/browse/APP-7", LinkedIssue.JIRA, LinkedIssue.DONE)));
         String template = "{{whatChanged}}{{#linkedIssues}} [{{key}}]({{url}}) {{title}} {{type}} {{status}}"
                 + "{{/linkedIssues}}";
 
         assertThat(ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "operator", "en"))
                 .contains("export [APP-7](https://acme.atlassian.net/browse/APP-7) "
                         + "Export \\*all\\* \\[tables\\](x) Story\\_type \\<Done\\>\n");
+    }
+
+    // ADR-0041: an issue recorded before categories were has an unknown one, which a note never shows.
+    @Test
+    void aStatusRecordedWithoutACategoryIsLeftOut() {
+        ChangeView change = change(1, "feat: export", TestCategories.FEATURE, false, 1, null, Map.of(),
+                List.of(new LinkedIssue("APP-7", "Export tables", "", "Story", "In Progress",
+                        "https://acme.atlassian.net/browse/APP-7")));
+        String template = "{{whatChanged}}{{#linkedIssues}} {{key}}{{#status}} ({{status}}){{/status}}{{/linkedIssues}}";
+
+        assertThat(ReleaseNoteDigest.render("1.0.0", null, List.of(change), template, "operator", "en"))
+                .contains("export APP-7\n");
     }
 
     @Test

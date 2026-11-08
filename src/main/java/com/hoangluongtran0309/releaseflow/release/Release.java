@@ -165,6 +165,14 @@ class Release {
         requireStatus(ReleaseStatus.IN_REVIEW, "error.release_status_conflict.notInReview");
     }
 
+    // A linked issue's status is accepted while the release is reviewed or approved (ADR-0041).
+    void requireReviewedOrApproved() {
+        requireUnpublished();
+        if (status != ReleaseStatus.IN_REVIEW && status != ReleaseStatus.APPROVED) {
+            throw new ReleaseStatusException("error.release_status_conflict.statusStage");
+        }
+    }
+
     // A draft chooses its changes; rejecting one during review removes it.
     void requireChangesRemovable() {
         requireUnpublished();

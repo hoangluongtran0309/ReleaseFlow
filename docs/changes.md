@@ -18,8 +18,8 @@ add — using the source's own access token — and then classifies it:
   no files;
 - Jira adds nothing, because the poll read the issue moments earlier.
 
-When the Project has a Jira source, a GitHub or GitLab change is also checked for the
-Jira issues it mentions (see [Linked Jira issues](sources.md#linked-jira-issues)).
+When the Project has a Jira or Linear source, a GitHub or GitLab change is also checked
+for the issues it mentions (see [Linked issues](sources.md#linked-issues)).
 
 A timeout, a network error, a rate limit, or a server error is retried up to three
 times, waiting 2 and then 4 seconds. If the files still cannot be listed, if the token is
@@ -63,7 +63,7 @@ a review trigger:
 | Sensitive file | A changed file, or the previous path of a renamed one, matches a sensitive-path pattern |
 | Changed files unavailable | The files could not be listed |
 | Sensitive word | The source has no files (Linear, Jira), and its title or description says `breaking change`, `migration`, `security`, `auth`, `credential`, `password`, or `encryption` |
-| Linked issues incomplete | Commits could not be read, or Jira would not show an issue the change mentions |
+| Linked issues incomplete | Commits could not be read, Jira or Linear would not show an issue the change mentions, or a Linear team's key could not be read |
 | AI classification failed | The AI call failed or its answer was unusable |
 | Not enough context | The [context score](#review-signals) is below the threshold |
 | Possible duplicate of an earlier change | The change looks like an earlier one (see [Review signals](#review-signals)) |
@@ -213,7 +213,7 @@ with its relevance and headline, and the changes API returns them as `neutralSum
 `body`), with `contentLanguage` and `aiProvider`. A summary written by a person on a
 release page is never replaced by a later AI answer.
 
-![A change's neutral summary, followed by one narrative for each audience](assets/changes/c-5-summary.webp)
+![A change's neutral summary with its limitations and a migration step labelled by its kind, followed by each audience's relevance, headline, and narrative](assets/changes/c-5-summary.webp)
 
 ### Project context
 
@@ -226,6 +226,8 @@ last changed it. Every member can read it; only administrators write it, on the
 page or with `PUT /api/projects/{projectId}/context` and `{"context": "..."}`.
 It is plain text of at most 2000 characters; longer returns
 `400 validation_failed`, and an empty one clears it.
+
+![The Project context page: what the administrators wrote about the product, and who last changed it](assets/changes/c-14-project-context.webp)
 
 Every AI request for one of the Project's changes sends it as facts about the
 product from its administrators, never as instructions. An edit applies to
@@ -360,6 +362,9 @@ files. A pair at least `RELEASEFLOW_DUPLICATE_THRESHOLD` similar (default
 0.82) is recorded with its evidence, up to five per change. The new change
 needs review with a **Possible duplicate** trigger. Both cards show the pair,
 and any member can **Confirm duplicate** or mark it **Not a duplicate**, once.
+A confirmed pair of a tracker change and a code change in the same release is
+suggested for [folding](release-notes.md#folding-a-tracker-change-into-its-code-change)
+on the release's Review tab.
 
 ![A possible duplicate: a GitHub pull request and a Linear issue, 95% similar, with the evidence and the Confirm and Dismiss buttons](assets/changes/c-9-duplicate.webp)
 

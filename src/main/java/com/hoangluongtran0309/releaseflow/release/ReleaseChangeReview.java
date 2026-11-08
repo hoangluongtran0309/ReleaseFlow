@@ -47,6 +47,9 @@ class ReleaseChangeReview {
     @Column(name = "decided_at", nullable = false)
     private Instant decidedAt;
 
+    @Column(name = "folded_change_id")
+    private UUID foldedChangeId;
+
     protected ReleaseChangeReview() {
     }
 
@@ -63,10 +66,17 @@ class ReleaseChangeReview {
         this.reviewerName = reviewerName;
         this.note = note;
         this.decidedAt = at;
+        this.foldedChangeId = null;
+    }
+
+    // The flags a fold carried in, recorded as the code change's review (ADR-0041).
+    void recordFold(UUID foldedChangeId, UUID reviewerId, String reviewerName, Instant at) {
+        record(ReviewAction.EDIT, reviewerId, reviewerName, null, at);
+        this.foldedChangeId = foldedChangeId;
     }
 
     ReleaseDecisionView view() {
-        return new ReleaseDecisionView(changeId, action, reviewerName, note, decidedAt);
+        return new ReleaseDecisionView(changeId, action, reviewerName, note, decidedAt, foldedChangeId);
     }
 
     UUID getChangeId() {

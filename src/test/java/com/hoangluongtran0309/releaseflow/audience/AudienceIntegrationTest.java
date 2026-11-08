@@ -54,7 +54,7 @@ class AudienceIntegrationTest extends PostgreSqlIntegrationTest {
     @BeforeEach
     @AfterEach
     void clearDatabase() {
-        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, releases");
+        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, linked_issue_reads, release_linked_issues, release_fold_decisions, releases");
         jdbcTemplate.update("DELETE FROM projects");
         jdbcTemplate.update("DELETE FROM organization_translation_settings");
         jdbcTemplate.update("DELETE FROM app_users");
@@ -188,13 +188,78 @@ class AudienceIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("Vận hành"))
                 .andExpect(jsonPath("$.communicationIntent", containsString("operational risk")))
-                .andExpect(jsonPath("$.templateBody", containsString("  - Cách chuyển đổi: {{migrationStep}}")));
+                .andExpect(jsonPath("$.templateBody", containsString("  - Cách chuyển đổi: {{migrationStep}}")))
+                .andExpect(jsonPath("$.preset").value(true));
 
         UUID custom = UUID.fromString(JsonPath.read(create(admin, "board", "Board", "", TEMPLATE)
                 .andReturn().getResponse().getContentAsString(), "$.id"));
         mockMvc.perform(post("/api/audiences/{id}/reset-to-preset", custom).session(admin.session()).with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("audience_not_preset"));
+    }
+
+    // ADR-0035: an Organization registered before the support preset adds an audience
+    // coded support and resets it to the preset, which it then follows.
+    @Test
+    void anAudienceAddedUnderAShippedCodeResetsToThatPreset() throws Exception {
+        Admin admin = registerAndLogin("owner@example.com", "en");
+        jdbcTemplate.update("DELETE FROM audience_definitions WHERE organization_id = ? AND code = 'support'",
+                admin.organizationId());
+        mockMvc.perform(put("/api/organization/release-languages").session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"targetLanguages\":[\"en\",\"vi\"]}"))
+                .andExpect(status().isOk());
+
+        UUID support = UUID.fromString(JsonPath.read(create(admin, "support", "Helpdesk", "Customers.", TEMPLATE)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.preset").value(false))
+                .andExpect(jsonPath("$.templateVariants.vi").value(TEMPLATE))
+                .andReturn().getResponse().getContentAsString(), "$.id"));
+
+        AudiencePresets.Preset english = AudiencePresets.find("support", "en").orElseThrow();
+        AudiencePresets.Preset vietnamese = AudiencePresets.find("support", "vi").orElseThrow();
+        mockMvc.perform(post("/api/audiences/{id}/reset-to-preset", support).session(admin.session()).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("support"))
+                .andExpect(jsonPath("$.preset").value(true))
+                .andExpect(jsonPath("$.displayName").value("Support"))
+                .andExpect(jsonPath("$.communicationIntent").value(AudiencePresets.SUPPORT_INTENT))
+                .andExpect(jsonPath("$.templateBody").value(english.templateBody()))
+                .andExpect(jsonPath("$.footerTemplateBody").value(english.footerBody()))
+                .andExpect(jsonPath("$.templateVariants.vi").value(vietnamese.templateBody()))
+                .andExpect(jsonPath("$.footerTemplateVariants.vi").value(vietnamese.footerBody()));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT preset FROM audience_definitions WHERE id = ?", Boolean.class, support)).isTrue();
+
+        // From then on it is a preset: a later reset restores a language template too.
+        mockMvc.perform(put("/api/audiences/{id}/templates/vi", support).session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"templateBody\":\"- {{headline}}\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.templateVariants.vi").value("- {{headline}}"));
+        mockMvc.perform(post("/api/audiences/{id}/reset-to-preset", support).session(admin.session()).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.preset").value(true))
+                .andExpect(jsonPath("$.templateVariants.vi").value(vietnamese.templateBody()));
+    }
+
+    // A language added after the reset starts from the shipped template in that language.
+    @Test
+    void anAudienceResetToAPresetFollowsItInALanguageAddedLater() throws Exception {
+        Admin admin = registerAndLogin("owner@example.com", "en");
+        jdbcTemplate.update("DELETE FROM audience_definitions WHERE organization_id = ? AND code = 'support'",
+                admin.organizationId());
+        UUID support = UUID.fromString(JsonPath.read(create(admin, "support", "Helpdesk", "", TEMPLATE)
+                .andReturn().getResponse().getContentAsString(), "$.id"));
+        mockMvc.perform(post("/api/audiences/{id}/reset-to-preset", support).session(admin.session()).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.templateVariants").isEmpty());
+
+        mockMvc.perform(put("/api/organization/release-languages").session(admin.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"targetLanguages\":[\"en\",\"vi\"]}"))
+                .andExpect(status().isOk());
+        AudiencePresets.Preset vietnamese = AudiencePresets.find("support", "vi").orElseThrow();
+        mockMvc.perform(get("/api/audiences/{id}", support).session(admin.session()))
+                .andExpect(jsonPath("$.templateVariants.vi").value(vietnamese.templateBody()))
+                .andExpect(jsonPath("$.footerTemplateVariants.vi").value(vietnamese.footerBody()));
     }
 
     // ADR-0037: a footer per audience and language, kept when a caller leaves it out.

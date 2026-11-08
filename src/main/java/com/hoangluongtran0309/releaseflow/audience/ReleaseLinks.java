@@ -1,10 +1,6 @@
 package com.hoangluongtran0309.releaseflow.audience;
 
-import com.samskivert.mustache.Mustache;
-import com.samskivert.mustache.Template;
 
-import java.io.IOException;
-import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,67 +49,14 @@ public record ReleaseLinks(
         releaseUrl = Objects.requireNonNullElse(releaseUrl, "");
     }
 
-    // Every value is a FooterValue, so a section over one still reaches the others.
+    // Every value is a SectionValue, so a section over one still reaches the others.
     Map<String, Object> context() {
         Map<String, Object> context = new LinkedHashMap<>();
-        context.put("version", new FooterValue(version, context));
-        context.put("previousVersion", new FooterValue(previousVersion, context));
-        context.put("compareUrl", new FooterValue(compareUrl, context));
-        context.put("upgradeGuideUrl", new FooterValue(upgradeGuideUrl, context));
-        context.put("releaseUrl", new FooterValue(releaseUrl, context));
+        context.put("version", new SectionValue(version, context));
+        context.put("previousVersion", new SectionValue(previousVersion, context));
+        context.put("compareUrl", new SectionValue(compareUrl, context));
+        context.put("upgradeGuideUrl", new SectionValue(upgradeGuideUrl, context));
+        context.put("releaseUrl", new SectionValue(releaseUrl, context));
         return context;
-    }
-
-    /**
-     * One footer value. It prints as its text, and a section over it renders only when the
-     * text is not empty, with every footer value still in reach and {@code {{.}}} as its
-     * own text. A plain string would not do: in standards mode a name inside a section is
-     * looked up only in the section's own value, so {@code {{#compareUrl}}} could not
-     * print {@code {{version}}}.
-     */
-    private static final class FooterValue implements Mustache.InvertibleLambda {
-
-        private final String text;
-        private final Map<String, Object> values;
-
-        FooterValue(String text, Map<String, Object> values) {
-            this.text = text;
-            this.values = values;
-        }
-
-        @Override
-        public void execute(Template.Fragment fragment, Writer out) throws IOException {
-            if (!text.isEmpty()) {
-                fragment.execute(new Scope(values, text), out);
-            }
-        }
-
-        @Override
-        public void executeInverse(Template.Fragment fragment, Writer out) throws IOException {
-            if (text.isEmpty()) {
-                fragment.execute(new Scope(values, text), out);
-            }
-        }
-
-        @Override
-        public String toString() {
-            return text;
-        }
-    }
-
-    // The footer values inside a section, which print as the section's own value.
-    private static final class Scope extends LinkedHashMap<String, Object> {
-
-        private final String text;
-
-        Scope(Map<String, Object> values, String text) {
-            super(values);
-            this.text = text;
-        }
-
-        @Override
-        public String toString() {
-            return text;
-        }
     }
 }
