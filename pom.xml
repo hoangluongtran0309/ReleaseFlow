@@ -54,21 +54,13 @@
              and builds that tag with -Drevision set. -->
         <revision>0.0.0-SNAPSHOT</revision>
         <java.version>21</java.version>
-        <!-- Overrides of versions the Spring Boot parent manages. Each one is listed in
+        <!-- An override of a version the Spring Boot parent manages goes here, with a
+             comment naming the CVE it pulls a fix in for, and is listed in
              scripts/ci/check-version-overrides.sh, which fails CI once the parent
              manages the same version or a newer one, so an override can never quietly
-             hold a dependency back after a Boot upgrade. -->
-        <!-- Spring Boot 4.1.1 manages Tomcat 11.0.24, which has critical CVEs
-             (CVE-2026-65182, CVE-2026-65905, CVE-2026-68525). Remove this
-             override once the parent manages 11.0.25 or later. -->
-        <tomcat.version>11.0.25</tomcat.version>
-        <!-- Spring Boot 4.1.1 manages Jackson 3.1.5 and 2.21.5. Those, and 3.1.6 and 2.21.6
-             after them, have high CVEs in jackson-core and jackson-databind
-             (CVE-2026-68497, CVE-2026-89407, CVE-2026-89425, CVE-2026-91776,
-             CVE-2026-91777). Remove these overrides once the parent manages 3.1.7 and
-             2.21.7 or later. -->
-        <jackson-bom.version>3.1.7</jackson-bom.version>
-        <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+             hold a dependency back after a Boot upgrade. Spring Boot 4.1.2 manages
+             Tomcat 11.0.27 and Jackson 3.1.7 and 2.21.7, past every fix an override
+             pulled in, so none is needed. -->
         <alpinejs.version>3.17.5</alpinejs.version>
         <anthropic-java.version>2.73.0</anthropic-java.version>
         <commonmark.version>0.31.0</commonmark.version>

@@ -8,12 +8,9 @@
 #   ./scripts/ci/check-version-overrides.sh
 set -euo pipefail
 
-# Every property in pom.xml that overrides a version spring-boot-dependencies manages.
-readonly OVERRIDES=(
-  tomcat.version
-  jackson-bom.version
-  jackson-2-bom.version
-)
+# Every property in pom.xml that overrides a version spring-boot-dependencies manages. None
+# is needed with Spring Boot 4.1.2; add one here when pom.xml gains one.
+readonly OVERRIDES=()
 
 cd "$(dirname "$0")/../.."
 
