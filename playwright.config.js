@@ -5,6 +5,23 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.RELEASEFLOW_E2E_BASE_URL ?? 'http://127.0.0.1:8080';
 
+// The stack the suite starts never reads an AI or DeepL setting from .env, as CI's .env has
+// none: every change the suite delivers would otherwise be sent to a paid service (the 1.1.0
+// run sent about 20 OpenAI requests that way). Compose takes the shell's value over .env's,
+// and a blank provider leaves AI off and translation disabled.
+const NO_PROVIDERS = Object.fromEntries([
+  'RELEASEFLOW_AI_PROVIDER',
+  'RELEASEFLOW_OPENAI_API_KEY',
+  'RELEASEFLOW_OPENAI_MODEL',
+  'RELEASEFLOW_ANTHROPIC_API_KEY',
+  'RELEASEFLOW_ANTHROPIC_MODEL',
+  'RELEASEFLOW_DEEPSEEK_API_KEY',
+  'RELEASEFLOW_DEEPSEEK_MODEL',
+  'RELEASEFLOW_TRANSLATION_PROVIDER',
+  'RELEASEFLOW_DEEPL_API_KEY',
+  'RELEASEFLOW_DEEPL_BASE_URL',
+].map((name) => [name, '']));
+
 export default defineConfig({
   testDir: 'tests/e2e',
   // A page is server-rendered, so a failure is a failure; a retry would only hide a race.
@@ -35,8 +52,11 @@ export default defineConfig({
     ? undefined
     : {
         command: 'docker compose -f docker-compose.demo.yml up --build app db',
+        env: NO_PROVIDERS,
         url: `${baseURL}/api/status`,
-        reuseExistingServer: !process.env.CI,
+        // An application already answering may have been started from .env with a provider,
+        // so it is never reused: stop it, or name it with RELEASEFLOW_E2E_BASE_URL.
+        reuseExistingServer: false,
         timeout: 300_000,
         stdout: 'pipe',
         stderr: 'pipe',

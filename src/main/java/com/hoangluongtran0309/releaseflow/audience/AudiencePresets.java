@@ -11,8 +11,8 @@ import java.util.ResourceBundle;
  * otherwise English); the communication intents are instructions for the AI and stay
  * in English, and each ends by saying when a change is none for its audience
  * (ADR-0035). V13 seeded the values of its time for Organizations that existed before;
- * they keep their templates until an administrator resets a preset, and can add the
- * support audience themselves.
+ * they keep their templates until an administrator resets a preset, and can add an
+ * audience coded {@code support} themselves and reset it to this preset, which makes it one.
  *
  * <p>Operators and contributors upgrade, so their footers link the comparison with the
  * previous release and the upgrade guide, each only when there is one (ADR-0037). Neither
@@ -159,6 +159,11 @@ final class AudiencePresets {
                         ""
                 )
         );
+    }
+
+    /** Whether an audience with this code can be reset to a shipped preset; codes are the same in every language. */
+    static boolean shipped(String code) {
+        return find(code, "en").isPresent();
     }
 
     static Optional<Preset> find(String code, String languageTag) {

@@ -120,6 +120,8 @@ integration_sources (github_integrations before V18)
   repository_owner + repository_name (GitHub only)
   api_base_url (GitLab: an allowlisted instance; Jira: an atlassian.net site)
   external_workspace_key (Linear only, the workspace the team belongs to)
+  external_team_key (Linear only, V35: the key its identifiers start with, such as OPS;
+    read at connection, or at the first enrichment of a team connected before)
   credential_identity (Jira only, the account email of its Basic credentials)
   webhook_auth_mode (GITHUB_HMAC | GITLAB_SIGNING_TOKEN | GITLAB_SECRET_TOKEN
     | LINEAR_HMAC | NONE), which must match the source type (NONE is Jira's)
@@ -267,6 +269,27 @@ release_change_reviews
   (release_id, change_id, organization_id, project_id) FK -> release_changes, ON DELETE CASCADE
   action (APPROVE | EDIT), note
   reviewer_id (composite FK with organization_id -> app_users), reviewer_name, decided_at
+  folded_change_id (V36, composite FK -> changes: the tracker change whose fold made this
+    decision; cleared by a person's own decision)
+
+linked_issue_reads (V35; one per release, queued when its review is requested)
+  release_id (PK); (release_id, organization_id, project_id) FK -> releases, ON DELETE CASCADE
+  status (PENDING | RUNNING | SUCCEEDED | FAILED), attempts, next_attempt_at, claimed_at,
+  last_error (a fixed code), requested_at, completed_at (exactly when finished)
+
+release_linked_issues (V35; each linked issue of a release as of its review)
+  release_id + tracker (JIRA | LINEAR) + issue_key (PK); FK -> releases, ON DELETE CASCADE
+  status, status_category (open | done), read_at (together; null until read)
+  accepted_status, accepted_by (composite FK -> app_users), accepter_name, accepted_at (together)
+
+release_fold_decisions (V35; once per release and tracker change)
+  release_id + tracker_change_id (PK); FK -> releases, ON DELETE CASCADE
+  tracker_change_id, code_change_id (composite FKs -> changes; never equal)
+  evidence (LINKED_KEY | CONFIRMED_DUPLICATE), issue_key
+  decision (ACCEPTED | DISMISSED); removal (REJECTED | EXCLUDED) exactly when ACCEPTED;
+  reason exactly when EXCLUDED
+  adds_breaking, adds_security (V36; only on ACCEPTED: the flags the fold added)
+  decided_by (composite FK -> app_users), decider_name, decided_at
 
 release_audience_notes (written while APPROVED, immutable once PUBLISHED)
   id (UUID PK); release_id + audience_id + language unique (V17)
@@ -539,7 +562,7 @@ the site, key, account, and encrypted token with no webhook identity, a
 
 ## Background work
 
-Every call to another system that a request does not wait for runs in one of five
+Every call to another system that a request does not wait for runs in one of seven
 scheduled workers. Each claims its work with `FOR UPDATE SKIP LOCKED` in a short
 transaction, calls out with no transaction open, and records the result in another
 short transaction that first checks the claim is still its own. Retries are bounded.
@@ -549,6 +572,7 @@ short transaction that first checks the claim is still its own. Retries are boun
 | `ChangeProcessingWorker` | second | `change_processing_jobs` | Enrich and classify a change |
 | `SourceSyncWorker` | second | `source_sync_jobs` | History imports, and Jira polls that `JiraPollScheduler` books |
 | `TranslationWorker` | second | `translation_jobs` | DeepL translations of change summaries and release summaries |
+| `LinkedIssueReadWorker` | 2 seconds | `linked_issue_reads` | Read a release's linked issues again when its review is requested |
 | `GlossarySyncWorker` | second | `glossary_syncs` | Send a language pair's glossary dictionary to DeepL, one sync per Organization at a time |
 | `AutomationWorker` | second | `automation_publish_jobs`, `automation_action_runs` | Turn publications into runs, then deliver one action at a time |
 | `AutomationTriggerWorker` | `RELEASEFLOW_AUTOMATION_TRIGGER_DELAY` (15 s) | `automation_rules`, `automation_runs` | Book runs for due schedules and reminders; it never calls a provider |
@@ -609,28 +633,43 @@ need or have received review.
 
 ## Linked context
 
-A GitHub or GitLab change may mention issues of the Project's Jira project.
-`LinkedContextEnricher` runs after the source's own enricher, outside any
-transaction:
+A GitHub or GitLab change may mention issues of the Project's Jira project or Linear team
+(ADR-0019, ADR-0041). `LinkedContextEnricher` runs after the source's own enricher,
+outside any transaction:
 
-1. A change from Linear or Jira is `NOT_SUPPORTED`. A Project without a Jira
-   source that has a token, or a change whose own source has no token, is
-   `NOT_CONFIGURED`. The Jira source is found by type with
-   `SourceAccess.findByType`, the oldest first.
+1. A change from Linear or Jira is `NOT_SUPPORTED`. A Project with neither a Jira nor a
+   Linear source that has a token, or a change whose own source has no token, is
+   `NOT_CONFIGURED`. Each tracker is found by type with `SourceAccess.findByType`, the
+   oldest first.
 2. `SourceEnricher.commitMessages` lists at most 250 commit messages over three
    pages (`GET /repos/{o}/{r}/pulls/{n}/commits` or
    `GET /api/v4/projects/{key}/merge_requests/{iid}/commits`). They are evidence
    only: never stored, never sent to the AI.
-3. `JiraKeys.extract` finds the Jira project's keys in the title, description,
-   target branch, and commits with
-   `(?<![A-Z0-9_])(KEY-[1-9][0-9]*)(?![A-Z0-9_-])`, case-insensitive,
-   uppercased, deduplicated in first-seen order, at most ten.
-4. Each key is read with `GET /rest/api/3/issue/{key}?fields=summary,description,issuetype,status`.
+3. `IssueKeys.extract` finds one tracker's keys, case-insensitive, uppercased,
+   deduplicated in first-seen order, at most ten, as `(?<![A-Za-z0-9_])(KEY-[1-9][0-9]*)`
+   followed by what the place allows:
+   - title and target branch: `(?![A-Za-z0-9_-])`, so a key followed by a hyphen names
+     nothing;
+   - head branch (`changes.head_branch`, V31): `(?![A-Za-z0-9])`, so `-`, `/`, `_`, or the
+     end of the name follows;
+   - description and commits: the strict rule, or `-` and a lowercase letter
+     (`Spec: DBV-12-quartz`). Only a tracker's own key is ever searched for, so another
+     prefix (`ISO-8601-compliant`) never links.
+4. A Jira key is read with `GET /rest/api/3/issue/{key}?fields=summary,description,issuetype,status`.
    The description is Atlassian Document Format flattened to plain text and
-   capped at `releaseflow.jira.description-max-characters`.
+   capped at `releaseflow.jira.description-max-characters`; the status category is
+   `fields.status.statusCategory.key`.
+5. A Linear identifier is read with one GraphQL `issue(id:)` query and kept only when the
+   issue's team and workspace are the source's; its state type `completed` or `canceled`
+   is the category `done`. The team key is `integration_sources.external_team_key`; a
+   source without one asks for it once (`team(id:){key}`) and keeps it through
+   `SourceAccess.rememberTeamKey`, and a key it cannot read makes the change `UNAVAILABLE`.
 
 No key and readable commits is `NOT_FOUND`; unreadable commits are `PARTIAL`; a
-key Jira would not show is `UNAVAILABLE`; otherwise `COLLECTED`. The worker
+key a tracker would not show, or a team key that could not be read, is `UNAVAILABLE`;
+otherwise `COLLECTED`. Each `LinkedIssue` records its `tracker` and `statusCategory`
+(`open` or `done`); an issue recorded before V35 has neither, reads as Jira, and its
+category is unknown. The worker
 records the status and issues beside the changed files, `ChangeClassifier` adds
 `LINKED_CONTEXT_UNAVAILABLE` for `PARTIAL` and `UNAVAILABLE`, the AI prompt gets
 a top-level `linked_issues` array, the Change Inbox lists the issues, and audience
@@ -1027,7 +1066,8 @@ checks and the service checks the release's changes and decisions.
 | --- | --- | --- |
 | Edit version or summary, add changes | `DRAFT` | a processed change that is in no other release |
 | Remove a change (reject during review) | `DRAFT`, `IN_REVIEW` | |
-| Request review | `DRAFT` | at least one change |
+| Request review | `DRAFT` | at least one change; queues a read of its linked issues |
+| Accept a linked issue's status, decide a folding suggestion | `IN_REVIEW` (an acceptance also `APPROVED`) | an issue or suggestion of this release |
 | Record a decision | `IN_REVIEW` | a change of this release |
 | Approve (writes the audience notes) | `IN_REVIEW` | a decision on every change |
 | Edit a change's summary | `IN_REVIEW`, `APPROVED` | a change of this release |
@@ -1077,6 +1117,41 @@ sorted by merge time. Titles drop a
 leading Conventional Commit prefix. Pages instead preview each audience's note
 (see Audiences and release notes).
 
+### Linked issues at review and folding
+
+ADR-0041 adds two things to a release in review, and neither ever blocks approval or
+publication.
+
+- **Statuses as of review.** `requestReview` queues one `linked_issue_reads` row, or queues
+  it again, and forgets what earlier reads found, keeping acceptances.
+  `LinkedIssueReadWorker` claims it, gathers each distinct `(tracker, key)` of the release's
+  changes through `ChangeInboxService.changes`, reads them from Jira or Linear with no
+  transaction open, and records each read issue in `release_linked_issues`. While an issue
+  is unread it retries after `2^attempt` seconds (at most 300), five attempts in all, then
+  finishes `FAILED` and the unread issues keep their recorded status. Each result publishes
+  `LinkedIssuesRead`, which renders again an `APPROVED` release's notes that still follow
+  their template.
+- **What a note gets.** `IssueStatuses` turns the rows into the `status`,
+  `recordedStatus`, and `statusAtReview` of each `NoteIssue`: a status is given only when
+  its category is `done`, or when a person accepted that very status; otherwise all three
+  are empty. `SectionValue` lets `{{#status}} ({{status}}){{/status}}` print the value in
+  Mustache standards mode. An acceptance names the status the person saw, and one that no
+  longer matches the last read is `409 linked_issue_status_changed`.
+- **Folding suggestions.** `ReleaseService` computes them from stored data alone while the
+  release is `IN_REVIEW`: a Jira or Linear change of the release whose key a GitHub or
+  GitLab change of the release lists among its linked issues, or which
+  `ChangeFoldingService.confirmedDuplicates` pairs with one. A suggestion with a row in
+  `release_fold_decisions` is not offered again. Accepting runs, in one transaction,
+  `ChangeFoldingService.foldIssue` (which adds the tracker change's issue to the code
+  change when it lacks it), carries the tracker change's breaking and security flags into
+  the code change when that changes one (`ChangeReviewService.review` by the person, and a
+  `release_change_reviews` row `EDIT` with `folded_change_id`; refused for an Unknown
+  code change), removes the tracker change from the release, excludes it
+  through `ChangeExclusionService` when the person chose to (administrators, with a
+  non-blank reason), then records the decision. An issue the fold added queues the
+  release's read again; a claim takes only the issues with no read at this review, so a
+  retry or a fold asks the tracker for what is missing and nothing else.
+
 ## Audiences and release notes
 
 `audience` owns the Organization's audiences and their templates; see
@@ -1096,7 +1171,12 @@ because run history has to keep naming what it delivered to.
 `messages/audience-presets{,_vi}.properties`. Registration seeds all four. V13
 seeded the first three, with the values of its time, for Organizations that existed
 before, which keep their templates and intents until a preset is reset, and can add
-`support` themselves; a migration test compares them with those values. Each intent
+`support` themselves; a migration test compares them with those values.
+`resetToPreset` takes the shipped audience with the audience's code, whether
+registration seeded it or an administrator added it, and sets `preset`, so an
+added `support` follows the preset in later language variants and resets; a code
+nothing ships is refused with `audience_not_preset`, and the Audiences page offers
+the reset exactly when `AudiencePresets.shipped` holds for the code. Each intent
 ends by saying when a change is `none` for its audience, and the operator intent
 names something to watch only when the change or the Project context does. The
 shipped templates lead with `**{{headline}}**`, label a migration step by its kind
@@ -1329,7 +1409,11 @@ ADR-0015 writes a note per audience and **release note language**; see
   spans, URLs, paths, and capitalized identifiers; an answer that fails with the glossary
   is translated again without it in the same attempt
   (`glossary_answer_untranslated`), and one that fails without it fails the job with
-  `untranslated` and is never cached. `ReleaseNoteWriter` combines the jobs' outcomes per
+  `untranslated` and is never cached. `TranslationJob.succeed` then passes each text of
+  its output, from DeepL or the cache, through `SourceForms.restore` (ADR-0040): a
+  placeholder or lowercase hyphenated identifier of the source that the translation has in
+  another letter case alone, and matches unambiguously, gets the source's form back; the
+  cache keeps DeepL's answer, and a lost placeholder is only logged. `ReleaseNoteWriter` combines the jobs' outcomes per
   language (`NOT_APPLIED` over `PENDING` over `APPLIED` over `NONE`) into
   `release_audience_notes.glossary_status`, and `ReleaseView.glossaries` reports it per
   language. `retryTranslations` also restarts a failed sync and re-translates jobs that went
@@ -1801,7 +1885,8 @@ database volume whose `.env` is gone. See
 [ADR-0031](adr/0031-quickstart-bundle.md).
 
 GitHub Actions workflows in `.github/workflows` gate pushes and pull requests
-to `develop` and `main`: tests, audits, and the Playwright browser and accessibility
+to `develop` and `main`, and `ci.yml`, `container.yml`, and `docs.yml` also pull
+requests into `release/**` and `hotfix/**`: tests, audits, and the Playwright browser and accessibility
 suite (`ci.yml`), CodeQL, dependency review, a full-history Gitleaks scan, and a
 container workflow that builds the
 image, scans it with Trivy, and smoke tests the Compose stack. Actions are

@@ -11,7 +11,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
@@ -87,7 +90,7 @@ class GlossaryIntegrationTest extends PostgreSqlIntegrationTest {
     @AfterEach
     void clearDatabase() {
         DEEPL.reset();
-        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, releases");
+        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, linked_issue_reads, release_linked_issues, release_fold_decisions, releases");
         jdbcTemplate.update("DELETE FROM glossary_syncs");
         jdbcTemplate.update("DELETE FROM translation_glossaries");
         jdbcTemplate.update("DELETE FROM glossary_kept_terms");
@@ -507,6 +510,90 @@ class GlossaryIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$[?(@.language == 'vi')].translationStatus").value(everyItem(is("FAILED"))));
     }
 
+    // ADR-0040: with a glossary DeepL uppercases placeholders. The note shows them as the change
+    // wrote them, the requests are the ones sent before, and the cache keeps DeepL's answer.
+    @Test
+    void placeholdersComeBackAsWrittenAndTheRequestsDoNotChange() throws Exception {
+        Owner owner = register("owner@example.com", "en", "vi");
+        keep(owner, "CLI").andExpect(status().isCreated());
+        UUID projectId = createProject(owner);
+        String source = "Run dbvault backup verify <backup-id> after <count> tries, then <backup-id> again.";
+        summarizedChange(owner, projectId, 1, source);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.2.0", null);
+        approve(owner, projectId, releaseId);
+
+        DEEPL.upperPlaceholdersWithGlossary();
+        syncAndTranslate();
+
+        assertThat(DEEPL.translations()).singleElement().satisfies(request -> {
+            assertThat(request.glossaryId()).isNotNull();
+            assertThat(request.texts()).as("sent as written").contains(source);
+            assertThat(request.body()).contains("\"" + source + "\"").doesNotContain("BACKUP");
+        });
+        String raw = "[VI] " + DeepLStub.VIETNAMESE_MARKER
+                + "Run dbvault backup verify <BACKUP-id> after <COUNT> tries, then <BACKUP-id> again.";
+        String restored = "[VI] " + DeepLStub.VIETNAMESE_MARKER + source;
+        mockMvc.perform(get(releaseApi(projectId, releaseId)).session(owner.session()))
+                .andExpect(jsonPath("$.glossaries[0].status").value("APPLIED"))
+                .andExpect(jsonPath("$.notes[*].translationStatus").value(everyItem(is("READY"))))
+                .andExpect(jsonPath("$.notes[?(@.language == 'vi')].content")
+                        .value(everyItem(containsString(markdown(restored)))))
+                .andExpect(jsonPath("$.notes[?(@.language == 'vi')].content").value(everyItem(not(containsString("BACKUP")))));
+        assertThat(jdbcTemplate.queryForList("SELECT translated_text FROM translation_cache", String.class))
+                .as("the cache keeps DeepL's answer").contains(raw);
+    }
+
+    // ADR-0040: an answer cached before the fix is repaired when an approval uses it, without a request.
+    @Test
+    void aCachedAnswerIsRepairedAtApprovalWithNoNewRequest() throws Exception {
+        Owner owner = register("owner@example.com", "en", "vi");
+        keep(owner, "CLI").andExpect(status().isCreated());
+        UUID projectId = createProject(owner);
+        String source = "Upgrade dbvault-cli, then verify <backup-id>.";
+        summarizedChange(owner, projectId, 1, source);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.2.0", null);
+        approve(owner, projectId, releaseId);
+        syncAndTranslate();
+        assertThat(DEEPL.translations()).hasSize(1);
+
+        // As DeepL answered with the glossary before the fix, and as the cache still holds it.
+        jdbcTemplate.update("UPDATE translation_cache SET translated_text = replace(replace(translated_text, "
+                + "'dbvault-cli', 'dbvault-CLI'), '<backup-id>', '<BACKUP-id>')");
+        reapprove(owner, projectId, releaseId);
+        drainTranslations();
+
+        assertThat(DEEPL.translations()).as("served from the cache").hasSize(1);
+        mockMvc.perform(get(releaseApi(projectId, releaseId)).session(owner.session()))
+                .andExpect(jsonPath("$.notes[*].translationStatus").value(everyItem(is("READY"))))
+                .andExpect(jsonPath("$.notes[?(@.language == 'vi')].content")
+                        .value(everyItem(containsString(markdown("[VI] " + DeepLStub.VIETNAMESE_MARKER + source)))));
+        assertThat(jdbcTemplate.queryForList("SELECT translated_text FROM translation_cache", String.class))
+                .as("the cache is not rewritten").anyMatch(text -> text.contains("dbvault-CLI, then verify <BACKUP-id>."));
+    }
+
+    // ADR-0040: a lost placeholder is left lost and logged; nothing more is sent.
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void aLostPlaceholderIsLoggedAndNothingMoreIsSent(CapturedOutput output) throws Exception {
+        Owner owner = register("owner@example.com", "en", "vi");
+        keep(owner, "CLI").andExpect(status().isCreated());
+        UUID projectId = createProject(owner);
+        UUID change = summarizedChange(owner, projectId, 1, "Run dbvault backup verify <backup-id> after each backup.");
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.2.0", null);
+        approve(owner, projectId, releaseId);
+
+        DEEPL.dropPlaceholdersWithGlossary();
+        syncAndTranslate();
+
+        assertThat(DEEPL.translations()).singleElement().satisfies(request -> assertThat(request.glossaryId()).isNotNull());
+        mockMvc.perform(get(releaseApi(projectId, releaseId)).session(owner.session()))
+                .andExpect(jsonPath("$.notes[*].translationStatus").value(everyItem(is("READY"))))
+                .andExpect(jsonPath("$.glossaries[0].status").value("APPLIED"))
+                .andExpect(jsonPath("$.notes[?(@.language == 'vi')].content")
+                        .value(everyItem(containsString("Run dbvault backup verify  after each backup."))));
+        assertThat(output).contains("The vi translation of change " + change, "lost placeholder(s) [<backup-id>]");
+    }
+
     @Test
     void aRefusedGlossaryIsSentAgainBeforeTheTranslationIsRetried() throws Exception {
         Owner owner = register("owner@example.com", "en", "vi");
@@ -547,6 +634,11 @@ class GlossaryIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Vui lòng nhập thuật ngữ.")))
                 .andExpect(content().string(containsString("Vui lòng chọn ngôn ngữ khác với ngôn ngữ nguồn.")));
+    }
+
+    // A note escapes "<" in a change's text, so a placeholder reads as written in Markdown.
+    private static String markdown(String text) {
+        return text.replace("<", "\\<");
     }
 
     private void syncAndTranslate() {

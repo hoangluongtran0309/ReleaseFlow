@@ -85,12 +85,17 @@ public final class JiraStub implements AutoCloseable {
         searchFailuresLeft.set(times);
     }
 
+    /** The issue, in Jira's "done" status category when its status is Done, and in progress otherwise. */
     public void respondWithIssue(String key, String summary, String type, String status, String description) {
+        respondWithIssue(key, summary, type, status, "Done".equalsIgnoreCase(status) ? "done" : "indeterminate", description);
+    }
+
+    public void respondWithIssue(String key, String summary, String type, String status, String category, String description) {
         Map<String, Object> fields = new LinkedHashMap<>();
         fields.put("summary", summary);
         fields.put("description", adf(description));
         fields.put("issuetype", Map.of("name", type));
-        fields.put("status", Map.of("name", status));
+        fields.put("status", Map.of("name", status, "statusCategory", Map.of("key", category)));
         issues.put(key, Map.of("id", "10" + key.hashCode(), "key", key, "fields", fields));
     }
 

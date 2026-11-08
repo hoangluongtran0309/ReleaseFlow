@@ -1,0 +1,428 @@
+{
+ "version": "v0.1.0",
+ "summary": "MySQL MVP",
+ "capturedApprovedAt": "2026-10-15T16:08:03.247009Z",
+ "upgradeGuideUrl": null,
+ "previousVersion": null,
+ "publish": true,
+ "languages": [
+  "en"
+ ],
+ "members": [
+  {
+   "source": "GITHUB",
+   "reference": "#1"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#2"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#3"
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!1"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#4"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#5"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#6"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#7"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#8"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#9"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#10"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#12"
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!2"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#13"
+  },
+  {
+   "source": "JIRA",
+   "reference": "DBV-35"
+  }
+ ],
+ "decisions": [
+  {
+   "source": "JIRA",
+   "reference": "DBV-35",
+   "action": "EDIT",
+   "capturedAction": "EDIT",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": "Customer-facing checklist, no code change"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#1",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#2",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#3",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!1",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#4",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#5",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#6",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#7",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "PERFORMANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#8",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#9",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#10",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#12",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": true,
+   "securityFlaggedBy": "rules",
+   "note": null
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!2",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#13",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  }
+ ],
+ "summariesWrittenAtApproval": [],
+ "atApproval": [
+  {
+   "source": "GITHUB",
+   "reference": "#1",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "title": "chore: bootstrap multi-module Maven build",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#2",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "title": "ci: add Maven verify and workflow lint",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#3",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "security": false,
+   "title": "docs: add README, branching model and contributing guide",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!1",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "title": "chore: bootstrap dbvault-cli with picocli",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#4",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(target): register and list MySQL targets (DBV-1)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#5",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(target): test the connection to a MySQL target (DBV-2)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#6",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(backup): run a full logical MySQL backup (DBV-3)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#7",
+   "category": "PERFORMANCE",
+   "breaking": false,
+   "security": false,
+   "title": "perf(backup): gzip the dump while it is written (DBV-4)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#8",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(restore): restore a backup after explicit confirmation (DBV-5)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#9",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "Delete backup artifacts from history",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#10",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "title": "build: ship Docker image and compose quickstart (DBV-7)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#12",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": true,
+   "title": "feat(auth): single operator sign-in with CSRF protection (DBV-6)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!2",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat: list targets and backups (DBV-8)",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#13",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "title": "ci: publish the image on tags and attach the jar to releases",
+   "neutralSummary": null,
+   "narratives": {}
+  },
+  {
+   "source": "JIRA",
+   "reference": "DBV-35",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "security": false,
+   "title": "DBV-35: Publish the dbvault onboarding checklist for customers",
+   "neutralSummary": null,
+   "narratives": {}
+  }
+ ],
+ "glossaries": [],
+ "notes": [
+  {
+   "audience": "contributor",
+   "language": "en",
+   "file": "snapshots/v0.1.0/contributor.en.md",
+   "sha256": "6350b63aea187b8233454ff3bc4d16583436e8f014bead7422e0a31484746f1a",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "end_user",
+   "language": "en",
+   "file": "snapshots/v0.1.0/end_user.en.md",
+   "sha256": "26591ca19ae1a550de29ffb8724ce725cd224a14404850fbb2174018dfed639c",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "operator",
+   "language": "en",
+   "file": "snapshots/v0.1.0/operator.en.md",
+   "sha256": "6350b63aea187b8233454ff3bc4d16583436e8f014bead7422e0a31484746f1a",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "support",
+   "language": "en",
+   "file": "snapshots/v0.1.0/support.en.md",
+   "sha256": "6350b63aea187b8233454ff3bc4d16583436e8f014bead7422e0a31484746f1a",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  }
+ ]
+}
