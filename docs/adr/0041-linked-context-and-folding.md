@@ -110,6 +110,14 @@ The captured dbvault data says more about v0.2.0 than the issue's summary does:
     again; or
   - **exclude** it from releases (ADR-0033), with a reason prefilled as
     "`DBV-12` is tracked by `#21`, which carries the release-note entry." and editable.
+- **Accepting keeps the work's flags.** The code change becomes breaking when the tracker
+  change is, and security when the tracker change is (an OR; neither is ever cleared). When
+  that changes a flag, the fold is recorded as a review of the code change by the person
+  who accepted it, and as the release's decision on the code change, naming the folded
+  change; the suggestion says so before it is accepted. A code change that is Unknown
+  cannot be reviewed as it is, so a fold that would change its flags is refused until it
+  has a category. Without this, folding `OPS-7` (security) into `#30` (not security)
+  dropped v0.2.0's security count from 3 to 2.
 - Each suggestion is decided once, by one person, with the time and, for an acceptance,
   the way chosen; a dismissed suggestion is not offered again in that release. A release
   returned to draft keeps its decisions.
@@ -141,6 +149,10 @@ The captured dbvault data says more about v0.2.0 than the issue's summary does:
   person accepts showing that status, once, recorded with their name, the time, and the
   status they accepted. A later read that returns another status asks again. The warning
   never blocks approval or publication.
+- **A folded issue is read as of review too.** An issue that a fold adds to a code change
+  queues the release's read again; the read takes only issues not yet read at this review,
+  so it asks the tracker for that issue alone, and a retry asks only for what is still
+  unread.
 - Notes written at approval use the statuses read by then. A read that finishes later
   renders again the notes that still follow their template, until publication, as a
   translation does; publication does not wait for a read.
@@ -153,7 +165,7 @@ No decision adds an AI request, a DeepL request, or a GitHub or GitLab request.
 | --- | --- |
 | 1. Head branches | None: the branch is already stored from the webhook or the import's list. |
 | 2. Linear keys | Linear GraphQL: one request per Linear source, once, for its team key; then, per code change that names Linear identifiers, one request per distinct identifier, at most ten, with ADR-0019's bounded retries. Only Projects with a Linear source. |
-| 3. Folding | None: suggestions come from stored linked issues and duplicate decisions. |
+| 3. Folding | None for a suggestion, which comes from stored linked issues and duplicate decisions. An accepted fold that adds an issue to a code change makes one read of that issue, as decision 4 reads, with its retries. |
 | 4. Status at review | Per review request, one Jira request per distinct Jira key and one Linear request per distinct Linear identifier among the release's changes, each retried at most four more times. For dbvault's recorded links that is 8, 9, 6, 4, and 2 Jira reads for v0.1.0 to v1.1.0, before the keys decisions 1 and 2 add. |
 
 ## Consequences
@@ -182,8 +194,9 @@ No decision adds an AI request, a DeepL request, or a GitHub or GitLab request.
 - A Linear team renamed after its issues were written about keeps matching only its new
   key.
 - One new job table and worker, for the reads at review, with the queue rules every other
-  job follows; a table for folding decisions; a table for statuses as of review and their
-  acceptances; a column for a Linear source's team key.
+  job follows; a table for folding decisions, with the flags an acceptance added; a table
+  for statuses as of review and their acceptances; a column for a Linear source's team key;
+  a column naming the folded change on a release's decision.
 
 ## Not decided here
 
