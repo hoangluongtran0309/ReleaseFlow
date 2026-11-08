@@ -140,8 +140,14 @@ class JiraApiClientTest {
                 "A description far longer than the forty",
                 "Story",
                 "Done",
-                "https://acme.atlassian.net/browse/APP-7"
+                "https://acme.atlassian.net/browse/APP-7",
+                LinkedIssue.JIRA,
+                LinkedIssue.DONE
         ));
+        // ADR-0041: the status category says whether Jira counts the issue finished.
+        JIRA.respondWithIssue("APP-8", "Stream rows", "Task", "In Progress", "");
+        assertThat(client.issue(JiraStub.SITE, "APP-8", EMAIL, TOKEN)).get()
+                .satisfies(issue -> assertThat(issue.statusCategory()).isEqualTo(LinkedIssue.OPEN));
         assertThat(JIRA.issueRequests().getFirst().query())
                 .containsEntry("fields", "summary,description,issuetype,status");
     }

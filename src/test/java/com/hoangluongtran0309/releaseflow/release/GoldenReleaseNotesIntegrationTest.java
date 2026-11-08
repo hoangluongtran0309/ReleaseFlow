@@ -48,7 +48,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * Release-note regressions, caught without the dbvault workspace (#18). The Organization of
  * dbvault's five releases v0.1.0 to v1.1.0 is set up from the workspace's inputs, each release
  * is approved with AI off and DeepL answered from the answers it really gave, and every note,
- * English and Vietnamese, must equal the one ReleaseFlow 1.1.0 wrote, byte for byte. A text
+ * English and Vietnamese, must equal the one the workspace rendered, byte for byte. A text
  * DeepL never answered fails it too, so a change to what ReleaseFlow sends DeepL is caught.
  *
  * <p>The Organization's settings, sources, audiences, and releases go through the REST API.
@@ -59,14 +59,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  */
 class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
 
-    private static final String PACKAGE = "golden/dbvault/1.1.0/";
+    private static final String PACKAGE = "golden/dbvault/1.2.0-dev/";
+    private static final String REVIEW_READS = "trackers/review-reads.jsonl";
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final DeepLStub DEEPL = DeepLStub.start();
     private static final LinearStub LINEAR = LinearStub.start();
     private static final JiraStub JIRA = JiraStub.start();
     private static final String LINEAR_TEAM = "33333333-3333-4333-8333-333333333333";
     private static final String LINEAR_WORKSPACE = "44444444-4444-4444-8444-444444444444";
-    private static final int MAX_DIFF_LINES = 40;
+    private static final int MAX_DIFF_LINES = 200;
 
     @Autowired
     private MockMvc mockMvc;
@@ -80,6 +81,9 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
     @Autowired
     private ApplicationContext context;
 
+    @Autowired
+    private LinkedIssueReadWorker readWorker;
+
     private MockHttpSession session;
     private UUID organizationId;
     private UUID projectId;
@@ -87,6 +91,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
     private final Map<String, UUID> changeIds = new LinkedHashMap<>();
     private final Map<String, JsonNode> changes = new LinkedHashMap<>();
     private final List<String> failures = new ArrayList<>();
+    private Map<String, List<JsonNode>> reviewReads;
     private int notesCompared;
 
     @DynamicPropertySource
@@ -113,7 +118,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         JIRA.reset();
         jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, "
                 + "automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, "
-                + "release_audience_notes, release_change_reviews, release_notes, release_changes, releases");
+                + "release_audience_notes, release_change_reviews, release_notes, release_changes, linked_issue_reads, release_linked_issues, release_fold_decisions, releases");
         jdbcTemplate.update("DELETE FROM glossary_syncs");
         jdbcTemplate.update("DELETE FROM translation_glossaries");
         jdbcTemplate.update("DELETE FROM glossary_kept_terms");
@@ -128,7 +133,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    void dbvaultsNotesAreWrittenAsReleaseFlow110WroteThem() throws Exception {
+    void dbvaultsNotesAreWrittenAsTheWorkspaceRenderedThem() throws Exception {
         verifyManifest();
         JsonNode organization = read("inputs/organization.json");
         for (JsonNode change : read("inputs/changes.json").values()) {
@@ -136,6 +141,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         }
         Map<List<String>, String> answers = recordedAnswers();
         DEEPL.answerFrom(answers);
+        reviewReads = reviewReads();
 
         setUp(organization);
         for (JsonNode event : organization.path("timeline").values()) {
@@ -148,9 +154,10 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         }
 
         assertThat(new LinkedHashSet<>(DEEPL.translatedTexts()))
-                .as("the texts sent to DeepL are exactly the ones it answered for the 1.1.0 notes")
+                .as("the texts sent to DeepL are exactly the ones it answered for the rendered notes")
                 .containsExactlyInAnyOrderElementsOf(answers.keySet().stream().map(answer -> answer.get(2)).toList());
         checkDeepLRequests(organization.path("projectContext").stringValue());
+        assertThat(failures).withFailMessage(() -> String.join("\n\n", failures)).isEmpty();
         assertThat(notesCompared).as("notes compared byte for byte").isEqualTo(46);
     }
 
@@ -240,8 +247,12 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         String category = decision != null ? decision.path("category").stringValue() : record.path("category").stringValue();
         JsonNode definition = categoryNamed(categories, category);
         boolean codeHost = source.equals("GITHUB") || source.equals("GITLAB");
-        JsonNode linkedIssues = record.path("linkedIssues");
-        String linkedStatus = record.path("linkedContextStatus").stringValue();
+        // The links the workspace's render made at intake, where they differ from the captured ones:
+        // intake runs no enricher here, so a key it links (ADR-0041) comes from the package.
+        JsonNode linkedIssues = change.path("linkedIssuesReplayed").isArray()
+                ? change.path("linkedIssuesReplayed") : record.path("linkedIssues");
+        String linkedStatus = change.path("linkedContextStatusReplayed").isString()
+                ? change.path("linkedContextStatusReplayed").stringValue() : record.path("linkedContextStatus").stringValue();
         boolean keepsIssues = linkedIssues.isArray() && !linkedIssues.isEmpty()
                 && Set.of("PARTIAL", "UNAVAILABLE", "COLLECTED").contains(linkedStatus);
         boolean imported = "IMPORT".equals(record.path("origin").stringValue());
@@ -301,6 +312,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         release.path("members").values().forEach(member -> members.add(key(member)));
         send(post(path + "/changes"), Map.of("changeIds", members.stream().map(changeIds::get).toList()), 200);
         send(post(path + "/request-review"), null, 200);
+        readAtReview(version, path);
 
         Set<String> atApproval = new LinkedHashSet<>();
         release.path("summariesWrittenAtApproval").values().forEach(written -> atApproval.add(written.path("reference").stringValue()));
@@ -339,9 +351,15 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         JsonNode approved = JSON.readTree(send(get(path), null, 200));
         compareAtApproval(version, release, approved);
         compareNotes(version, release, path, approved);
-        assertThat(failures).withFailMessage(() -> String.join("\n\n", failures)).isEmpty();
+        // Every release is compared before the test fails, so one run shows each note that differs;
+        // only a release that cannot be published stops it.
         if (release.path("publish").asBoolean()) {
-            send(post(path + "/publish"), null, 200);
+            MvcResult published = mockMvc.perform(post(path + "/publish").session(session).with(csrf())).andReturn();
+            if (published.getResponse().getStatus() != 200) {
+                failures.add(version + " could not be published: "
+                        + published.getResponse().getContentAsString(StandardCharsets.UTF_8));
+                assertThat(failures).withFailMessage(() -> String.join("\n\n", failures)).isEmpty();
+            }
         }
     }
 
@@ -420,6 +438,54 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
                 failures.add(version + " " + name + ": a note the snapshots do not have");
             }
         }
+    }
+
+    /**
+     * ADR-0041: requesting review reads each linked issue again. The trackers answer from what
+     * the workspace captured when each change was recorded, never from the trackers as they are
+     * today, so the run stays deterministic; an issue with no recorded answer fails the test. A
+     * package from before these answers existed reads nothing, and its notes show no open
+     * status, nor any whose category was never recorded.
+     */
+    private void readAtReview(String version, String path) throws Exception {
+        if (reviewReads == null) {
+            return;
+        }
+        JIRA.reset();
+        LINEAR.reset();
+        for (JsonNode answer : reviewReads.getOrDefault(version, List.of())) {
+            String key = answer.path("key").stringValue();
+            if ("LINEAR".equals(answer.path("tracker").stringValue())) {
+                LINEAR.respondWithIdentifiedIssue(key, answer.path("title").stringValue(), answer.path("status").stringValue(),
+                        answer.path("category").stringValue(), LINEAR_TEAM, LINEAR_WORKSPACE);
+            } else {
+                JIRA.respondWithIssue(key, answer.path("title").stringValue(), answer.path("type").asString(""),
+                        answer.path("status").stringValue(), answer.path("category").stringValue(), "");
+            }
+        }
+        do {
+            jdbcTemplate.update("UPDATE linked_issue_reads SET next_attempt_at = now() - interval '1 second' WHERE status = 'PENDING'");
+        } while (readWorker.processOne());
+        List<String> unread = new ArrayList<>();
+        for (JsonNode issue : JSON.readTree(send(get(path), null, 200)).path("linkedIssues").values()) {
+            if (!issue.path("read").asBoolean()) {
+                unread.add(issue.path("tracker").stringValue() + " " + issue.path("key").stringValue());
+            }
+        }
+        assertThat(unread).as(version + ": linked issues with no recorded answer at review").isEmpty();
+    }
+
+    // The answers each release's review read, by release; null for a package without them.
+    private static Map<String, List<JsonNode>> reviewReads() throws IOException {
+        if (GoldenReleaseNotesIntegrationTest.class.getClassLoader().getResource(PACKAGE + REVIEW_READS) == null) {
+            return null;
+        }
+        Map<String, List<JsonNode>> byRelease = new LinkedHashMap<>();
+        for (String line : lines(new String(bytes(REVIEW_READS), StandardCharsets.UTF_8))) {
+            JsonNode answer = JSON.readTree(line);
+            byRelease.computeIfAbsent(answer.path("release").stringValue(), release -> new ArrayList<>()).add(answer);
+        }
+        return byRelease;
     }
 
     // Every translation went with the Project's context and the glossary the inputs hold.

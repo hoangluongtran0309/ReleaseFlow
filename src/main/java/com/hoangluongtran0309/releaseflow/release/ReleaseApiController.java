@@ -137,6 +137,29 @@ public class ReleaseApiController {
         return releaseService.decide(principal, projectId, releaseId, changeId, request);
     }
 
+    // ADR-0041: show a linked issue's open status in the notes, as the person saw it.
+    @PostMapping("/releases/{releaseId}/linked-issues/acceptance")
+    ReleaseView acceptLinkedIssueStatus(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @Valid @RequestBody LinkedIssueAcceptanceRequest request
+    ) {
+        return releaseService.acceptLinkedIssueStatus(principal, projectId, releaseId, request);
+    }
+
+    // ADR-0041: accept or dismiss folding a tracker change into a code change of the release.
+    @PutMapping("/releases/{releaseId}/folding-suggestions/{trackerChangeId}/decision")
+    ReleaseView decideFold(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @PathVariable UUID trackerChangeId,
+            @Valid @RequestBody FoldDecisionRequest request
+    ) {
+        return releaseService.decideFold(principal, projectId, releaseId, trackerChangeId, request);
+    }
+
     @PostMapping("/releases/{releaseId}/approve")
     ReleaseView approve(
             @AuthenticationPrincipal ReleaseFlowPrincipal principal,

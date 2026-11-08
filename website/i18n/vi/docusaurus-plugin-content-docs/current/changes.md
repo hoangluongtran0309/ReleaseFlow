@@ -17,8 +17,8 @@ bổ sung được — dùng chính access token của nguồn — rồi phân l
 - Linear đọc lại issue, nên thay đổi mang nội dung hiện tại của issue; issue không có tệp;
 - Jira không bổ sung gì, vì lượt đọc theo lịch vừa đọc issue ngay trước đó.
 
-Khi Project có nguồn Jira, một thay đổi từ GitHub hoặc GitLab còn được kiểm tra xem có nhắc tới
-issue Jira nào không (xem [Issue Jira liên kết](sources.md#linked-jira-issues)).
+Khi Project có nguồn Jira hoặc Linear, một thay đổi từ GitHub hoặc GitLab còn được kiểm tra
+xem có nhắc tới issue nào không (xem [Issue liên kết](sources.md#linked-issues)).
 
 Hết thời gian chờ, lỗi mạng, bị giới hạn tốc độ hoặc lỗi phía server sẽ được thử lại tối đa ba
 lần, chờ 2 rồi 4 giây. Nếu vẫn không liệt kê được tệp, nếu token thiếu hoặc bị từ chối, hoặc nếu
@@ -62,7 +62,7 @@ Thay đổi phá vỡ tương thích, thay đổi bảo mật và thay đổi Un
 | Tệp nhạy cảm | Một tệp thay đổi, hoặc đường dẫn cũ của một tệp được đổi tên, khớp với một mẫu sensitive path |
 | Không lấy được danh sách tệp thay đổi | Không liệt kê được các tệp |
 | Từ nhạy cảm | Nguồn không có tệp (Linear, Jira), và tiêu đề hoặc mô tả có chứa `breaking change`, `migration`, `security`, `auth`, `credential`, `password` hoặc `encryption` |
-| Danh sách issue liên kết chưa đầy đủ | Không đọc được commit, hoặc Jira không cho xem một issue mà thay đổi có nhắc tới |
+| Danh sách issue liên kết chưa đầy đủ | Không đọc được commit, Jira hoặc Linear không cho xem một issue mà thay đổi có nhắc tới, hoặc không đọc được key của một team Linear |
 | Phân loại bằng AI thất bại | Lời gọi AI thất bại hoặc câu trả lời không dùng được |
 | Không đủ ngữ cảnh | [Điểm ngữ cảnh](#review-signals) thấp hơn ngưỡng |
 | Có thể trùng với một thay đổi trước đó | Thay đổi trông giống một thay đổi trước đó (xem [Tín hiệu review](#review-signals)) |
@@ -341,6 +341,8 @@ thay đổi) và các tệp thay đổi. Một cặp có độ tương đồng �
 cho mỗi thay đổi. Thay đổi mới cần review với trigger **Có thể trùng với một thay đổi trước
 đó**. Cả hai thẻ đều hiển thị cặp này, và bất kỳ thành viên nào cũng có thể **Xác nhận trùng**
 hoặc đánh dấu **Không trùng**, một lần duy nhất.
+Một cặp đã xác nhận gồm một thay đổi tracker và một thay đổi mã trong cùng release sẽ được gợi ý
+[gộp](release-notes.md#folding-a-tracker-change-into-its-code-change) trên tab Review của release.
 
 ![Một cặp có thể trùng: một pull request GitHub và một issue Linear, giống nhau 95%, kèm bằng chứng và hai nút xác nhận hoặc bỏ qua](assets/changes/c-9-duplicate.webp)
 

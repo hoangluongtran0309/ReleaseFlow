@@ -79,8 +79,20 @@ public class SourceAccess {
                 .toList();
     }
 
+    /**
+     * Keeps the key of a Linear team connected before ADR-0041, read at its first
+     * enrichment. It is written in a short transaction of its own, after Linear answered.
+     */
+    @Transactional
+    public void rememberTeamKey(UUID organizationId, UUID projectId, UUID sourceId, String teamKey) {
+        sourceRepository.findByIdAndOrganizationIdAndProjectId(sourceId, organizationId, projectId)
+                .filter(source -> source.getSourceType() == SourceType.LINEAR)
+                .ifPresent(source -> source.rememberTeamKey(teamKey));
+    }
+
     private SourceCredentials credentials(IntegrationSource source) {
         return new SourceCredentials(
+                source.getId(),
                 source.getSourceType(),
                 source.getExternalProjectKey(),
                 source.getExternalWorkspaceKey(),
@@ -88,6 +100,7 @@ public class SourceAccess {
                 source.getCredentialIdentity(),
                 source.getRepositoryOwner(),
                 source.getRepositoryName(),
+                source.getExternalTeamKey(),
                 decryptToken(source)
         );
     }

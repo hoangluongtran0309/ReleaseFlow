@@ -51,6 +51,11 @@ class IntegrationSource {
     @Column(name = "external_workspace_key", length = 100, updatable = false)
     private String externalWorkspaceKey;
 
+    // A Linear team's key, such as OPS, its issue identifiers start with (ADR-0041). Read
+    // when the team is connected, or at the first enrichment of a source connected before.
+    @Column(name = "external_team_key", length = 100)
+    private String externalTeamKey;
+
     // Only a source whose credential names an account has one, so far Jira.
     @Column(name = "credential_identity", length = 255, updatable = false)
     private String credentialIdentity;
@@ -234,6 +239,13 @@ class IntegrationSource {
         return source;
     }
 
+    void rememberTeamKey(String teamKey) {
+        if (sourceType != SourceType.LINEAR) {
+            throw new IllegalStateException("Only a Linear source has a team key.");
+        }
+        this.externalTeamKey = teamKey;
+    }
+
     static IntegrationSource gitLab(
             UUID id,
             UUID organizationId,
@@ -296,6 +308,10 @@ class IntegrationSource {
 
     String getExternalWorkspaceKey() {
         return externalWorkspaceKey;
+    }
+
+    String getExternalTeamKey() {
+        return externalTeamKey;
     }
 
     WebhookAuthMode getWebhookAuthMode() {

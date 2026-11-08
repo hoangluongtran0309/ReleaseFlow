@@ -173,6 +173,8 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `POST /api/projects/{projectId}/releases/{releaseId}/changes` | member |
 | `DELETE /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}` | member |
 | `POST /api/projects/{projectId}/releases/{releaseId}/request-review` | member |
+| `POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance` | member |
+| `PUT /api/projects/{projectId}/releases/{releaseId}/folding-suggestions/{trackerChangeId}/decision` | member; `EXCLUDE` admin |
 | `PUT /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/decision` | member |
 | `PUT /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/summary` | member |
 | `POST /api/projects/{projectId}/releases/{releaseId}/approve` | member |
@@ -254,7 +256,7 @@ Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
 | Audiences | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
 | Glossary | `404` | `glossary_term_not_found` |
 | Glossary | `409` | `glossary_term_taken`, `glossary_limit` |
-| Releases | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release` |
-| Releases | `404` | `release_not_found`, `release_note_not_found` |
-| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
+| Releases | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision` |
+| Releases | `404` | `release_not_found`, `release_note_not_found`, `folding_suggestion_not_found`, `linked_issue_not_found` |
+| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed` |
 | Automation | `400`, `404`, `409` | See [Automation](automation.md#rest) |
