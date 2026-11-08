@@ -13,6 +13,8 @@ public record FoldDecisionView(
         ReleaseFoldDecision.Removal removal,
         String reason,
         String deciderName,
-        Instant decidedAt
+        Instant decidedAt,
+        boolean addsBreaking,
+        boolean addsSecurity
 ) {
 }

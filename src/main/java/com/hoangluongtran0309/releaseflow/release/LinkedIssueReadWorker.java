@@ -20,11 +20,13 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -118,8 +120,13 @@ class LinkedIssueReadWorker {
         return true;
     }
 
-    // Each distinct linked issue of the release's changes, by its tracker and key.
+    // Each distinct linked issue of the release's changes, by its tracker and key, that has not
+    // been read at this review: a retry, or a fold that added an issue, reads only what is missing.
     private List<LinkedIssue> issues(LinkedIssueRead read) {
+        Set<String> alreadyRead = new HashSet<>();
+        issueRepository.findAllByReleaseIdAndOrganizationId(read.getReleaseId(), read.getOrganizationId()).stream()
+                .filter(row -> row.getReadAt() != null)
+                .forEach(row -> alreadyRead.add(IssueStatuses.id(row.getTracker(), row.getIssueKey())));
         List<UUID> ids = releaseChangeRepository
                 .findAllByReleaseIdAndOrganizationId(read.getReleaseId(), read.getOrganizationId())
                 .stream()
@@ -128,7 +135,10 @@ class LinkedIssueReadWorker {
         Map<String, LinkedIssue> issues = new LinkedHashMap<>();
         for (ChangeView change : changeService.changes(read.getOrganizationId(), read.getProjectId(), ids)) {
             for (LinkedIssue issue : change.linkedIssues()) {
-                issues.putIfAbsent(IssueStatuses.id(issue.trackerOrJira(), issue.key()), issue);
+                String id = IssueStatuses.id(issue.trackerOrJira(), issue.key());
+                if (!alreadyRead.contains(id)) {
+                    issues.putIfAbsent(id, issue);
+                }
             }
         }
         return List.copyOf(issues.values());

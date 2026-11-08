@@ -510,7 +510,13 @@ A suggestion is evidence only, and nothing is folded on its own. A member choose
   offered again in this release.
 
 Either fold keeps the issue as linked context of the code change, adding it from the
-tracker change when the code change did not list it yet. Each suggestion is decided once,
+tracker change when the code change did not list it yet; an issue added that way is read
+from its tracker as of this review, like the others. Either fold also keeps the work's
+flags: the code change becomes breaking or security when the tracker change is. The
+suggestion says so first, such as "Accepting marks #30 security, as OPS-7 is", and
+accepting records it as the review of the code change and as its decision in the release,
+which names the folded change. A code change still Unknown needs a category first:
+`400 invalid_fold_decision`. Each suggestion is decided once,
 with who decided and when; a release returned to draft keeps its decisions. A pair with
 nothing that ties them is not suggested: reject or exclude the tracker change by hand.
 
@@ -524,8 +530,9 @@ PUT  /api/projects/{projectId}/releases/{releaseId}/folding-suggestions/{tracker
 Both answer with the release, whose `linkedIssueRead` is `PENDING`, `RUNNING`,
 `SUCCEEDED`, or `FAILED` (absent before review is requested), and which lists
 `linkedIssues` (each with `tracker`, `key`, `recordedStatus`, `statusAtReview`, `read`,
-`status`, `open`, `accepted`, `accepterName`, and `acceptedAt`), `foldingSuggestions`, and
-`foldDecisions`.
+`status`, `open`, `accepted`, `accepterName`, and `acceptedAt`), `foldingSuggestions` (each
+with `addsBreaking` and `addsSecurity`), and `foldDecisions`. A decision a fold made names
+the tracker change in `foldedChangeId`.
 
 | Situation | Response |
 | --- | --- |
@@ -533,7 +540,7 @@ Both answer with the release, whose `linkedIssueRead` is `PENDING`, `RUNNING`,
 | Accepting a status of an issue no change of the release links | `404 linked_issue_not_found` |
 | Accepting a status while the release is a draft or published | `409 release_status_conflict` |
 | Deciding a suggestion that is not offered, or was decided | `404 folding_suggestion_not_found` |
-| Accepting without `removal`, or excluding without a reason | `400 invalid_fold_decision` |
+| Accepting without `removal`, excluding without a reason, or a fold that adds a flag to an Unknown change | `400 invalid_fold_decision` |
 | A member excluding | `403` |
 
 Until it is published, a release can be scheduled or unscheduled, returned to

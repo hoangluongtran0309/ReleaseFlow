@@ -269,6 +269,8 @@ release_change_reviews
   (release_id, change_id, organization_id, project_id) FK -> release_changes, ON DELETE CASCADE
   action (APPROVE | EDIT), note
   reviewer_id (composite FK with organization_id -> app_users), reviewer_name, decided_at
+  folded_change_id (V36, composite FK -> changes: the tracker change whose fold made this
+    decision; cleared by a person's own decision)
 
 linked_issue_reads (V35; one per release, queued when its review is requested)
   release_id (PK); (release_id, organization_id, project_id) FK -> releases, ON DELETE CASCADE
@@ -286,6 +288,7 @@ release_fold_decisions (V35; once per release and tracker change)
   evidence (LINKED_KEY | CONFIRMED_DUPLICATE), issue_key
   decision (ACCEPTED | DISMISSED); removal (REJECTED | EXCLUDED) exactly when ACCEPTED;
   reason exactly when EXCLUDED
+  adds_breaking, adds_security (V36; only on ACCEPTED: the flags the fold added)
   decided_by (composite FK -> app_users), decider_name, decided_at
 
 release_audience_notes (written while APPROVED, immutable once PUBLISHED)
@@ -1140,9 +1143,14 @@ publication.
   `ChangeFoldingService.confirmedDuplicates` pairs with one. A suggestion with a row in
   `release_fold_decisions` is not offered again. Accepting runs, in one transaction,
   `ChangeFoldingService.foldIssue` (which adds the tracker change's issue to the code
-  change when it lacks it), removes the tracker change from the release, excludes it
+  change when it lacks it), carries the tracker change's breaking and security flags into
+  the code change when that changes one (`ChangeReviewService.review` by the person, and a
+  `release_change_reviews` row `EDIT` with `folded_change_id`; refused for an Unknown
+  code change), removes the tracker change from the release, excludes it
   through `ChangeExclusionService` when the person chose to (administrators, with a
-  non-blank reason), then records the decision.
+  non-blank reason), then records the decision. An issue the fold added queues the
+  release's read again; a claim takes only the issues with no read at this review, so a
+  retry or a fold asks the tracker for what is missing and nothing else.
 
 ## Audiences and release notes
 

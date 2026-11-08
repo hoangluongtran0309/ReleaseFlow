@@ -75,6 +75,12 @@ public record ReleaseView(
         return foldingSuggestions.stream().filter(suggestion -> suggestion.trackerChangeId().equals(trackerChangeId)).toList();
     }
 
+    /** The decision that folded a tracker change into a code change, if there was one. */
+    public FoldDecisionView foldDecisionFor(UUID trackerChangeId) {
+        return foldDecisions.stream().filter(decision -> decision.trackerChangeId().equals(trackerChangeId))
+                .findFirst().orElse(null);
+    }
+
     /**
      * One entry per note language, from the notes that follow their templates, which all
      * share the language's translations; a language's notes that a person wrote say nothing.

@@ -4676,7 +4676,20 @@
    "summaryEditorName": null,
    "summaryEditedAt": null,
    "origin": "WEBHOOK"
-  }
+  },
+  "linkedIssuesReplayed": [
+   {
+    "key": "DBV-12",
+    "title": "Backup schedules",
+    "description": "Operators can schedule a target's backups with a cron expression in a chosen time zone.\nAcceptance: schedules survive a restart; a missed run while the server was down runs once on start.",
+    "type": "Story",
+    "status": "To Do",
+    "url": "https://hoangluongtran0309.atlassian.net/browse/DBV-12",
+    "tracker": "JIRA",
+    "statusCategory": "open"
+   }
+  ],
+  "linkedContextStatusReplayed": "COLLECTED"
  },
  {
   "source": "JIRA",
@@ -7030,7 +7043,7 @@
    "limitations": "",
    "narratives": {}
   },
-  "summaryWrittenFrom": "overlay adr-0037, at approval (409 change_summary_required)",
+  "summaryWrittenFrom": "overlay adr-0041, at approval (409 change_summary_required)",
   "record": {
    "title": "fix",
    "description": null,
@@ -9692,7 +9705,20 @@
    "summaryEditorName": null,
    "summaryEditedAt": null,
    "origin": "WEBHOOK"
-  }
+  },
+  "linkedIssuesReplayed": [
+   {
+    "key": "OPS-8",
+    "title": "Enable Dependabot alerts and version updates for dbvault",
+    "description": "Turn on Dependabot alerts and add dependabot.yml with weekly Maven and GitHub Actions updates targeting develop.",
+    "type": "Issue",
+    "status": "Done",
+    "url": "https://linear.app/dbvault/issue/OPS-8/enable-dependabot-alerts-and-version-updates-for-dbvault",
+    "tracker": "LINEAR",
+    "statusCategory": "done"
+   }
+  ],
+  "linkedContextStatusReplayed": "COLLECTED"
  },
  {
   "source": "GITHUB",
@@ -11947,7 +11973,20 @@
    "summaryEditorName": null,
    "summaryEditedAt": null,
    "origin": "WEBHOOK"
-  }
+  },
+  "linkedIssuesReplayed": [
+   {
+    "key": "OPS-13",
+    "title": "Pin base images by digest in the Dockerfile",
+    "description": "The runtime image follows a moving tag. Pin it by digest and let Dependabot propose updates. Not scheduled.",
+    "type": "Issue",
+    "status": "Backlog",
+    "url": "https://linear.app/dbvault/issue/OPS-13/pin-base-images-by-digest-in-the-dockerfile",
+    "tracker": "LINEAR",
+    "statusCategory": "open"
+   }
+  ],
+  "linkedContextStatusReplayed": "COLLECTED"
  },
  {
   "source": "LINEAR",
@@ -12111,7 +12150,20 @@
    "summaryEditorName": null,
    "summaryEditedAt": null,
    "origin": "WEBHOOK"
-  }
+  },
+  "linkedIssuesReplayed": [
+   {
+    "key": "OPS-13",
+    "title": "Pin base images by digest in the Dockerfile",
+    "description": "The runtime image follows a moving tag. Pin it by digest and let Dependabot propose updates. Not scheduled.",
+    "type": "Issue",
+    "status": "Done",
+    "url": "https://linear.app/dbvault/issue/OPS-13/pin-base-images-by-digest-in-the-dockerfile",
+    "tracker": "LINEAR",
+    "statusCategory": "done"
+   }
+  ],
+  "linkedContextStatusReplayed": "COLLECTED"
  },
  {
   "source": "GITHUB",

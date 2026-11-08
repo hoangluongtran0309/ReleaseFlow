@@ -279,6 +279,11 @@
                                                 ? #{ui.release.foldEvidenceKey(${suggestion.codeReference},${suggestion.issueKey})}
                                                 : #{ui.release.foldEvidenceDuplicate(${suggestion.confirmedBy},${suggestion.trackerReference},${suggestion.codeReference})}">
                                         #21 names DBV-12 as a linked issue.</p>
+                                    <p class="text-xs font-semibold" th:if="${suggestion.addsFlags()}"
+                                       th:text="${suggestion.addsBreaking and suggestion.addsSecurity} ? #{ui.release.foldTakesBoth(${suggestion.codeReference},${suggestion.trackerReference})}
+                                                : (${suggestion.addsBreaking} ? #{ui.release.foldTakesBreaking(${suggestion.codeReference},${suggestion.trackerReference})}
+                                                : #{ui.release.foldTakesSecurity(${suggestion.codeReference},${suggestion.trackerReference})})">
+                                        Accepting marks #30 security, as OPS-7 is, and records that as the review of #30.</p>
                                     <div class="mt-2 flex flex-wrap items-end gap-2">
                                         <form method="post" th:action="${foldPath}">
                                             <input type="hidden" name="codeChangeId" th:value="${suggestion.codeChangeId}">
@@ -369,6 +374,11 @@
                                 </div>
                                 <p class="mt-2 whitespace-pre-line text-sm text-slate-600" th:if="${decision != null and decision.note != null}"
                                    th:text="${decision.note}">Checked with the docs team.</p>
+                                <p class="mt-2 text-sm text-slate-600" th:if="${decision != null and decision.foldedChangeId != null}"
+                                   th:with="fold=${release.foldDecisionFor(decision.foldedChangeId)}"
+                                   th:text="${fold == null} ? '' : (${fold.addsBreaking and fold.addsSecurity} ? #{ui.release.decisionFoldedBoth(${fold.issueKey})}
+                                            : (${fold.addsBreaking} ? #{ui.release.decisionFoldedBreaking(${fold.issueKey})} : #{ui.release.decisionFoldedSecurity(${fold.issueKey})}))">
+                                    Marked security when OPS-7 was folded in.</p>
 
                                 <details class="mt-3" th:if="${inReview or approved}" th:id="|summary-${change.id}|"
                                          th:with="summary=${change.neutralSummary},summaryFailing=${failingSummaryChangeId == change.id},

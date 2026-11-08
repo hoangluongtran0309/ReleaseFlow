@@ -48,7 +48,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * Release-note regressions, caught without the dbvault workspace (#18). The Organization of
  * dbvault's five releases v0.1.0 to v1.1.0 is set up from the workspace's inputs, each release
  * is approved with AI off and DeepL answered from the answers it really gave, and every note,
- * English and Vietnamese, must equal the one ReleaseFlow 1.1.0 wrote, byte for byte. A text
+ * English and Vietnamese, must equal the one the workspace rendered, byte for byte. A text
  * DeepL never answered fails it too, so a change to what ReleaseFlow sends DeepL is caught.
  *
  * <p>The Organization's settings, sources, audiences, and releases go through the REST API.
@@ -59,7 +59,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  */
 class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
 
-    private static final String PACKAGE = "golden/dbvault/1.1.0/";
+    private static final String PACKAGE = "golden/dbvault/1.2.0-dev/";
     private static final String REVIEW_READS = "trackers/review-reads.jsonl";
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final DeepLStub DEEPL = DeepLStub.start();
@@ -133,7 +133,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    void dbvaultsNotesAreWrittenAsReleaseFlow110WroteThem() throws Exception {
+    void dbvaultsNotesAreWrittenAsTheWorkspaceRenderedThem() throws Exception {
         verifyManifest();
         JsonNode organization = read("inputs/organization.json");
         for (JsonNode change : read("inputs/changes.json").values()) {
@@ -154,7 +154,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         }
 
         assertThat(new LinkedHashSet<>(DEEPL.translatedTexts()))
-                .as("the texts sent to DeepL are exactly the ones it answered for the 1.1.0 notes")
+                .as("the texts sent to DeepL are exactly the ones it answered for the rendered notes")
                 .containsExactlyInAnyOrderElementsOf(answers.keySet().stream().map(answer -> answer.get(2)).toList());
         checkDeepLRequests(organization.path("projectContext").stringValue());
         assertThat(failures).withFailMessage(() -> String.join("\n\n", failures)).isEmpty();
@@ -247,8 +247,12 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         String category = decision != null ? decision.path("category").stringValue() : record.path("category").stringValue();
         JsonNode definition = categoryNamed(categories, category);
         boolean codeHost = source.equals("GITHUB") || source.equals("GITLAB");
-        JsonNode linkedIssues = record.path("linkedIssues");
-        String linkedStatus = record.path("linkedContextStatus").stringValue();
+        // The links the workspace's render made at intake, where they differ from the captured ones:
+        // intake runs no enricher here, so a key it links (ADR-0041) comes from the package.
+        JsonNode linkedIssues = change.path("linkedIssuesReplayed").isArray()
+                ? change.path("linkedIssuesReplayed") : record.path("linkedIssues");
+        String linkedStatus = change.path("linkedContextStatusReplayed").isString()
+                ? change.path("linkedContextStatusReplayed").stringValue() : record.path("linkedContextStatus").stringValue();
         boolean keepsIssues = linkedIssues.isArray() && !linkedIssues.isEmpty()
                 && Set.of("PARTIAL", "UNAVAILABLE", "COLLECTED").contains(linkedStatus);
         boolean imported = "IMPORT".equals(record.path("origin").stringValue());

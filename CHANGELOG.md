@@ -29,6 +29,8 @@ section into the version's entry, and the GitHub release is written from it.
   same release that names its key or that a person confirmed as its duplicate. A member
   accepts by rejecting the tracker change from the release, an administrator may exclude
   it with a prefilled reason instead, or the suggestion is dismissed; each is decided once.
+  A fold keeps the work's breaking and security flags on the code change, recorded as its
+  review, and reads the issue it adds as of review.
 - Templates get `recordedStatus` and `statusAtReview` for each linked issue.
 
 ### Changed

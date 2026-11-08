@@ -77,6 +77,12 @@ class ReleaseFoldDecision {
     @Column(name = "decided_at", nullable = false)
     private Instant decidedAt;
 
+    @Column(name = "adds_breaking", nullable = false)
+    private boolean addsBreaking;
+
+    @Column(name = "adds_security", nullable = false)
+    private boolean addsSecurity;
+
     protected ReleaseFoldDecision() {
     }
 
@@ -105,11 +111,13 @@ class ReleaseFoldDecision {
         this.decidedBy = decidedBy;
         this.deciderName = deciderName;
         this.decidedAt = decidedAt;
+        this.addsBreaking = decision == Decision.ACCEPTED && suggestion.addsBreaking();
+        this.addsSecurity = decision == Decision.ACCEPTED && suggestion.addsSecurity();
     }
 
     FoldDecisionView view() {
         return new FoldDecisionView(trackerChangeId, codeChangeId, evidence, issueKey, decision, removal, reason,
-                deciderName, decidedAt);
+                deciderName, decidedAt, addsBreaking, addsSecurity);
     }
 
     UUID getTrackerChangeId() {

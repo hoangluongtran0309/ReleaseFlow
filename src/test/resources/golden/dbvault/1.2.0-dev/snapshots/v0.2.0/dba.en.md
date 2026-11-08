@@ -16,7 +16,7 @@ This release includes 25 changes: 1 breaking change, 3 security changes, 11 new 
 
 - **Encryption of each target's password now uses a unique key derived from the master key via HKDF with the target's ID as context, instead of encrypting all passwords with the same key.** ([#25](https://github.com/hoangtulangtoc/dbvault/pull/25))
   - Migration: No direct action is required; credentials migrate to the new key scheme individually on update.
-  - Tracked in [DBV-16](https://hoangluongtran0309.atlassian.net/browse/DBV-16): Every target's credentials are encrypted with the same key (In Progress)
+  - Tracked in [DBV-16](https://hoangluongtran0309.atlassian.net/browse/DBV-16): Every target's credentials are encrypted with the same key (Done)
 
 - **A review was conducted on dbvault's credential encryption, covering encryption key management and exposure risks from database dumps.** ([OPS-6](https://linear.app/dbvault/issue/OPS-6/security-review-of-credential-encryption))
 
@@ -42,6 +42,7 @@ This release includes 25 changes: 1 breaking change, 3 security changes, 11 new 
   - Tracked in [DBV-10](https://hoangluongtran0309.atlassian.net/browse/DBV-10): Route backups by engine and add PostgreSQL (Done)
 
 - **Added support for Quartz backup schedules.** ([#21](https://github.com/hoangtulangtoc/dbvault/pull/21))
+  - Tracked in [DBV-12](https://hoangluongtran0309.atlassian.net/browse/DBV-12): Backup schedules (Done)
 
 - **Backup scheduling for targets is now possible using cron expressions with a selected time zone.** ([DBV-12](https://hoangluongtran0309.atlassian.net/browse/DBV-12))
 

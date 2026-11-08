@@ -483,7 +483,12 @@ Gợi ý chỉ là bằng chứng, và không có gì tự được gộp. Một
   ra lại trong release này.
 
 Cả hai cách gộp đều giữ issue làm ngữ cảnh liên kết của thay đổi mã, thêm nó từ thay đổi tracker
-khi thay đổi mã chưa liệt kê. Mỗi gợi ý được quyết định một lần, ghi lại ai quyết định và lúc
+khi thay đổi mã chưa liệt kê; issue được thêm như vậy được đọc từ công cụ theo dõi của nó tại thời
+điểm review này, như các issue khác. Cả hai cách gộp cũng giữ các cờ của phần việc: thay đổi mã
+trở thành phá vỡ tương thích hoặc bảo mật khi thay đổi tracker là như vậy. Gợi ý nói điều đó trước,
+như "Chấp nhận sẽ đánh dấu #30 là bảo mật, như OPS-7", và việc chấp nhận được ghi thành lần review
+của thay đổi mã và thành quyết định cho nó trong release, có nêu thay đổi đã được gộp. Thay đổi mã
+còn Unknown cần được phân loại trước: `400 invalid_fold_decision`. Mỗi gợi ý được quyết định một lần, ghi lại ai quyết định và lúc
 nào; release đưa về nháp vẫn giữ các quyết định của nó. Một cặp không có gì ràng buộc thì không
 được gợi ý: hãy từ chối hoặc loại thay đổi tracker bằng tay.
 
@@ -497,7 +502,8 @@ PUT  /api/projects/{projectId}/releases/{releaseId}/folding-suggestions/{tracker
 Cả hai trả về release, với `linkedIssueRead` là `PENDING`, `RUNNING`, `SUCCEEDED` hoặc `FAILED`
 (không có trước khi yêu cầu review), và liệt kê `linkedIssues` (mỗi mục có `tracker`, `key`,
 `recordedStatus`, `statusAtReview`, `read`, `status`, `open`, `accepted`, `accepterName` và
-`acceptedAt`), `foldingSuggestions` và `foldDecisions`.
+`acceptedAt`), `foldingSuggestions` (mỗi mục có `addsBreaking` và `addsSecurity`) và
+`foldDecisions`. Quyết định do một lần gộp tạo ra nêu thay đổi tracker trong `foldedChangeId`.
 
 | Tình huống | Phản hồi |
 | --- | --- |
@@ -505,7 +511,7 @@ Cả hai trả về release, với `linkedIssueRead` là `PENDING`, `RUNNING`, `
 | Chấp nhận trạng thái của một issue mà không thay đổi nào của release liên kết | `404 linked_issue_not_found` |
 | Chấp nhận trạng thái khi release là bản nháp hoặc đã publish | `409 release_status_conflict` |
 | Quyết định một gợi ý không được đưa ra, hoặc đã được quyết định | `404 folding_suggestion_not_found` |
-| Chấp nhận mà không có `removal`, hoặc loại mà không có lý do | `400 invalid_fold_decision` |
+| Chấp nhận mà không có `removal`, loại mà không có lý do, hoặc gộp thêm cờ vào một thay đổi Unknown | `400 invalid_fold_decision` |
 | Thành viên thực hiện loại | `403` |
 
 Trước khi publish, một release có thể được đặt lịch hoặc bỏ lịch, đưa về nháp (từ trạng thái

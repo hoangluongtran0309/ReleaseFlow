@@ -581,9 +581,9 @@ where it first appears; ADRs are linked from the slice they record.
     and upgrade-guide links, and existing ones received them;
   - the upgrade note for custom audience templates in the release-note guide.
 
-### Linked context and folding (V35)
+### Linked context and folding (V35–V36)
 
-- [ADR-0041](adr/0041-linked-context-and-folding.md) (#19), with Flyway `V35`:
+- [ADR-0041](adr/0041-linked-context-and-folding.md) (#19), with Flyway `V35` and `V36`:
   - issue keys in a change's head branch, followed by `-`, `/`, or `_`; in a description
     or commit, a tracker's own key followed by `-` and a lowercase word; the strict rule
     kept in titles and target branches;
@@ -598,7 +598,9 @@ where it first appears; ADRs are linked from the slice they record.
   - folding suggestions on the Review tab from a linked key or a confirmed duplicate,
     accepted by rejecting the tracker change from the release or excluding it with a
     reason (administrators), or dismissed, each recorded once in
-    `release_fold_decisions`.
+    `release_fold_decisions`; an accepted fold carries the tracker change's breaking and
+    security flags into the code change as a recorded review that names the folded change,
+    and reads the issue it added as of review.
 
 ## In progress
 

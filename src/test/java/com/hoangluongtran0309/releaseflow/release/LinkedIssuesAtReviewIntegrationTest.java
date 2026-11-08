@@ -230,12 +230,7 @@ class LinkedIssuesAtReviewIntegrationTest extends PostgreSqlIntegrationTest {
                 "https://linear.app/acme/issue/OPS-7/rotate-s3-credentials");
         UUID other = tracker(workspace, "JIRA", "APP-19", "APP-19: Document S3 profiles",
                 "https://acme.atlassian.net/browse/APP-19");
-        jdbcTemplate.update("""
-                INSERT INTO duplicate_candidates (id, organization_id, project_id, change_id, duplicate_of_id, similarity,
-                    evidence, status, decided_by, decider_name, created_at, decided_at)
-                VALUES (?, ?, ?, ?, ?, 0.95, '{"title":0.9,"content":0.9,"paths":0}'::jsonb, 'CONFIRMED',
-                    (SELECT id FROM app_users WHERE role = 'ADMIN'), 'Owner', now(), now())
-                """, UUID.randomUUID(), workspace.organizationId(), workspace.projectId(), tracker, code);
+        confirmDuplicate(workspace, tracker, code);
         String release = draft(workspace, "0.2.0", code, tracker, other);
         send(workspace.admin(), post(release + "/request-review"), null)
                 .andExpect(jsonPath("$.foldingSuggestions.length()").value(1))
@@ -270,6 +265,68 @@ class LinkedIssuesAtReviewIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    void aFoldKeepsTheTrackerChangesFlagsAndReadsItsIssueAsOfReview() throws Exception {
+        Workspace workspace = workspace();
+        UUID code = code(workspace, 30, "ci: rotate S3 credentials used by integration tests", null);
+        UUID tracker = tracker(workspace, "LINEAR", "OPS-7", "Rotate S3 credentials",
+                "https://linear.app/acme/issue/OPS-7/rotate-s3-credentials");
+        jdbcTemplate.update("UPDATE changes SET security = true WHERE id = ?", tracker);
+        confirmDuplicate(workspace, tracker, code);
+        String release = draft(workspace, "0.2.0", code, tracker);
+        send(workspace.admin(), post(release + "/request-review"), null).andExpect(status().isOk());
+        drainReads();
+        send(workspace.admin(), get(release), null)
+                .andExpect(jsonPath("$.linkedIssueRead").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.foldingSuggestions[0].addsSecurity").value(true))
+                .andExpect(jsonPath("$.foldingSuggestions[0].addsBreaking").value(false));
+        mockMvc.perform(get(release.substring("/api".length())).session(workspace.member()))
+                .andExpect(content().string(containsString(
+                        "Accepting marks #30 security, as OPS-7 is, and records that as the review of #30.")));
+
+        // Folding records the code change's review, which an Unknown change cannot have as it is.
+        jdbcTemplate.update("UPDATE changes SET category = 'UNKNOWN', category_display_name = 'Unknown', "
+                + "category_group = 'OTHER' WHERE id = ?", code);
+        send(workspace.member(), put(release + "/folding-suggestions/" + tracker + "/decision"),
+                Map.of("codeChangeId", code.toString(), "decision", "ACCEPT", "removal", "REJECT"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("invalid_fold_decision"));
+        jdbcTemplate.update("UPDATE changes SET category = 'FEATURE', category_display_name = 'Feature', "
+                + "category_group = 'FEATURE' WHERE id = ?", code);
+
+        LINEAR.respondWithIdentifiedIssue("OPS-7", "Rotate S3 credentials", "Done", "completed", TEAM, WORKSPACE);
+        send(workspace.member(), put(release + "/folding-suggestions/" + tracker + "/decision"),
+                Map.of("codeChangeId", code.toString(), "decision", "ACCEPT", "removal", "REJECT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changes.length()").value(1))
+                .andExpect(jsonPath("$.changes[0].security").value(true))
+                .andExpect(jsonPath("$.decisions[0].changeId").value(code.toString()))
+                .andExpect(jsonPath("$.decisions[0].action").value("EDIT"))
+                .andExpect(jsonPath("$.decisions[0].reviewerName").value("Member"))
+                .andExpect(jsonPath("$.decisions[0].foldedChangeId").value(tracker.toString()))
+                .andExpect(jsonPath("$.foldDecisions[0].addsSecurity").value(true))
+                .andExpect(jsonPath("$.linkedIssueRead").value("PENDING"));
+        assertThat(jdbcTemplate.queryForObject("SELECT reviewer_name FROM changes WHERE id = ?", String.class, code))
+                .as("a recorded human review of the code change").isEqualTo("Member");
+
+        // Only the issue the fold added is read: the others were read at this review already.
+        LINEAR.clearRequests();
+        drainReads();
+        assertThat(LINEAR.requests()).hasSize(1);
+        assertThat(JIRA.issueRequests()).isEmpty();
+        send(workspace.admin(), get(release), null)
+                .andExpect(jsonPath("$.linkedIssueRead").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.linkedIssues[0].key").value("OPS-7"))
+                .andExpect(jsonPath("$.linkedIssues[0].statusAtReview").value("Done"))
+                .andExpect(jsonPath("$.linkedIssues[0].open").value(false));
+        mockMvc.perform(get(release.substring("/api".length())).session(workspace.member()))
+                .andExpect(content().string(containsString("Marked security when OPS-7 was folded in.")));
+
+        send(workspace.admin(), post(release + "/approve"), null).andExpect(status().isOk());
+        assertThat(note(release))
+                .contains("## 🔒 Security\n\n- rotate S3 credentials used by integration tests [OPS-7] (Done)\n");
+    }
+
+    @Test
     void aDismissedSuggestionIsNotOfferedAgainAndNothingIsFolded() throws Exception {
         Workspace workspace = workspace();
         UUID code = code(workspace, 61, "feat: sign-in throttling", """
@@ -292,6 +349,15 @@ class LinkedIssuesAtReviewIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(get(release.substring("/api".length())).session(workspace.admin()))
                 .andExpect(content().string(not(containsString("id=\"folding-suggestions\""))));
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM release_fold_decisions", Integer.class)).isEqualTo(1);
+    }
+
+    private void confirmDuplicate(Workspace workspace, UUID change, UUID duplicateOf) {
+        jdbcTemplate.update("""
+                INSERT INTO duplicate_candidates (id, organization_id, project_id, change_id, duplicate_of_id, similarity,
+                    evidence, status, decided_by, decider_name, created_at, decided_at)
+                VALUES (?, ?, ?, ?, ?, 0.95, '{"title":0.9,"content":0.9,"paths":0}'::jsonb, 'CONFIRMED',
+                    (SELECT id FROM app_users WHERE role = 'ADMIN'), 'Owner', now(), now())
+                """, UUID.randomUUID(), workspace.organizationId(), workspace.projectId(), change, duplicateOf);
     }
 
     private void drainReads() {

@@ -15,7 +15,7 @@ trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
 context, translation glossary, and linked context and folding slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V35,
+Spring Boot application, PostgreSQL/Flyway V1-V36,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -142,7 +142,10 @@ changing behavior.
 - A folding suggestion is evidence only, computed from a stored linked key or a
   confirmed duplicate and never from a provider call. Nothing is folded, merged, or
   deleted without a person's decision, each suggestion is decided once, and excluding
-  the tracker change takes an administrator and a reason.
+  the tracker change takes an administrator and a reason. A fold never loses a flag: the
+  code change takes the tracker change's breaking and security flags, as a recorded
+  review naming the folded change that the suggestion announced, and an issue it adds is
+  read as of review like the others.
 - A `PROCESSING` change cannot be reviewed, sent to AI, or released.
 - A release's changes are chosen while it is a draft; during review a change
   can only be rejected, which removes it. A release is approved only when every

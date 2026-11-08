@@ -8,6 +8,8 @@ import java.util.UUID;
  * person confirmed the two as possible duplicates. It is evidence only; a person decides.
  *
  * @param confirmedBy who confirmed the duplicate, for {@code CONFIRMED_DUPLICATE} only
+ * @param addsBreaking whether accepting marks the code change breaking, as the tracker change is
+ * @param addsSecurity whether accepting marks the code change security, as the tracker change is
  */
 public record FoldingSuggestion(
         UUID trackerChangeId,
@@ -18,6 +20,13 @@ public record FoldingSuggestion(
         String codeTitle,
         ReleaseFoldDecision.Evidence evidence,
         String issueKey,
-        String confirmedBy
+        String confirmedBy,
+        boolean addsBreaking,
+        boolean addsSecurity
 ) {
+
+    /** Whether accepting changes the code change's flags, and so records its review. */
+    public boolean addsFlags() {
+        return addsBreaking || addsSecurity;
+    }
 }

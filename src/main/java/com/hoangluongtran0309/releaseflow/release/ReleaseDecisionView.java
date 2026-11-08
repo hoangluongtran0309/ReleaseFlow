@@ -8,6 +8,7 @@ public record ReleaseDecisionView(
         ReviewAction action,
         String reviewerName,
         String note,
-        Instant decidedAt
+        Instant decidedAt,
+        UUID foldedChangeId
 ) {
 }

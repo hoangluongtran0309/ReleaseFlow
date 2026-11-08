@@ -16,7 +16,7 @@ Bản phát hành này gồm 25 thay đổi: 1 thay đổi phá vỡ, 3 thay đ�
 
 - **Việc mã hóa mật khẩu của từng đích hiện sử dụng một khóa duy nhất được dẫn xuất từ khóa chính thông qua HKDF với ID của đích làm bối cảnh, thay vì mã hóa tất cả mật khẩu bằng cùng một khóa.** ([#25](https://github.com/hoangtulangtoc/dbvault/pull/25))
   - Cách chuyển đổi: Không cần thực hiện bất kỳ thao tác trực tiếp nào; thông tin đăng nhập sẽ được chuyển đổi sang cơ chế khóa mới một cách tự động khi cập nhật.
-  - Theo dõi tại [DBV-16](https://hoangluongtran0309.atlassian.net/browse/DBV-16): Every target's credentials are encrypted with the same key (In Progress)
+  - Theo dõi tại [DBV-16](https://hoangluongtran0309.atlassian.net/browse/DBV-16): Every target's credentials are encrypted with the same key (Done)
 
 - **Một cuộc đánh giá đã được tiến hành đối với cơ chế mã hóa thông tin đăng nhập của dbvault, bao gồm quản lý khóa mã hóa và các rủi ro rò rỉ từ các bản sao lưu cơ sở dữ liệu.** ([OPS-6](https://linear.app/dbvault/issue/OPS-6/security-review-of-credential-encryption))
 
@@ -42,6 +42,7 @@ Bản phát hành này gồm 25 thay đổi: 1 thay đổi phá vỡ, 3 thay đ�
   - Theo dõi tại [DBV-10](https://hoangluongtran0309.atlassian.net/browse/DBV-10): Route backups by engine and add PostgreSQL (Done)
 
 - **Đã thêm hỗ trợ cho lịch trình sao lưu Quartz.** ([#21](https://github.com/hoangtulangtoc/dbvault/pull/21))
+  - Theo dõi tại [DBV-12](https://hoangluongtran0309.atlassian.net/browse/DBV-12): Backup schedules (Done)
 
 - **Giờ đây, có thể lên lịch sao lưu cho các đích sao lưu bằng cách sử dụng biểu thức cron với múi giờ đã chọn.** ([DBV-12](https://hoangluongtran0309.atlassian.net/browse/DBV-12))
 

@@ -14,6 +14,7 @@ import com.hoangluongtran0309.releaseflow.change.ChangeExclusionService;
 import com.hoangluongtran0309.releaseflow.change.ChangeFoldingService;
 import com.hoangluongtran0309.releaseflow.change.ChangeInboxService;
 import com.hoangluongtran0309.releaseflow.change.ChangeNotFoundException;
+import com.hoangluongtran0309.releaseflow.change.ChangeReviewRequest;
 import com.hoangluongtran0309.releaseflow.change.ChangeReviewService;
 import com.hoangluongtran0309.releaseflow.change.ChangeSummaryRequest;
 import com.hoangluongtran0309.releaseflow.change.ChangeSummaryService;
@@ -466,7 +467,18 @@ public class ReleaseService {
             }
             ChangeView tracker = changes.stream().filter(change -> change.id().equals(trackerChangeId)).findFirst()
                     .orElseThrow(ChangeNotFoundException::new);
-            changeFoldingService.foldIssue(organizationId, projectId, suggestion.codeChangeId(), foldedIssue(tracker));
+            ChangeView code = changes.stream().filter(change -> change.id().equals(suggestion.codeChangeId())).findFirst()
+                    .orElseThrow(ChangeNotFoundException::new);
+            if (suggestion.addsFlags() && code.unknownCategory()) {
+                throw new InvalidFoldDecisionException("error.invalid_fold_decision.classifyFirst");
+            }
+            LinkedIssue folded = foldedIssue(tracker);
+            boolean newIssue = code.linkedIssues().stream().noneMatch(issue -> issue.key().equalsIgnoreCase(folded.key())
+                    && issue.trackerOrJira().equals(folded.trackerOrJira()));
+            changeFoldingService.foldIssue(organizationId, projectId, code.id(), folded);
+            if (suggestion.addsFlags()) {
+                carryFlags(person, release, code, tracker, now);
+            }
             releaseChangeRepository.deleteByReleaseIdAndChangeIdAndOrganizationId(releaseId, trackerChangeId, organizationId);
             releaseChangeRepository.flush();
             if (removal == ReleaseFoldDecision.Removal.EXCLUDED) {
@@ -474,11 +486,35 @@ public class ReleaseService {
                 exclusion.setReason(reason);
                 changeExclusionService.exclude(person, projectId, trackerChangeId, exclusion);
             }
+            // The issue the code change now carries is read as of this review, like the others.
+            if (newIssue) {
+                linkedIssueReadRepository.findByReleaseIdAndOrganizationId(releaseId, organizationId)
+                        .ifPresentOrElse(read -> read.queue(now), () -> linkedIssueReadRepository.save(
+                                new LinkedIssueRead(releaseId, organizationId, projectId, now)));
+            }
         }
         foldDecisionRepository.saveAndFlush(new ReleaseFoldDecision(releaseId, suggestion, organizationId, projectId,
                 decision, removal, reason, person.userId(), person.displayName(), now));
         release.touch(now);
         return view(release, includedChanges(release));
+    }
+
+    /**
+     * A fold keeps the work's flags: the code change becomes breaking or security when the
+     * folded tracker change is, reviewed by the person who accepted the fold, and the release
+     * records that as the code change's decision, naming the folded change.
+     */
+    private void carryFlags(ReleaseFlowPrincipal person, Release release, ChangeView code, ChangeView tracker, Instant now) {
+        ChangeReviewRequest review = new ChangeReviewRequest();
+        review.setCategory(code.category());
+        review.setBreaking(code.breaking() || tracker.breaking());
+        review.setSecurity(code.security() || tracker.security());
+        changeReviewService.review(person, release.getProjectId(), code.id(), review);
+        ReleaseChangeReview decision = reviewRepository.findById(new ReleaseChange.Key(release.getId(), code.id()))
+                .orElseGet(() -> new ReleaseChangeReview(release.getId(), code.id(), release.getOrganizationId(),
+                        release.getProjectId()));
+        decision.recordFold(tracker.id(), person.userId(), person.displayName(), now);
+        reviewRepository.saveAndFlush(decision);
     }
 
     /**
@@ -546,7 +582,9 @@ public class ReleaseService {
                             code.title(),
                             linked ? ReleaseFoldDecision.Evidence.LINKED_KEY : ReleaseFoldDecision.Evidence.CONFIRMED_DUPLICATE,
                             key,
-                            linked ? null : duplicate.get().deciderName()
+                            linked ? null : duplicate.get().deciderName(),
+                            tracker.breaking() && !code.breaking(),
+                            tracker.security() && !code.security()
                     ));
                 }
             }

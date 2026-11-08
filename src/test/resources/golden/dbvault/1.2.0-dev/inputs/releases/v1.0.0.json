@@ -387,7 +387,7 @@
    "audience": "dba",
    "language": "en",
    "file": "snapshots/v1.0.0/dba.en.md",
-   "sha256": "283c8a4ad240b8cde19c09830a3ae1e6baa7076eada7edf3a7642f74a99f928a",
+   "sha256": "c8a51024345ec9e9317b7ac752251f0eee828b48c4154a5bc25f00e250ee6673",
    "glossaryStatus": "NONE",
    "glossaryReason": null
   },
@@ -395,7 +395,7 @@
    "audience": "dba",
    "language": "vi",
    "file": "snapshots/v1.0.0/dba.vi.md",
-   "sha256": "1a8eddfc92243c7712ad0ea45ddec958ce91bb1e5f6c636699594ced31c32953",
+   "sha256": "8b0ede03379ee865329817d21da20099e9afc9e5beddb19a48c4c7d09c6dd37b",
    "glossaryStatus": "APPLIED",
    "glossaryReason": null
   },
