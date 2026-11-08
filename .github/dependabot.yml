@@ -25,6 +25,11 @@ updates:
     groups:
       maven-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # anthropic-java 3.x moves to Anthropic API version 2026-10-21, which drops the
+      # temperature and sends the key as a Bearer token; it waits for its ADR (#60).
+      - dependency-name: com.anthropic:anthropic-java
+        update-types: [version-update:semver-major]
     labels: [dependencies, java]
 
   - package-ecosystem: npm
