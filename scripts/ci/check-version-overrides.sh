@@ -29,7 +29,7 @@ bom="${local_repository}/org/springframework/boot/spring-boot-dependencies/${par
 stale=0
 for property in "${OVERRIDES[@]}"; do
   ours="$(evaluate "${property}")"
-  managed="$(sed -n "s|^ *<${property}>\\(.*\\)</${property}>.*|\\1|p" "${bom}" | head -n 1)"
+  managed="$(sed -n "s|^ *<${property}>\\(.*\\)</${property}>.*|\\1|p" "${bom}" | sed -n 1p)"
   if [ -z "${managed}" ]; then
     echo "not ok - Spring Boot ${parent_version} no longer manages ${property}; remove the override."
     stale=1

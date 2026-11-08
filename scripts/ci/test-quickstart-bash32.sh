@@ -64,7 +64,9 @@ run_quickstart() {
     "${BASH32_IMAGE}" bash /bundle/quickstart.sh
 }
 
-docker run --rm --network none "${BASH32_IMAGE}" bash --version | head -n 1
+# sed reads all of it: a reader that stops early, such as head, can leave docker writing into a
+# closed pipe, which pipefail turns into a failure.
+docker run --rm --network none "${BASH32_IMAGE}" bash --version | sed -n 1p
 
 # The first run: every line from the shell clean-up to the closing instructions.
 run_quickstart first --env RELEASEFLOW_HTTP_PORT=18080 --env RELEASEFLOW_AI_PROVIDER=openai \
