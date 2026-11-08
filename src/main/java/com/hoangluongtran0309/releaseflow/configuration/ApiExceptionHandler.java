@@ -72,6 +72,10 @@ import com.hoangluongtran0309.releaseflow.project.SourceTokenRejectedException;
 import com.hoangluongtran0309.releaseflow.project.SourceUnavailableException;
 import com.hoangluongtran0309.releaseflow.release.ChangeNotReleasableException;
 import com.hoangluongtran0309.releaseflow.release.ClassificationChangedException;
+import com.hoangluongtran0309.releaseflow.release.FoldingSuggestionNotFoundException;
+import com.hoangluongtran0309.releaseflow.release.InvalidFoldDecisionException;
+import com.hoangluongtran0309.releaseflow.release.LinkedIssueNotFoundException;
+import com.hoangluongtran0309.releaseflow.release.LinkedIssueStatusChangedException;
 import com.hoangluongtran0309.releaseflow.release.InvalidPreviousReleaseException;
 import com.hoangluongtran0309.releaseflow.release.InvalidReleaseScheduleException;
 import com.hoangluongtran0309.releaseflow.release.InvalidUpgradeGuideUrlException;
@@ -268,6 +272,16 @@ public class ApiExceptionHandler {
         return localized(HttpStatus.CONFLICT, "classification_changed", exception);
     }
 
+    @ExceptionHandler(LinkedIssueStatusChangedException.class)
+    ResponseEntity<ProblemDetail> linkedIssueStatusChanged(LinkedIssueStatusChangedException exception) {
+        return localized(HttpStatus.CONFLICT, "linked_issue_status_changed", exception);
+    }
+
+    @ExceptionHandler(InvalidFoldDecisionException.class)
+    ResponseEntity<ProblemDetail> invalidFoldDecision(InvalidFoldDecisionException exception) {
+        return localized(HttpStatus.BAD_REQUEST, "invalid_fold_decision", exception);
+    }
+
     @ExceptionHandler(InvalidReleaseScheduleException.class)
     ResponseEntity<ProblemDetail> invalidReleaseSchedule(InvalidReleaseScheduleException exception) {
         return localized(HttpStatus.BAD_REQUEST, "invalid_release_schedule", exception);
@@ -366,6 +380,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ReleaseNoteNotFoundException.class)
     ResponseEntity<ProblemDetail> releaseNoteNotFound(ReleaseNoteNotFoundException exception) {
         return localized(HttpStatus.NOT_FOUND, "release_note_not_found", exception);
+    }
+
+    @ExceptionHandler(LinkedIssueNotFoundException.class)
+    ResponseEntity<ProblemDetail> linkedIssueNotFound(LinkedIssueNotFoundException exception) {
+        return localized(HttpStatus.NOT_FOUND, "linked_issue_not_found", exception);
+    }
+
+    @ExceptionHandler(FoldingSuggestionNotFoundException.class)
+    ResponseEntity<ProblemDetail> foldingSuggestionNotFound(FoldingSuggestionNotFoundException exception) {
+        return localized(HttpStatus.NOT_FOUND, "folding_suggestion_not_found", exception);
     }
 
     @ExceptionHandler(ReleaseNotesMissingException.class)

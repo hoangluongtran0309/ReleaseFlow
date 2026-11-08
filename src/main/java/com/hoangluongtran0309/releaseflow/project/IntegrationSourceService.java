@@ -6,6 +6,7 @@ import com.hoangluongtran0309.releaseflow.gitlab.GitLabBaseUrl;
 import com.hoangluongtran0309.releaseflow.jira.JiraApiClient;
 import com.hoangluongtran0309.releaseflow.jira.JiraSiteUrl;
 import com.hoangluongtran0309.releaseflow.linear.LinearApiClient;
+import com.hoangluongtran0309.releaseflow.linear.LinearTeam;
 import com.hoangluongtran0309.releaseflow.source.ProviderAccess;
 import com.hoangluongtran0309.releaseflow.source.SourceType;
 import com.hoangluongtran0309.releaseflow.source.WebhookAuthMode;
@@ -256,8 +257,10 @@ public class IntegrationSourceService {
         // Linear names a team by a UUID, so the same canonical form as the other types works.
         String teamId = canonicalize(request.getTeamId());
         requireNotConnected(organizationId, SourceType.LINEAR, teamId);
-        String workspaceId = linearApiClient.workspaceOf(teamId, request.getApiToken())
+        // The same request names the team's key, which links its identifiers (ADR-0041).
+        LinearTeam team = linearApiClient.team(teamId, request.getApiToken())
                 .orElseThrow(() -> new SourceTokenRejectedException(SourceType.LINEAR));
+        String workspaceId = team.workspaceId();
 
         UUID sourceId = UUID.randomUUID();
         UUID webhookId = UUID.randomUUID();
@@ -285,6 +288,9 @@ public class IntegrationSourceService {
                             credentialCipher.encrypt(request.getApiToken(), tokenAuthenticatedData(source)),
                             createdAt
                     );
+                    if (!team.key().isBlank()) {
+                        source.rememberTeamKey(team.key());
+                    }
                     return source;
                 },
                 SourceType.LINEAR

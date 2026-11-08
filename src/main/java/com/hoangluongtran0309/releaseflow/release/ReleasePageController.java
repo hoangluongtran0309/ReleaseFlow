@@ -256,6 +256,46 @@ public class ReleasePageController {
                 () -> releaseService.decide(principal, projectId, releaseId, changeId, request));
     }
 
+    @PostMapping("/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance")
+    String acceptLinkedIssueStatus(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @Valid @ModelAttribute("acceptanceRequest") LinkedIssueAcceptanceRequest request,
+            BindingResult bindingResult,
+            Model model,
+            HttpServletResponse response
+    ) {
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            return renderRelease(principal, projectId, releaseId, model, response);
+        }
+        return act(principal, projectId, releaseId, model, response,
+                () -> releaseService.acceptLinkedIssueStatus(principal, projectId, releaseId, request));
+    }
+
+    @PostMapping("/projects/{projectId}/releases/{releaseId}/folding-suggestions/{trackerChangeId}/decision")
+    String decideFold(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @PathVariable UUID trackerChangeId,
+            @Valid @ModelAttribute("foldRequest") FoldDecisionRequest request,
+            BindingResult bindingResult,
+            Model model,
+            HttpServletResponse response
+    ) {
+        // Several suggestions carry this form; only the one sent shows what was wrong with it.
+        model.addAttribute("failingFoldChangeId", trackerChangeId);
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            return renderRelease(principal, projectId, releaseId, model, response);
+        }
+        return act(principal, projectId, releaseId, model, response, bindingResult,
+                failure -> failure instanceof InvalidFoldDecisionException ? "reason" : null,
+                () -> releaseService.decideFold(principal, projectId, releaseId, trackerChangeId, request));
+    }
+
     @PostMapping("/projects/{projectId}/releases/{releaseId}/approve")
     String approve(
             @AuthenticationPrincipal ReleaseFlowPrincipal principal,
@@ -404,7 +444,8 @@ public class ReleasePageController {
         } catch (InvalidReleaseScheduleException
                  | InvalidChangeReviewException
                  | InvalidUpgradeGuideUrlException
-                 | InvalidPreviousReleaseException exception) {
+                 | InvalidPreviousReleaseException
+                 | InvalidFoldDecisionException exception) {
             return refuse(principal, projectId, releaseId, HttpStatus.BAD_REQUEST, exception, form, fieldOf, model, response);
         } catch (ReleasePublishedException
                  | ReleaseStatusException
@@ -417,7 +458,8 @@ public class ReleasePageController {
                  | ChangeProcessingException
                  | ReleaseNotesMissingException
                  | TranslationsNotReadyException
-                 | ReleaseNoteRenderException exception) {
+                 | ReleaseNoteRenderException
+                 | LinkedIssueStatusChangedException exception) {
             return refuse(principal, projectId, releaseId, HttpStatus.CONFLICT, exception, form, fieldOf, model, response);
         }
         return "redirect:" + successPath;
@@ -537,7 +579,9 @@ public class ReleasePageController {
                 "changesRequest", ReleaseChangesRequest::new,
                 "decisionRequest", ReleaseDecisionRequest::new,
                 "summaryRequest", ChangeSummaryRequest::new,
-                "noteRequest", ReleaseNoteRequest::new
+                "noteRequest", ReleaseNoteRequest::new,
+                "foldRequest", FoldDecisionRequest::new,
+                "acceptanceRequest", LinkedIssueAcceptanceRequest::new
         ).entrySet()) {
             if (!model.containsAttribute(form.getKey())) {
                 model.addAttribute(form.getKey(), form.getValue().get());

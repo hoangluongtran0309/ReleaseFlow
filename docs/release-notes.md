@@ -18,7 +18,7 @@ Organization starts with four presets, named in its output language
 | `end_user` | plain language, what people notice | the headline and the narrative, and a migration step only when it is required | none |
 | `support` | what customers may ask about, and what to tell them | the headline with the link and narrative, the migration step under its kind, and limitations | none |
 
-![The Audiences page: the three presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
+![The Audiences page: the four presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
 
 An audience has a **code** (lowercase letters, digits, and underscores,
 starting with a letter; fixed once created), a **display name**, a
@@ -30,9 +30,15 @@ only when the change or the [Project context](changes.md#project-context) names 
 [Mustache](https://mustache.github.io/mustache.5.html) and render one change as
 Markdown with the variables `whatChanged`, `whyChanged`, `technicalDetail`,
 `migrationStep`, `migrationKind`, `limitations`, `narrative`, `headline`, `relevance`,
-`brief`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
-`url`, escaped like any other tracker text, as they were read when the change was recorded
-([Linked Jira issues](sources.md#linked-jira-issues)). `migrationKind` is `required`,
+`brief`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`,
+`recordedStatus`, `statusAtReview`, and `url`, escaped like any other tracker text
+([Linked issues](sources.md#linked-issues)). `status` is the issue's status as of the
+release's review, or the one recorded with the change when the issue could not be read
+again; `recordedStatus` is the one recorded with the change, and `statusAtReview` the one
+read at review, empty when it was not read. A status that is not finished, or that
+ReleaseFlow cannot tell is finished, is empty in all three unless a person chose to show
+it (see [Linked issues at review](#linked-issues-at-review)), so print it inside a section:
+`{{#status}} ({{status}}){{/status}}`. `migrationKind` is `required`,
 `conditional`, `recommended`, or `unspecified` for a step recorded before kinds
 existed, and is empty without a step (see
 [AI classification](changes.md#ai-classification-and-summaries)). Since Mustache cannot
@@ -86,6 +92,8 @@ as `brief`; for an end-user or a custom audience it follows its relevance like a
 change, unless it is also breaking. See
 [ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
 
+![An operator note: the breaking-change warning links the upgrade guide, then the breaking change and the 🔒 Security section](assets/release-notes/rn-12-operator-note.webp)
+
 The counts and the breaking-change warning describe what the note shows, and every
 change counts once, in the section it is listed in. An audience that nothing in the release concerns still gets its note: the title,
 the release summary, and one line saying that nothing in the release concerns it.
@@ -93,7 +101,7 @@ Approval still writes one note per audience and language, and an automation acti
 delivers that note like any other. See
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
-![Editing an audience's template and saving it](assets/release-notes/rn-2-template.webp)
+![An audience's template and footer in the editor, and its preview: a sample change followed by the footer](assets/release-notes/rn-2-template.webp)
 
 ### Footer
 
@@ -141,6 +149,8 @@ Neither links `releaseUrl`: a published note is often the GitHub release itself,
 install link would point to the page it is on. A note keeps the footer it was approved
 with, like its template.
 
+![The end of the same operator note: its footer links the upgrade guide](assets/release-notes/rn-12-operator-note-footer.webp)
+
 ### Upgrading custom audience templates
 
 Audiences created before 1.1.0 keep their own templates; nothing rewrites them. The
@@ -173,13 +183,32 @@ and `Đọc trước khi nâng cấp`. A release note language other than the ma
 template and footer under **Language templates**. **Reset to preset** gives a shipped
 audience its shipped footer in every language.
 
+Since 1.2.0, a linked issue's `{{status}}` is its status as of the release's review, and
+it is empty for an issue that is still open unless a person chose to show it. A template
+that prints `({{status}})` bare then prints `()`. Wrap it in a section so that an empty
+status prints nothing. A DBA audience's line, before:
+
+```text
+  - Tracked in [{{key}}]({{url}}): {{title}} ({{status}})
+```
+
+and after:
+
+```text
+  - Tracked in [{{key}}]({{url}}): {{title}}{{#status}} ({{status}}){{/status}}
+```
+
+Do the same in each language template (`Theo dõi tại` in Vietnamese). The shipped
+audiences print no linked issue, so none of them changes.
+
 An Organization keeps between 1 and 20 audiences. An audience cannot be deleted
 while something still names it: a release note, an automation rule's action, or an
 automation run's history. A rule that is enabled or disabled can be pointed at another
 audience first. An archived rule cannot be changed, and run history keeps the
 audience it delivered to, so either keeps the audience for good; a refusal says
 which of these holds it. A preset can be reset to its shipped version in the current
-output language. See [ADR-0011](adr/0011-audience-release-notes.md).
+output language, and so can an audience your team added under a shipped code (`operator`,
+`contributor`, `end_user`, or `support`), which becomes a preset from then on. See [ADR-0011](adr/0011-audience-release-notes.md).
 
 Every audience endpoint is for administrators only:
 
@@ -209,7 +238,7 @@ audience then has none, so callers written before footers keep working.
 | The Organization already has 20 audiences | `409 audience_limit` |
 | Deleting the last audience | `409 audience_last` |
 | Deleting an audience that has release notes, that an automation rule's action delivers to (enabled, disabled, or archived), or that a run's history names | `409 audience_in_use`; `detail` says which |
-| Resetting an audience your team created | `409 audience_not_preset` |
+| Resetting an audience whose code no shipped audience has | `409 audience_not_preset` |
 | A language template for a language that is not a release note language | `400 template_language_not_targeted` |
 | An unknown or foreign audience | `404 audience_not_found` |
 
@@ -274,7 +303,7 @@ summary after approval translates the new text. See
 
 ![Seconds after approval: the Vietnamese note is Translating and still shows the untranslated text](assets/release-notes/rn-3-translating.webp)
 
-![The same note once its translations arrived: the release summary and every change are in Vietnamese](assets/release-notes/rn-4-translated.webp)
+![The same note once its translations arrived: the release summary and every change are in Vietnamese, and the glossary was Sent with every translation](assets/release-notes/rn-4-translated.webp)
 
 ```text
 GET  /api/organization/release-languages
@@ -305,6 +334,8 @@ holds at most 500 entries, and uniqueness is exact: "Image" and "image" are two 
 A lowercase entry usually keeps the capitalized word at the start of a sentence too, so
 add another form only for one DeepL still changes.
 
+![The Glossary page: the terms kept as written in every language, the fixed en → vi translations, and the DeepL sync state of the pair](assets/release-notes/rn-10-glossary.webp)
+
 A glossary steers DeepL; it does not bind every word. DeepL can still translate a kept
 term inside a longer phrase: with "image", "secret", and "container" kept, dbvault's notes
 still got "container images", "emulator image", and "repository secrets" translated, and
@@ -332,6 +363,8 @@ with every translation into that language, not that DeepL kept every term; read 
 and add a phrase DeepL translated as its own kept term. Retry translations tries a failed sync again. The glossary never reaches the
 AI.
 
+![The notes of an approved release: the glossary was Sent with every translation into vi](assets/release-notes/rn-11-glossary-state.webp)
+
 A translation that comes back in its source language is not stored as one. For a
 Vietnamese note, a sentence with at least three words left to translate and no Vietnamese
 diacritic fails; for a language in another script, such as Japanese or Russian, a
@@ -340,6 +373,17 @@ like `MongoDB` are left out of the count. A failing answer is translated once mo
 the glossary, and if it fails again the note is **Not translated**, like any failed
 translation. Other Latin-script languages have no such check yet. See
 [ADR-0036](adr/0036-translation-glossary.md).
+
+With a glossary, DeepL changes the letter case of some code-like words: `<backup-id>` came
+back as `<BACKUP-id>`, and `dbvault-cli` as `dbvault-CLI`. A translation therefore keeps
+the source's **placeholders** (`<`, a letter, then letters, digits, hyphens, or
+underscores, then `>`) and its **hyphenated names written in lowercase** as the source
+writes them: where a translation differs from one in letter case alone, the source's form
+is put back, and nothing else changes. A word the source writes in two cases is left as
+DeepL wrote it. This happens when a translation is recorded, from DeepL or from the cache,
+so a translation cached earlier is corrected at the next approval without a request, and
+nothing that is sent changes. A placeholder DeepL drops is left out and logged. See
+[ADR-0040](adr/0040-translation-placeholders.md).
 
 ```text
 GET    /api/glossary
@@ -426,6 +470,79 @@ Any member can take every step, so one person can prepare, review, approve, and 
 the same release. ReleaseFlow records who reviewed each change, who approved, and who
 published, but it does not require two different people.
 
+### Linked issues at review
+
+Requesting review reads every issue linked to the release's changes again, from Jira or
+Linear, in the background: a status read when a change was recorded may be weeks old. The
+Review tab says while the read is running, and whether an issue could not be read. A read
+that fails is tried again after 2, 4, 8 … seconds, five attempts in all; an issue still
+unread keeps the status recorded with its change. Returning to draft and requesting review
+again reads every issue again.
+
+A note shows an issue's status only when the issue is finished: Jira's **Done** category,
+or a Linear issue that is completed or canceled. An issue recorded before 1.2.0, or read
+from a tracker that did not say, counts as not finished. Under **Linked issues still
+open**, the Review tab lists each issue whose status is not finished while its change
+ships, with **Show this status**: a member who chooses it lets every note print that very
+status, and ReleaseFlow records who and when. A later read that returns another status asks
+again. The warning never holds up approval or publication. Notes are written at approval
+from the statuses read by then; a read that finishes later writes again the notes that
+still follow their template, until the release is published.
+
+### Folding a tracker change into its code change
+
+A Jira or Linear change and the pull request that did the work are one piece of work, and
+should be one item in a note. While a release is in review, the Review tab suggests
+folding a **tracker change** into a **code change** of the same release when the code
+change lists the tracker change's key among its [linked issues](sources.md#linked-issues),
+or when a person confirmed the two as a
+[possible duplicate](changes.md#review-signals). Each suggestion says which.
+
+A suggestion is evidence only, and nothing is folded on its own. A member chooses:
+
+- **Fold, and reject … from this release** takes the tracker change out of the release as a
+  review decision would, so it is available for another release.
+- **Fold, and exclude … from releases** (administrators) excludes the tracker change from
+  every release, with a reason ReleaseFlow fills in, such as "`OPS-7` is tracked by `#30`,
+  which carries the release-note entry.", which can be edited. See
+  [Excluding a change from releases](changes.md#excluding-a-change-from-releases).
+- **Not the same work** dismisses the suggestion: both changes stay, and it is not
+  offered again in this release.
+
+Either fold keeps the issue as linked context of the code change, adding it from the
+tracker change when the code change did not list it yet; an issue added that way is read
+from its tracker as of this review, like the others. Either fold also keeps the work's
+flags: the code change becomes breaking or security when the tracker change is. The
+suggestion says so first, such as "Accepting marks #30 security, as OPS-7 is", and
+accepting records it as the review of the code change and as its decision in the release,
+which names the folded change. A code change still Unknown needs a category first:
+`400 invalid_fold_decision`. Each suggestion is decided once,
+with who decided and when; a release returned to draft keeps its decisions. A pair with
+nothing that ties them is not suggested: reject or exclude the tracker change by hand.
+
+```text
+POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance
+     {"tracker": "JIRA" | "LINEAR", "key", "status"}
+PUT  /api/projects/{projectId}/releases/{releaseId}/folding-suggestions/{trackerChangeId}/decision
+     {"codeChangeId", "decision": "ACCEPT" | "DISMISS", "removal": "REJECT" | "EXCLUDE", "reason"}
+```
+
+Both answer with the release, whose `linkedIssueRead` is `PENDING`, `RUNNING`,
+`SUCCEEDED`, or `FAILED` (absent before review is requested), and which lists
+`linkedIssues` (each with `tracker`, `key`, `recordedStatus`, `statusAtReview`, `read`,
+`status`, `open`, `accepted`, `accepterName`, and `acceptedAt`), `foldingSuggestions` (each
+with `addsBreaking` and `addsSecurity`), and `foldDecisions`. A decision a fold made names
+the tracker change in `foldedChangeId`.
+
+| Situation | Response |
+| --- | --- |
+| Accepting a status other than the one read last | `409 linked_issue_status_changed` |
+| Accepting a status of an issue no change of the release links | `404 linked_issue_not_found` |
+| Accepting a status while the release is a draft or published | `409 release_status_conflict` |
+| Deciding a suggestion that is not offered, or was decided | `404 folding_suggestion_not_found` |
+| Accepting without `removal`, excluding without a reason, or a fold that adds a flag to an Unknown change | `400 invalid_fold_decision` |
+| A member excluding | `403` |
+
 Until it is published, a release can be scheduled or unscheduled, returned to
 draft (from review or approval, clearing its decisions and approval but not
 the reviews on its changes), or discarded (its changes become available
@@ -463,6 +580,8 @@ again. Notes reflect the changes at approval: to pick up a classification
 corrected later in the Change Inbox, return the release to draft and approve it
 again. See [ADR-0010](adr/0010-release-review-lifecycle.md) and
 [ADR-0011](adr/0011-audience-release-notes.md).
+
+![Edit summary on a release's Review tab: the migration kind and limitations, then each audience's relevance, headline, and narrative](assets/release-notes/rn-13-edit-summary.webp)
 
 REST clients use the same rules:
 

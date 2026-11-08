@@ -171,6 +171,8 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `POST /api/projects/{projectId}/releases/{releaseId}/changes` | thành viên |
 | `DELETE /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}` | thành viên |
 | `POST /api/projects/{projectId}/releases/{releaseId}/request-review` | thành viên |
+| `POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance` | thành viên |
+| `PUT /api/projects/{projectId}/releases/{releaseId}/folding-suggestions/{trackerChangeId}/decision` | thành viên; `EXCLUDE` quản trị viên |
 | `PUT /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/decision` | thành viên |
 | `PUT /api/projects/{projectId}/releases/{releaseId}/changes/{changeId}/summary` | thành viên |
 | `POST /api/projects/{projectId}/releases/{releaseId}/approve` | thành viên |
@@ -252,7 +254,7 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Audience | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
 | Bảng thuật ngữ | `404` | `glossary_term_not_found` |
 | Bảng thuật ngữ | `409` | `glossary_term_taken`, `glossary_limit` |
-| Release | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release` |
-| Release | `404` | `release_not_found`, `release_note_not_found` |
-| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready` |
+| Release | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision` |
+| Release | `404` | `release_not_found`, `release_note_not_found`, `folding_suggestion_not_found`, `linked_issue_not_found` |
+| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed` |
 | Automation | `400`, `404`, `409` | Xem [Automation](automation.md#rest) |

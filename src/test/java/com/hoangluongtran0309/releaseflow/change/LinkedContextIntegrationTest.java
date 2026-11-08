@@ -5,6 +5,7 @@ import com.hoangluongtran0309.releaseflow.account.RegistrationService;
 import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 import com.hoangluongtran0309.releaseflow.support.GitHubStub;
 import com.hoangluongtran0309.releaseflow.support.JiraStub;
+import com.hoangluongtran0309.releaseflow.support.LinearStub;
 import com.hoangluongtran0309.releaseflow.support.OpenAiStub;
 import com.hoangluongtran0309.releaseflow.support.PostgreSqlIntegrationTest;
 import com.jayway.jsonpath.JsonPath;
@@ -45,6 +46,9 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
 
     private static final GitHubStub GITHUB = GitHubStub.start();
     private static final JiraStub JIRA = JiraStub.start();
+    private static final LinearStub LINEAR = LinearStub.start();
+    private static final String TEAM = "11111111-1111-4111-8111-111111111111";
+    private static final String WORKSPACE = "22222222-2222-4222-8222-222222222222";
     private static final OpenAiStub OPENAI = OpenAiStub.start();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String COMMIT_SECRET = "commit-only-detail-never-stored";
@@ -70,6 +74,8 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
         registry.add("releaseflow.github.timeout", () -> "PT2S");
         registry.add("releaseflow.jira.api-base-url", JIRA::baseUrl);
         registry.add("releaseflow.jira.timeout", () -> "PT2S");
+        registry.add("releaseflow.linear.api-base-url", LINEAR::baseUrl);
+        registry.add("releaseflow.linear.timeout", () -> "PT2S");
         registry.add("releaseflow.ai.provider", () -> "openai");
         registry.add("releaseflow.ai.timeout", () -> "PT2S");
         registry.add("releaseflow.openai.base-url", OPENAI::baseUrl);
@@ -81,6 +87,7 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
     static void stopStubs() {
         GITHUB.close();
         JIRA.close();
+        LINEAR.close();
         OPENAI.close();
     }
 
@@ -89,6 +96,7 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
     void clearDatabase() {
         GITHUB.reset();
         JIRA.reset();
+        LINEAR.reset();
         OPENAI.reset();
         OPENAI.respondWithClassification("FEATURE", false, "Adds CSV export.");
         jdbcTemplate.update("DELETE FROM change_processing_jobs");
@@ -134,7 +142,7 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(change.getLinkedIssues()).extracting(LinkedIssue::key).containsExactly("APP-7", "APP-9", "APP-8");
         assertThat(change.getLinkedIssues().getFirst()).isEqualTo(new LinkedIssue(
                 "APP-7", "Export tables", "Users asked for CSV.", "Story", "Done",
-                JiraStub.SITE + "/browse/APP-7"));
+                JiraStub.SITE + "/browse/APP-7", LinkedIssue.JIRA, LinkedIssue.DONE));
         assertThat(change.getReviewTriggers()).extracting(ReviewTrigger::type)
                 .doesNotContain(ReviewTriggerType.LINKED_CONTEXT_UNAVAILABLE);
         assertThat(JIRA.issueRequests()).allSatisfy(request -> assertThat(request.authorization())
@@ -260,6 +268,92 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
                 .doesNotContain(ReviewTriggerType.LINKED_CONTEXT_UNAVAILABLE);
     }
 
+    // ADR-0041: the branch a change was merged from is scanned, and there a key may be followed by -, /, or _.
+    @Test
+    void aHeadBranchNamesAnIssueTheRestOfTheChangeDoesNot() throws Exception {
+        Project project = connect("branch@example.com", true);
+        GITHUB.respondWithFiles("src/main/java/Retention.java");
+        GITHUB.respondWithCommits("add the retention preview");
+        JIRA.respondWithIssue("APP-47", "Retention preview", "Story", "In Progress", "");
+
+        deliver(project, 6, "feat: retention preview", null, "feature/APP-47-retention-preview");
+        worker.processOne();
+
+        Change change = onlyChange();
+        assertThat(change.getLinkedContextStatus()).isEqualTo(LinkedContextStatus.COLLECTED);
+        assertThat(change.getLinkedIssues()).singleElement().satisfies(issue -> {
+            assertThat(issue.key()).isEqualTo("APP-47");
+            assertThat(issue.statusCategory()).isEqualTo(LinkedIssue.OPEN);
+        });
+    }
+
+    // ADR-0041: in a description, a tracker's key followed by a hyphen and a lowercase word counts.
+    @Test
+    void aDescriptionNamesAKeyFollowedByAHyphenAndALowercaseWord() throws Exception {
+        Project project = connect("hyphen@example.com", true);
+        GITHUB.respondWithFiles("src/main/java/Schedule.java");
+        GITHUB.respondWithCommits("schedule backups");
+        JIRA.respondWithIssue("APP-12", "Quartz schedules", "Story", "Done", "");
+
+        deliver(project, 7, "feat(schedule): Quartz backup schedules",
+                "Times are ISO-8601-compliant. Spec: APP-12-quartz", "feature/quartz-schedules");
+        worker.processOne();
+
+        assertThat(onlyChange().getLinkedIssues()).extracting(LinkedIssue::key).containsExactly("APP-12");
+        assertThat(JIRA.issueRequests()).singleElement().satisfies(request -> assertThat(request.path()).endsWith("/APP-12"));
+    }
+
+    // ADR-0041: a Linear identifier links to the Project's Linear team like a Jira key to its project.
+    @Test
+    void aLinearIdentifierLinksToTheProjectsLinearTeam() throws Exception {
+        LINEAR.respondWithTeam(TEAM, WORKSPACE, "OPS");
+        Project project = connect("linear@example.com", true, true);
+        GITHUB.respondWithFiles("ci/s3.yml");
+        GITHUB.respondWithCommits("Refs OPS-7 and APP-8");
+        JIRA.respondWithIssue("APP-8", "Stream rows", "Task", "Done", "");
+        LINEAR.respondWithIdentifiedIssue("OPS-7", "Rotate S3 credentials", "Done", "completed", TEAM, WORKSPACE);
+
+        deliver(project, 8, "ci: rotate S3 credentials", null, "ci/OPS-7-rotate");
+        worker.processOne();
+
+        Change change = onlyChange();
+        assertThat(change.getLinkedContextStatus()).isEqualTo(LinkedContextStatus.COLLECTED);
+        assertThat(change.getLinkedIssues()).extracting(LinkedIssue::key, LinkedIssue::tracker, LinkedIssue::statusCategory)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("APP-8", LinkedIssue.JIRA, LinkedIssue.DONE),
+                        org.assertj.core.groups.Tuple.tuple("OPS-7", LinkedIssue.LINEAR, LinkedIssue.DONE));
+        assertThat(LINEAR.requests()).filteredOn(request -> request.query().contains("identifier"))
+                .singleElement().satisfies(request -> assertThat(request.variableId()).isEqualTo("OPS-7"));
+        assertThat(LINEAR.requests()).as("the team key was read when the team was connected")
+                .noneMatch(request -> request.query().contains("team(id:"));
+    }
+
+    // A team connected before its key was kept is asked for it once, and keeps it.
+    @Test
+    void aTeamConnectedWithoutItsKeyIsAskedForItOnceAndAnUnreadIssueSaysSo() throws Exception {
+        LINEAR.respondWithTeam(TEAM, WORKSPACE);
+        Project project = connect("teamkey@example.com", false, true);
+        assertThat(jdbcTemplate.queryForObject("SELECT external_team_key FROM integration_sources WHERE source_type = 'LINEAR'",
+                String.class)).isNull();
+        LINEAR.respondWithTeam(TEAM, WORKSPACE, "OPS");
+        GITHUB.respondWithFiles("ci/s3.yml");
+        GITHUB.respondWithCommits("Refs OPS-9");
+
+        deliver(project, 9, "ci: rotate S3 credentials", null, null);
+        for (int attempt = 1; attempt <= ChangeProcessingWorker.MAX_ATTEMPTS; attempt++) {
+            makeDue();
+            worker.processOne();
+        }
+
+        assertThat(jdbcTemplate.queryForObject("SELECT external_team_key FROM integration_sources WHERE source_type = 'LINEAR'",
+                String.class)).isEqualTo("OPS");
+        assertThat(LINEAR.requests()).filteredOn(request -> request.query().contains("team(id:")).hasSize(1);
+        Change change = onlyChange();
+        assertThat(change.getLinkedContextStatus()).isEqualTo(LinkedContextStatus.UNAVAILABLE);
+        assertThat(change.getReviewTriggers())
+                .contains(new ReviewTrigger(ReviewTriggerType.LINKED_CONTEXT_UNAVAILABLE, "UNAVAILABLE"));
+    }
+
     private JsonNode userPrompt() {
         List<OpenAiStub.RecordedRequest> requests = OPENAI.requests();
         assertThat(requests).isNotEmpty();
@@ -283,13 +377,18 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     private void deliver(Project project, int number, String title, String description) throws Exception {
+        deliver(project, number, title, description, null);
+    }
+
+    private void deliver(Project project, int number, String title, String description, String headBranch) throws Exception {
         String body = """
                 {"action":"closed","number":%d,"pull_request":{"number":%d,"title":"%s","body":%s,\
                 "merged":true,"merged_at":"2026-09-10T09:14:22Z",\
                 "merge_commit_sha":"0123456789abcdef0123456789abcdef01234567",\
                 "html_url":"https://github.com/acme/releaseflow/pull/%d","user":{"login":"mai-dev"},\
-                "base":{"ref":"main"},"labels":[]},"repository":{"full_name":"acme/releaseflow"}}"""
-                .formatted(number, number, title, description == null ? "null" : "\"" + description + "\"", number);
+                "base":{"ref":"main"},%s"labels":[]},"repository":{"full_name":"acme/releaseflow"}}"""
+                .formatted(number, number, title, description == null ? "null" : "\"" + description + "\"", number,
+                        headBranch == null ? "" : "\"head\":{\"ref\":\"" + headBranch + "\"},");
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(project.secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         String signature = "sha256=" + java.util.HexFormat.of()
@@ -305,6 +404,10 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     private Project connect(String email, boolean withJira) throws Exception {
+        return connect(email, withJira, false);
+    }
+
+    private Project connect(String email, boolean withJira, boolean withLinear) throws Exception {
         RegistrationRequest registration = new RegistrationRequest();
         registration.setOrganizationName(email);
         registration.setDisplayName("Owner");
@@ -345,8 +448,18 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
                                     .formatted(JiraStub.SITE)))
                     .andExpect(status().isCreated());
         }
+        if (withLinear) {
+            mockMvc.perform(post("/api/projects/{projectId}/sources", projectId)
+                            .session(session).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"type":"LINEAR","teamId":"%s","webhookSecret":"lin_wh_linked-test",\
+                                    "apiToken":"lin_api_linked-test"}""".formatted(TEAM)))
+                    .andExpect(status().isCreated());
+        }
         GITHUB.reset();
         JIRA.reset();
+        LINEAR.clearRequests();
         return new Project(projectId, JsonPath.read(created, "$.webhookPath"), JsonPath.read(created, "$.webhookSecret"),
                 session);
     }
