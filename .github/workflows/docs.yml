@@ -7,7 +7,8 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [develop, main]
+    # A fix into a release or hotfix branch is checked on its own pull request too.
+    branches: [develop, main, "release/**", "hotfix/**"]
   workflow_dispatch:
 
 permissions:

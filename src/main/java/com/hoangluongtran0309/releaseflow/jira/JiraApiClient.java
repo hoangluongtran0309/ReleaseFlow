@@ -182,7 +182,12 @@ public class JiraApiClient {
                     JiraAdfText.convert(fields.path("description"), descriptionLimit),
                     fields.path("issuetype").path("name").asString(""),
                     fields.path("status").path("name").asString(""),
-                    siteUrls.validated(site) + "/browse/" + key
+                    siteUrls.validated(site) + "/browse/" + key,
+                    LinkedIssue.JIRA,
+                    // Jira's own grouping of a workflow's statuses: "done" means finished.
+                    "done".equals(fields.path("status").path("statusCategory").path("key").asString(""))
+                            ? LinkedIssue.DONE
+                            : LinkedIssue.OPEN
             ));
         } catch (RestClientException | JacksonException exception) {
             log.warn("Could not read the Jira issue {}.", key);

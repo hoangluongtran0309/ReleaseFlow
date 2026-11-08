@@ -1,0 +1,451 @@
+{
+ "version": "v1.0.0",
+ "summary": "dbvault 1.0: backup metrics for Prometheus and Grafana, TLS required to every database target, a Vietnamese console, and JSON output in the CLI.",
+ "capturedApprovedAt": "2026-10-17T01:35:31.388073Z",
+ "upgradeGuideUrl": "https://github.com/hoangtulangtoc/dbvault/blob/v1.0.0/docs/upgrading-to-1.0.md",
+ "previousVersion": "v0.3.0",
+ "publish": true,
+ "languages": [
+  "en",
+  "vi"
+ ],
+ "members": [
+  {
+   "source": "GITHUB",
+   "reference": "#42"
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!7"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#43"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#44"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#45"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#46"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#47"
+  }
+ ],
+ "decisions": [
+  {
+   "source": "GITHUB",
+   "reference": "#42",
+   "action": "EDIT",
+   "capturedAction": "EDIT",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": "CI workflow only; not a product feature."
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!7",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#43",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#44",
+   "action": "EDIT",
+   "capturedAction": "APPROVE",
+   "category": "SECURITY",
+   "breaking": true,
+   "security": true,
+   "securityFlaggedBy": "rules",
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#45",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": "Summary corrected: first part of DBV-31, not the whole console."
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#46",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#47",
+   "action": "APPROVE",
+   "capturedAction": "APPROVE",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "security": false,
+   "securityFlaggedBy": null,
+   "note": null
+  }
+ ],
+ "summariesWrittenAtApproval": [],
+ "atApproval": [
+  {
+   "source": "GITHUB",
+   "reference": "#42",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(ci): add signed ReleaseFlow announce workflow",
+   "neutralSummary": {
+    "whatChanged": "A manually triggered workflow was added to announce and sign an already published ReleaseFlow release in CI.",
+    "whyChanged": "To support securely announcing published releases and verifying their status within the CI process.",
+    "technicalDetail": "The workflow is manually dispatched, signs the ReleaseFlow webhook request, follows the returned status path with a signed GET, and fails if the run ends unsuccessfully. Secrets and configuration are handled via GitHub Actions configuration, not committed to the repository.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!7",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat: JSON output for every command (DBV-34)",
+   "neutralSummary": {
+    "whatChanged": "All CLI commands now support a JSON output mode using the '--output json' or '-o json' flag, which returns API-equivalent JSON responses. The option is documented in the README and five additional tests were added.",
+    "whyChanged": "To enable easier integration with scripts and external tools that require machine-readable output, addressing user need for stable and parseable responses rather than formatted tables.",
+    "technicalDetail": "When JSON mode is specified, CLI commands emit indented JSON matching the server's /api/v1 responses (including field nulls and raw byte sizes). The 'targets' and 'backups' commands print arrays as received; 'verify' prints its result without a start line and preserves exit codes for scripting. Errors are still reported on stderr in text form. Invalid formats fail with exit code 2.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#43",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(observability): Prometheus metrics and Grafana dashboard (DBV-30)",
+   "neutralSummary": {
+    "whatChanged": "Prometheus metrics endpoint (/actuator/prometheus) was added, exposing detailed backup metrics per target, and an optional Docker Compose profile for Prometheus and Grafana with a pre-built dashboard for monitoring backups.",
+    "whyChanged": "To let operators and users monitor the status, performance, and failures of their database backups in real time using standard observability tools.",
+    "technicalDetail": "Metrics include timestamps and sizes of the most recent successful backups, duration, and failure counts over the past 24 hours, all refreshing from backup history on a background thread. Access uses operator credentials, and Grafana/Prometheus versions are fixed by digest for reproducibility. Setup instructions and rationale are documented.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#44",
+   "category": "SECURITY",
+   "breaking": true,
+   "security": true,
+   "title": "security: enforce TLS to database targets (DBV-33)",
+   "neutralSummary": {
+    "whatChanged": "Database target connections now require TLS encryption by default, with an explicit opt-out per target. Existing targets will fail to connect if their server does not support TLS after upgrade, unless explicitly configured otherwise. API, configuration, migration logic, test coverage, and documentation have been updated to reflect and enforce this new default requirement.",
+    "whyChanged": "Previously, database credentials and dumps could be transmitted in plaintext due to default client behavior; this change enforces encryption to prevent data from crossing the network unencrypted, reducing the risk of credential exposure and interception.",
+    "technicalDetail": "A new field `tls_required` (default TRUE) is added to `database_targets`, enforced in API, configuration forms, backup/restore command lines (e.g., `--ssl-mode=REQUIRED` for MySQL, `PGSSLMODE=require` for PostgreSQL, `--tls` for MongoDB), and documented in ADR-041 and deployment docs. Tests are updated to require TLS where available. Opting out sets clients to prefer but not require TLS; warnings are shown where TLS is not enforced. Migration V14 sets up DB schema changes. Server certificate validation is not enforced yet except for MongoDB, which requires certificates match system CA.",
+    "migrationStep": "After upgrade, DBAs must verify every target: servers must support TLS or each affected target must opt out by clearing 'Require TLS'. Targets that cannot establish TLS will fail connection tests and backups until resolved.",
+    "migrationKind": "UNSPECIFIED",
+    "limitations": ""
+   },
+   "narratives": {
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#45",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "title": "feat(ui): Vietnamese console (DBV-31)",
+   "neutralSummary": {
+    "whatChanged": "The console can now be shown in English or Vietnamese, chosen per browser (a link in the sidebar and on the sign-in page, or `?lang=`), and kept in a cookie. This first part translates the navigation, sign-in, the Targets list and form, and the Backups list; the other pages still show English.",
+    "whyChanged": "To address requests from Vietnamese customers for a localized user interface, allowing operators to use the console in Vietnamese or English as needed.",
+    "technicalDetail": "All user-facing text has moved to language property files, with a mechanism that ensures consistency between English and Vietnamese keys. Language preference is controlled by the 'dbvault_lang' cookie (HttpOnly, SameSite=Lax, one year), falls back to browser 'Accept-Language', and defaults to English. Translations cover navigation, sign-in, targets, backups listing, status badges, and pager. The language is not tied to user account but to the session/browser. English remains for HTTP API, CLI, logs, and notifications.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#46",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "title": "chore(legal): add third-party licence report",
+   "neutralSummary": {
+    "whatChanged": "A third-party license report is now generated during the build and included in the application JAR as 'THIRD-PARTY.txt'. The report lists every bundled third-party library and its declared license, with dependencies lacking license information causing the build to fail. Documentation has been updated to explain this report.",
+    "whyChanged": "To provide transparency and legal clarity about the open-source libraries bundled in the application, ensuring compliance and making it easy for users to audit licenses.",
+    "technicalDetail": "The 'license-maven-plugin' generates the report at build time using dependency POM information, covering runtime and compile dependencies (excluding project modules and Lombok). A template removes unwanted entries, and documentation ('docs/licences.md', 'NOTICE') has been updated to explain coverage and exclusions. The build fails if any included dependency has no license.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#47",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "security": false,
+   "title": "docs: v1.0 upgrade guide",
+   "neutralSummary": {
+    "whatChanged": "Added an upgrade guide documenting the steps needed to upgrade to version 1.0, including the new requirement for TLS on every target and various operational and rollback guidance.",
+    "whyChanged": "To help operators perform a safe and informed upgrade to version 1.0, particularly due to the new TLS requirement and other notable changes.",
+    "technicalDetail": "The new documentation (docs/upgrading-to-1.0.md) covers preparing for upgrade, performing the schema migration, post-upgrade validation, new features, and how to roll back to 0.3. It includes engine-specific checks for TLS capability and cautions about Flyway's one-way migrations.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "narratives": {
+    "contributor": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "dba": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "end_user": {
+     "relevance": "FULL",
+     "headline": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": ""
+    }
+   }
+  }
+ ],
+ "glossaries": [
+  {
+   "language": "vi",
+   "status": "APPLIED",
+   "reason": null
+  }
+ ],
+ "notes": [
+  {
+   "audience": "contributor",
+   "language": "en",
+   "file": "snapshots/v1.0.0/contributor.en.md",
+   "sha256": "9b9b95a86c862a72cc08609ce936ac849a029b6c259651810cd92bad9a2107d4",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "contributor",
+   "language": "vi",
+   "file": "snapshots/v1.0.0/contributor.vi.md",
+   "sha256": "7aa548418885b28ed27e43cd9b718f1194a9015538149df9776dc764b3d03abe",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "dba",
+   "language": "en",
+   "file": "snapshots/v1.0.0/dba.en.md",
+   "sha256": "c8a51024345ec9e9317b7ac752251f0eee828b48c4154a5bc25f00e250ee6673",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "dba",
+   "language": "vi",
+   "file": "snapshots/v1.0.0/dba.vi.md",
+   "sha256": "8b0ede03379ee865329817d21da20099e9afc9e5beddb19a48c4c7d09c6dd37b",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "end_user",
+   "language": "en",
+   "file": "snapshots/v1.0.0/end_user.en.md",
+   "sha256": "f0e7017cec4962ae3d56fe1192cffb9adfeb5e1703c59a12686cf46e52a31179",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "end_user",
+   "language": "vi",
+   "file": "snapshots/v1.0.0/end_user.vi.md",
+   "sha256": "4cfb86e9361eae108a76988c8928c231e4c05050d741b6315a194b0fb6845044",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "operator",
+   "language": "en",
+   "file": "snapshots/v1.0.0/operator.en.md",
+   "sha256": "f75fbb1a463f54bc17dcc5c47e693b614096b0fc790ee7cd571bcac35bfe989c",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "operator",
+   "language": "vi",
+   "file": "snapshots/v1.0.0/operator.vi.md",
+   "sha256": "a354f50cfa8a8295b14dffbf29ac01b927887ae6fdf39780b4fce87d7bc62a53",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  },
+  {
+   "audience": "support",
+   "language": "en",
+   "file": "snapshots/v1.0.0/support.en.md",
+   "sha256": "ee865c7491ceb17f8d04691dac370c5eb56db07763a29c01e13abe9fe1a345b5",
+   "glossaryStatus": "NONE",
+   "glossaryReason": null
+  },
+  {
+   "audience": "support",
+   "language": "vi",
+   "file": "snapshots/v1.0.0/support.vi.md",
+   "sha256": "b7ab6b4e012be90a049a94bc64bd154bc4f1bdde1ffdd2dcb5d99086cc721b84",
+   "glossaryStatus": "APPLIED",
+   "glossaryReason": null
+  }
+ ]
+}

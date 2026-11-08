@@ -17,7 +17,7 @@ trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu 
 | `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | dòng tiêu đề và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc | không có |
 | `support` | những gì khách hàng có thể hỏi, và nên trả lời họ thế nào | dòng tiêu đề kèm liên kết và narrative, bước chuyển đổi dưới nhãn theo loại của nó, và giới hạn | không có |
 
-![Trang Audiences: ba preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
+![Trang Audiences: bốn preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
 
 Một audience có một **mã** (chữ thường, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái; cố định
 sau khi tạo), một **tên hiển thị**, một **ý định truyền đạt** mà AI làm theo khi viết narrative
@@ -31,9 +31,14 @@ nêu ra. Template là
 các biến `whatChanged`, `whyChanged`, `technicalDetail`, `migrationStep`, `migrationKind`,
 `limitations`, `narrative`, `headline`, `relevance`, `brief`, `reference`, `pullRequestNumber`,
 `pullRequestUrl` và `linkedIssues` — một danh sách mà mỗi phần
-tử có `key`, `title`, `type`, `status` và `url`, được escape như mọi văn bản khác lấy từ công cụ
-theo dõi issue, đúng như khi được đọc lúc thay đổi được ghi nhận
-([Issue Jira liên kết](sources.md#linked-jira-issues)). `migrationKind` là `required`,
+tử có `key`, `title`, `type`, `status`, `recordedStatus`, `statusAtReview` và `url`, được escape
+như mọi văn bản khác lấy từ công cụ theo dõi issue ([Issue liên kết](sources.md#linked-issues)).
+`status` là trạng thái của issue tại thời điểm release được review, hoặc trạng thái đã ghi lại
+cùng thay đổi khi không đọc lại được issue; `recordedStatus` là trạng thái đã ghi lại cùng thay
+đổi, còn `statusAtReview` là trạng thái đọc được lúc review, để trống khi không đọc được. Một
+trạng thái chưa hoàn tất, hoặc ReleaseFlow không biết chắc là đã hoàn tất, để trống ở cả ba trừ
+khi có người chọn hiển thị nó (xem [Issue liên kết lúc review](#linked-issues-at-review)), nên
+hãy in nó bên trong một section: `{{#status}} ({{status}}){{/status}}`. `migrationKind` là `required`,
 `conditional`, `recommended`, hoặc `unspecified` cho bước được ghi trước khi có loại, và để trống
 khi không có bước (xem [Phân loại bằng AI](changes.md#ai-classification-and-summaries)). Vì
 Mustache không so sánh được giá trị, các section `migrationRequired`, `migrationConditional`,
@@ -85,13 +90,15 @@ với người dùng cuối hoặc một audience tự tạo, nó theo mức li�
 nó cũng phá vỡ tương thích. Xem
 [ADR-0037](adr/0037-security-changes-and-release-note-structure.md).
 
+![Một note operator: cảnh báo thay đổi phá vỡ liên kết tới hướng dẫn nâng cấp, rồi thay đổi phá vỡ đó và mục 🔒 Bảo mật](assets/release-notes/rn-12-operator-note.webp)
+
 Các con số và cảnh báo phá vỡ tương thích mô tả đúng những gì note hiển thị, và mỗi thay đổi chỉ
 được đếm một lần, trong mục mà nó được liệt kê. Audience không liên quan tới bất cứ thay đổi nào trong release vẫn có note của mình: tiêu đề,
 tóm tắt release, và một dòng nói rằng release này không có gì liên quan tới họ. Việc duyệt vẫn viết
 một note cho mỗi audience và ngôn ngữ, và một hành động automation giao note đó như mọi note khác.
 Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
-![Sửa template của một audience rồi lưu lại](assets/release-notes/rn-2-template.webp)
+![Template và phần cuối của một audience trong trình sửa, cùng bản xem trước: một thay đổi mẫu rồi tới phần cuối](assets/release-notes/rn-2-template.webp)
 
 ### Phần cuối {#footer}
 
@@ -138,6 +145,8 @@ liên kết `releaseUrl`: một note đã publish thường chính là trang Git
 cài đặt sẽ trỏ về đúng trang đang mở. Một note giữ phần cuối mà nó được duyệt cùng, như template
 của nó.
 
+![Phần cuối của cùng note operator đó: liên kết tới hướng dẫn nâng cấp](assets/release-notes/rn-12-operator-note-footer.webp)
+
 ### Nâng cấp template của audience tự tạo {#upgrading-custom-audience-templates}
 
 Audience tạo trước 1.1.0 giữ nguyên template của mình; không có gì viết lại chúng. Audience mẫu
@@ -169,12 +178,32 @@ upgrading`. Một ngôn ngữ release note khác ngôn ngữ chính có template
 **Template theo ngôn ngữ**. **Đặt lại về preset** trả cho audience mẫu phần cuối đi kèm ở mọi ngôn
 ngữ.
 
+Từ 1.2.0, `{{status}}` của một issue liên kết là trạng thái của nó tại thời điểm release được
+review, và để trống với issue còn chưa hoàn tất trừ khi có người chọn hiển thị nó. Template in
+`({{status}})` trần khi đó sẽ in ra `()`. Hãy bọc nó trong một section để trạng thái trống không
+in ra gì. Dòng của một audience DBA, trước:
+
+```text
+  - Theo dõi tại [{{key}}]({{url}}): {{title}} ({{status}})
+```
+
+và sau:
+
+```text
+  - Theo dõi tại [{{key}}]({{url}}): {{title}}{{#status}} ({{status}}){{/status}}
+```
+
+Làm tương tự trong template của từng ngôn ngữ (`Tracked in` trong tiếng Anh). Các audience đi
+kèm không in issue liên kết nào, nên không audience nào trong số đó thay đổi.
+
 Một Organization giữ từ 1 đến 20 audience. Audience không xoá được khi còn thứ gì đó nhắc tới
 nó: một release note, một hành động của quy tắc automation, hoặc lịch sử chạy automation. Quy
 tắc đang bật hay đã tắt có thể được đổi sang audience khác trước. Quy tắc đã lưu trữ thì không
 sửa được, và lịch sử chạy giữ audience mà nó đã giao tới, nên cả hai giữ audience đó mãi mãi;
 lời từ chối nói rõ thứ nào đang giữ nó. Một audience mẫu có thể được đặt lại về phiên bản đi
-kèm, theo ngôn ngữ đầu ra hiện tại. Xem [ADR-0011](adr/0011-audience-release-notes.md).
+kèm, theo ngôn ngữ đầu ra hiện tại, và một audience nhóm của bạn thêm với mã của một audience đi
+kèm (`operator`, `contributor`, `end_user` hoặc `support`) cũng vậy, và từ đó trở thành audience
+mẫu. Xem [ADR-0011](adr/0011-audience-release-notes.md).
 
 Mọi endpoint audience chỉ dành cho quản trị viên:
 
@@ -204,7 +233,7 @@ trước khi có phần cuối vẫn chạy được.
 | Organization đã có 20 audience | `409 audience_limit` |
 | Xoá audience cuối cùng | `409 audience_last` |
 | Xoá một audience đã có release note, đang được hành động của một quy tắc automation giao tới (bật, tắt hay đã lưu trữ), hoặc có trong lịch sử chạy | `409 audience_in_use`; `detail` nói rõ lý do nào |
-| Đặt lại một audience do nhóm của bạn tự tạo | `409 audience_not_preset` |
+| Đặt lại một audience mà không audience đi kèm nào có mã của nó | `409 audience_not_preset` |
 | Template cho một ngôn ngữ không nằm trong các ngôn ngữ release note | `400 template_language_not_targeted` |
 | Audience không tồn tại hoặc thuộc Organization khác | `404 audience_not_found` |
 
@@ -264,7 +293,7 @@ sẽ dịch văn bản mới. Xem [ADR-0015](adr/0015-multilingual-release-notes
 
 ![Vài giây sau khi duyệt: note tiếng Việt đang dịch và vẫn hiện văn bản chưa dịch](assets/release-notes/rn-3-translating.webp)
 
-![Cùng note đó khi bản dịch đã về: tóm tắt release và mọi thay đổi đều bằng tiếng Việt](assets/release-notes/rn-4-translated.webp)
+![Cùng note đó khi bản dịch đã về: tóm tắt release và mọi thay đổi đều bằng tiếng Việt, và bảng thuật ngữ Đã gửi kèm mọi bản dịch](assets/release-notes/rn-4-translated.webp)
 
 ```text
 GET  /api/organization/release-languages
@@ -292,6 +321,8 @@ mới được giữ. Một thuật ngữ dài 1 đến 100 ký tự trên một
 phải khác nhau chính xác từng ký tự: "Image" và "image" là hai mục. Mục viết thường thường
 cũng giữ được từ viết hoa ở đầu câu, nên chỉ thêm dạng khác cho từ mà DeepL vẫn đổi.
 
+![Trang Bảng thuật ngữ: các thuật ngữ giữ nguyên trong mọi ngôn ngữ, các bản dịch cố định en → vi, và trạng thái đồng bộ DeepL của cặp ngôn ngữ đó](assets/release-notes/rn-10-glossary.webp)
+
 Bảng thuật ngữ định hướng DeepL chứ không ràng buộc từng chữ. DeepL vẫn có thể dịch một thuật ngữ
 giữ nguyên nằm trong một cụm dài hơn: dù đã giữ nguyên "image", "secret" và "container", note của
 dbvault vẫn bị dịch "container images", "emulator image" và "repository secrets", và một lần cả
@@ -318,6 +349,8 @@ phải DeepL đã giữ đúng mọi thuật ngữ; đọc lại note, và thêm
 ngữ giữ nguyên riêng. **Chạy lại bản
 dịch** sẽ thử đồng bộ thất bại thêm lần nữa. Bảng thuật ngữ không bao giờ được gửi cho AI.
 
+![Các note của một release đã duyệt: bảng thuật ngữ Đã gửi kèm mọi bản dịch sang vi](assets/release-notes/rn-11-glossary-state.webp)
+
 Bản dịch trả về bằng ngôn ngữ nguồn không được lưu như một bản dịch. Với note tiếng Việt, một câu
 còn ít nhất ba từ cần dịch mà không có dấu tiếng Việt nào sẽ bị coi là chưa dịch; với một ngôn ngữ
 dùng chữ viết khác, như tiếng Nhật hay tiếng Nga, một câu không có ký tự nào của chữ viết đó cũng
@@ -325,6 +358,16 @@ vậy. Thuật ngữ giữ nguyên, mã, URL, đường dẫn và những từ n
 lời không đạt được dịch lại một lần không có bảng thuật ngữ, và nếu vẫn không đạt thì note ở
 trạng thái **Chưa dịch**, như mọi bản dịch thất bại. Các ngôn ngữ chữ Latin khác chưa có bước kiểm
 tra này. Xem [ADR-0036](adr/0036-translation-glossary.md).
+
+Khi có bảng thuật ngữ, DeepL đổi chữ hoa chữ thường của một số từ dạng mã: `<backup-id>` trở
+thành `<BACKUP-id>`, và `dbvault-cli` thành `dbvault-CLI`. Vì vậy bản dịch giữ nguyên các
+**placeholder** của bản gốc (`<`, một chữ cái, rồi chữ cái, chữ số, gạch nối hoặc gạch dưới, rồi
+`>`) và các **tên có gạch nối viết thường** đúng như bản gốc viết: chỗ nào bản dịch chỉ khác
+chúng ở chữ hoa chữ thường thì được đưa về dạng của bản gốc, và không gì khác thay đổi. Một từ mà
+bản gốc viết theo hai cách được để nguyên như DeepL viết. Việc này diễn ra khi bản dịch được ghi
+lại, dù lấy từ DeepL hay từ cache, nên bản dịch đã cache trước đó được sửa ở lần duyệt tới mà
+không gửi yêu cầu nào, và không gì được gửi đi thay đổi. Placeholder mà DeepL làm mất thì để
+nguyên là mất và được ghi vào log. Xem [ADR-0040](adr/0040-translation-placeholders.md).
 
 ```text
 GET    /api/glossary
@@ -402,6 +445,75 @@ Mọi thành viên đều làm được mọi bước, nên một người có t
 publish cùng một release. ReleaseFlow ghi lại ai đã review từng thay đổi, ai đã duyệt và ai đã
 publish, nhưng không yêu cầu hai người khác nhau.
 
+### Issue liên kết lúc review {#linked-issues-at-review}
+
+Yêu cầu review sẽ đọc lại, ở chế độ nền, mọi issue liên kết với các thay đổi của release từ Jira
+hoặc Linear: trạng thái đọc lúc ghi nhận thay đổi có thể đã cũ nhiều tuần. Tab Review cho biết khi
+nào việc đọc đang chạy, và khi có issue không đọc được. Một lần đọc thất bại được thử lại sau 2,
+4, 8 … giây, tổng cộng năm lần; issue vẫn không đọc được thì giữ trạng thái đã ghi lại cùng thay
+đổi. Đưa về nháp rồi yêu cầu review lại sẽ đọc lại mọi issue.
+
+Note chỉ hiển thị trạng thái của một issue khi issue đã hoàn tất: thuộc nhóm **Done** của Jira,
+hoặc là issue Linear đã hoàn thành hay đã huỷ. Issue được ghi nhận trước 1.2.0, hoặc đọc từ một
+công cụ theo dõi không cho biết điều đó, được coi là chưa hoàn tất. Trong mục **Issue được liên
+kết vẫn chưa hoàn tất**, tab Review liệt kê từng issue có trạng thái chưa hoàn tất trong khi thay
+đổi của nó vẫn phát hành, kèm **Hiển thị trạng thái này**: thành viên chọn nút này cho phép mọi
+note in đúng trạng thái đó, và ReleaseFlow ghi lại ai chọn và lúc nào. Một lần đọc sau trả về
+trạng thái khác sẽ hỏi lại. Cảnh báo này không bao giờ chặn việc duyệt hay publish. Note được viết
+lúc duyệt từ các trạng thái đã đọc tới khi đó; một lần đọc xong muộn hơn sẽ viết lại các note vẫn
+theo template, cho tới khi release được publish.
+
+### Gộp thay đổi tracker vào thay đổi mã {#folding-a-tracker-change-into-its-code-change}
+
+Một thay đổi Jira hoặc Linear và pull request đã làm phần việc đó là cùng một phần việc, và nên
+là một mục trong note. Khi release đang review, tab Review gợi ý gộp một **thay đổi tracker** vào
+một **thay đổi mã** trong cùng release khi thay đổi mã có key của thay đổi tracker trong số
+[issue liên kết](sources.md#linked-issues) của nó, hoặc khi có người đã xác nhận hai thay đổi là
+[có thể trùng](changes.md#review-signals). Mỗi gợi ý nói rõ là trường hợp nào.
+
+Gợi ý chỉ là bằng chứng, và không có gì tự được gộp. Một thành viên chọn:
+
+- **Gộp, và từ chối … khỏi release này** đưa thay đổi tracker ra khỏi release như một quyết
+  định review, nên nó lại dùng được cho release khác.
+- **Gộp, và loại … khỏi mọi release** (quản trị viên) loại thay đổi tracker khỏi mọi release,
+  với lý do ReleaseFlow điền sẵn, như "`OPS-7` được theo dõi trong `#30`, thay đổi mang mục
+  release note.", và có thể sửa. Xem
+  [Loại một thay đổi khỏi release](changes.md#excluding-a-change-from-releases).
+- **Không phải cùng một việc** bỏ qua gợi ý: cả hai thay đổi được giữ, và gợi ý không được đưa
+  ra lại trong release này.
+
+Cả hai cách gộp đều giữ issue làm ngữ cảnh liên kết của thay đổi mã, thêm nó từ thay đổi tracker
+khi thay đổi mã chưa liệt kê; issue được thêm như vậy được đọc từ công cụ theo dõi của nó tại thời
+điểm review này, như các issue khác. Cả hai cách gộp cũng giữ các cờ của phần việc: thay đổi mã
+trở thành phá vỡ tương thích hoặc bảo mật khi thay đổi tracker là như vậy. Gợi ý nói điều đó trước,
+như "Chấp nhận sẽ đánh dấu #30 là bảo mật, như OPS-7", và việc chấp nhận được ghi thành lần review
+của thay đổi mã và thành quyết định cho nó trong release, có nêu thay đổi đã được gộp. Thay đổi mã
+còn Unknown cần được phân loại trước: `400 invalid_fold_decision`. Mỗi gợi ý được quyết định một lần, ghi lại ai quyết định và lúc
+nào; release đưa về nháp vẫn giữ các quyết định của nó. Một cặp không có gì ràng buộc thì không
+được gợi ý: hãy từ chối hoặc loại thay đổi tracker bằng tay.
+
+```text
+POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance
+     {"tracker": "JIRA" | "LINEAR", "key", "status"}
+PUT  /api/projects/{projectId}/releases/{releaseId}/folding-suggestions/{trackerChangeId}/decision
+     {"codeChangeId", "decision": "ACCEPT" | "DISMISS", "removal": "REJECT" | "EXCLUDE", "reason"}
+```
+
+Cả hai trả về release, với `linkedIssueRead` là `PENDING`, `RUNNING`, `SUCCEEDED` hoặc `FAILED`
+(không có trước khi yêu cầu review), và liệt kê `linkedIssues` (mỗi mục có `tracker`, `key`,
+`recordedStatus`, `statusAtReview`, `read`, `status`, `open`, `accepted`, `accepterName` và
+`acceptedAt`), `foldingSuggestions` (mỗi mục có `addsBreaking` và `addsSecurity`) và
+`foldDecisions`. Quyết định do một lần gộp tạo ra nêu thay đổi tracker trong `foldedChangeId`.
+
+| Tình huống | Phản hồi |
+| --- | --- |
+| Chấp nhận một trạng thái khác với trạng thái đọc được lần cuối | `409 linked_issue_status_changed` |
+| Chấp nhận trạng thái của một issue mà không thay đổi nào của release liên kết | `404 linked_issue_not_found` |
+| Chấp nhận trạng thái khi release là bản nháp hoặc đã publish | `409 release_status_conflict` |
+| Quyết định một gợi ý không được đưa ra, hoặc đã được quyết định | `404 folding_suggestion_not_found` |
+| Chấp nhận mà không có `removal`, loại mà không có lý do, hoặc gộp thêm cờ vào một thay đổi Unknown | `400 invalid_fold_decision` |
+| Thành viên thực hiện loại | `403` |
+
 Trước khi publish, một release có thể được đặt lịch hoặc bỏ lịch, đưa về nháp (từ trạng thái
 đang review hoặc đã duyệt; việc này xoá các quyết định và lần duyệt nhưng không xoá các lần
 review trên thay đổi của nó), hoặc bị huỷ bỏ (các thay đổi của nó lại dùng được). Đưa về nháp
@@ -435,6 +547,8 @@ vẫn theo template sẽ được dựng lại. Release note phản ánh các th
 lấy một phân loại được sửa sau đó trong Hộp thay đổi, đưa release về nháp rồi duyệt lại. Xem
 [ADR-0010](adr/0010-release-review-lifecycle.md) và
 [ADR-0011](adr/0011-audience-release-notes.md).
+
+![Sửa tóm tắt trên tab Review của một release: loại bước chuyển đổi và giới hạn, rồi mức liên quan, dòng tiêu đề và diễn giải của từng audience](assets/release-notes/rn-13-edit-summary.webp)
 
 REST client tuân theo cùng các quy tắc:
 

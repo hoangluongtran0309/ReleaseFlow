@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,6 +33,7 @@ public final class LinearStub implements AutoCloseable {
     private final List<RecordedRequest> requests = new CopyOnWriteArrayList<>();
     private volatile Map<String, Object> team;
     private volatile Map<String, Object> issue;
+    private final Map<String, Map<String, Object>> identified = new ConcurrentHashMap<>();
     private volatile Failure failure;
     private final AtomicInteger failuresLeft = new AtomicInteger();
     private volatile Duration delay = Duration.ZERO;
@@ -56,9 +58,30 @@ public final class LinearStub implements AutoCloseable {
         return "http://localhost:" + server.getAddress().getPort();
     }
 
-    /** The team this token can read, and the workspace it belongs to. */
+    /** The team this token can read, and the workspace it belongs to; Linear names no key. */
     public void respondWithTeam(String teamId, String workspaceId) {
         team = Map.of("id", teamId, "organization", Map.of("id", workspaceId));
+    }
+
+    /** The team this token can read, the workspace it belongs to, and its key, such as OPS. */
+    public void respondWithTeam(String teamId, String workspaceId, String key) {
+        team = Map.of("id", teamId, "key", key, "organization", Map.of("id", workspaceId));
+    }
+
+    /**
+     * An issue a code change names by its identifier, such as OPS-7, in a state of the given
+     * name and type ({@code started}, {@code completed}, {@code canceled}, …).
+     */
+    public void respondWithIdentifiedIssue(String identifier, String title, String stateName, String stateType,
+                                           String teamId, String workspaceId) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("identifier", identifier);
+        value.put("title", title);
+        value.put("description", "");
+        value.put("url", "https://linear.app/acme/issue/" + identifier);
+        value.put("state", Map.of("name", stateName, "type", stateType));
+        value.put("team", Map.of("id", teamId, "organization", Map.of("id", workspaceId)));
+        identified.put(identifier, value);
     }
 
     /** Linear answers a query it cannot satisfy with a null field, not an HTTP error. */
@@ -108,10 +131,16 @@ public final class LinearStub implements AutoCloseable {
         return List.copyOf(requests);
     }
 
+    /** Forgets the requests seen so far, and nothing else. */
+    public void clearRequests() {
+        requests.clear();
+    }
+
     public void reset() {
         requests.clear();
         team = null;
         issue = null;
+        identified.clear();
         failure = null;
         failuresLeft.set(0);
         delay = Duration.ZERO;
@@ -154,8 +183,11 @@ public final class LinearStub implements AutoCloseable {
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
+        String id = request == null ? "" : request.path("variables").path("id").asString("");
         if (query.contains("team(id:")) {
             data.put("team", team);
+        } else if (query.contains("identifier")) {
+            data.put("issue", identified.get(id));
         } else {
             data.put("issue", issue);
         }

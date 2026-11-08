@@ -2,13 +2,13 @@ package com.hoangluongtran0309.releaseflow.release;
 
 import com.hoangluongtran0309.releaseflow.audience.AudienceItem;
 import com.hoangluongtran0309.releaseflow.audience.AudienceTemplate;
+import com.hoangluongtran0309.releaseflow.audience.NoteIssue;
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLinks;
 import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.MigrationKind;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.change.Relevance;
-import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -87,10 +87,7 @@ final class ReleaseNoteDigest {
         return render(summary, changes, templateBody, "", new ReleaseLinks(version, "", "", "", ""), audienceCode, languageTag);
     }
 
-    /**
-     * @param footerBody the audience's footer for this language; blank adds nothing
-     * @param links the release's version and its release-wide links, unescaped
-     */
+    /** A note whose linked issues have no status as of review, as before a review is requested. */
     static String render(
             String summary,
             List<ChangeView> changes,
@@ -99,6 +96,24 @@ final class ReleaseNoteDigest {
             ReleaseLinks links,
             String audienceCode,
             String languageTag
+    ) {
+        return render(summary, changes, templateBody, footerBody, links, audienceCode, languageTag, IssueStatuses.NONE);
+    }
+
+    /**
+     * @param footerBody the audience's footer for this language; blank adds nothing
+     * @param links the release's version and its release-wide links, unescaped
+     * @param statuses the release's linked issues as of its review, and accepted statuses
+     */
+    static String render(
+            String summary,
+            List<ChangeView> changes,
+            String templateBody,
+            String footerBody,
+            ReleaseLinks links,
+            String audienceCode,
+            String languageTag,
+            IssueStatuses statuses
     ) {
         if (changes.isEmpty()) {
             throw new IllegalArgumentException("A release note needs at least one change.");
@@ -122,7 +137,7 @@ final class ReleaseNoteDigest {
             sections.forEach((section, items) -> {
                 note.append("\n## ").append(labels.raw("section." + section.name())).append("\n\n");
                 note.append(String.join(ITEM_SEPARATOR, items.stream()
-                        .map(change -> item(change, templateBody, audienceCode, labels))
+                        .map(change -> item(change, templateBody, audienceCode, labels, statuses))
                         .toList()));
                 note.append('\n');
             });
@@ -136,8 +151,9 @@ final class ReleaseNoteDigest {
 
     // One change as the audience's template writes it. A change that is both breaking and
     // security says so in Breaking, after its list marker, whatever the template prints.
-    private static String item(ChangeView change, String templateBody, String audienceCode, Labels labels) {
-        String rendered = demoteHeadings(AudienceTemplate.render(templateBody, item(change, audienceCode)).strip());
+    private static String item(ChangeView change, String templateBody, String audienceCode, Labels labels,
+                               IssueStatuses statuses) {
+        String rendered = demoteHeadings(AudienceTemplate.render(templateBody, item(change, audienceCode, statuses)).strip());
         if (!change.breaking() || !change.security()) {
             return rendered;
         }
@@ -202,6 +218,10 @@ final class ReleaseNoteDigest {
      * The stored text, and what is sent for translation, stay as they were written.
      */
     static AudienceItem item(ChangeView change, String audienceCode) {
+        return item(change, audienceCode, IssueStatuses.NONE);
+    }
+
+    static AudienceItem item(ChangeView change, String audienceCode, IssueStatuses statuses) {
         NeutralSummary summary = change.neutralSummary();
         AudienceNarrative written = change.audienceNarrative(audienceCode);
         String narrative = ReleaseNoteMarkdown.escapeRawHtml(change.narrative(audienceCode));
@@ -221,7 +241,7 @@ final class ReleaseNoteDigest {
                     change.reference(),
                     change.pullRequestNumber(),
                     change.url(),
-                    linkedIssues(change)
+                    linkedIssues(change, statuses)
             );
         }
         return new AudienceItem(
@@ -237,22 +257,25 @@ final class ReleaseNoteDigest {
                 change.reference(),
                 change.pullRequestNumber(),
                 change.url(),
-                linkedIssues(change)
+                linkedIssues(change, statuses)
         );
     }
 
     /**
-     * The issues a change mentions, as a template may print them. Every value but the
-     * URL ReleaseFlow built itself is the tracker's own text, so it is escaped.
+     * The issues a change mentions, as a template may print them, with only the statuses a
+     * note may show (ADR-0041). Every value but the URL ReleaseFlow built itself is the
+     * tracker's own text, so it is escaped.
      */
-    private static List<LinkedIssue> linkedIssues(ChangeView change) {
+    private static List<NoteIssue> linkedIssues(ChangeView change, IssueStatuses statuses) {
         return change.linkedIssues().stream()
-                .map(issue -> new LinkedIssue(
+                .map(statuses::noteIssue)
+                .map(issue -> new NoteIssue(
                         issue.key(),
                         ReleaseNoteMarkdown.escape(issue.title()),
-                        "",
-                        issue.type() == null ? null : ReleaseNoteMarkdown.escape(issue.type()),
-                        issue.status() == null ? null : ReleaseNoteMarkdown.escape(issue.status()),
+                        ReleaseNoteMarkdown.escape(issue.type()),
+                        ReleaseNoteMarkdown.escape(issue.status()),
+                        ReleaseNoteMarkdown.escape(issue.recordedStatus()),
+                        ReleaseNoteMarkdown.escape(issue.statusAtReview()),
                         issue.url()
                 ))
                 .toList();
