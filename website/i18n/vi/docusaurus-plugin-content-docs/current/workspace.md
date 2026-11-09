@@ -85,7 +85,7 @@ coi là đang chờ thay đổi đầu tiên, vì chưa có gì để đưa vào
 
 ![Tổng quan của một Project mới: mọi bộ đếm bằng 0, và bước tiếp theo là kết nối nguồn](assets/workspace/w-5a-connect-a-source.webp)
 
-![Tổng quan về sau, khi đã có release được duyệt: bước tiếp theo là gom các thay đổi chưa thuộc release nào](assets/workspace/w-5b-collect-changes.webp)
+![Tổng quan về sau: 125 thay đổi, một thay đổi cần review, 10 thay đổi phá vỡ tương thích và 7 release; bước tiếp theo là gom các thay đổi chưa thuộc release nào](assets/workspace/w-5b-collect-changes.webp)
 
 Thanh tiêu đề và menu trên di động dùng để chuyển giữa các Project. ReleaseFlow nhớ Project
 gần nhất trong cookie `releaseflow_project`, nên một trang mở ra không kèm `?project=` sẽ

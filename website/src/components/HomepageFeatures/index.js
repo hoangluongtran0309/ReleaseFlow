@@ -92,7 +92,7 @@ function ProductShowcase() {
             slug="h-2-release-review"
             alt={translate({
               id: 'homepage.showcase.release.alt',
-              message: 'A release in review with two of its five changes decided, and the preview of its contributor note',
+              message: 'A release in review with five of its eleven changes decided, its previous release, and the preview of its contributor note',
             })}
             title={<Translate id="homepage.showcase.release.title">Release review</Translate>}
             description={

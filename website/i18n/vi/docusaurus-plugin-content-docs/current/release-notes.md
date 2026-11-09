@@ -291,7 +291,7 @@ Release chỉ được publish khi mọi release note đều sẵn sàng: nếu 
 `409 translations_not_ready`, và cơ sở dữ liệu cũng từ chối. Sửa một bản tóm tắt sau khi duyệt
 sẽ dịch văn bản mới. Xem [ADR-0015](adr/0015-multilingual-release-notes.md).
 
-![Vài giây sau khi duyệt: note tiếng Việt đang dịch và vẫn hiện văn bản chưa dịch](assets/release-notes/rn-3-translating.webp)
+![Vài giây sau khi duyệt v1.3.0: note Contributor tiếng Việt đang dịch và vẫn hiện tóm tắt chưa dịch, còn thông tin release ghi release trước là v1.2.0 và không có hướng dẫn nâng cấp](assets/release-notes/rn-3-translating.webp)
 
 ![Cùng note đó khi bản dịch đã về: tóm tắt release và mọi thay đổi đều bằng tiếng Việt, và bảng thuật ngữ Đã gửi kèm mọi bản dịch](assets/release-notes/rn-4-translated.webp)
 
@@ -439,7 +439,7 @@ Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
    theo template nữa), rồi chọn **Publish release này**.
 4. **Đã publish.** Xem [Publish](#publishing).
 
-![Một release đang review ngay sau khi thêm mọi thay đổi có sẵn](assets/release-notes/rn-6-add-all.webp)
+![Release v1.3.0 đang review với cả 10 thay đổi đã có quyết định; release trước là v1.2.0 và không có hướng dẫn nâng cấp](assets/release-notes/rn-6-add-all.webp)
 
 Mọi thành viên đều làm được mọi bước, nên một người có thể tự chuẩn bị, review, duyệt và
 publish cùng một release. ReleaseFlow ghi lại ai đã review từng thay đổi, ai đã duyệt và ai đã
@@ -463,6 +463,8 @@ trạng thái khác sẽ hỏi lại. Cảnh báo này không bao giờ chặn v
 lúc duyệt từ các trạng thái đã đọc tới khi đó; một lần đọc xong muộn hơn sẽ viết lại các note vẫn
 theo template, cho tới khi release được publish.
 
+![Một release đang review có các issue liên kết vừa được đọc lại: DBV-53, liên kết từ #69, vẫn In Progress, kèm nút Hiển thị trạng thái này](assets/release-notes/rn-16-issues-at-review.webp)
+
 ### Gộp thay đổi tracker vào thay đổi mã {#folding-a-tracker-change-into-its-code-change}
 
 Một thay đổi Jira hoặc Linear và pull request đã làm phần việc đó là cùng một phần việc, và nên
@@ -482,6 +484,8 @@ Gợi ý chỉ là bằng chứng, và không có gì tự được gộp. Một
 - **Không phải cùng một việc** bỏ qua gợi ý: cả hai thay đổi được giữ, và gợi ý không được đưa
   ra lại trong release này.
 
+![Gợi ý gộp trên tab Review của một release: sáu thay đổi tracker, mỗi cái gộp vào thay đổi mã nêu nó hoặc được một người xác nhận là trùng; gợi ý cho OPS-17 nói #67 sẽ thành bảo mật, và mỗi gợi ý có Gộp rồi từ chối, Không phải cùng một việc, và Gộp rồi loại kèm lý do điền sẵn](assets/release-notes/rn-14-folding.webp)
+
 Cả hai cách gộp đều giữ issue làm ngữ cảnh liên kết của thay đổi mã, thêm nó từ thay đổi tracker
 khi thay đổi mã chưa liệt kê; issue được thêm như vậy được đọc từ công cụ theo dõi của nó tại thời
 điểm review này, như các issue khác. Cả hai cách gộp cũng giữ các cờ của phần việc: thay đổi mã
@@ -491,6 +495,8 @@ của thay đổi mã và thành quyết định cho nó trong release, có nêu
 còn Unknown cần được phân loại trước: `400 invalid_fold_decision`. Mỗi gợi ý được quyết định một lần, ghi lại ai quyết định và lúc
 nào; release đưa về nháp vẫn giữ các quyết định của nó. Một cặp không có gì ràng buộc thì không
 được gợi ý: hãy từ chối hoặc loại thay đổi tracker bằng tay.
+
+![#67 sau khi OPS-17 được gộp vào: quyết định của nó là Đã sửa bởi dbvault Lead, và nó được đánh dấu bảo mật khi gộp OPS-17 vào](assets/release-notes/rn-15-folded-decision.webp)
 
 ```text
 POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance
@@ -628,7 +634,7 @@ hiển thị người đã duyệt và người đã publish release, và có m�
 với release note đã dựng, Markdown của nó, nút **Sao chép**, và liên kết **Tải về** để dùng cho
 GitHub Releases hoặc một changelog. Tệp tải về có tên `<version>-<audience>-<language>.md`.
 
-![Một release đã publish: chọn note Contributor · vi và tải nó về dưới dạng Markdown](assets/release-notes/rn-9-publish.webp)
+![Release v1.3.0 đã publish: note Contributor · vi đã dịch, bảng thuật ngữ được gửi kèm mọi bản dịch, cùng nút Sao chép và Tải về Markdown](assets/release-notes/rn-9-publish.webp)
 
 Một release đã publish không sửa, đặt lịch, review, huỷ bỏ, gỡ publish hay đổi nội dung được, và
 các release note của nó cũng vậy. Các thay đổi của nó vẫn sửa được trong Hộp thay đổi, nhưng
