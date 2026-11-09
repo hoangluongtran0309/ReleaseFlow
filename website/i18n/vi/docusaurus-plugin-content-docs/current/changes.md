@@ -75,6 +75,8 @@ Mỗi thay đổi giữ lại các quy tắc đã khớp, các `reviewTriggers` 
 nó, và hộp thay đổi hiển thị chúng. Một lần review quyết định thay đổi có trigger nhưng vẫn giữ
 trigger lại làm hồ sơ.
 
+![Một thay đổi có hai label bug và enhancement mâu thuẫn và chạm vào file nhạy cảm, sau khi review: AI chọn Feature, một người đã review, và thẻ vẫn giữ các quy tắc và trigger đã áp dụng](assets/changes/c-6-conflicting-labels.webp)
+
 ![Một pull request có tiêu đề feat nhưng mọi file thay đổi đều là tài liệu: được phân loại là Documentation, và thẻ ghi rõ lý do](assets/changes/c-1-why.webp)
 
 ### Sensitive path {#sensitive-paths}
@@ -113,7 +115,7 @@ trạng thái hợp lệ trả về `400 invalid_change_filter`, và Project c�
 `404 project_not_found`. Mỗi thay đổi trả về mã `category` cùng `categoryName` và
 `categoryGroup`, đúng như lúc nó được phân loại.
 
-![Change Inbox lọc theo Fix: trạng thái đồng bộ của từng nguồn, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
+![Change Inbox với các bộ lọc, trạng thái đồng bộ của nguồn Jira, GitHub và GitLab, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
 
 ![Lọc Change Inbox để chỉ còn các thay đổi bị đánh giá là thiếu context](assets/changes/c-4-context-filter.webp)
 

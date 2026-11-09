@@ -369,7 +369,7 @@
                        th:if="${change.linkedContextStatus != null and change.linkedContextStatus.incomplete()}"
                        th:text="${change.linkedContextStatus.name() == 'PARTIAL'}
                                 ? #{ui.changes.linkedPartial}
-                                : #{ui.changes.linkedUnavailable}">Jira did not return every issue this change mentions.</p>
+                                : #{ui.changes.linkedUnavailable}">Not every issue this change mentions could be read from its tracker.</p>
                     <details class="mt-3 text-sm" th:unless="${#lists.isEmpty(change.changedFiles)}">
                         <summary class="cursor-pointer font-medium text-slate-600"
                                  th:text="#{ui.changes.changedFiles(${#lists.size(change.changedFiles)})}">Changed files (3)</summary>
