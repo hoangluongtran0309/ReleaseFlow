@@ -89,7 +89,7 @@ to put in the draft.
 
 ![The overview of a new Project: every counter at zero, and the next step is to connect a source](assets/workspace/w-5a-connect-a-source.webp)
 
-![The overview later, with a release approved: the next step is to collect the changes not yet in a release](assets/workspace/w-5b-collect-changes.webp)
+![The overview later: 125 changes, one needing review, 10 breaking, and 7 releases; the next step is to collect the changes not yet in a release](assets/workspace/w-5b-collect-changes.webp)
 
 The header and mobile navigation switch between Projects. ReleaseFlow remembers the
 last one in the `releaseflow_project` cookie, so a page reached without `?project=`

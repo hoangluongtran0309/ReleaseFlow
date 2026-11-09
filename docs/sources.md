@@ -269,9 +269,13 @@ What counts as a mention depends on where the key is:
 | Description, commit message | `Spec: APP-12-quartz`: a key followed by a hyphen and a lowercase word | `APP-12-3`, `APP-12-Q`, and `ISO-8601-compliant`, whose prefix is no tracker of the Project |
 | Title, target branch | `APP-3` standing alone | `feature/APP-3-export`: a key followed by a hyphen |
 
+![A GitHub pull request whose title names no issue, linked to DBV-50 through its head branch alone](assets/sources/sr-6-linked-branch.webp)
+
 A Linear team's key is read when the team is connected and kept; a team connected before
 1.2.0 has it read at the first change checked afterwards. A team whose key cannot be read
 links nothing, and the change says so. An issue of another Linear team is not linked.
+
+![A GitLab merge request linked to OPS-16, the Linear issue its title names, shown with the issue's title, type, and status](assets/sources/sr-6-linked-linear.webp)
 
 An issue is read when the change is recorded, and what was read then is what the change
 keeps. A release reads its changes' issues again when its review is requested, so a note
@@ -355,7 +359,7 @@ An item already recorded, by webhook or by an earlier import, is skipped, so
 imports and webhooks never duplicate each other. Imported changes carry an
 **Imported** badge.
 
-![Import last 90 days in the Change Inbox: the import runs until it is completed, and the imported changes appear](assets/sources/sr-9-history-import.webp)
+![The Source sync panel of the Change Inbox: the Jira project is read on a schedule, and each GitHub and GitLab source offers Import last 90 days beside its last import's state and counts](assets/sources/sr-9-source-sync-panel.webp)
 
 A GitHub import stops at the first pull request updated before its window, and
 either import stops after 500 new changes as **Stopped at the limit** with its
