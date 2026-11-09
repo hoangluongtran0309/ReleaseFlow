@@ -45,7 +45,7 @@ class LinearApiClientTest {
         assertThat(request.path()).isEqualTo("/graphql");
         // Linear takes the token bare; a Bearer prefix would be rejected.
         assertThat(request.authorization()).isEqualTo(TOKEN);
-        assertThat(request.query()).isEqualTo("query($id:String!){team(id:$id){id organization{id}}}");
+        assertThat(request.query()).isEqualTo("query($id:String!){team(id:$id){id key organization{id}}}");
         assertThat(request.variableId()).isEqualTo(TEAM);
     }
 

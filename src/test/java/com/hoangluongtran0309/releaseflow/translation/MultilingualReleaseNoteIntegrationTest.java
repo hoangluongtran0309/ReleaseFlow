@@ -78,7 +78,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     void clearDatabase() {
         DEEPL.reset();
         // Published releases reject DELETE by design; TRUNCATE bypasses row triggers.
-        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, releases");
+        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, linked_issue_reads, release_linked_issues, release_fold_decisions, releases");
         jdbcTemplate.update("DELETE FROM changes");
         jdbcTemplate.update("DELETE FROM projects");
         jdbcTemplate.update("DELETE FROM organization_translation_settings");
@@ -392,7 +392,7 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         // A change takes its jobs with it.
-        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, releases");
+        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, release_audience_notes, release_change_reviews, release_notes, release_changes, linked_issue_reads, release_linked_issues, release_fold_decisions, releases");
         jdbcTemplate.update("""
                 INSERT INTO translation_jobs (id, organization_id, project_id, change_id, source_language, target_language,
                     input_hash, input, status, attempts, next_attempt_at, created_at)

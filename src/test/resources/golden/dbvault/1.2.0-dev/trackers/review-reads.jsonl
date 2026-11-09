@@ -1,0 +1,32 @@
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-1", "title": "Register and list MySQL targets", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-2", "title": "Test the connection to a MySQL target", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-3", "title": "Run a full logical MySQL backup", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-4", "title": "Compress the dump while it is written", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-5", "title": "Restore a backup after explicit confirmation", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-7", "title": "Ship a Docker image and a compose quickstart", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-6", "title": "Single operator sign-in with CSRF protection", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.1.0", "tracker": "JIRA", "key": "DBV-8", "title": "CLI: list targets and backups", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-15", "title": "Expose backup checksums in the API", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-32", "title": "Stream decompression into the restore client", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-10", "title": "Route backups by engine and add PostgreSQL", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-12", "title": "Backup schedules", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-13", "title": "Keep the newest N backups per target", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-11", "title": "S3-compatible storage profiles", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-17", "title": "CLI: rename --target to --target-id", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-18", "title": "CLI ignores the DBVAULT_URL environment variable", "type": "Bug", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-14", "title": "Two backups started in the same second overwrite each other", "type": "Bug", "status": "Done", "category": "done"}
+{"release": "v0.2.0", "tracker": "JIRA", "key": "DBV-16", "title": "Every target's credentials are encrypted with the same key", "type": "Bug", "status": "Done", "category": "done"}
+{"release": "v0.3.0", "tracker": "JIRA", "key": "DBV-21", "title": "MongoDB logical backup and restore", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.3.0", "tracker": "JIRA", "key": "DBV-22", "title": "Notify operators through Slack, email and webhooks", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.3.0", "tracker": "JIRA", "key": "DBV-23", "title": "Isolated restore verification", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.3.0", "tracker": "JIRA", "key": "DBV-26", "title": "CLI: verify command", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.3.0", "tracker": "JIRA", "key": "DBV-24", "title": "Version the HTTP API under /api/v1", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v0.3.0", "tracker": "LINEAR", "key": "OPS-8", "title": "Enable Dependabot alerts and version updates for dbvault", "status": "Done", "category": "completed"}
+{"release": "v0.3.0", "tracker": "JIRA", "key": "DBV-25", "title": "Schedules skip or repeat runs at daylight saving changes", "type": "Bug", "status": "Done", "category": "done"}
+{"release": "v1.0.0", "tracker": "JIRA", "key": "DBV-34", "title": "CLI: JSON output for every command", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v1.0.0", "tracker": "JIRA", "key": "DBV-30", "title": "Prometheus metrics and a Grafana dashboard", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v1.0.0", "tracker": "JIRA", "key": "DBV-33", "title": "Enforce TLS to database targets", "type": "Story", "status": "Done", "category": "done"}
+{"release": "v1.0.0", "tracker": "JIRA", "key": "DBV-31", "title": "Vietnamese console", "type": "Story", "status": "In Progress", "category": "indeterminate"}
+{"release": "v1.1.0", "tracker": "JIRA", "key": "DBV-44", "title": "CLI: a server address without http:// fails with an internal error", "type": "Bug", "status": "Done", "category": "done"}
+{"release": "v1.1.0", "tracker": "LINEAR", "key": "OPS-13", "title": "Pin base images by digest in the Dockerfile", "status": "Done", "category": "completed"}
+{"release": "v1.1.0", "tracker": "JIRA", "key": "DBV-31", "title": "Vietnamese console", "type": "Story", "status": "Done", "category": "done"}

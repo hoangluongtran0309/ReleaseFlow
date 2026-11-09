@@ -247,30 +247,48 @@ fixed in ReleaseFlow, not configured, and neither saving a new token nor restart
 brings the booked read forward. The Change Inbox shows each Jira project's last and next
 read; a Jira project has no history import.
 
-### Linked Jira issues
+### Linked issues
 
-When a Project has a Jira source, each GitHub or GitLab change is checked for
-that project's issue keys in its title, description, target branch, and up to
-250 commit messages. At most ten issues are read from Jira and shown under
-**Linked issues** on the change, given to the AI as untrusted evidence, and
-available to audience templates:
+When a Project has a Jira source or a Linear source with its token, each GitHub or GitLab
+change is checked for the issues it mentions: keys of the Jira project, such as `APP-12`,
+and identifiers of the Linear team, such as `OPS-7`, matched without regard to case. It
+looks in the change's title, description, target branch, head branch (the branch the pull
+or merge request came from), and up to 250 commit messages. At most ten keys of each
+tracker are read, each from its own tracker, and shown under **Linked issues** on the
+change, given to the AI as untrusted evidence, and available to audience templates:
 
 ```mustache
-{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}
+{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}{{#status}}, {{status}}{{/status}}){{/linkedIssues}}
 ```
 
-An issue is read when the change is recorded, and what was read then is what the change keeps:
-its title and status are those of that moment, not refreshed later, so a note written at approval
-can say `In Progress` for an issue finished since. They are evidence of what the change pointed
-at, never a live view of the tracker.
+What counts as a mention depends on where the key is:
+
+| Where | Counts | Does not count |
+| --- | --- | --- |
+| Head branch | `feature/APP-47-retention-preview`, `APP-47/preview`, `bugfix/app-47_restore` | `release/2026-APP-47x`, `APP-047` |
+| Description, commit message | `Spec: APP-12-quartz`: a key followed by a hyphen and a lowercase word | `APP-12-3`, `APP-12-Q`, and `ISO-8601-compliant`, whose prefix is no tracker of the Project |
+| Title, target branch | `APP-3` standing alone | `feature/APP-3-export`: a key followed by a hyphen |
+
+![A GitHub pull request whose title names no issue, linked to DBV-50 through its head branch alone](assets/sources/sr-6-linked-branch.webp)
+
+A Linear team's key is read when the team is connected and kept; a team connected before
+1.2.0 has it read at the first change checked afterwards. A team whose key cannot be read
+links nothing, and the change says so. An issue of another Linear team is not linked.
+
+![A GitLab merge request linked to OPS-16, the Linear issue its title names, shown with the issue's title, type, and status](assets/sources/sr-6-linked-linear.webp)
+
+An issue is read when the change is recorded, and what was read then is what the change
+keeps. A release reads its changes' issues again when its review is requested, so a note
+shows each status as of review (see
+[Linked issues at review](release-notes.md#linked-issues-at-review)). They are evidence
+of what the change pointed at, never a live view of the tracker.
 
 ![A GitHub change with the Jira issue it mentions, linked with the title and status read when the change was recorded](assets/sources/sr-6-linked-issue.webp)
 
 Commit messages are only searched for keys; they are never stored. When commits
-could not be read, or Jira would not show an issue the change mentions, the
+could not be read, or Jira or Linear would not show an issue the change mentions, the
 change is retried and then marked **Linked issues incomplete**, which forces
-review. A key followed by a hyphen, as in `feature/APP-3-export`, is not taken
-as a mention.
+review.
 
 ![A change that mentions DBV-15 and DBV-999: Jira returned only DBV-15, so the change needs review for incomplete linked issues](assets/sources/sr-6-linked-incomplete.webp)
 
@@ -341,7 +359,7 @@ An item already recorded, by webhook or by an earlier import, is skipped, so
 imports and webhooks never duplicate each other. Imported changes carry an
 **Imported** badge.
 
-![Import last 90 days in the Change Inbox: the import runs until it is completed, and the imported changes appear](assets/sources/sr-9-history-import.webp)
+![The Source sync panel of the Change Inbox: the Jira project is read on a schedule, and each GitHub and GitLab source offers Import last 90 days beside its last import's state and counts](assets/sources/sr-9-source-sync-panel.webp)
 
 A GitHub import stops at the first pull request updated before its window, and
 either import stops after 500 new changes as **Stopped at the limit** with its
@@ -380,10 +398,10 @@ request, in a background worker, or when an administrator saves a token:
 
 | Provider | Calls |
 | --- | --- |
-| GitHub | Confirms a token against the repository's pull requests; lists a merged pull request's changed files and, when the Project has a Jira source, up to 250 of its commit messages; reads closed pull requests for a history import; reads and creates releases for a [GitHub Release action](automation.md#actions) |
-| GitLab | Confirms a token against the project; lists a merge request's diffs and, when the Project has a Jira source, its commit messages; reads merged merge requests for a history import |
-| Linear | Confirms the API key and learns the team's workspace when the team is connected; reads a completed issue back |
-| Jira | Confirms the project when it is connected; searches for issues that moved into Done on every poll; reads the issues a code change mentions |
+| GitHub | Confirms a token against the repository's pull requests; lists a merged pull request's changed files and, when the Project has a Jira or Linear source, up to 250 of its commit messages; reads closed pull requests for a history import; reads and creates releases for a [GitHub Release action](automation.md#actions) |
+| GitLab | Confirms a token against the project; lists a merge request's diffs and, when the Project has a Jira or Linear source, its commit messages; reads merged merge requests for a history import |
+| Linear | Confirms the API key and learns the team's workspace and key when the team is connected; reads a completed issue back; reads the issues a code change mentions, and again when a release's review is requested |
+| Jira | Confirms the project when it is connected; searches for issues that moved into Done on every poll; reads the issues a code change mentions, and again when a release's review is requested |
 
 Timeouts, API addresses, and polling intervals are listed in
 [Configuration](configuration.md#sources).

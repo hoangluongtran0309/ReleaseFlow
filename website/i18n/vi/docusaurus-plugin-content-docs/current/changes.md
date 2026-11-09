@@ -17,8 +17,8 @@ bổ sung được — dùng chính access token của nguồn — rồi phân l
 - Linear đọc lại issue, nên thay đổi mang nội dung hiện tại của issue; issue không có tệp;
 - Jira không bổ sung gì, vì lượt đọc theo lịch vừa đọc issue ngay trước đó.
 
-Khi Project có nguồn Jira, một thay đổi từ GitHub hoặc GitLab còn được kiểm tra xem có nhắc tới
-issue Jira nào không (xem [Issue Jira liên kết](sources.md#linked-jira-issues)).
+Khi Project có nguồn Jira hoặc Linear, một thay đổi từ GitHub hoặc GitLab còn được kiểm tra
+xem có nhắc tới issue nào không (xem [Issue liên kết](sources.md#linked-issues)).
 
 Hết thời gian chờ, lỗi mạng, bị giới hạn tốc độ hoặc lỗi phía server sẽ được thử lại tối đa ba
 lần, chờ 2 rồi 4 giây. Nếu vẫn không liệt kê được tệp, nếu token thiếu hoặc bị từ chối, hoặc nếu
@@ -62,7 +62,7 @@ Thay đổi phá vỡ tương thích, thay đổi bảo mật và thay đổi Un
 | Tệp nhạy cảm | Một tệp thay đổi, hoặc đường dẫn cũ của một tệp được đổi tên, khớp với một mẫu sensitive path |
 | Không lấy được danh sách tệp thay đổi | Không liệt kê được các tệp |
 | Từ nhạy cảm | Nguồn không có tệp (Linear, Jira), và tiêu đề hoặc mô tả có chứa `breaking change`, `migration`, `security`, `auth`, `credential`, `password` hoặc `encryption` |
-| Danh sách issue liên kết chưa đầy đủ | Không đọc được commit, hoặc Jira không cho xem một issue mà thay đổi có nhắc tới |
+| Danh sách issue liên kết chưa đầy đủ | Không đọc được commit, Jira hoặc Linear không cho xem một issue mà thay đổi có nhắc tới, hoặc không đọc được key của một team Linear |
 | Phân loại bằng AI thất bại | Lời gọi AI thất bại hoặc câu trả lời không dùng được |
 | Không đủ ngữ cảnh | [Điểm ngữ cảnh](#review-signals) thấp hơn ngưỡng |
 | Có thể trùng với một thay đổi trước đó | Thay đổi trông giống một thay đổi trước đó (xem [Tín hiệu review](#review-signals)) |
@@ -74,6 +74,8 @@ Thay đổi phá vỡ tương thích, thay đổi bảo mật và thay đổi Un
 Mỗi thay đổi giữ lại các quy tắc đã khớp, các `reviewTriggers` có kiểu và `changedFiles` của
 nó, và hộp thay đổi hiển thị chúng. Một lần review quyết định thay đổi có trigger nhưng vẫn giữ
 trigger lại làm hồ sơ.
+
+![Một thay đổi có hai label bug và enhancement mâu thuẫn và chạm vào file nhạy cảm, sau khi review: AI chọn Feature, một người đã review, và thẻ vẫn giữ các quy tắc và trigger đã áp dụng](assets/changes/c-6-conflicting-labels.webp)
 
 ![Một pull request có tiêu đề feat nhưng mọi file thay đổi đều là tài liệu: được phân loại là Documentation, và thẻ ghi rõ lý do](assets/changes/c-1-why.webp)
 
@@ -113,7 +115,7 @@ trạng thái hợp lệ trả về `400 invalid_change_filter`, và Project c�
 `404 project_not_found`. Mỗi thay đổi trả về mã `category` cùng `categoryName` và
 `categoryGroup`, đúng như lúc nó được phân loại.
 
-![Change Inbox lọc theo Fix: trạng thái đồng bộ của từng nguồn, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
+![Change Inbox với các bộ lọc, trạng thái đồng bộ của nguồn Jira, GitHub và GitLab, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
 
 ![Lọc Change Inbox để chỉ còn các thay đổi bị đánh giá là thiếu context](assets/changes/c-4-context-filter.webp)
 
@@ -341,6 +343,8 @@ thay đổi) và các tệp thay đổi. Một cặp có độ tương đồng �
 cho mỗi thay đổi. Thay đổi mới cần review với trigger **Có thể trùng với một thay đổi trước
 đó**. Cả hai thẻ đều hiển thị cặp này, và bất kỳ thành viên nào cũng có thể **Xác nhận trùng**
 hoặc đánh dấu **Không trùng**, một lần duy nhất.
+Một cặp đã xác nhận gồm một thay đổi tracker và một thay đổi mã trong cùng release sẽ được gợi ý
+[gộp](release-notes.md#folding-a-tracker-change-into-its-code-change) trên tab Review của release.
 
 ![Một cặp có thể trùng: một pull request GitHub và một issue Linear, giống nhau 95%, kèm bằng chứng và hai nút xác nhận hoặc bỏ qua](assets/changes/c-9-duplicate.webp)
 

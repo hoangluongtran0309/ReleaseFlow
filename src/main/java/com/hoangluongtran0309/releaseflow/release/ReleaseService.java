@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.release;
 
+import com.hoangluongtran0309.releaseflow.account.AppUserRole;
 import com.hoangluongtran0309.releaseflow.account.OutputLanguageService;
 import com.hoangluongtran0309.releaseflow.account.ReleaseFlowPrincipal;
 import com.hoangluongtran0309.releaseflow.audience.AudienceService;
@@ -8,19 +9,26 @@ import com.hoangluongtran0309.releaseflow.audience.AudienceView;
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLanguageService;
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLinks;
 import com.hoangluongtran0309.releaseflow.change.ChangeExcludedException;
+import com.hoangluongtran0309.releaseflow.change.ChangeExclusionRequest;
+import com.hoangluongtran0309.releaseflow.change.ChangeExclusionService;
+import com.hoangluongtran0309.releaseflow.change.ChangeFoldingService;
 import com.hoangluongtran0309.releaseflow.change.ChangeInboxService;
 import com.hoangluongtran0309.releaseflow.change.ChangeNotFoundException;
+import com.hoangluongtran0309.releaseflow.change.ChangeReviewRequest;
 import com.hoangluongtran0309.releaseflow.change.ChangeReviewService;
 import com.hoangluongtran0309.releaseflow.change.ChangeSummaryRequest;
 import com.hoangluongtran0309.releaseflow.change.ChangeSummaryService;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.InvalidChangeReviewException;
+import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 import com.hoangluongtran0309.releaseflow.project.ProjectService;
+import com.hoangluongtran0309.releaseflow.source.SourceType;
 import com.hoangluongtran0309.releaseflow.translation.TranslationFinished;
 import com.hoangluongtran0309.releaseflow.translation.TranslationState;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
@@ -32,6 +40,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -71,6 +80,11 @@ public class ReleaseService {
     private final ReleaseChangeReviewRepository reviewRepository;
     private final AudienceReleaseNoteRepository noteRepository;
     private final LegacyReleaseNoteRepository legacyNoteRepository;
+    private final ReleaseLinkedIssueRepository linkedIssueRepository;
+    private final LinkedIssueReadRepository linkedIssueReadRepository;
+    private final ReleaseFoldDecisionRepository foldDecisionRepository;
+    private final ChangeFoldingService changeFoldingService;
+    private final ChangeExclusionService changeExclusionService;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -90,6 +104,11 @@ public class ReleaseService {
             ReleaseChangeReviewRepository reviewRepository,
             AudienceReleaseNoteRepository noteRepository,
             LegacyReleaseNoteRepository legacyNoteRepository,
+            ReleaseLinkedIssueRepository linkedIssueRepository,
+            LinkedIssueReadRepository linkedIssueReadRepository,
+            ReleaseFoldDecisionRepository foldDecisionRepository,
+            ChangeFoldingService changeFoldingService,
+            ChangeExclusionService changeExclusionService,
             ObjectMapper objectMapper,
             ApplicationEventPublisher events,
             Clock clock
@@ -108,6 +127,11 @@ public class ReleaseService {
         this.reviewRepository = reviewRepository;
         this.noteRepository = noteRepository;
         this.legacyNoteRepository = legacyNoteRepository;
+        this.linkedIssueRepository = linkedIssueRepository;
+        this.linkedIssueReadRepository = linkedIssueReadRepository;
+        this.foldDecisionRepository = foldDecisionRepository;
+        this.changeFoldingService = changeFoldingService;
+        this.changeExclusionService = changeExclusionService;
         this.objectMapper = objectMapper;
         this.events = events;
         this.clock = clock;
@@ -338,8 +362,287 @@ public class ReleaseService {
         if (changes.isEmpty()) {
             throw new ReleaseEmptyException();
         }
-        release.requestReview(clock.instant());
+        Instant now = clock.instant();
+        release.requestReview(now);
+        queueLinkedIssueRead(release, now);
         return view(release, changes);
+    }
+
+    // Requesting review reads every linked issue again (ADR-0041); acceptances stay.
+    private void queueLinkedIssueRead(Release release, Instant now) {
+        linkedIssueRepository.findAllByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .forEach(ReleaseLinkedIssue::forgetRead);
+        linkedIssueReadRepository.findByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .ifPresentOrElse(
+                        read -> read.queue(now),
+                        () -> linkedIssueReadRepository.save(new LinkedIssueRead(release.getId(),
+                                release.getOrganizationId(), release.getProjectId(), now))
+                );
+    }
+
+    /**
+     * Accepts showing a linked issue's status in the release's notes, though it is open
+     * (ADR-0041). The request names the status the person saw: a status read since then is
+     * not accepted on their behalf.
+     */
+    @Transactional
+    ReleaseView acceptLinkedIssueStatus(
+            ReleaseFlowPrincipal person,
+            UUID projectId,
+            UUID releaseId,
+            LinkedIssueAcceptanceRequest request
+    ) {
+        Release release = find(person.organizationId(), projectId, releaseId);
+        release.requireReviewedOrApproved();
+        List<ChangeView> changes = includedChanges(release);
+        LinkedIssue issue = changes.stream()
+                .flatMap(change -> change.linkedIssues().stream())
+                .filter(linked -> linked.trackerOrJira().equals(request.getTracker())
+                        && linked.key().equalsIgnoreCase(request.getKey()))
+                .findFirst()
+                .orElseThrow(LinkedIssueNotFoundException::new);
+        IssueStatuses statuses = statuses(release);
+        if (!statuses.status(issue).equals(request.getStatus())) {
+            throw new LinkedIssueStatusChangedException();
+        }
+        ReleaseLinkedIssue.Key key = new ReleaseLinkedIssue.Key(release.getId(), issue.trackerOrJira(),
+                issue.key().toUpperCase(Locale.ROOT));
+        ReleaseLinkedIssue row = linkedIssueRepository.findById(key)
+                .orElseGet(() -> new ReleaseLinkedIssue(release.getId(), release.getOrganizationId(),
+                        release.getProjectId(), key.tracker(), key.issueKey()));
+        Instant now = clock.instant();
+        row.accept(request.getStatus(), person.userId(), person.displayName(), now);
+        linkedIssueRepository.saveAndFlush(row);
+        release.touch(now);
+        if (release.getStatus() == ReleaseStatus.APPROVED) {
+            rerenderNotes(release, changes, null, false, now);
+        }
+        return view(release, changes);
+    }
+
+    /**
+     * Records a decision on a suggestion to fold a tracker change into a code change of this
+     * release (ADR-0041). Accepting keeps the issue as the code change's linked context, and
+     * takes the tracker change out of the note: rejected from the release, or excluded from
+     * releases with a reason, which only an administrator may do.
+     */
+    @Transactional
+    ReleaseView decideFold(
+            ReleaseFlowPrincipal person,
+            UUID projectId,
+            UUID releaseId,
+            UUID trackerChangeId,
+            FoldDecisionRequest request
+    ) {
+        UUID organizationId = person.organizationId();
+        Release release = find(organizationId, projectId, releaseId);
+        release.requireInReview();
+        List<ChangeView> changes = includedChanges(release);
+        FoldingSuggestion suggestion = foldingSuggestions(release, changes).stream()
+                .filter(candidate -> candidate.trackerChangeId().equals(trackerChangeId)
+                        && candidate.codeChangeId().equals(request.getCodeChangeId()))
+                .findFirst()
+                .orElseThrow(FoldingSuggestionNotFoundException::new);
+        Instant now = clock.instant();
+        ReleaseFoldDecision.Decision decision = request.getDecision() == FoldDecisionRequest.Decision.ACCEPT
+                ? ReleaseFoldDecision.Decision.ACCEPTED
+                : ReleaseFoldDecision.Decision.DISMISSED;
+        ReleaseFoldDecision.Removal removal = null;
+        String reason = null;
+        if (decision == ReleaseFoldDecision.Decision.ACCEPTED) {
+            if (request.getRemoval() == null) {
+                throw new InvalidFoldDecisionException("error.invalid_fold_decision.removalRequired");
+            }
+            removal = request.getRemoval() == FoldDecisionRequest.Removal.EXCLUDE
+                    ? ReleaseFoldDecision.Removal.EXCLUDED
+                    : ReleaseFoldDecision.Removal.REJECTED;
+            if (removal == ReleaseFoldDecision.Removal.EXCLUDED) {
+                if (person.role() != AppUserRole.ADMIN) {
+                    throw new AccessDeniedException("Only an administrator excludes a change from releases.");
+                }
+                if (request.getReason() == null || request.getReason().isBlank()) {
+                    throw new InvalidFoldDecisionException("error.invalid_fold_decision.reasonRequired");
+                }
+                reason = request.getReason();
+            }
+            ChangeView tracker = changes.stream().filter(change -> change.id().equals(trackerChangeId)).findFirst()
+                    .orElseThrow(ChangeNotFoundException::new);
+            ChangeView code = changes.stream().filter(change -> change.id().equals(suggestion.codeChangeId())).findFirst()
+                    .orElseThrow(ChangeNotFoundException::new);
+            if (suggestion.addsFlags() && code.unknownCategory()) {
+                throw new InvalidFoldDecisionException("error.invalid_fold_decision.classifyFirst");
+            }
+            LinkedIssue folded = foldedIssue(tracker);
+            boolean newIssue = code.linkedIssues().stream().noneMatch(issue -> issue.key().equalsIgnoreCase(folded.key())
+                    && issue.trackerOrJira().equals(folded.trackerOrJira()));
+            changeFoldingService.foldIssue(organizationId, projectId, code.id(), folded);
+            if (suggestion.addsFlags()) {
+                carryFlags(person, release, code, tracker, now);
+            }
+            releaseChangeRepository.deleteByReleaseIdAndChangeIdAndOrganizationId(releaseId, trackerChangeId, organizationId);
+            releaseChangeRepository.flush();
+            if (removal == ReleaseFoldDecision.Removal.EXCLUDED) {
+                ChangeExclusionRequest exclusion = new ChangeExclusionRequest();
+                exclusion.setReason(reason);
+                changeExclusionService.exclude(person, projectId, trackerChangeId, exclusion);
+            }
+            // The issue the code change now carries is read as of this review, like the others.
+            if (newIssue) {
+                linkedIssueReadRepository.findByReleaseIdAndOrganizationId(releaseId, organizationId)
+                        .ifPresentOrElse(read -> read.queue(now), () -> linkedIssueReadRepository.save(
+                                new LinkedIssueRead(releaseId, organizationId, projectId, now)));
+            }
+        }
+        foldDecisionRepository.saveAndFlush(new ReleaseFoldDecision(releaseId, suggestion, organizationId, projectId,
+                decision, removal, reason, person.userId(), person.displayName(), now));
+        release.touch(now);
+        return view(release, includedChanges(release));
+    }
+
+    /**
+     * A fold keeps the work's flags: the code change becomes breaking or security when the
+     * folded tracker change is, reviewed by the person who accepted the fold, and the release
+     * records that as the code change's decision, naming the folded change.
+     */
+    private void carryFlags(ReleaseFlowPrincipal person, Release release, ChangeView code, ChangeView tracker, Instant now) {
+        ChangeReviewRequest review = new ChangeReviewRequest();
+        review.setCategory(code.category());
+        review.setBreaking(code.breaking() || tracker.breaking());
+        review.setSecurity(code.security() || tracker.security());
+        changeReviewService.review(person, release.getProjectId(), code.id(), review);
+        ReleaseChangeReview decision = reviewRepository.findById(new ReleaseChange.Key(release.getId(), code.id()))
+                .orElseGet(() -> new ReleaseChangeReview(release.getId(), code.id(), release.getOrganizationId(),
+                        release.getProjectId()));
+        decision.recordFold(tracker.id(), person.userId(), person.displayName(), now);
+        reviewRepository.saveAndFlush(decision);
+    }
+
+    /**
+     * The tracker change as the issue a code change carries. It was recorded when its
+     * tracker counted it finished, so its status category is done; its status name was not
+     * kept, so it shows none.
+     */
+    private static LinkedIssue foldedIssue(ChangeView tracker) {
+        String key = tracker.reference();
+        String title = tracker.title();
+        String prefix = key + ": ";
+        if (title.regionMatches(true, 0, prefix, 0, prefix.length())) {
+            title = title.substring(prefix.length());
+        }
+        String type = tracker.sourceType() == SourceType.LINEAR ? LinkedIssue.LINEAR : LinkedIssue.JIRA;
+        return new LinkedIssue(key, title, null, "", "", tracker.url(), type, LinkedIssue.DONE);
+    }
+
+    /**
+     * Each tracker change of a release in review that a code change of the same release may
+     * carry (ADR-0041): the code change holds its key as a linked issue of the same tracker,
+     * or a person confirmed the two as possible duplicates. A tracker change decided on in
+     * this release is not suggested again.
+     */
+    private List<FoldingSuggestion> foldingSuggestions(Release release, List<ChangeView> changes) {
+        if (release.getStatus() != ReleaseStatus.IN_REVIEW) {
+            return List.of();
+        }
+        Set<UUID> decided = foldDecisionRepository
+                .findAllByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .stream()
+                .map(ReleaseFoldDecision::getTrackerChangeId)
+                .collect(Collectors.toSet());
+        List<ChangeView> trackers = changes.stream()
+                .filter(change -> change.sourceType() == SourceType.JIRA || change.sourceType() == SourceType.LINEAR)
+                .filter(change -> !decided.contains(change.id()))
+                .toList();
+        if (trackers.isEmpty()) {
+            return List.of();
+        }
+        List<ChangeView> codeChanges = changes.stream()
+                .filter(change -> change.sourceType() == null
+                        || change.sourceType() == SourceType.GITHUB
+                        || change.sourceType() == SourceType.GITLAB)
+                .toList();
+        List<ChangeFoldingService.ConfirmedDuplicate> duplicates = changeFoldingService.confirmedDuplicates(
+                release.getOrganizationId(), release.getProjectId(), changes.stream().map(ChangeView::id).toList());
+        List<FoldingSuggestion> suggestions = new ArrayList<>();
+        for (ChangeView tracker : trackers) {
+            String key = tracker.reference();
+            String trackerType = tracker.sourceType() == SourceType.LINEAR ? LinkedIssue.LINEAR : LinkedIssue.JIRA;
+            for (ChangeView code : codeChanges) {
+                boolean linked = code.linkedIssues().stream()
+                        .anyMatch(issue -> issue.key().equalsIgnoreCase(key) && issue.trackerOrJira().equals(trackerType));
+                Optional<ChangeFoldingService.ConfirmedDuplicate> duplicate = duplicates.stream()
+                        .filter(pair -> pair.pairs(tracker.id(), code.id()))
+                        .findFirst();
+                if (linked || duplicate.isPresent()) {
+                    suggestions.add(new FoldingSuggestion(
+                            tracker.id(),
+                            key,
+                            tracker.title(),
+                            code.id(),
+                            code.reference(),
+                            code.title(),
+                            linked ? ReleaseFoldDecision.Evidence.LINKED_KEY : ReleaseFoldDecision.Evidence.CONFIRMED_DUPLICATE,
+                            key,
+                            linked ? null : duplicate.get().deciderName(),
+                            tracker.breaking() && !code.breaking(),
+                            tracker.security() && !code.security()
+                    ));
+                }
+            }
+        }
+        return suggestions;
+    }
+
+    // Each linked issue of the release's changes as of its review.
+    private List<LinkedIssueStatusView> linkedIssues(List<ChangeView> changes, IssueStatuses statuses,
+                                                     Map<String, ReleaseLinkedIssue> rows) {
+        Map<String, LinkedIssue> issues = new LinkedHashMap<>();
+        Map<String, List<String>> references = new LinkedHashMap<>();
+        for (ChangeView change : changes) {
+            for (LinkedIssue issue : change.linkedIssues()) {
+                String id = IssueStatuses.id(issue.trackerOrJira(), issue.key());
+                issues.putIfAbsent(id, issue);
+                references.computeIfAbsent(id, missing -> new ArrayList<>()).add(change.reference());
+            }
+        }
+        List<LinkedIssueStatusView> views = new ArrayList<>();
+        issues.forEach((id, issue) -> {
+            ReleaseLinkedIssue row = rows.get(id);
+            boolean accepted = statuses.accepted(issue);
+            views.add(new LinkedIssueStatusView(
+                    issue.trackerOrJira(),
+                    issue.key(),
+                    issue.title(),
+                    issue.url(),
+                    references.get(id),
+                    issue.status() == null ? "" : issue.status(),
+                    row != null && row.getReadAt() != null ? row.getStatus() : "",
+                    statuses.read(issue),
+                    statuses.status(issue),
+                    statuses.open(issue),
+                    accepted,
+                    accepted ? row.getAccepterName() : null,
+                    accepted ? row.getAcceptedAt() : null
+            ));
+        });
+        return views;
+    }
+
+    private IssueStatuses statuses(Release release) {
+        return IssueStatuses.of(linkedIssueRepository.findAllByReleaseIdAndOrganizationId(release.getId(),
+                release.getOrganizationId()));
+    }
+
+    /**
+     * A release's linked issues were read as of its review: the notes of an approved release
+     * that still follow their templates show the statuses read. Runs inside the transaction
+     * that recorded the read.
+     */
+    @EventListener
+    void onLinkedIssuesRead(LinkedIssuesRead event) {
+        releaseRepository.findById(event.releaseId())
+                .filter(release -> release.getOrganizationId().equals(event.organizationId()))
+                .filter(release -> release.getStatus() == ReleaseStatus.APPROVED)
+                .ifPresent(release -> rerenderNotes(release, includedChanges(release), null, false, clock.instant()));
     }
 
     /**
@@ -590,12 +893,13 @@ public class ReleaseService {
         }
         String language = outputLanguageService.outputLanguage(organizationId).tag();
         ReleaseLinks links = links(release);
+        IssueStatuses statuses = statuses(release);
         return audienceService.list(organizationId).stream()
                 .map(audience -> new AudienceNotePreview(
                         audience.code(),
                         audience.displayName(),
                         render(release.getSummary(), changes, audience.templateBody(), audience.footerTemplateBody(), links,
-                                audience.code(), language, audience.displayName())
+                                audience.code(), language, audience.displayName(), statuses)
                 ))
                 .toList();
     }
@@ -621,6 +925,7 @@ public class ReleaseService {
         List<AudienceView> audiences = audienceService.list(release.getOrganizationId());
         List<AudienceReleaseNote> notes = new ArrayList<>();
         ReleaseLinks links = links(release);
+        IssueStatuses statuses = statuses(release);
         for (String language : releaseLanguageService.targetLanguages(release.getOrganizationId())) {
             ReleaseNoteWriter.Localized localized = noteWriter.localize(release, changes, language, false);
             for (AudienceView audience : audiences) {
@@ -636,7 +941,7 @@ public class ReleaseService {
                         template,
                         footer,
                         render(localized.summary(), localized.changes(), template, footer, links, audience.code(), language,
-                                audience.displayName()),
+                                audience.displayName(), statuses),
                         localized.status(),
                         localized.glossary(),
                         now
@@ -653,6 +958,7 @@ public class ReleaseService {
     private void rerenderNotes(Release release, List<ChangeView> changes, String onlyLanguage, boolean retry, Instant now) {
         Map<String, ReleaseNoteWriter.Localized> byLanguage = new LinkedHashMap<>();
         ReleaseLinks links = links(release);
+        IssueStatuses statuses = statuses(release);
         for (AudienceReleaseNote note : notes(release)) {
             if (!note.isAutoRerender() || (onlyLanguage != null && !onlyLanguage.equals(note.getLanguage()))) {
                 continue;
@@ -661,7 +967,7 @@ public class ReleaseService {
                     language -> noteWriter.localize(release, changes, language, retry));
             note.rerender(render(localized.summary(), localized.changes(), note.getTemplateBodySnapshot(),
                     note.getFooterTemplateSnapshot(), links, note.getAudienceCode(), note.getLanguage(),
-                    note.getAudienceName()), localized.status(), localized.glossary(), now);
+                    note.getAudienceName(), statuses), localized.status(), localized.glossary(), now);
         }
         noteRepository.flush();
     }
@@ -674,10 +980,12 @@ public class ReleaseService {
             ReleaseLinks links,
             String audienceCode,
             String language,
-            String audienceName
+            String audienceName,
+            IssueStatuses statuses
     ) {
         try {
-            return ReleaseNoteDigest.render(summary, changes, templateBody, footerBody, links, audienceCode, language);
+            return ReleaseNoteDigest.render(summary, changes, templateBody, footerBody, links, audienceCode, language,
+                    statuses);
         } catch (AudienceTemplateRenderException exception) {
             throw new ReleaseNoteRenderException(audienceName, exception);
         }
@@ -759,11 +1067,13 @@ public class ReleaseService {
                 .map(ReleaseChangeReview::view)
                 .toList();
         List<AudienceNoteView> notes = notes(release).stream().map(AudienceReleaseNote::view).toList();
+        Review review = review(release, changes);
         if (!release.isPublished()) {
-            return view(release, previousVersion, changes, decisions, ReleaseNotePreview.sections(changes), null, notes);
+            return view(release, previousVersion, changes, decisions, ReleaseNotePreview.sections(changes), null, notes,
+                    review);
         }
         if (!notes.isEmpty()) {
-            return view(release, previousVersion, changes, decisions, List.of(), null, notes);
+            return view(release, previousVersion, changes, decisions, List.of(), null, notes, review);
         }
         // Published before audiences existed: shown from its single legacy note.
         LegacyReleaseNote legacy = legacyNoteRepository
@@ -780,8 +1090,34 @@ public class ReleaseService {
                 decisions,
                 objectMapper.readValue(legacy.getSections(), SECTIONS),
                 legacy.getMarkdown(),
-                List.of()
+                List.of(),
+                review
         );
+    }
+
+    // What the release's review knows beyond its changes and decisions (ADR-0041).
+    private record Review(
+            List<LinkedIssueStatusView> linkedIssues,
+            String linkedIssueRead,
+            List<FoldingSuggestion> foldingSuggestions,
+            List<FoldDecisionView> foldDecisions
+    ) {
+    }
+
+    private Review review(Release release, List<ChangeView> changes) {
+        Map<String, ReleaseLinkedIssue> rows = new LinkedHashMap<>();
+        linkedIssueRepository.findAllByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .forEach(row -> rows.put(IssueStatuses.id(row.getTracker(), row.getIssueKey()), row));
+        IssueStatuses statuses = IssueStatuses.of(List.copyOf(rows.values()));
+        String read = linkedIssueReadRepository.findByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .map(job -> job.getStatus().name())
+                .orElse(null);
+        List<FoldDecisionView> decisions = foldDecisionRepository
+                .findAllByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .stream()
+                .map(ReleaseFoldDecision::view)
+                .toList();
+        return new Review(linkedIssues(changes, statuses, rows), read, foldingSuggestions(release, changes), decisions);
     }
 
     private static ReleaseView view(
@@ -791,7 +1127,8 @@ public class ReleaseService {
             List<ReleaseDecisionView> decisions,
             List<ReleaseNoteSection> sections,
             String markdown,
-            List<AudienceNoteView> notes
+            List<AudienceNoteView> notes,
+            Review review
     ) {
         return new ReleaseView(
                 release.getId(),
@@ -815,7 +1152,11 @@ public class ReleaseService {
                 release.getPublisherName(),
                 markdown,
                 notes,
-                ReleaseView.glossaries(notes)
+                ReleaseView.glossaries(notes),
+                review.linkedIssues(),
+                review.linkedIssueRead(),
+                review.foldingSuggestions(),
+                review.foldDecisions()
         );
     }
 

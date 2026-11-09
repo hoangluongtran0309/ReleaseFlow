@@ -14,8 +14,8 @@ source, GitLab source, Linear source, Jira source, automation, automation
 trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
-context, and translation glossary slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V34,
+context, translation glossary, and linked context and folding slices: one
+Spring Boot application, PostgreSQL/Flyway V1-V36,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -24,8 +24,9 @@ GitLab project, Linear team, or Jira Cloud project sources, per-source encrypted
 webhook secrets for the sources that are delivered to, a resumable 90-day history import for the providers that keep
 one, webhook endpoints that record normalized merged pull requests, merged merge
 requests, and completed issues idempotently once the source's own secret proves
-the delivery, scheduled Jira polls, Jira issues linked to the code changes that
-mention them,
+the delivery, scheduled Jira polls, Jira and Linear issues linked to the code changes
+that mention them and read again when a release's review is requested, suggestions
+to fold a tracker change into the code change of the same release,
 write-only access tokens, a durable
 `SKIP LOCKED` worker that asks each provider for what it can add, outside
 transactions,
@@ -53,7 +54,7 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0040, indexed in
+The decisions behind all of it are ADR-0001 through ADR-0041, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -126,6 +127,25 @@ changing behavior.
   lookup that could not read the commits or an issue it found adds
   `LINKED_CONTEXT_UNAVAILABLE` rather than being ignored. Commit messages are
   read only to find issue keys and are never stored or sent to the AI.
+- A key counts in a head branch when `-`, `/`, `_`, or the end follows it, and in a
+  description or commit when a tracker's own key is followed by `-` and a lowercase
+  word; in a title or target branch, a key followed by a hyphen names nothing. Only a
+  Project tracker's own key is searched for, at most ten per tracker. A Linear team's
+  key is read once and kept; one that cannot be read adds
+  `LINKED_CONTEXT_UNAVAILABLE`, and an issue of another team is never linked.
+- Requesting review queues one read of the release's linked issues; it runs outside
+  transactions with bounded retries, and an issue it could not read keeps its recorded
+  status. A note shows a linked issue's status only when its category is done or a
+  person accepted that very status; an open or unknown one is empty, never guessed.
+  An acceptance of a status other than the last one read is refused. Neither the read
+  nor an open issue ever blocks approval or publication.
+- A folding suggestion is evidence only, computed from a stored linked key or a
+  confirmed duplicate and never from a provider call. Nothing is folded, merged, or
+  deleted without a person's decision, each suggestion is decided once, and excluding
+  the tracker change takes an administrator and a reason. A fold never loses a flag: the
+  code change takes the tracker change's breaking and security flags, as a recorded
+  review naming the folded change that the suggestion announced, and an issue it adds is
+  read as of review like the others.
 - A `PROCESSING` change cannot be reviewed, sent to AI, or released.
 - A release's changes are chosen while it is a draft; during review a change
   can only be rejected, which removes it. A release is approved only when every

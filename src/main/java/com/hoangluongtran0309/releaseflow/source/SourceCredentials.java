@@ -1,6 +1,7 @@
 package com.hoangluongtran0309.releaseflow.source;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * What a provider call needs about a source: how to address its project and, when an
@@ -11,6 +12,7 @@ import java.util.Optional;
  * for a provider whose credential names an account. Never serialize or log this value.
  */
 public record SourceCredentials(
+        UUID sourceId,
         SourceType sourceType,
         String externalProjectKey,
         String externalWorkspaceKey,
@@ -18,6 +20,7 @@ public record SourceCredentials(
         String credentialIdentity,
         String repositoryOwner,
         String repositoryName,
+        String teamKey,
         String token
 ) {
 

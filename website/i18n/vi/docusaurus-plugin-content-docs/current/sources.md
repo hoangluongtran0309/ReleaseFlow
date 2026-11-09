@@ -236,28 +236,47 @@ và việc lưu token mới hay khởi động lại đều không kéo lượt 
 hiển thị lượt đọc gần nhất và lượt đọc tiếp theo của mỗi project Jira; project Jira không có
 import lịch sử.
 
-### Issue Jira liên kết {#linked-jira-issues}
+### Issue liên kết {#linked-issues}
 
-Khi một Project có nguồn Jira, mỗi thay đổi từ GitHub hoặc GitLab được kiểm tra xem có chứa
-issue key của project đó trong tiêu đề, mô tả, nhánh đích và tối đa 250 commit message hay
-không. Tối đa mười issue được đọc từ Jira và hiển thị trong mục **Issue liên kết** của thay
-đổi, được đưa cho AI như bằng chứng không tin cậy, và dùng được trong template của audience:
+Khi một Project có nguồn Jira hoặc nguồn Linear kèm token, mỗi thay đổi từ GitHub hoặc GitLab
+được kiểm tra xem có nhắc tới issue nào không: key của project Jira, như `APP-12`, và định danh
+của team Linear, như `OPS-7`, so khớp không phân biệt hoa thường. Việc kiểm tra xét tiêu đề, mô
+tả, nhánh đích, nhánh nguồn (nhánh mà pull request hoặc merge request xuất phát) và tối đa 250
+commit message của thay đổi. Tối đa mười key của mỗi công cụ theo dõi được đọc, mỗi key từ đúng
+công cụ của nó, và hiển thị trong mục **Issue liên kết** của thay đổi, được đưa cho AI như bằng
+chứng không tin cậy, và dùng được trong template của audience:
 
 ```mustache
-{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}, {{status}}){{/linkedIssues}}
+{{#linkedIssues}} [{{key}}]({{url}}) {{title}} ({{type}}{{#status}}, {{status}}{{/status}}){{/linkedIssues}}
 ```
 
-Issue được đọc lúc thay đổi được ghi nhận, và thay đổi giữ đúng những gì đọc được khi đó: tiêu
-đề và trạng thái là của thời điểm ấy, không được cập nhật về sau, nên một note viết lúc duyệt có
-thể ghi `In Progress` cho một issue đã xong từ đó tới nay. Chúng là bằng chứng về việc thay đổi đã
-trỏ tới đâu, không phải góc nhìn trực tiếp vào công cụ theo dõi issue.
+Thế nào là có nhắc tới tuỳ vào vị trí của key:
+
+| Vị trí | Được tính | Không được tính |
+| --- | --- | --- |
+| Nhánh nguồn | `feature/APP-47-retention-preview`, `APP-47/preview`, `bugfix/app-47_restore` | `release/2026-APP-47x`, `APP-047` |
+| Mô tả, commit message | `Spec: APP-12-quartz`: key theo sau là dấu gạch nối và một từ viết thường | `APP-12-3`, `APP-12-Q`, và `ISO-8601-compliant`, vì tiền tố của nó không phải công cụ theo dõi nào của Project |
+| Tiêu đề, nhánh đích | `APP-3` đứng riêng | `feature/APP-3-export`: key theo sau là dấu gạch nối |
+
+![Một pull request GitHub có tiêu đề không nêu issue nào, được liên kết với DBV-50 chỉ nhờ nhánh nguồn của nó](assets/sources/sr-6-linked-branch.webp)
+
+Key của một team Linear được đọc khi kết nối team và được giữ lại; team kết nối trước 1.2.0 được
+đọc key ở thay đổi đầu tiên được kiểm tra sau đó. Team không đọc được key thì không liên kết gì,
+và thay đổi nói rõ điều đó. Issue của một team Linear khác không được liên kết.
+
+![Một merge request GitLab được liên kết với OPS-16, issue Linear mà tiêu đề của nó nêu, kèm tiêu đề, loại và trạng thái của issue](assets/sources/sr-6-linked-linear.webp)
+
+Issue được đọc lúc thay đổi được ghi nhận, và thay đổi giữ đúng những gì đọc được khi đó. Một
+release đọc lại các issue của các thay đổi trong nó khi yêu cầu review, nên note hiển thị từng
+trạng thái tại thời điểm review (xem
+[Issue liên kết lúc review](release-notes.md#linked-issues-at-review)). Chúng là bằng chứng về
+việc thay đổi đã trỏ tới đâu, không phải góc nhìn trực tiếp vào công cụ theo dõi issue.
 
 ![Một thay đổi GitHub cùng issue Jira mà nó nhắc tới, được liên kết với tiêu đề và trạng thái đọc lúc ghi nhận thay đổi](assets/sources/sr-6-linked-issue.webp)
 
 Commit message chỉ được dùng để tìm key; chúng không bao giờ được lưu lại. Khi không đọc được
-commit, hoặc Jira không cho xem một issue mà thay đổi có nhắc tới, thay đổi được thử lại rồi
-đánh dấu **Danh sách issue liên kết chưa đầy đủ**, khiến nó bắt buộc phải review. Một key theo
-sau là dấu gạch nối, như trong `feature/APP-3-export`, không được coi là có nhắc tới.
+commit, hoặc Jira hay Linear không cho xem một issue mà thay đổi có nhắc tới, thay đổi được thử
+lại rồi đánh dấu **Danh sách issue liên kết chưa đầy đủ**, khiến nó bắt buộc phải review.
 
 ![Một thay đổi nhắc tới DBV-15 và DBV-999: Jira chỉ trả về DBV-15, nên thay đổi cần review vì linked issue không đầy đủ](assets/sources/sr-6-linked-incomplete.webp)
 
@@ -320,7 +339,7 @@ và, khi đã cấu hình AI, thay đổi được phân loại một lần. M�
 webhook hay qua một lần import trước, sẽ được bỏ qua, nên import và webhook không bao giờ tạo
 bản trùng của nhau. Thay đổi được import mang nhãn **Đã import**.
 
-![Import 90 ngày gần nhất trong Change Inbox: lần import chạy tới khi xong, và các thay đổi được import hiện ra](assets/sources/sr-9-history-import.webp)
+![Khung đồng bộ nguồn trong Change Inbox: project Jira được đọc theo lịch, còn mỗi nguồn GitHub và GitLab có nút Import 90 ngày gần nhất bên cạnh trạng thái và số liệu của lần import gần nhất](assets/sources/sr-9-source-sync-panel.webp)
 
 Import từ GitHub dừng ở pull request đầu tiên được cập nhật trước khoảng thời gian của nó, và cả
 hai loại import đều dừng sau 500 thay đổi mới với trạng thái **Dừng ở giới hạn**, vị trí được
@@ -357,10 +376,10 @@ hoặc khi quản trị viên lưu token:
 
 | Nhà cung cấp | Các lời gọi |
 | --- | --- |
-| GitHub | Xác nhận token với các pull request của repository; liệt kê tệp thay đổi của một pull request đã merge và, khi Project có nguồn Jira, tối đa 250 commit message của nó; đọc các pull request đã đóng khi import lịch sử; đọc và tạo release cho một [action GitHub Release](automation.md#actions) |
-| GitLab | Xác nhận token với project; liệt kê diff của một merge request và, khi Project có nguồn Jira, các commit message của nó; đọc các merge request đã merge khi import lịch sử |
-| Linear | Xác nhận API key và biết workspace của team khi kết nối team; đọc lại một issue đã hoàn thành |
-| Jira | Xác nhận project khi kết nối; tìm các issue vừa chuyển sang Done ở mỗi lượt đọc; đọc các issue mà một thay đổi mã nguồn nhắc tới |
+| GitHub | Xác nhận token với các pull request của repository; liệt kê tệp thay đổi của một pull request đã merge và, khi Project có nguồn Jira hoặc Linear, tối đa 250 commit message của nó; đọc các pull request đã đóng khi import lịch sử; đọc và tạo release cho một [action GitHub Release](automation.md#actions) |
+| GitLab | Xác nhận token với project; liệt kê diff của một merge request và, khi Project có nguồn Jira hoặc Linear, các commit message của nó; đọc các merge request đã merge khi import lịch sử |
+| Linear | Xác nhận API key và biết workspace và key của team khi kết nối team; đọc lại một issue đã hoàn thành; đọc các issue mà một thay đổi mã nguồn nhắc tới, và đọc lại khi một release được yêu cầu review |
+| Jira | Xác nhận project khi kết nối; tìm các issue vừa chuyển sang Done ở mỗi lượt đọc; đọc các issue mà một thay đổi mã nguồn nhắc tới, và đọc lại khi một release được yêu cầu review |
 
 Thời gian chờ, địa chỉ API và chu kỳ đọc theo lịch được liệt kê trong
 [Cấu hình](configuration.md#sources).

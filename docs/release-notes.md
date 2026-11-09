@@ -30,9 +30,15 @@ only when the change or the [Project context](changes.md#project-context) names 
 [Mustache](https://mustache.github.io/mustache.5.html) and render one change as
 Markdown with the variables `whatChanged`, `whyChanged`, `technicalDetail`,
 `migrationStep`, `migrationKind`, `limitations`, `narrative`, `headline`, `relevance`,
-`brief`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`, and
-`url`, escaped like any other tracker text, as they were read when the change was recorded
-([Linked Jira issues](sources.md#linked-jira-issues)). `migrationKind` is `required`,
+`brief`, `reference`, `pullRequestNumber`, `pullRequestUrl`, and `linkedIssues` — a list whose items have `key`, `title`, `type`, `status`,
+`recordedStatus`, `statusAtReview`, and `url`, escaped like any other tracker text
+([Linked issues](sources.md#linked-issues)). `status` is the issue's status as of the
+release's review, or the one recorded with the change when the issue could not be read
+again; `recordedStatus` is the one recorded with the change, and `statusAtReview` the one
+read at review, empty when it was not read. A status that is not finished, or that
+ReleaseFlow cannot tell is finished, is empty in all three unless a person chose to show
+it (see [Linked issues at review](#linked-issues-at-review)), so print it inside a section:
+`{{#status}} ({{status}}){{/status}}`. `migrationKind` is `required`,
 `conditional`, `recommended`, or `unspecified` for a step recorded before kinds
 existed, and is empty without a step (see
 [AI classification](changes.md#ai-classification-and-summaries)). Since Mustache cannot
@@ -177,6 +183,24 @@ and `Đọc trước khi nâng cấp`. A release note language other than the ma
 template and footer under **Language templates**. **Reset to preset** gives a shipped
 audience its shipped footer in every language.
 
+Since 1.2.0, a linked issue's `{{status}}` is its status as of the release's review, and
+it is empty for an issue that is still open unless a person chose to show it. A template
+that prints `({{status}})` bare then prints `()`. Wrap it in a section so that an empty
+status prints nothing. A DBA audience's line, before:
+
+```text
+  - Tracked in [{{key}}]({{url}}): {{title}} ({{status}})
+```
+
+and after:
+
+```text
+  - Tracked in [{{key}}]({{url}}): {{title}}{{#status}} ({{status}}){{/status}}
+```
+
+Do the same in each language template (`Theo dõi tại` in Vietnamese). The shipped
+audiences print no linked issue, so none of them changes.
+
 An Organization keeps between 1 and 20 audiences. An audience cannot be deleted
 while something still names it: a release note, an automation rule's action, or an
 automation run's history. A rule that is enabled or disabled can be pointed at another
@@ -277,7 +301,7 @@ when every note is ready: otherwise publishing returns
 summary after approval translates the new text. See
 [ADR-0015](adr/0015-multilingual-release-notes.md).
 
-![Seconds after approval: the Vietnamese note is Translating and still shows the untranslated text](assets/release-notes/rn-3-translating.webp)
+![Seconds after approving v1.3.0: the Vietnamese Contributor note is Translating and still shows the untranslated summary, while the release details name v1.2.0 as the previous release and no upgrade guide](assets/release-notes/rn-3-translating.webp)
 
 ![The same note once its translations arrived: the release summary and every change are in Vietnamese, and the glossary was Sent with every translation](assets/release-notes/rn-4-translated.webp)
 
@@ -440,11 +464,90 @@ A release moves through four steps, shown at the top of its page:
    follows its template), then **Publish release**.
 4. **Published.** See [Publishing](#publishing).
 
-![Creating a release, adding every available change, and requesting review](assets/release-notes/rn-6-add-all.webp)
+![Creating v1.3.0 with a summary, no upgrade guide, and v1.2.0 as the previous release, adding every available change, and requesting review: 17 changes wait for a decision](assets/release-notes/rn-6-add-all.webp)
 
 Any member can take every step, so one person can prepare, review, approve, and publish
 the same release. ReleaseFlow records who reviewed each change, who approved, and who
 published, but it does not require two different people.
+
+### Linked issues at review
+
+Requesting review reads every issue linked to the release's changes again, from Jira or
+Linear, in the background: a status read when a change was recorded may be weeks old. The
+Review tab says while the read is running, and whether an issue could not be read. A read
+that fails is tried again after 2, 4, 8 … seconds, five attempts in all; an issue still
+unread keeps the status recorded with its change. Returning to draft and requesting review
+again reads every issue again.
+
+A note shows an issue's status only when the issue is finished: Jira's **Done** category,
+or a Linear issue that is completed or canceled. An issue recorded before 1.2.0, or read
+from a tracker that did not say, counts as not finished. Under **Linked issues still
+open**, the Review tab lists each issue whose status is not finished while its change
+ships, with **Show this status**: a member who chooses it lets every note print that very
+status, and ReleaseFlow records who and when. A later read that returns another status asks
+again. The warning never holds up approval or publication. Notes are written at approval
+from the statuses read by then; a read that finishes later writes again the notes that
+still follow their template, until the release is published.
+
+![A release in review whose linked issues were read again: DBV-53, linked from #69, is still In Progress, with Show this status](assets/release-notes/rn-16-issues-at-review.webp)
+
+### Folding a tracker change into its code change
+
+A Jira or Linear change and the pull request that did the work are one piece of work, and
+should be one item in a note. While a release is in review, the Review tab suggests
+folding a **tracker change** into a **code change** of the same release when the code
+change lists the tracker change's key among its [linked issues](sources.md#linked-issues),
+or when a person confirmed the two as a
+[possible duplicate](changes.md#review-signals). Each suggestion says which.
+
+A suggestion is evidence only, and nothing is folded on its own. A member chooses:
+
+- **Fold, and reject … from this release** takes the tracker change out of the release as a
+  review decision would, so it is available for another release.
+- **Fold, and exclude … from releases** (administrators) excludes the tracker change from
+  every release, with a reason ReleaseFlow fills in, such as "`OPS-7` is tracked by `#30`,
+  which carries the release-note entry.", which can be edited. See
+  [Excluding a change from releases](changes.md#excluding-a-change-from-releases).
+- **Not the same work** dismisses the suggestion: both changes stay, and it is not
+  offered again in this release.
+
+![Folding suggestions on a release's Review tab: six tracker changes, each to fold into the code change that names it or that a person confirmed as its duplicate; the one for OPS-17 says #67 would become security, and each offers Fold and reject, Not the same work, and Fold and exclude with a prefilled reason](assets/release-notes/rn-14-folding.webp)
+
+Either fold keeps the issue as linked context of the code change, adding it from the
+tracker change when the code change did not list it yet; an issue added that way is read
+from its tracker as of this review, like the others. Either fold also keeps the work's
+flags: the code change becomes breaking or security when the tracker change is. The
+suggestion says so first, such as "Accepting marks #30 security, as OPS-7 is", and
+accepting records it as the review of the code change and as its decision in the release,
+which names the folded change. A code change still Unknown needs a category first:
+`400 invalid_fold_decision`. Each suggestion is decided once,
+with who decided and when; a release returned to draft keeps its decisions. A pair with
+nothing that ties them is not suggested: reject or exclude the tracker change by hand.
+
+![#67 after OPS-17 was folded into it: its decision is Edited by dbvault Lead, and it was marked security when OPS-17 was folded in](assets/release-notes/rn-15-folded-decision.webp)
+
+```text
+POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance
+     {"tracker": "JIRA" | "LINEAR", "key", "status"}
+PUT  /api/projects/{projectId}/releases/{releaseId}/folding-suggestions/{trackerChangeId}/decision
+     {"codeChangeId", "decision": "ACCEPT" | "DISMISS", "removal": "REJECT" | "EXCLUDE", "reason"}
+```
+
+Both answer with the release, whose `linkedIssueRead` is `PENDING`, `RUNNING`,
+`SUCCEEDED`, or `FAILED` (absent before review is requested), and which lists
+`linkedIssues` (each with `tracker`, `key`, `recordedStatus`, `statusAtReview`, `read`,
+`status`, `open`, `accepted`, `accepterName`, and `acceptedAt`), `foldingSuggestions` (each
+with `addsBreaking` and `addsSecurity`), and `foldDecisions`. A decision a fold made names
+the tracker change in `foldedChangeId`.
+
+| Situation | Response |
+| --- | --- |
+| Accepting a status other than the one read last | `409 linked_issue_status_changed` |
+| Accepting a status of an issue no change of the release links | `404 linked_issue_not_found` |
+| Accepting a status while the release is a draft or published | `409 release_status_conflict` |
+| Deciding a suggestion that is not offered, or was decided | `404 folding_suggestion_not_found` |
+| Accepting without `removal`, excluding without a reason, or a fold that adds a flag to an Unknown change | `400 invalid_fold_decision` |
+| A member excluding | `403` |
 
 Until it is published, a release can be scheduled or unscheduled, returned to
 draft (from review or approval, clearing its decisions and approval but not
@@ -569,7 +672,7 @@ and offers one tab per audience and language with the rendered note, its
 Markdown, a **Copy** button, and a **Download** link for GitHub Releases or a
 changelog. Downloaded files are named `<version>-<audience>-<language>.md`.
 
-![Publishing an approved release: it becomes Published, and a note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
+![Publishing approved v1.3.0: it becomes Published, an immutable snapshot whose glossary went with every translation, and the Contributor note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
 
 A published release cannot be edited, scheduled, reviewed, discarded,
 unpublished, or changed in content, and neither can its notes. Its changes can

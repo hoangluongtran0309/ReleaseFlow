@@ -8,12 +8,9 @@
 #   ./scripts/ci/check-version-overrides.sh
 set -euo pipefail
 
-# Every property in pom.xml that overrides a version spring-boot-dependencies manages.
-readonly OVERRIDES=(
-  tomcat.version
-  jackson-bom.version
-  jackson-2-bom.version
-)
+# Every property in pom.xml that overrides a version spring-boot-dependencies manages. None
+# is needed with Spring Boot 4.1.2; add one here when pom.xml gains one.
+readonly OVERRIDES=()
 
 cd "$(dirname "$0")/../.."
 
@@ -29,7 +26,7 @@ bom="${local_repository}/org/springframework/boot/spring-boot-dependencies/${par
 stale=0
 for property in "${OVERRIDES[@]}"; do
   ours="$(evaluate "${property}")"
-  managed="$(sed -n "s|^ *<${property}>\\(.*\\)</${property}>.*|\\1|p" "${bom}" | head -n 1)"
+  managed="$(sed -n "s|^ *<${property}>\\(.*\\)</${property}>.*|\\1|p" "${bom}" | sed -n 1p)"
   if [ -z "${managed}" ]; then
     echo "not ok - Spring Boot ${parent_version} no longer manages ${property}; remove the override."
     stale=1

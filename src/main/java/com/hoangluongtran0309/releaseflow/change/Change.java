@@ -296,6 +296,26 @@ class Change {
         this.linkedIssues = context.issues().isEmpty() ? null : new ArrayList<>(context.issues());
     }
 
+    /**
+     * Keeps an issue a person folded into this change from a tracker change of the same
+     * release (ADR-0041). The issue joins what the trackers said; a change that held no
+     * linked issue now holds this one, as collected.
+     */
+    void foldIssue(LinkedIssue issue) {
+        List<LinkedIssue> issues = new ArrayList<>(getLinkedIssues());
+        if (issues.stream().anyMatch(held -> held.key().equalsIgnoreCase(issue.key())
+                && held.trackerOrJira().equals(issue.trackerOrJira()))) {
+            return;
+        }
+        issues.add(issue);
+        this.linkedIssues = issues;
+        if (linkedContextStatus == null
+                || linkedContextStatus == LinkedContextStatus.NOT_FOUND
+                || linkedContextStatus == LinkedContextStatus.NOT_CONFIGURED) {
+            this.linkedContextStatus = LinkedContextStatus.COLLECTED;
+        }
+    }
+
     /** The linked context as recorded; a change recorded before the lookup counts as absent. */
     LinkedContext recordedLinkedContext() {
         return linkedContextStatus == null
