@@ -76,6 +76,8 @@ Each change keeps the rules that matched, its typed `reviewTriggers`, and its
 `changedFiles`, and the inbox shows them. A review settles a triggered change
 but keeps the trigger as a record.
 
+![A change whose labels bug and enhancement conflict and which touches sensitive files, after review: the AI chose Feature, a person reviewed it, and the card keeps the rules and triggers that applied](assets/changes/c-6-conflicting-labels.webp)
+
 ![A pull request titled feat whose changed files are all documentation: classified as Documentation, and the card says why](assets/changes/c-1-why.webp)
 
 ### Sensitive paths
@@ -118,7 +120,7 @@ code such as `feature` or `security`, in any case), `status`
 `404 project_not_found`. Each change returns its `category` code with its
 `categoryName` and `categoryGroup`, as recorded when it was classified.
 
-![The Change Inbox filtered to Fix: the sync state of each source, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
+![The Change Inbox with its filters, the sync state of its Jira, GitHub, and GitLab sources, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
 
 ![Filtering the Change Inbox to the changes whose context was judged insufficient](assets/changes/c-4-context-filter.webp)
 
@@ -307,7 +309,7 @@ overview no longer counts it among the changes that need review. **Include in re
 again** takes the decision back. The **Releases** filter of the Inbox shows only the
 excluded changes. See [ADR-0033](adr/0033-change-exclusion.md).
 
-![Excluding a change from releases with a reason; the change then carries the Excluded from releases badge](assets/changes/c-13-exclude.webp)
+![A change excluded from releases: the Excluded from releases badge, who excluded it and why, and Include in releases again](assets/changes/c-13-exclude.webp)
 
 A change that belongs to a release, of any status, is removed from it first: take it
 out of the draft, or reject it during review. A change still processing cannot be

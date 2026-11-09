@@ -258,9 +258,13 @@ Thế nào là có nhắc tới tuỳ vào vị trí của key:
 | Mô tả, commit message | `Spec: APP-12-quartz`: key theo sau là dấu gạch nối và một từ viết thường | `APP-12-3`, `APP-12-Q`, và `ISO-8601-compliant`, vì tiền tố của nó không phải công cụ theo dõi nào của Project |
 | Tiêu đề, nhánh đích | `APP-3` đứng riêng | `feature/APP-3-export`: key theo sau là dấu gạch nối |
 
+![Một pull request GitHub có tiêu đề không nêu issue nào, được liên kết với DBV-50 chỉ nhờ nhánh nguồn của nó](assets/sources/sr-6-linked-branch.webp)
+
 Key của một team Linear được đọc khi kết nối team và được giữ lại; team kết nối trước 1.2.0 được
 đọc key ở thay đổi đầu tiên được kiểm tra sau đó. Team không đọc được key thì không liên kết gì,
 và thay đổi nói rõ điều đó. Issue của một team Linear khác không được liên kết.
+
+![Một merge request GitLab được liên kết với OPS-16, issue Linear mà tiêu đề của nó nêu, kèm tiêu đề, loại và trạng thái của issue](assets/sources/sr-6-linked-linear.webp)
 
 Issue được đọc lúc thay đổi được ghi nhận, và thay đổi giữ đúng những gì đọc được khi đó. Một
 release đọc lại các issue của các thay đổi trong nó khi yêu cầu review, nên note hiển thị từng
@@ -335,7 +339,7 @@ và, khi đã cấu hình AI, thay đổi được phân loại một lần. M�
 webhook hay qua một lần import trước, sẽ được bỏ qua, nên import và webhook không bao giờ tạo
 bản trùng của nhau. Thay đổi được import mang nhãn **Đã import**.
 
-![Import 90 ngày gần nhất trong Change Inbox: lần import chạy tới khi xong, và các thay đổi được import hiện ra](assets/sources/sr-9-history-import.webp)
+![Khung đồng bộ nguồn trong Change Inbox: project Jira được đọc theo lịch, còn mỗi nguồn GitHub và GitLab có nút Import 90 ngày gần nhất bên cạnh trạng thái và số liệu của lần import gần nhất](assets/sources/sr-9-source-sync-panel.webp)
 
 Import từ GitHub dừng ở pull request đầu tiên được cập nhật trước khoảng thời gian của nó, và cả
 hai loại import đều dừng sau 500 thay đổi mới với trạng thái **Dừng ở giới hạn**, vị trí được

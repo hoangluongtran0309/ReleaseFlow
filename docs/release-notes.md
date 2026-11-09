@@ -301,7 +301,7 @@ when every note is ready: otherwise publishing returns
 summary after approval translates the new text. See
 [ADR-0015](adr/0015-multilingual-release-notes.md).
 
-![Seconds after approval: the Vietnamese note is Translating and still shows the untranslated text](assets/release-notes/rn-3-translating.webp)
+![Seconds after approving v1.3.0: the Vietnamese Contributor note is Translating and still shows the untranslated summary, while the release details name v1.2.0 as the previous release and no upgrade guide](assets/release-notes/rn-3-translating.webp)
 
 ![The same note once its translations arrived: the release summary and every change are in Vietnamese, and the glossary was Sent with every translation](assets/release-notes/rn-4-translated.webp)
 
@@ -464,7 +464,7 @@ A release moves through four steps, shown at the top of its page:
    follows its template), then **Publish release**.
 4. **Published.** See [Publishing](#publishing).
 
-![Creating a release, adding every available change, and requesting review](assets/release-notes/rn-6-add-all.webp)
+![Creating v1.3.0 with a summary, no upgrade guide, and v1.2.0 as the previous release, adding every available change, and requesting review: 17 changes wait for a decision](assets/release-notes/rn-6-add-all.webp)
 
 Any member can take every step, so one person can prepare, review, approve, and publish
 the same release. ReleaseFlow records who reviewed each change, who approved, and who
@@ -489,6 +489,8 @@ again. The warning never holds up approval or publication. Notes are written at 
 from the statuses read by then; a read that finishes later writes again the notes that
 still follow their template, until the release is published.
 
+![A release in review whose linked issues were read again: DBV-53, linked from #69, is still In Progress, with Show this status](assets/release-notes/rn-16-issues-at-review.webp)
+
 ### Folding a tracker change into its code change
 
 A Jira or Linear change and the pull request that did the work are one piece of work, and
@@ -509,6 +511,8 @@ A suggestion is evidence only, and nothing is folded on its own. A member choose
 - **Not the same work** dismisses the suggestion: both changes stay, and it is not
   offered again in this release.
 
+![Folding suggestions on a release's Review tab: six tracker changes, each to fold into the code change that names it or that a person confirmed as its duplicate; the one for OPS-17 says #67 would become security, and each offers Fold and reject, Not the same work, and Fold and exclude with a prefilled reason](assets/release-notes/rn-14-folding.webp)
+
 Either fold keeps the issue as linked context of the code change, adding it from the
 tracker change when the code change did not list it yet; an issue added that way is read
 from its tracker as of this review, like the others. Either fold also keeps the work's
@@ -519,6 +523,8 @@ which names the folded change. A code change still Unknown needs a category firs
 `400 invalid_fold_decision`. Each suggestion is decided once,
 with who decided and when; a release returned to draft keeps its decisions. A pair with
 nothing that ties them is not suggested: reject or exclude the tracker change by hand.
+
+![#67 after OPS-17 was folded into it: its decision is Edited by dbvault Lead, and it was marked security when OPS-17 was folded in](assets/release-notes/rn-15-folded-decision.webp)
 
 ```text
 POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance
@@ -666,7 +672,7 @@ and offers one tab per audience and language with the rendered note, its
 Markdown, a **Copy** button, and a **Download** link for GitHub Releases or a
 changelog. Downloaded files are named `<version>-<audience>-<language>.md`.
 
-![Publishing an approved release: it becomes Published, and a note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
+![Publishing approved v1.3.0: it becomes Published, an immutable snapshot whose glossary went with every translation, and the Contributor note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
 
 A published release cannot be edited, scheduled, reviewed, discarded,
 unpublished, or changed in content, and neither can its notes. Its changes can
