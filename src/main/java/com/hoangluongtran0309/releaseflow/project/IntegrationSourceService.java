@@ -12,6 +12,7 @@ import com.hoangluongtran0309.releaseflow.source.SourceType;
 import com.hoangluongtran0309.releaseflow.source.WebhookAuthMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,6 +24,7 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -39,12 +41,14 @@ public class IntegrationSourceService {
 
     private static final int WEBHOOK_SECRET_BYTES = 32;
     private static final String EXTERNAL_UNIQUE_CONSTRAINT = "integration_sources_external_unique";
+    private static final String EXTERNAL_PROJECT_UNIQUE_CONSTRAINT = "integration_sources_external_project_unique";
+    // A reconnected Jira source reads no further back than an import would (ADR-0042).
+    private static final Duration RECONNECT_WINDOW = Duration.ofDays(90);
+    private static final String STANDARD_WEBHOOK_PREFIX = "whsec_";
     private static final String GITHUB_TOKEN_PURPOSE = "github-access-token";
     private static final String GITLAB_TOKEN_PURPOSE = "gitlab-access-token";
     private static final String LINEAR_TOKEN_PURPOSE = "linear-access-token";
     private static final String JIRA_TOKEN_PURPOSE = "jira-access-token";
-    private static final String POLLING_DELIVERY = "POLLING";
-    private static final String WEBHOOK_DELIVERY = "WEBHOOK";
 
     private final ProjectRepository projectRepository;
     private final IntegrationSourceRepository sourceRepository;
@@ -56,6 +60,8 @@ public class IntegrationSourceService {
     private final JiraApiClient jiraApiClient;
     private final JiraSiteUrl jiraSiteUrl;
     private final Duration pollInterval;
+    private final SourceViews sourceViews;
+    private final ApplicationEventPublisher events;
     private final TransactionTemplate transactionTemplate;
     private final Clock clock;
     private final SecureRandom secureRandom;
@@ -72,6 +78,8 @@ public class IntegrationSourceService {
             JiraApiClient jiraApiClient,
             JiraSiteUrl jiraSiteUrl,
             @Value("${releaseflow.jira.poll-interval}") Duration pollInterval,
+            SourceViews sourceViews,
+            ApplicationEventPublisher events,
             PlatformTransactionManager transactionManager,
             Clock clock
     ) {
@@ -86,6 +94,8 @@ public class IntegrationSourceService {
                 jiraApiClient,
                 jiraSiteUrl,
                 pollInterval,
+                sourceViews,
+                events,
                 transactionManager,
                 clock,
                 new SecureRandom()
@@ -103,6 +113,8 @@ public class IntegrationSourceService {
             JiraApiClient jiraApiClient,
             JiraSiteUrl jiraSiteUrl,
             Duration pollInterval,
+            SourceViews sourceViews,
+            ApplicationEventPublisher events,
             PlatformTransactionManager transactionManager,
             Clock clock,
             SecureRandom secureRandom
@@ -117,6 +129,8 @@ public class IntegrationSourceService {
         this.jiraApiClient = jiraApiClient;
         this.jiraSiteUrl = jiraSiteUrl;
         this.pollInterval = pollInterval;
+        this.sourceViews = sourceViews;
+        this.events = events;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.clock = clock;
         this.secureRandom = secureRandom;
@@ -146,7 +160,7 @@ public class IntegrationSourceService {
         String owner = canonicalize(request.getOwner());
         String repository = canonicalize(request.getRepository());
         String projectKey = owner + "/" + repository;
-        requireNotConnected(organizationId, SourceType.GITHUB, projectKey);
+        requireNotHeld(organizationId, projectId, SourceType.GITHUB, projectKey);
 
         UUID sourceId = UUID.randomUUID();
         UUID webhookId = UUID.randomUUID();
@@ -169,7 +183,8 @@ public class IntegrationSourceService {
                         encryptedSecret.ciphertext(),
                         createdAt
                 ),
-                SourceType.GITHUB
+                SourceType.GITHUB,
+                projectKey
         );
 
         return new IntegrationSourceCreated(
@@ -198,7 +213,7 @@ public class IntegrationSourceService {
         // The only address a request may choose, so the deployment's allowlist decides it.
         String apiBaseUrl = gitLabBaseUrl.validated(request.getApiBaseUrl());
         String projectPath = canonicalize(request.getProjectPath());
-        requireNotConnected(organizationId, SourceType.GITLAB, projectPath);
+        requireNotHeld(organizationId, projectId, SourceType.GITLAB, projectPath);
 
         UUID sourceId = UUID.randomUUID();
         UUID webhookId = UUID.randomUUID();
@@ -222,7 +237,8 @@ public class IntegrationSourceService {
                         encryptedSecret.ciphertext(),
                         createdAt
                 ),
-                SourceType.GITLAB
+                SourceType.GITLAB,
+                projectPath
         );
 
         return new IntegrationSourceCreated(
@@ -256,7 +272,7 @@ public class IntegrationSourceService {
     ) {
         // Linear names a team by a UUID, so the same canonical form as the other types works.
         String teamId = canonicalize(request.getTeamId());
-        requireNotConnected(organizationId, SourceType.LINEAR, teamId);
+        requireNotHeld(organizationId, projectId, SourceType.LINEAR, teamId);
         // The same request names the team's key, which links its identifiers (ADR-0041).
         LinearTeam team = linearApiClient.team(teamId, request.getApiToken())
                 .orElseThrow(() -> new SourceTokenRejectedException(SourceType.LINEAR));
@@ -293,7 +309,8 @@ public class IntegrationSourceService {
                     }
                     return source;
                 },
-                SourceType.LINEAR
+                SourceType.LINEAR,
+                teamId
         );
 
         // The secret came from Linear, so it is never echoed back.
@@ -330,7 +347,7 @@ public class IntegrationSourceService {
         String siteUrl = jiraSiteUrl.validated(request.getSiteUrl());
         String projectKey = request.getProjectKey().strip().toUpperCase(Locale.ROOT);
         String accountEmail = request.getAccountEmail();
-        requireNotConnected(organizationId, SourceType.JIRA, projectKey);
+        requireNotHeld(organizationId, projectId, SourceType.JIRA, projectKey);
 
         ProviderAccess access = jiraApiClient.checkProjectAccess(
                 siteUrl, projectKey, accountEmail, request.getApiToken());
@@ -361,7 +378,8 @@ public class IntegrationSourceService {
                     );
                     return source;
                 },
-                SourceType.JIRA
+                SourceType.JIRA,
+                projectKey
         );
 
         // Nothing is delivered to a Jira source, so there is no path and no secret.
@@ -386,15 +404,15 @@ public class IntegrationSourceService {
     @Transactional(readOnly = true)
     public List<IntegrationSourceView> list(UUID organizationId, UUID projectId) {
         requireProject(organizationId, projectId);
-        return sourceRepository.findAllByOrganizationIdAndProjectIdOrderByCreatedAtAscIdAsc(organizationId, projectId)
-                .stream()
-                .map(IntegrationSourceService::view)
-                .toList();
+        return sourceViews.views(
+                organizationId,
+                sourceRepository.findAllByOrganizationIdAndProjectIdOrderByCreatedAtAscIdAsc(organizationId, projectId)
+        );
     }
 
     @Transactional(readOnly = true)
     public IntegrationSourceView get(UUID organizationId, UUID projectId, UUID sourceId) {
-        return view(find(organizationId, projectId, sourceId));
+        return sourceViews.view(find(organizationId, projectId, sourceId));
     }
 
     /**
@@ -403,19 +421,271 @@ public class IntegrationSourceService {
      */
     public void replaceToken(UUID organizationId, UUID projectId, UUID sourceId, SourceTokenRequest request) {
         String token = request.getToken();
-        Coordinates coordinates = transactionTemplate.execute(status -> {
+        Coordinates stored = transactionTemplate.execute(status -> {
             IntegrationSource source = find(organizationId, projectId, sourceId);
-            return new Coordinates(
-                    source.getSourceType(),
-                    source.getExternalProjectKey(),
-                    source.getExternalWorkspaceKey(),
-                    source.getApiBaseUrl(),
-                    source.getCredentialIdentity(),
-                    source.getRepositoryOwner(),
-                    source.getRepositoryName()
+            if (!source.isConnected()) {
+                throw SourceLifecycleException.disconnected();
+            }
+            return coordinates(source);
+        });
+        // A Jira token belongs to its account, and that person may leave: a new token may come
+        // with a new account, confirmed together. No other type names an account.
+        String accountEmail = stored.sourceType() == SourceType.JIRA && request.getAccountEmail() != null
+                ? request.getAccountEmail()
+                : null;
+        Coordinates coordinates = accountEmail == null ? stored : stored.withIdentity(accountEmail);
+
+        requireAccess(coordinates, token);
+
+        transactionTemplate.executeWithoutResult(status -> {
+            IntegrationSource current = find(organizationId, projectId, sourceId);
+            if (!current.isConnected()) {
+                throw SourceLifecycleException.disconnected();
+            }
+            if (accountEmail != null) {
+                current.changeAccount(accountEmail);
+            }
+            current.replaceToken(
+                    credentialCipher.encrypt(token, tokenAuthenticatedData(current)),
+                    clock.instant()
             );
         });
+    }
 
+    /**
+     * Disconnects a source (ADR-0042). Its row, its identity, and every change it recorded
+     * stay; its webhook identity, secret, token, and schedule are destroyed in this one
+     * transaction, and the work queued for it ends in the same commit. Nothing is called at
+     * the provider: the hook and the token are the provider's to delete.
+     */
+    @Transactional
+    public IntegrationSourceView disconnect(UUID organizationId, UUID administratorId, UUID projectId, UUID sourceId) {
+        IntegrationSource source = find(organizationId, projectId, sourceId);
+        if (!source.isConnected()) {
+            throw SourceLifecycleException.disconnected();
+        }
+        source.disconnect(administratorId, now());
+        sourceRepository.flush();
+        events.publishEvent(new SourceDisconnected(organizationId, projectId, sourceId));
+        return sourceViews.view(source);
+    }
+
+    /**
+     * Brings a disconnected source back under its own ID, so intake keeps recognising every
+     * change it recorded. Nothing that identifies the source changes; a delivered source gets
+     * a new webhook path and secret, and a polled one resumes from its cursor. Any provider
+     * call happens between two short transactions, never inside one.
+     */
+    public IntegrationSourceCreated reconnect(
+            UUID organizationId,
+            UUID projectId,
+            UUID sourceId,
+            SourceReconnectRequest request
+    ) {
+        Coordinates stored = transactionTemplate.execute(status -> {
+            IntegrationSource source = find(organizationId, projectId, sourceId);
+            if (source.isConnected()) {
+                throw SourceLifecycleException.notDisconnected();
+            }
+            return coordinates(source);
+        });
+        if (sourceRepository.existsByOrganizationIdAndSourceTypeAndExternalProjectKeyAndDisconnectedAtIsNull(
+                organizationId, stored.sourceType(), stored.externalProjectKey())) {
+            // Another Project connected the same key since; it is that Project's now.
+            throw new SourceAlreadyConnectedException(stored.sourceType());
+        }
+        String pastedSecret = request.getWebhookSecret();
+        String token = request.getToken();
+        Coordinates coordinates = stored;
+        switch (stored.sourceType()) {
+            case GITHUB -> {
+                if (pastedSecret != null) {
+                    throw SourceLifecycleException.secretGenerated();
+                }
+            }
+            case GITLAB -> {
+                if (pastedSecret != null) {
+                    requirePastable(stored.webhookAuthMode());
+                    requireSigningToken(pastedSecret);
+                }
+            }
+            case LINEAR -> {
+                if (pastedSecret == null) {
+                    throw SourceCredentialInvalidException.required("webhookSecret");
+                }
+                if (token == null) {
+                    throw SourceCredentialInvalidException.required("token");
+                }
+            }
+            case JIRA -> {
+                if (pastedSecret != null) {
+                    throw SourceLifecycleException.noWebhook();
+                }
+                if (request.getAccountEmail() == null) {
+                    throw SourceCredentialInvalidException.required("accountEmail");
+                }
+                if (token == null) {
+                    throw SourceCredentialInvalidException.required("token");
+                }
+                coordinates = stored.withIdentity(request.getAccountEmail());
+            }
+        }
+        if (token != null) {
+            requireAccess(coordinates, token);
+        }
+
+        boolean delivered = !stored.sourceType().isPolled();
+        String generatedSecret = delivered && pastedSecret == null ? generateWebhookSecret() : null;
+        UUID webhookId = delivered ? UUID.randomUUID() : null;
+        Instant at = now();
+        IntegrationSource reconnected;
+        try {
+            reconnected = transactionTemplate.execute(status -> {
+                IntegrationSource source = find(organizationId, projectId, sourceId);
+                if (source.isConnected()) {
+                    throw SourceLifecycleException.notDisconnected();
+                }
+                if (delivered) {
+                    String secret = generatedSecret != null ? generatedSecret : pastedSecret;
+                    source.reconnectDelivered(
+                            webhookId,
+                            credentialCipher.encrypt(secret, secretAuthenticatedData(source)),
+                            at
+                    );
+                } else {
+                    source.reconnectPolled(at.minus(RECONNECT_WINDOW), at.plus(pollInterval));
+                    source.changeAccount(request.getAccountEmail());
+                }
+                if (token != null) {
+                    source.replaceToken(credentialCipher.encrypt(token, tokenAuthenticatedData(source)), at);
+                }
+                sourceRepository.saveAndFlush(source);
+                sourceRepository.resetSignatureFailures(sourceId, organizationId);
+                return source;
+            });
+        } catch (DataIntegrityViolationException exception) {
+            throw violates(exception, EXTERNAL_UNIQUE_CONSTRAINT)
+                    ? new SourceAlreadyConnectedException(stored.sourceType())
+                    : exception;
+        }
+        return created(reconnected, generatedSecret);
+    }
+
+    /**
+     * A new webhook secret ReleaseFlow generated, for GitHub and GitLab, shown once. The path
+     * stays, and the old secret stops at once: a secret is rotated because someone else may
+     * know it (ADR-0042). No provider is called.
+     */
+    @Transactional
+    public IntegrationSourceCreated generateSecret(UUID organizationId, UUID projectId, UUID sourceId) {
+        IntegrationSource source = connected(organizationId, projectId, sourceId);
+        if (source.getSourceType() == SourceType.LINEAR) {
+            throw SourceLifecycleException.secretPasted();
+        }
+        String secret = generateWebhookSecret();
+        storeSecret(source, secret);
+        return created(source, secret);
+    }
+
+    /**
+     * A new webhook secret the provider made: Linear's signing secret, or a signing token
+     * GitLab generated for a signed source. It is never echoed back.
+     */
+    @Transactional
+    public void replaceSecret(UUID organizationId, UUID projectId, UUID sourceId, WebhookSecretRequest request) {
+        IntegrationSource source = connected(organizationId, projectId, sourceId);
+        switch (source.getSourceType()) {
+            case GITHUB -> throw SourceLifecycleException.secretGenerated();
+            case GITLAB -> {
+                requirePastable(source.getWebhookAuthMode());
+                requireSigningToken(request.getWebhookSecret());
+            }
+            case LINEAR -> {
+                // Linear's secret is whatever Linear shows; only the next delivery can confirm it.
+            }
+            case JIRA -> throw SourceLifecycleException.noWebhook();
+        }
+        storeSecret(source, request.getWebhookSecret());
+    }
+
+    private IntegrationSource connected(UUID organizationId, UUID projectId, UUID sourceId) {
+        IntegrationSource source = find(organizationId, projectId, sourceId);
+        if (!source.isConnected()) {
+            throw SourceLifecycleException.disconnected();
+        }
+        if (source.getSourceType().isPolled()) {
+            throw SourceLifecycleException.noWebhook();
+        }
+        return source;
+    }
+
+    private void storeSecret(IntegrationSource source, String secret) {
+        source.replaceSecret(credentialCipher.encrypt(secret, secretAuthenticatedData(source)), now());
+        sourceRepository.saveAndFlush(source);
+        sourceRepository.resetSignatureFailures(source.getId(), source.getOrganizationId());
+    }
+
+    // Only a signed GitLab source takes a token GitLab generated; the token header compares
+    // ReleaseFlow's own secret verbatim, so that one is only ever generated.
+    private static void requirePastable(WebhookAuthMode mode) {
+        if (mode != WebhookAuthMode.GITLAB_SIGNING_TOKEN) {
+            throw SourceLifecycleException.secretGenerated();
+        }
+    }
+
+    private static void requireSigningToken(String value) {
+        if (value == null || !value.startsWith(STANDARD_WEBHOOK_PREFIX)) {
+            throw SourceCredentialInvalidException.signingToken("webhookSecret");
+        }
+        try {
+            byte[] key = Base64.getDecoder().decode(value.substring(STANDARD_WEBHOOK_PREFIX.length()));
+            if (key.length < 16) {
+                throw SourceCredentialInvalidException.signingToken("webhookSecret");
+            }
+        } catch (IllegalArgumentException exception) {
+            throw SourceCredentialInvalidException.signingToken("webhookSecret");
+        }
+    }
+
+    private IntegrationSourceCreated created(IntegrationSource source, String revealedSecret) {
+        return new IntegrationSourceCreated(
+                source.getId(),
+                source.getProjectId(),
+                source.getSourceType(),
+                source.getExternalProjectKey(),
+                source.getRepositoryOwner(),
+                source.getRepositoryName(),
+                source.getApiBaseUrl(),
+                source.getExternalWorkspaceKey(),
+                source.getCredentialIdentity(),
+                source.getWebhookAuthMode(),
+                source.getWebhookId(),
+                webhookPath(source.getSourceType(), source.getWebhookId()),
+                revealedSecret,
+                source.getCreatedAt()
+        );
+    }
+
+    private static Coordinates coordinates(IntegrationSource source) {
+        return new Coordinates(
+                source.getSourceType(),
+                source.getExternalProjectKey(),
+                source.getExternalWorkspaceKey(),
+                source.getApiBaseUrl(),
+                source.getCredentialIdentity(),
+                source.getRepositoryOwner(),
+                source.getRepositoryName(),
+                source.getWebhookAuthMode()
+        );
+    }
+
+    // PostgreSQL keeps microseconds, so a time compared after a round trip must have no more.
+    private Instant now() {
+        return clock.instant().truncatedTo(ChronoUnit.MICROS);
+    }
+
+    /** Asks the provider to confirm a token before anything is written; never inside a transaction. */
+    private void requireAccess(Coordinates coordinates, String token) {
         ProviderAccess access = switch (coordinates.sourceType()) {
             case GITHUB -> gitHubApiClient.checkPullRequestAccess(
                     coordinates.repositoryOwner(),
@@ -445,14 +715,6 @@ public class IntegrationSourceService {
         if (access == ProviderAccess.UNAVAILABLE) {
             throw new SourceUnavailableException(coordinates.sourceType());
         }
-
-        transactionTemplate.executeWithoutResult(status -> {
-            IntegrationSource current = find(organizationId, projectId, sourceId);
-            current.replaceToken(
-                    credentialCipher.encrypt(token, tokenAuthenticatedData(current)),
-                    clock.instant()
-            );
-        });
     }
 
     /**
@@ -465,18 +727,32 @@ public class IntegrationSourceService {
                 .ifPresent(source -> source.recordSync(at, errorCode, credentialRejected));
     }
 
-    private void save(Supplier<IntegrationSource> source, SourceType sourceType) {
+    private void save(Supplier<IntegrationSource> source, SourceType sourceType, String externalProjectKey) {
         try {
             transactionTemplate.executeWithoutResult(status -> sourceRepository.saveAndFlush(source.get()));
         } catch (DataIntegrityViolationException exception) {
+            if (violates(exception, EXTERNAL_PROJECT_UNIQUE_CONSTRAINT)) {
+                throw SourceLifecycleException.reconnectRequired(externalProjectKey);
+            }
             throw violates(exception, EXTERNAL_UNIQUE_CONSTRAINT)
                     ? new SourceAlreadyConnectedException(sourceType)
                     : exception;
         }
     }
 
-    private void requireNotConnected(UUID organizationId, SourceType sourceType, String externalProjectKey) {
-        if (sourceRepository.existsByOrganizationIdAndSourceTypeAndExternalProjectKey(
+    /**
+     * A key is connected in at most one Project, and a Project that holds it disconnected
+     * reconnects it rather than taking a second identity for it, which would let an import
+     * record every change again (ADR-0042).
+     */
+    private void requireNotHeld(UUID organizationId, UUID projectId, SourceType sourceType, String externalProjectKey) {
+        sourceRepository.findByOrganizationIdAndProjectIdAndSourceTypeAndExternalProjectKey(
+                        organizationId, projectId, sourceType, externalProjectKey)
+                .filter(source -> !source.isConnected())
+                .ifPresent(source -> {
+                    throw SourceLifecycleException.reconnectRequired(externalProjectKey);
+                });
+        if (sourceRepository.existsByOrganizationIdAndSourceTypeAndExternalProjectKeyAndDisconnectedAtIsNull(
                 organizationId,
                 sourceType,
                 externalProjectKey
@@ -496,31 +772,6 @@ public class IntegrationSourceService {
                 .orElseThrow(ProjectNotFoundException::new);
     }
 
-    static IntegrationSourceView view(IntegrationSource source) {
-        return new IntegrationSourceView(
-                source.getId(),
-                source.getSourceType(),
-                source.getSourceType().isPolled() ? POLLING_DELIVERY : WEBHOOK_DELIVERY,
-                source.getExternalProjectKey(),
-                source.getRepositoryOwner(),
-                source.getRepositoryName(),
-                source.getApiBaseUrl(),
-                source.getExternalWorkspaceKey(),
-                source.getCredentialIdentity(),
-                source.getWebhookAuthMode(),
-                source.getWebhookId(),
-                webhookPath(source.getSourceType(), source.getWebhookId()),
-                source.getCreatedAt(),
-                source.getLastDeliveryAt(),
-                source.hasAccessToken(),
-                source.getTokenUpdatedAt(),
-                source.getConnectionStatus(),
-                source.getLastSyncAt(),
-                source.getLastErrorCode(),
-                source.getNextPollAt()
-        );
-    }
-
     /** A poll that finished: the cursor covers the window it read, and the next one is booked. */
     @Transactional
     public void recordPoll(UUID organizationId, UUID sourceId, Instant cursorAt, Instant at) {
@@ -536,6 +787,10 @@ public class IntegrationSourceService {
     }
 
     static String webhookPath(SourceType sourceType, UUID webhookId) {
+        if (webhookId == null) {
+            // A polled source, or a disconnected one: nothing is delivered to it.
+            return null;
+        }
         return switch (sourceType) {
             case GITHUB -> "/webhooks/github/" + webhookId;
             case GITLAB -> "/webhooks/gitlab/" + webhookId;
@@ -674,7 +929,13 @@ public class IntegrationSourceService {
             String apiBaseUrl,
             String credentialIdentity,
             String repositoryOwner,
-            String repositoryName
+            String repositoryName,
+            WebhookAuthMode webhookAuthMode
     ) {
+
+        Coordinates withIdentity(String identity) {
+            return new Coordinates(sourceType, externalProjectKey, externalWorkspaceKey, apiBaseUrl, identity,
+                    repositoryOwner, repositoryName, webhookAuthMode);
+        }
     }
 }

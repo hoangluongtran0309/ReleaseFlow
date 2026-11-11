@@ -17,8 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-// Members read Projects, their sources, and their context; connecting a source, setting
-// its token, and writing the context are administrator only, by URL rule.
+// Members read Projects, their sources, and their context; connecting, disconnecting, and
+// reconnecting a source, setting its token or secret, and writing the context are
+// administrator only, by URL rule.
 @RestController
 @RequestMapping("/api/projects")
 public class ProjectApiController {
@@ -67,6 +68,15 @@ public class ProjectApiController {
         return sourceService.list(principal.organizationId(), projectId);
     }
 
+    @GetMapping("/{projectId}/sources/{sourceId}")
+    IntegrationSourceView source(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID sourceId
+    ) {
+        return sourceService.get(principal.organizationId(), projectId, sourceId);
+    }
+
     // The webhook secret is in this response only.
     @PostMapping("/{projectId}/sources")
     ResponseEntity<IntegrationSourceCreated> createSource(
@@ -88,6 +98,53 @@ public class ProjectApiController {
             @Valid @RequestBody SourceTokenRequest request
     ) {
         sourceService.replaceToken(principal.organizationId(), projectId, sourceId, request);
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+    }
+
+    // The source's changes stay; its credentials are destroyed (ADR-0042).
+    @PostMapping("/{projectId}/sources/{sourceId}/disconnect")
+    IntegrationSourceView disconnect(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID sourceId
+    ) {
+        return sourceService.disconnect(principal.organizationId(), principal.userId(), projectId, sourceId);
+    }
+
+    // A generated secret for the new webhook path is in this response only.
+    @PostMapping("/{projectId}/sources/{sourceId}/reconnect")
+    ResponseEntity<IntegrationSourceCreated> reconnect(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID sourceId,
+            @Valid @RequestBody SourceReconnectRequest request
+    ) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(sourceService.reconnect(principal.organizationId(), projectId, sourceId, request));
+    }
+
+    // GitHub and GitLab: ReleaseFlow generates the new secret, shown in this response only.
+    @PostMapping("/{projectId}/sources/{sourceId}/webhook-secret")
+    ResponseEntity<IntegrationSourceCreated> generateSecret(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID sourceId
+    ) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(sourceService.generateSecret(principal.organizationId(), projectId, sourceId));
+    }
+
+    // Linear, or a signed GitLab source: the provider made the secret, so it is never echoed.
+    @PutMapping("/{projectId}/sources/{sourceId}/webhook-secret")
+    ResponseEntity<Void> replaceSecret(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID sourceId,
+            @Valid @RequestBody WebhookSecretRequest request
+    ) {
+        sourceService.replaceSecret(principal.organizationId(), projectId, sourceId, request);
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 }

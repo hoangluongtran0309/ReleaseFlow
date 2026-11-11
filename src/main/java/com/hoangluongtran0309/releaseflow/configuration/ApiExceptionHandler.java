@@ -67,6 +67,8 @@ import com.hoangluongtran0309.releaseflow.jira.InvalidJiraSiteException;
 import com.hoangluongtran0309.releaseflow.project.ProjectApiController;
 import com.hoangluongtran0309.releaseflow.project.ProjectNotFoundException;
 import com.hoangluongtran0309.releaseflow.project.SourceAlreadyConnectedException;
+import com.hoangluongtran0309.releaseflow.project.SourceCredentialInvalidException;
+import com.hoangluongtran0309.releaseflow.project.SourceLifecycleException;
 import com.hoangluongtran0309.releaseflow.project.SourceNotFoundException;
 import com.hoangluongtran0309.releaseflow.project.SourceTokenRejectedException;
 import com.hoangluongtran0309.releaseflow.project.SourceUnavailableException;
@@ -200,6 +202,18 @@ public class ApiExceptionHandler {
     @ExceptionHandler(SourceAlreadyConnectedException.class)
     ResponseEntity<ProblemDetail> sourceAlreadyConnected(SourceAlreadyConnectedException exception) {
         return localized(HttpStatus.CONFLICT, exception.code(), exception);
+    }
+
+    @ExceptionHandler(SourceLifecycleException.class)
+    ResponseEntity<ProblemDetail> sourceLifecycle(SourceLifecycleException exception) {
+        return localized(exception.status(), exception.code(), exception);
+    }
+
+    @ExceptionHandler(SourceCredentialInvalidException.class)
+    ResponseEntity<ProblemDetail> sourceCredentialInvalid(SourceCredentialInvalidException exception) {
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, exception.code(), messages.of(exception));
+        problem.setProperty("field", exception.field());
+        return response(problem);
     }
 
     @ExceptionHandler(SourceNotFoundException.class)

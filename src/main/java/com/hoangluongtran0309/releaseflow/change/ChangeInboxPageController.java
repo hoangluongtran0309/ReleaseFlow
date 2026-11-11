@@ -10,6 +10,7 @@ import com.hoangluongtran0309.releaseflow.overview.SelectedProject;
 import com.hoangluongtran0309.releaseflow.configuration.UiNotice;
 import com.hoangluongtran0309.releaseflow.project.ProjectService;
 import com.hoangluongtran0309.releaseflow.project.ProjectView;
+import com.hoangluongtran0309.releaseflow.project.SourceLifecycleException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -112,7 +113,8 @@ public class ChangeInboxPageController {
     ) {
         try {
             action.run();
-        } catch (SourceTokenMissingException | SourceSyncInProgressException | SourceImportNotResumableException exception) {
+        } catch (SourceTokenMissingException | SourceSyncInProgressException | SourceImportNotResumableException
+                 | SourceLifecycleException exception) {
             response.setStatus(HttpStatus.CONFLICT.value());
             model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error(exception));
             return renderInbox(principal, projectId, null, null, null, null, model, response);

@@ -1,5 +1,7 @@
 package com.hoangluongtran0309.releaseflow.overview;
 
+import com.hoangluongtran0309.releaseflow.project.IntegrationSourceView;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -19,8 +21,13 @@ public record OverviewView(
         long breaking,
         long releases,
         boolean sourceConnected,
+        List<IntegrationSourceView> sources,
         NextStep step
 ) {
+
+    public OverviewView {
+        sources = List.copyOf(sources);
+    }
 
     public record ProjectOption(UUID id, String name, boolean selected) {
     }

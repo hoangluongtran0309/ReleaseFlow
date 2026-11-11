@@ -133,9 +133,11 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | Method and path | Role |
 | --- | --- |
 | `GET /api/projects`, `POST /api/projects` | member |
-| `GET /api/projects/{projectId}/sources` | member |
+| `GET /api/projects/{projectId}/sources`, `GET /api/projects/{projectId}/sources/{sourceId}` | member |
 | `POST /api/projects/{projectId}/sources` | admin |
 | `PUT /api/projects/{projectId}/sources/{sourceId}/token` | admin |
+| `POST /api/projects/{projectId}/sources/{sourceId}/webhook-secret`, `PUT /api/projects/{projectId}/sources/{sourceId}/webhook-secret` | admin |
+| `POST /api/projects/{projectId}/sources/{sourceId}/disconnect`, `POST /api/projects/{projectId}/sources/{sourceId}/reconnect` | admin |
 | `GET /api/projects/{projectId}/imports` | member |
 | `POST /api/projects/{projectId}/sources/{sourceId}/imports` | admin |
 | `POST /api/projects/{projectId}/sources/{sourceId}/imports/resume` | admin |
@@ -236,9 +238,9 @@ Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
 | Account | `400` | `output_language_invalid`, `ui_locale_invalid`, `invitation_invalid`, `organization_slug_invalid` |
 | Account | `404` | `invitation_not_found` |
 | Account | `409` | `email_already_registered`, `invitation_already_pending`, `invitation_email_unavailable`, `organization_slug_taken` |
-| Sources | `400` | `gitlab_base_url_invalid`, `gitlab_host_not_allowed`, `jira_site_invalid`, `github_token_rejected`, `gitlab_token_rejected`, `linear_token_rejected`, `jira_token_rejected` |
+| Sources | `400` | `gitlab_base_url_invalid`, `gitlab_host_not_allowed`, `jira_site_invalid`, `github_token_rejected`, `gitlab_token_rejected`, `linear_token_rejected`, `jira_token_rejected`, `source_credential_required`, `source_signing_token_invalid` |
 | Sources | `404` | `project_not_found`, `source_not_found` |
-| Sources | `409` | `github_repository_already_connected`, `gitlab_project_already_connected`, `linear_team_already_connected`, `jira_project_already_connected`, `source_token_missing`, `source_sync_in_progress`, `source_import_not_supported`, `source_import_not_resumable` |
+| Sources | `409` | `github_repository_already_connected`, `gitlab_project_already_connected`, `linear_team_already_connected`, `jira_project_already_connected`, `source_token_missing`, `source_sync_in_progress`, `source_import_not_supported`, `source_import_not_resumable`, `source_disconnected`, `source_not_disconnected`, `source_reconnect_required`, `source_has_no_webhook`, `source_secret_generated`, `source_secret_pasted` |
 | Sources | `503` | `github_unavailable`, `gitlab_unavailable`, `jira_unavailable` |
 | Webhooks | `400` | `webhook_payload_malformed` |
 | Webhooks | `401` | `webhook_signature_invalid` |

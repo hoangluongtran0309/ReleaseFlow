@@ -63,18 +63,20 @@
             <button type="submit" class="btn btn-primary" th:text="#{ui.changes.apply}">Apply</button>
         </form>
 
+        <!--/* Every source of the Project, each with its health (ADR-0042). */-->
         <section class="surface-card mt-6 p-5" id="source-imports" th:aria-label="#{ui.changes.syncLabel}" aria-label="Source sync"
-                 th:unless="${#lists.isEmpty(imports.?[supportsImport or polled])}">
+                 th:unless="${#lists.isEmpty(imports)}">
             <h2 class="section-heading" th:text="#{ui.changes.syncHeading}">Source sync</h2>
             <p class="section-copy" th:text="#{ui.changes.syncCopy}">
                 Changes reach ReleaseFlow by webhook from the moment a source is connected.
             </p>
             <ul class="mt-4 grid gap-3">
                 <li class="subtle-panel flex flex-wrap items-center gap-3 p-3"
-                    th:each="sync : ${imports}" th:if="${sync.polled}"
+                    th:each="sync : ${imports}" th:if="${sync.polled and sync.connected}"
                     th:id="|poll-${sync.sourceId}|">
                     <span class="font-semibold" th:text="${sync.externalProjectKey}">APP</span>
                     <span class="badge badge-sm badge-ghost" th:text="#{ui.changes.polled}">Polled</span>
+                    <th:block th:replace="~{fragments/source-health :: summary(${sync})}"></th:block>
                     <span class="badge badge-sm" th:if="${sync.status != null}" th:switch="${sync.status}">
                         <span th:case="'PENDING'" th:text="#{ui.changes.sync.PENDING}">Queued</span>
                         <span th:case="'RUNNING'" th:text="#{ui.changes.sync.RUNNING.poll}">Reading</span>
@@ -95,9 +97,12 @@
                     <span class="text-sm text-red-700" th:if="${sync.lastError != null}" th:text="#{ui.changes.error(${sync.lastError})}">Error: access_rejected</span>
                 </li>
                 <li class="subtle-panel flex flex-wrap items-center gap-3 p-3"
-                    th:each="sync : ${imports}" th:if="${sync.supportsImport}"
+                    th:each="sync : ${imports}" th:if="${!sync.polled and sync.connected}"
                     th:id="|import-${sync.sourceId}|">
                     <span class="font-semibold" th:text="${sync.externalProjectKey}">owner/repository</span>
+                    <span class="badge badge-sm badge-ghost" th:text="${sync.type.displayName()}">GitHub</span>
+                    <th:block th:replace="~{fragments/source-health :: summary(${sync})}"></th:block>
+                    <th:block th:if="${sync.supportsImport}">
                     <span class="badge badge-sm badge-ghost" th:if="${sync.status == null}" th:text="#{ui.changes.neverImported}">Never imported</span>
                     <span class="badge badge-sm" th:if="${sync.status != null}" th:switch="${sync.status}">
                         <span th:case="'PENDING'" th:text="#{ui.changes.sync.PENDING}">Queued</span>
@@ -126,6 +131,14 @@
                             <button type="submit" class="btn btn-primary btn-sm" th:text="#{ui.changes.import90}">Import last 90 days</button>
                         </form>
                     </th:block>
+                    </th:block>
+                </li>
+                <li class="subtle-panel flex flex-wrap items-center gap-3 p-3"
+                    th:each="sync : ${imports}" th:unless="${sync.connected}"
+                    th:id="|disconnected-${sync.sourceId}|">
+                    <span class="font-semibold text-slate-600" th:text="${sync.externalProjectKey}">owner/repository</span>
+                    <span class="badge badge-sm badge-ghost" th:text="${sync.type.displayName()}">GitHub</span>
+                    <th:block th:replace="~{fragments/source-health :: summary(${sync})}"></th:block>
                 </li>
             </ul>
         </section>

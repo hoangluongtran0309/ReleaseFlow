@@ -155,6 +155,18 @@ public class SecurityConfiguration {
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/*/sources/*/token")
                         .hasRole("ADMIN")
+                        // Disconnecting destroys a source's credentials; reconnecting and a new
+                        // webhook secret make new ones (ADR-0042).
+                        .requestMatchers(HttpMethod.POST,
+                                "/projects/*/sources/*/disconnect", "/api/projects/*/sources/*/disconnect",
+                                "/projects/*/sources/*/reconnect", "/api/projects/*/sources/*/reconnect",
+                                "/projects/*/sources/*/webhook-secret", "/projects/*/sources/*/webhook-secret/generate",
+                                "/api/projects/*/sources/*/webhook-secret")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/projects/*/sources/*/disconnect")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/*/sources/*/webhook-secret")
+                        .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/projects/*/sources/*/imports", "/projects/*/sources/*/imports/resume",
                                 "/api/projects/*/sources/*/imports", "/api/projects/*/sources/*/imports/resume")
                         .hasRole("ADMIN")

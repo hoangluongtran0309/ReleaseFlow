@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
+<head>
+    <title th:text="#{ui.sourceDisconnect.title(${source.externalProjectKey})}">Disconnect owner/repository</title>
+</head>
+<body>
+<p layout:fragment="page-title" th:text="#{ui.nav.projects}">Projects</p>
+<!--/* A page rather than a dialog: what disconnecting does is read before it is done (ADR-0042). */-->
+<div layout:fragment="content" th:with="type=${source.type.name()}">
+    <header class="page-header">
+        <div class="min-w-0">
+            <p class="page-eyebrow" th:text="|${project.name} · ${source.type.displayName()}|">Checkout · GitHub</p>
+            <h1 class="page-heading [overflow-wrap:anywhere]"
+                th:text="#{ui.sourceDisconnect.heading(${source.externalProjectKey})}">Disconnect owner/repository?</h1>
+        </div>
+    </header>
+
+    <article class="surface-card max-w-3xl p-6">
+        <h2 class="font-bold" th:text="#{ui.sourceDisconnect.whatHappens}">What happens</h2>
+        <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+            <li th:text="#{ui.sourceDisconnect.keeps}">Every change it recorded stays, with its reviews and releases.</li>
+            <li th:text="#{ui.sourceDisconnect.destroys}">Its webhook secret and access token are destroyed.</li>
+            <li th:if="${type != 'JIRA'}" th:text="#{ui.sourceDisconnect.path}">Its webhook path stops answering.</li>
+            <li th:if="${type == 'JIRA'}" th:text="#{ui.sourceDisconnect.polls}">Reading Jira stops.</li>
+            <li th:text="#{ui.sourceDisconnect.jobs}">A queued import or poll ends, and changes still processing need review.</li>
+            <li th:text="#{ui.sourceDisconnect.reconnect}">Reconnecting it later keeps its changes and adds no duplicates.</li>
+        </ul>
+
+        <div class="mt-5" id="borrowing-rules" th:unless="${#lists.isEmpty(borrowingRules)}"
+             th:insert="~{fragments/alert :: alertBody('warning', ~{::borrowingRulesBody})}">
+            <div class="grid gap-1" th:ref="borrowingRulesBody">
+                <p class="font-semibold" th:text="#{ui.sourceDisconnect.rulesHeading}">These enabled rules publish a GitHub Release with this repository's token:</p>
+                <ul class="list-disc pl-5">
+                    <li th:each="rule : ${borrowingRules}" th:text="${rule}">Release notes to GitHub</li>
+                </ul>
+                <p th:text="#{ui.sourceDisconnect.rulesCopy}">Their GitHub Release action fails until a GitHub source is connected again; the rules stay enabled.</p>
+            </div>
+        </div>
+
+        <h2 class="mt-6 font-bold" th:text="#{ui.sourceDisconnect.providerHeading}">At the provider</h2>
+        <p class="mt-2 text-sm text-slate-700" th:utext="#{'ui.sourceDisconnect.provider.' + ${type}}">
+            ReleaseFlow cannot delete the hook or revoke the token: delete the webhook and revoke the token there.
+        </p>
+
+        <div class="mt-6 flex flex-wrap gap-3">
+            <form method="post" novalidate
+                  th:action="@{/projects/{projectId}/sources/{sourceId}/disconnect(projectId=${project.id},sourceId=${source.id})}">
+                <button type="submit" class="btn btn-error" th:text="#{ui.sourceDisconnect.confirm}">Disconnect</button>
+            </form>
+            <a class="btn btn-outline"
+               th:href="@{/projects/{projectId}/sources/{sourceId}(projectId=${project.id},sourceId=${source.id})}"
+               th:text="#{ui.sourceDisconnect.cancel}">Keep it connected</a>
+        </div>
+    </article>
+</div>
+</body>
+</html>

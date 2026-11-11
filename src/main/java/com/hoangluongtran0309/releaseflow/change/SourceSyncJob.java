@@ -168,6 +168,11 @@ class SourceSyncJob {
         finish(Status.PARTIAL, null, now);
     }
 
+    /** Queued or waiting to retry, but not being worked on by anyone. */
+    boolean isWaiting() {
+        return status == Status.PENDING || status == Status.RETRY_SCHEDULED;
+    }
+
     void fail(String error, Instant now) {
         finish(Status.FAILED, error, now);
     }

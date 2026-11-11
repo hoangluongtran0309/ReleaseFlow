@@ -14,8 +14,8 @@ source, GitLab source, Linear source, Jira source, automation, automation
 trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
-context, translation glossary, and linked context and folding slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V36,
+context, translation glossary, linked context and folding, and source lifecycle and
+health slices: one Spring Boot application, PostgreSQL/Flyway V1-V37,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -54,7 +54,9 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0041, indexed in
+Sources can be disconnected, reconnected under their own ID, and have their webhook
+secret rotated, and each one's health shows where people look.
+The decisions behind all of it are ADR-0001 through ADR-0042, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -163,7 +165,23 @@ changing behavior.
 - Integration source ciphertexts are bound to the source's ID and to its
   repository for GitHub, or its type and external key (GitLab project path, Linear
   team, Jira project key) for the others; never rewrite
-  those columns, or existing secrets stop decrypting.
+  those columns, or existing secrets stop decrypting. They are mapped not updatable, and
+  a different repository is a different source, never an edited one.
+- A source is never deleted: its changes point at it. Disconnecting destroys its webhook
+  identity, secret, token, and schedule in one transaction and keeps everything else; its
+  path then answers exactly like an unknown one and records nothing, and nothing else
+  borrows it. Reconnecting reuses its ID and never changes what it is, so intake keeps
+  recognising its changes; a Project that holds a key disconnected reconnects it rather
+  than connecting it again.
+- A rotated webhook secret keeps the path and stops the old secret at once; there is no
+  overlap. ReleaseFlow generates the secret only where the provider accepts one, and a
+  secret the provider made is pasted in and never echoed. Rotating, disconnecting, and
+  health call no provider and never AI or DeepL.
+- A delivery whose proof fails is counted on its connected source, with its time and
+  nothing else: never its body, a header, the secret, or the caller. The count is exact,
+  restarts when the secret is set, and is written about once a second per source however
+  many arrive. A source is quiet only against its own rhythm, with at least ten gaps;
+  health is evidence on a page and never stops anything.
 - Each source type has exactly one `SourceEnricher`, and one
   `SourceHistoryReader` when it has a history or is polled. A type missing its
   enricher, or a type that supports history import missing its reader, fails at

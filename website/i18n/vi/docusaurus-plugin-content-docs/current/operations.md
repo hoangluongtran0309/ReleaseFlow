@@ -85,6 +85,13 @@ thể nằm sau VPN hoặc danh sách IP cho phép. Sau khi Organization của b
 `/register` và `POST /api/registrations` ở proxy, vì [đăng ký luôn mở](workspace.md#registration).
 Không bao giờ định tuyến cổng quản trị qua proxy.
 
+**Webhook.** ReleaseFlow cũng không giới hạn tần suất yêu cầu đến: một request webhook chỉ bị
+giới hạn bởi giới hạn body 1 MiB, được kiểm tra trước tiên. Một lần gửi bị từ chối tới đường dẫn
+của một nguồn đã biết được đếm trên trang của nguồn, gộp lại thành khoảng một lần cập nhật dòng
+mỗi nguồn mỗi giây dù có bao nhiêu lần gửi
+([ADR-0042](adr/0042-source-lifecycle-and-health.md)), nhưng mỗi lần vẫn tốn một lần tra cứu và một
+lần kiểm tra chữ ký. Nếu dự kiến có lượng lớn, giới hạn `/webhooks/**` ở proxy.
+
 **Đăng nhập.** ReleaseFlow không giới hạn số lần đăng nhập sai, nên giới hạn tần suất
 `POST /login` ở proxy. Phiên đăng nhập nằm trong bộ nhớ của ứng dụng: khởi động lại sẽ đăng xuất
 mọi người.
@@ -100,10 +107,11 @@ ràng buộc và trigger khi ứng dụng khởi động.
 
 **Sao lưu.** Sao lưu cơ sở dữ liệu cùng với `RELEASEFLOW_CREDENTIAL_MASTER_KEY`, và cất chúng ở
 hai nơi khác nhau. Một cơ sở dữ liệu được khôi phục mà thiếu key vẫn khởi động được, nhưng mọi
-secret đã lưu đều không đọc được. Access token và secret của action có thể nhập lại; webhook
-secret của một nguồn thì không, vì hiện chưa thay được nguồn, nên mọi lần gửi tới nguồn đó đều bị
-từ chối với `401 webhook_signature_invalid` và log ghi
-`Could not decrypt the webhook secret of source …`. Khôi phục toàn bộ bản dump vào một cơ sở dữ
+secret đã lưu đều không đọc được. Access token và secret của action có thể nhập lại. Webhook
+secret của một nguồn khiến mọi lần gửi tới nguồn đó bị từ chối với
+`401 webhook_signature_invalid`, và log ghi `Could not decrypt the webhook secret of source …`,
+cho tới khi nó được [đổi](sources.md#rotate-a-webhook-secret) và secret mới được đưa cho nhà cung
+cấp. Khôi phục toàn bộ bản dump vào một cơ sở dữ
 liệu trống:
 
 ```bash

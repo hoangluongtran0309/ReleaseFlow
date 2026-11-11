@@ -12,6 +12,35 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+### Added
+
+- A source can be disconnected from its own page, which first says what will happen. Its
+  changes stay, with their reviews and releases; its webhook secret and access token are
+  destroyed, its webhook path answers like one that never existed, and its imports and
+  polls stop ([ADR-0042](docs/adr/0042-source-lifecycle-and-health.md)).
+- A disconnected source is reconnected under its own ID, with a new webhook path and
+  secret, so a history import afterwards adds no change twice. Connecting the same
+  repository, project, or team again in the same Project points to the reconnect instead;
+  another Project may connect it once it is disconnected.
+- A webhook secret can be rotated without changing its path: generated for GitHub and
+  GitLab, pasted for Linear and for a signing token GitLab generated. The old secret stops
+  at once, and the page says where the new one goes and how to send again what the
+  provider refused in between. A new Jira token may belong to another account.
+- Each source's health shows in the Change Inbox's Source sync panel, which now lists
+  every source, on the overview, and on the Projects page: its last delivery, how many
+  deliveries were refused for their signature since the secret was set and when the last
+  one was, a **Quiet** mark when it has been silent for longer than it usually goes, and
+  an **Overdue** mark for a Jira source whose read is late. Nothing about a refused
+  delivery is kept beyond its count and time.
+
+### Changed
+
+- A GitHub Release action whose repository's source is disconnected fails as
+  `github_source_disconnected` and succeeds when run again after the reconnect; the
+  Automation page marks an enabled rule that has no GitHub source to borrow. A rule with a
+  GitHub Release action can be enabled only while its project has one connected GitHub
+  source.
+
 ## [1.2.0] - 2026-11-08
 
 ### Added

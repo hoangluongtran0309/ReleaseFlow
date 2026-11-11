@@ -92,6 +92,13 @@ stay behind a VPN or an allowlist. Once your Organization exists, refuse `/regis
 [registration stays open](workspace.md#registration). Never route the management port
 through the proxy.
 
+**Webhooks.** ReleaseFlow has no inbound rate limit either: a webhook request is bounded
+only by the 1 MiB body limit, checked first. A refused delivery to a known source's path
+is counted on the source's page, coalesced to about one row update per source per second
+however many arrive ([ADR-0042](adr/0042-source-lifecycle-and-health.md)), but each one
+still costs a lookup and a signature check. If you expect floods, limit `/webhooks/**` at
+the proxy.
+
 **Signing in.** ReleaseFlow does not limit failed sign-in attempts, so rate-limit
 `POST /login` at the proxy. Sessions live in the application's memory: a restart signs
 everybody out.
@@ -108,10 +115,10 @@ constraints, and triggers when the application starts.
 
 **Backups.** Back up the database and `RELEASEFLOW_CREDENTIAL_MASTER_KEY` together, and
 store them apart. A database restored without its key still starts, but every stored
-secret is unreadable. Access tokens and action secrets can be entered again; a source's
-webhook secret cannot, because a source cannot be replaced yet, so its every delivery is
-refused with `401 webhook_signature_invalid` and the log says
-`Could not decrypt the webhook secret of source …`. Restore a whole dump into an empty
+secret is unreadable. Access tokens and action secrets can be entered again. A source's
+webhook secret is refused at every delivery with `401 webhook_signature_invalid`, and the
+log says `Could not decrypt the webhook secret of source …`, until it is
+[rotated](sources.md#rotate-a-webhook-secret) and the new one given to the provider. Restore a whole dump into an empty
 database:
 
 ```bash

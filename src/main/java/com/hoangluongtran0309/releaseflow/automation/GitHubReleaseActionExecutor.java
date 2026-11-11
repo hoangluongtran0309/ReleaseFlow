@@ -24,6 +24,7 @@ class GitHubReleaseActionExecutor implements RuleActionExecutor {
     static final String REPOSITORY = "githubRepository";
 
     static final String SOURCE_MISSING = "github_source_missing";
+    static final String SOURCE_DISCONNECTED = "github_source_disconnected";
     static final String TOKEN_MISSING = "github_token_missing";
     static final String RELEASE_CONFLICT = "github_release_conflict";
     static final String REJECTED = "github_rejected";
@@ -56,7 +57,11 @@ class GitHubReleaseActionExecutor implements RuleActionExecutor {
                 sourceAccess.findSole(command.organizationId(), command.projectId(), SourceType.GITHUB);
         // The repository the Run was created for must still be the Project's only one.
         if (repository == null || credentials.isEmpty() || !repository.equals(repositoryOf(credentials.get()))) {
-            return ActionResult.failed(SOURCE_MISSING);
+            // Nothing was called, so this is a failure, never unknown. A source that is only
+            // disconnected says so: reconnecting it keeps its name, and a retry then succeeds.
+            boolean disconnected = repository != null && sourceAccess.isDisconnected(
+                    command.organizationId(), command.projectId(), SourceType.GITHUB, repository);
+            return ActionResult.failed(disconnected ? SOURCE_DISCONNECTED : SOURCE_MISSING);
         }
         Optional<String> token = credentials.get().accessToken();
         if (token.isEmpty()) {
