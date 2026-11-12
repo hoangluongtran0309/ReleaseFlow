@@ -20,7 +20,7 @@ they describe.
 | [0008](0008-durable-change-processing.md) | Durable change processing and changed-file review triggers | Accepted | 2026-09-14 | |
 | [0009](0009-automatic-ai-classification.md) | Automatic AI classification and neutral summaries | Accepted | 2026-09-14 | Supersedes [0004](0004-openai-classification-as-reviewed-suggestion.md); amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (Project context, migration kind, limitations) |
 | [0010](0010-release-review-lifecycle.md) | Release review lifecycle | Accepted | 2026-09-14 | |
-| [0011](0011-audience-release-notes.md) | Audiences and a release note per audience | Accepted | 2026-09-15 | Amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (a selection and headline per audience) and [0037](0037-security-changes-and-release-note-structure.md) (security and release-wide note structure) |
+| [0011](0011-audience-release-notes.md) | Audiences and a release note per audience | Accepted | 2026-09-15 | Amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (a selection and headline per audience), [0037](0037-security-changes-and-release-note-structure.md) (security and release-wide note structure), and [0044](0044-retire-an-audience.md) (retired audiences) |
 | [0012](0012-category-catalog.md) | Category catalog per Organization | Accepted | 2026-09-15 | |
 | [0013](0013-context-sufficiency-and-duplicates.md) | Context sufficiency and possible duplicates | Accepted | 2026-09-15 | |
 | [0014](0014-project-sensitive-paths.md) | Sensitive paths per Project | Accepted | 2026-09-15 | |
@@ -53,6 +53,7 @@ they describe.
 | [0041](0041-linked-context-and-folding.md) | One piece of work once: branch and Linear keys, folding suggestions, and issue status at review | Accepted | 2026-11-02 | Amends [0019](0019-jira-sources-and-linked-context.md); builds on [0013](0013-context-sufficiency-and-duplicates.md) and [0033](0033-change-exclusion.md) |
 | [0042](0042-source-lifecycle-and-health.md) | Disconnecting, reconnecting, and rotating a source, and showing its health | Accepted | 2026-11-11 | Amends [0002](0002-per-integration-webhook-credentials.md), [0016](0016-integration-sources-and-history-import.md), [0017](0017-gitlab-sources.md), [0018](0018-linear-sources.md), and [0019](0019-jira-sources-and-linked-context.md); refers to [0020](0020-automation-rules-and-runs.md) |
 | [0043](0043-member-roles-and-removal.md) | Changing a member's role and removing a member | Accepted | 2026-11-12 | Amends [0006](0006-organization-roles-and-invitations.md); refers to [0034](0034-account-language-per-request.md) |
+| [0044](0044-retire-an-audience.md) | Retiring an audience without deleting it | Accepted | 2026-11-12 | Amends [0011](0011-audience-release-notes.md); refers to [0009](0009-automatic-ai-classification.md), [0015](0015-multilingual-release-notes.md), [0020](0020-automation-rules-and-runs.md), [0035](0035-evidence-bound-notes-and-audience-relevance.md), and [0036](0036-translation-glossary.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)
