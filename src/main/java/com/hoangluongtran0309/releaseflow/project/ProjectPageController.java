@@ -102,6 +102,10 @@ public class ProjectPageController {
         } catch (SourceAlreadyConnectedException exception) {
             response.setStatus(HttpStatus.CONFLICT.value());
             bindingResult.reject(exception.messageKey(), exception.arguments(), null);
+        } catch (SourceLifecycleException exception) {
+            // The Project holds this key disconnected; reconnecting it keeps its changes.
+            response.setStatus(exception.status().value());
+            bindingResult.reject(exception.messageKey(), exception.arguments(), null);
         } catch (InvalidGitLabBaseUrlException | GitLabHostNotAllowedException exception) {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
             bindingResult.rejectValue("apiBaseUrl", exception.messageKey(), exception.arguments(), null);
@@ -144,6 +148,10 @@ public class ProjectPageController {
             } catch (SourceUnavailableException exception) {
                 response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
                 bindingResult.reject(exception.messageKey(), exception.arguments(), null);
+            } catch (SourceLifecycleException exception) {
+                // A disconnected source has no token form to show it under.
+                response.setStatus(exception.status().value());
+                model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error(exception));
             }
         } else {
             response.setStatus(HttpStatus.BAD_REQUEST.value());

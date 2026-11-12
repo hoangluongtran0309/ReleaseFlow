@@ -115,8 +115,9 @@ integration_sources (github_integrations before V18)
   organization_id
   project_id (composite FK with organization_id -> projects; several per Project)
   source_type (GITHUB | GITLAB | LINEAR | JIRA) + external_project_key
-    (owner/repository, group/project, a Linear team, or a Jira project key,
-    unique per Organization and source type)
+    (owner/repository, group/project, a Linear team, or a Jira project key;
+    unique per Organization and source type among connected sources, and per
+    Project whether connected or not, V37)
   repository_owner + repository_name (GitHub only)
   api_base_url (GitLab: an allowlisted instance; Jira: an atlassian.net site)
   external_workspace_key (Linear only, the workspace the team belongs to)
@@ -125,13 +126,19 @@ integration_sources (github_integrations before V18)
   credential_identity (Jira only, the account email of its Basic credentials)
   webhook_auth_mode (GITHUB_HMAC | GITLAB_SIGNING_TOKEN | GITLAB_SECRET_TOKEN
     | LINEAR_HMAC | NONE), which must match the source type (NONE is Jira's)
-  webhook_id (globally unique; null exactly when the mode is NONE)
+  webhook_id (globally unique; while connected, null exactly when the mode is NONE)
   secret_nonce + secret_ciphertext (present exactly when webhook_id is)
+  secret_updated_at (V37: when the secret was last set; failures count from here)
   token_nonce + token_ciphertext + token_updated_at (the access token, V10)
-  poll_cursor_at + next_poll_at (Jira only: read up to here, read again then)
+  poll_cursor_at + next_poll_at (Jira only: read up to here, read again then;
+    a disconnected Jira source keeps its cursor and has no next poll)
   connection_status, last_sync_at, last_error_code
   created_at
   last_delivery_at (nullable, last accepted webhook delivery)
+  signature_failure_count + last_signature_failure_at (V37: deliveries whose
+    proof failed since secret_updated_at; written only by their own UPDATE)
+  disconnected_at + disconnected_by (V37, composite FK -> app_users; a
+    disconnected source has no webhook_id, secret, token, or next_poll_at)
 
 changes
   id (UUID PK)
@@ -360,14 +367,16 @@ database boundary. This decision is recorded in
 
 ## Source connection credentials
 
-A Project may have several create-only integration sources: GitHub repositories,
-GitLab projects, Linear teams, and Jira Cloud projects. Owners, repository names, and GitLab project paths are
+A Project may have several integration sources: GitHub repositories, GitLab projects,
+Linear teams, and Jira Cloud projects, each of which can be disconnected and reconnected
+but never deleted ([Source lifecycle and health](#source-lifecycle-and-health)). Owners, repository names, and GitLab project paths are
 trimmed, lowercased, and validated before persistence; which fields a request
 needs depends on its type, and `IntegrationSourceRequestValidator` reports the
 missing ones against those fields so REST and Thymeleaf both show them. The same
 canonical key may be connected by different Organizations, but only once inside
-one Organization and per source type
-(`integration_sources_external_unique`). V18 renamed `github_integrations` to
+one Organization and per source type among connected sources
+(`integration_sources_external_unique`, a partial unique index since V37), and is held
+at most once by each Project (`integration_sources_external_project_unique`). V18 renamed `github_integrations` to
 `integration_sources` in place, so every row kept its ID, webhook ID,
 repository, and ciphertexts; V19 made the repository columns GitHub's alone and
 added `api_base_url` and `webhook_auth_mode`. See
@@ -398,7 +407,8 @@ Additional authenticated data binds the Organization, Project, and source, plus
 the canonical repository for GitHub, or the source type and its external key (the
 GitLab project path, the Linear team, or the Jira project key) for the others, to
 prevent ciphertext relocation. GitHub's authenticated data has
-never changed, so no ciphertext was ever rewritten. Startup requires a
+never changed, so no ciphertext was ever rewritten. Every column the authenticated data
+names is mapped `updatable = false`, so no lifecycle step can rewrite one. Startup requires a
 Base64-encoded 32-byte key from `RELEASEFLOW_CREDENTIAL_MASTER_KEY`. Key and
 credential material are never logged. See
 [ADR-0002](adr/0002-per-integration-webhook-credentials.md).
@@ -419,8 +429,61 @@ secret plus a purpose line (`github-access-token`, `gitlab-access-token`,
 swapped. Project reads report only whether a token exists
 and when it was set. `SourceAccess` is the single way the `change` capability
 obtains a source's coordinates and decrypted token, always by Organization,
-Project, and source ID. Saving a token marks the source `ACTIVE` again. See
+Project, and source ID; it answers for connected sources only. Saving a token marks the
+source `ACTIVE` again, and a Jira token may come with a new `accountEmail`, confirmed by the
+same call and written to `credential_identity`, which no ciphertext is bound to. See
 [ADR-0008](adr/0008-durable-change-processing.md).
+
+## Source lifecycle and health
+
+[ADR-0042](adr/0042-source-lifecycle-and-health.md). A change is identified by
+`(source_id, external_id)`, and `changes_source_type_matches` points every change at its
+source, so a source row is never deleted and a reconnect reuses it.
+
+- **Disconnect.** `IntegrationSourceService.disconnect` nulls `webhook_id`, the secret,
+  the token, and `next_poll_at`, sets `disconnected_at` and `disconnected_by`, and publishes
+  `SourceDisconnected` inside the same transaction. `SourceDisconnectionListener` in the
+  `change` capability fails the source's `PENDING` or `RETRY_SCHEDULED` sync job as
+  `source_disconnected`; `SourceSyncWorker` reads the credentials again before every page,
+  so a running job stops at the next one. `IntegrationSource.recordPoll`,
+  `recordPollFailure`, and `recordSync` do nothing for a disconnected source, so a job
+  finishing late books nothing. With no `webhook_id`, a verifier finds no source and the
+  path answers like an unknown one. `SourceAccess.find`, `findByType`, `findSole`, and
+  `findDuePolls` skip disconnected sources, so a change still processing completes as
+  `NO_ACCESS_TOKEN`, linked context and issue reads see no tracker, and
+  `ReleaseLinkBuilder` and `NextStep` count connected code hosts and sources only.
+- **Reconnect.** `reconnect` reads the source in one short transaction, checks no other
+  Project connected the key since, asks the provider outside any transaction when there
+  is a token (Linear's `workspaceOf` must still answer the stored workspace), and writes
+  in a second: a new `webhook_id` and secret under the same authenticated data, or for
+  Jira a cursor of no earlier than 90 days ago and the next poll one interval later.
+  `create` refuses a key its Project holds disconnected with
+  `409 source_reconnect_required`.
+- **Rotation.** `generateSecret` (GitHub, GitLab) and `replaceSecret` (Linear, or a
+  `whsec_` token GitLab generated for a signed source) replace the ciphertext under the
+  same authenticated data, set `secret_updated_at`, and reset the failure count. No
+  provider is called, and the old secret stops at once.
+- **Signature failures.** Each verifier resolves the source first and, when the proof
+  fails, hands it to `SignatureFailureRecorder`, which writes the first failure on a
+  source at once and adds later ones within a second to an in-memory count, drained once
+  a second (and on shutdown) by one `UPDATE` per source. The `UPDATE` adds to the stored
+  count and applies only while `secret_updated_at` is the one the failures were refused
+  under. The entity maps the two columns as not insertable or updatable, so an ordinary
+  flush can never overwrite a concurrent increment.
+- **Health.** `SourceViews` builds every `IntegrationSourceView` with a `SourceHealth`.
+  One native query per list computes, for each connected delivered source, the gaps
+  between its `WEBHOOK` changes of the last 90 days and their 90th percentile
+  (`changes_source_delivered_idx`); with at least ten gaps, the usual gap is that
+  percentile or an hour, whichever is longer, and the source is quiet when its last
+  delivery, or its secret's last setting, is older. A connected Jira source is overdue
+  when its next poll is more than one interval past. Nothing is scheduled or stored for
+  it.
+- **Pages.** `SourcePageController` serves `/projects/{projectId}/sources/{sourceId}`, its
+  disconnect confirmation, the shown-once secret page, and the reconnect result. The
+  confirmation names the enabled rules `SourceTokenBorrowers` reports — the `project`
+  port that `AutomationRuleService` implements, so `project` never reaches into
+  `automation`. `fragments/source-health` draws the same health in the Change Inbox, the
+  overview, the Projects page, and the source page.
 
 ## Source intake
 
@@ -1471,8 +1534,8 @@ write-only: responses and pages say only that one is configured.
 ### Enabling
 
 `AutomationRuleService.enable` checks, in order, the project's ownership,
-every audience's ownership and language, a single GitHub source for a GitHub Release
-action on a project-scoped rule, whether the deployment can carry the action out at
+every audience's ownership and language, a single connected GitHub source for a GitHub
+Release action on a project-scoped rule, whether the deployment can carry the action out at
 all, and the action's own configuration and decrypted secret.
 
 ### Triggers
@@ -1557,6 +1620,12 @@ No outbound client follows a redirect, and a redirect is never a delivery.
 - **GitHub Release** borrows the project's own source token, publishes the note as the
   release of the version's tag, and marks the body with
   `<!-- releaseflow-action:{id} -->` so a repeat knows its own work from somebody else's.
+  `AutomationRunFactory` records the repository of the project's one connected GitHub
+  source, or of its one disconnected source when none is connected
+  (`SourceAccess.soleExternalKey`); when that source is disconnected at delivery the
+  action fails as `github_source_disconnected` before any call, and a retry after the
+  reconnect succeeds. A rule view carries `gitHubSourceMissing` while an enabled rule's
+  project has no connected GitHub source to lend.
 - **Slack** posts through an incoming webhook whose origin the deployment allows,
   checked again before every delivery, up to 39,000 characters. A redirect fails the
   action as `slack_rejected`, as does any 4xx, while a 5xx may have posted before
@@ -1657,7 +1726,9 @@ who have no account. See [ADR-0022](adr/0022-public-changelog.md).
 
 `OverviewService` in the `overview` capability owns no data: it asks `ProjectService`,
 `ChangeInboxService` and `ReleaseService` for counts and composes them
-([ADR-0028](adr/0028-parity-ui-and-browser-tests.md)). Both counts are aggregate queries
+([ADR-0028](adr/0028-parity-ui-and-browser-tests.md)). It also passes on the selected
+Project's sources with their health, which the page lists beside the figures; they are
+not a step and do not change which one is offered. Both counts are aggregate queries
 rather than lists counted in Java.
 
 `NextStep.of(...)` decides the one step a person is offered, in a fixed order: no project,

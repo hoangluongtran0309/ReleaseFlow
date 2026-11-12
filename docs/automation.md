@@ -34,7 +34,7 @@ says when an expression would next fire before any rule keeps it.
 Write the rule first; it starts disabled. Enabling it is the moment ReleaseFlow
 checks that the deliveries can be made: the project and every audience belong to
 your Organization, the language is one your Organization writes notes in, a
-GitHub Release action's project has exactly one GitHub source, the deployment can
+GitHub Release action's project has exactly one connected GitHub source, the deployment can
 carry the action out at all, and the configuration and secret are usable. A rule
 that is refused says which of those failed.
 
@@ -44,7 +44,7 @@ Eight kinds of action exist:
 
 | Action | What it needs | What it does |
 | --- | --- | --- |
-| GitHub Release | The project's own GitHub source and its access token | Publishes the note as the release of the version's tag, marking the body so a repeat knows its own work |
+| GitHub Release | The project's own connected GitHub source and its access token | Publishes the note as the release of the version's tag, marking the body so a repeat knows its own work |
 | Slack | An incoming webhook URL, which is the action's secret | Posts the note to the channel in Slack's own mrkdwn, up to 39,000 characters |
 | Email | `RELEASEFLOW_AUTOMATION_EMAIL_FROM` and an SMTP server | Sends the note to between 1 and 100 addresses |
 | Public changelog | Nothing | Publishes the note on your own changelog page and RSS feed |
@@ -133,6 +133,17 @@ own; repeating it asks you to confirm the delivery may happen twice. **Cancel**
 lets the action already on its way record its result and stops the rest.
 
 ![A run whose GitHub Release action failed with github_release_conflict: the actions behind it are pending, with Run again and Cancel](assets/automation/a-7-run-failed.webp)
+
+A GitHub Release action borrows the project's GitHub source, so it depends on that
+source staying connected. A run records the repository of the project's one connected
+GitHub source, or, when none is connected, of its one
+[disconnected](sources.md#disconnect-a-source) one. When the recorded repository's
+source is disconnected, the action fails as `github_source_disconnected` before calling
+anything, and **Run again** succeeds once the same repository is reconnected. Without a
+single repository to record, it fails as `github_source_missing`. Disconnecting never
+disables a rule: the confirmation page lists the enabled rules it leaves without a token,
+and the Automation page marks each one **No GitHub source connected** until the project
+has one again.
 
 ![An action whose outcome is unknown: running it again may deliver twice](assets/automation/a-8-run-unknown.webp)
 

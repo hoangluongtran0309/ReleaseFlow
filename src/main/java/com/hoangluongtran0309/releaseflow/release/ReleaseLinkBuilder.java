@@ -47,7 +47,9 @@ class ReleaseLinkBuilder {
             String previousVersion,
             String upgradeGuideUrl
     ) {
+        // A disconnected repository is history, not the Project's code host (ADR-0042).
         List<IntegrationSourceView> codeHosts = sources.stream()
+                .filter(IntegrationSourceView::connected)
                 .filter(source -> source.type() == SourceType.GITHUB || source.type() == SourceType.GITLAB)
                 .toList();
         String repository = codeHosts.size() == 1 ? repositoryUrl(codeHosts.getFirst()) : null;

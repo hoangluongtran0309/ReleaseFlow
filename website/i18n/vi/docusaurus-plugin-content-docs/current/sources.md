@@ -29,14 +29,18 @@ Lưu secret được trả về ngay lập tức: nó được lưu mã hoá b�
 lại. Tên chủ repository, tên repository và đường dẫn project GitLab được chuẩn hoá về chữ
 thường. Trong một Organization, mỗi repository hoặc project chỉ kết nối được với một Project,
 nhưng các Organization khác nhau có thể kết nối cùng một repository, và cùng một tên trên hai
-nhà cung cấp là hai nguồn riêng biệt. Hiện chưa ngắt kết nối hay thay thế được một nguồn.
+nhà cung cấp là hai nguồn riêng biệt. Một nguồn có thể được
+[ngắt kết nối](#disconnect-a-source) và [kết nối lại](#reconnect-a-source), và webhook secret của
+nó có thể được [đổi](#rotate-a-webhook-secret) mà không đổi đường dẫn.
 
 ![Kết nối một repository GitHub trên trang Projects; webhook secret, chỉ hiện một lần, đã được che](assets/sources/sr-1-connect-github.webp)
 
 Nguồn không tồn tại trả về `404 source_not_found`, và nguồn đã được kết nối trả về
 `409 github_repository_already_connected`, `409 gitlab_project_already_connected`,
-`409 linear_team_already_connected` hoặc `409 jira_project_already_connected`. Thành viên gọi
-endpoint dành cho quản trị viên nhận `403`.
+`409 linear_team_already_connected` hoặc `409 jira_project_already_connected`. Nguồn mà chính
+Project đó đang giữ ở trạng thái ngắt kết nối trả về `409 source_reconnect_required`: kết nối lại
+nó thay vì kết nối mới, như vậy các thay đổi được giữ nguyên. Thành viên gọi endpoint dành cho quản
+trị viên nhận `403`.
 
 ## Nhận webhook từ GitHub {#receive-github-webhooks}
 
@@ -65,7 +69,8 @@ Organization cùng Project từ kết nối, không bao giờ từ payload. Các
 Mỗi pull request đã merge chỉ được lưu một lần cho mỗi repository, nên GitHub gửi lại cũng
 không sao, và hai repository của cùng một Project đều có thể có pull request #12. Trang Project
 hiển thị thời điểm của lần gửi được chấp nhận gần nhất; thời điểm này xuất hiện ngay khi GitHub
-gửi `ping` đầu tiên.
+gửi `ping` đầu tiên, và Change Inbox cùng trang tổng quan cũng hiển thị nó, kèm
+[tình trạng](#source-health) của nguồn.
 
 ![Một nguồn GitHub: webhook path, lần nhận gần nhất và access token đã cấu hình](assets/sources/sr-2-github-source.webp)
 
@@ -95,6 +100,10 @@ Trong project GitLab, mở **Settings → Webhooks → Add new webhook** và nh�
   token**;
 - với **header secret token**: secret đã lưu, dán vào **Secret token**;
 - **Trigger**: *Merge request events*.
+
+GitLab xoá secret token của hook mỗi khi URL của nó thay đổi, nên mỗi lần sửa URL, nhập lại token
+trong cùng lần lưu, hoặc gửi `url` và token cùng nhau qua hooks API (xem
+[Đổi webhook secret](#rotate-a-webhook-secret)).
 
 Signing token là secret được viết theo dạng mà Standard Webhooks, và do đó GitLab, yêu cầu:
 `whsec_` theo sau là Base64 chuẩn, có padding, của 32 byte của secret. Bản thân secret là
@@ -291,19 +300,24 @@ Với GitHub, tạo một fine-grained personal access token chỉ giới hạn 
 **Pull requests: Read-only** (token kiểu classic cần `repo` cho repository private). Với GitLab,
 tạo một project access token với scope `read_api`. Với Linear, tạo một API key đọc được team —
 key này bắt buộc khi kết nối team, vì việc xác nhận nó cũng là cách ReleaseFlow biết workspace.
-Với Jira, API token cũng bắt buộc, và luôn thuộc về email tài khoản đã dùng để kết nối nguồn.
+Với Jira, API token cũng bắt buộc, và thuộc về email tài khoản của nguồn; token mới từ một tài
+khoản khác đi kèm email của tài khoản đó, trong `accountEmail`, và cả hai được xác nhận cùng lúc.
 Quản trị viên nhập token dưới nguồn tương ứng trong thẻ của Project trên trang Project, hoặc
 gọi:
 
 ```text
-PUT /api/projects/{projectId}/sources/{sourceId}/token {"token"}   (administrator; 204)
+PUT /api/projects/{projectId}/sources/{sourceId}/token {"token", "accountEmail"?}   (administrator; 204)
 ```
 
 ReleaseFlow trước hết nhờ nhà cung cấp xác nhận token — GitHub với các pull request của
 repository, GitLab với project, Linear với team (chỉ chấp nhận khi key vẫn truy cập đúng
 workspace cũ), Jira với project — rồi mới lưu nó dưới dạng mã hoá bằng AES-256-GCM. Token không
 bao giờ được trả về; nguồn chỉ báo `accessTokenConfigured` và `accessTokenUpdatedAt`. Gửi token
-mới sẽ thay token cũ. Các lỗi là `400 github_token_rejected`, `400 gitlab_token_rejected`,
+mới sẽ thay token cũ, và đó là cách đổi token: nguồn, đường dẫn và secret giữ nguyên, và token cũ
+không bao giờ được dùng nữa sau khi token mới được lưu, dù một lời gọi đang chạy vẫn hoàn tất với
+nó. ReleaseFlow không thu hồi được token, nên thu hồi token cũ ở phía nhà cung cấp sau khi lưu token
+mới. Không có gì nhắc việc đổi token. Nguồn đã ngắt kết nối không nhận token và trả lời
+`409 source_disconnected`. Các lỗi là `400 github_token_rejected`, `400 gitlab_token_rejected`,
 `400 linear_token_rejected` hoặc `400 jira_token_rejected` khi nhà cung cấp từ chối token;
 `503 github_unavailable`, `503 gitlab_unavailable` hoặc `503 jira_unavailable` khi không kết nối
 được; `404 source_not_found`; và `403` với thành viên.
@@ -368,18 +382,185 @@ Xem thêm [ADR-0017](adr/0017-gitlab-sources.md) về nguồn GitLab,
 [ADR-0019](adr/0019-jira-sources-and-linked-context.md) về việc đọc Jira theo lịch và issue
 liên kết.
 
+## Tình trạng của nguồn {#source-health}
+
+Tình trạng của mỗi nguồn được hiện ở những nơi mọi người hay xem: bảng **Đồng bộ nguồn** của
+Change Inbox, trang tổng quan bên cạnh các con số, trang Projects, và trang riêng của nguồn, mở
+bằng **Quản lý nguồn**. Trong REST, view của một nguồn mang nó trong trường `health`.
+
+- **Lần gửi cuối** — lần gửi gần nhất đã tự chứng minh và được chấp nhận. Lần gửi bị từ chối vì
+  repository, hoặc không đọc được, không được tính.
+- **Bị từ chối vì chữ ký** — số lần gửi tới đường dẫn của nguồn không qua được bước chứng minh kể
+  từ khi webhook secret được đặt lần cuối (`signatureFailureCount`), và thời điểm của lần cuối
+  (`lastSignatureFailureAt`). Chữ ký thiếu hoặc sai, mốc thời gian quá cũ, và một workspace Linear
+  khác đều được tính. Không có gì khác về lần gửi bị từ chối được giữ lại: không body, không
+  header, không secret, không nơi gửi. Số đếm bắt đầu lại mỗi khi secret được đặt, nên sau khi
+  [đổi secret](#rotate-a-webhook-secret) nó cho biết nhà cung cấp còn ký bằng secret cũ bao nhiêu
+  lần.
+- **Im lặng** — một nguồn đang kết nối và nhận webhook được coi là im lặng khi không có gì đến
+  trong khoảng thời gian dài hơn mức thường lệ của nó. Khoảng thường lệ là phân vị thứ 90 của các
+  khoảng cách giữa những thay đổi nó nhận qua webhook trong 90 ngày gần nhất, không bao giờ dưới
+  một giờ (`usualGapHours`); nguồn có ít hơn mười khoảng cách như vậy chưa có nhịp và không bao
+  giờ bị đánh dấu. Mỗi nguồn được so với chính nó, nên nguồn ít dùng không bị đánh dấu chỉ vì ít
+  dùng, còn một địa chỉ webhook chết, vốn làm mọi nguồn phía sau nó im lặng cùng lúc, sẽ lộ ra ở
+  những nguồn bận rộn. Với một địa chỉ chết, sự im lặng là tất cả những gì ReleaseFlow thấy được:
+  không có gì đến cả.
+- **Quá hạn** — một nguồn Jira có lần đọc tiếp theo đã trễ hơn một chu kỳ đọc. Một lần đọc không
+  tìm thấy gì vẫn là thành công, nên nguồn Jira không bao giờ bị coi là im lặng.
+
+Tình trạng là bằng chứng trên một trang. Không có gì tính nó theo lịch, không có gì được gửi đi,
+và nó không bao giờ dừng một nguồn, một release hay một quy tắc. ReleaseFlow không giới hạn tần
+suất yêu cầu đến, nên việc đếm được giới hạn theo cách khác: lần gửi bị từ chối đầu tiên của một
+nguồn được ghi ngay, các lần sau được cộng dồn trong bộ nhớ và ghi khoảng mỗi giây một lần, một
+lần cập nhật dòng cho mỗi nguồn dù có bao nhiêu lần gửi. Xem
+[Vận hành](operations.md#deploying-to-production) để giới hạn `/webhooks/**` ở proxy.
+
+## Đổi webhook secret {#rotate-a-webhook-secret}
+
+Webhook secret của một nguồn có thể được thay mà không đổi đường dẫn, từ **Quản lý nguồn** hoặc
+qua REST. **Secret cũ ngừng hoạt động ngay khi secret mới được lưu**: secret được đổi vì có thể
+người khác đã biết nó, và trong lúc cả hai secret cùng dùng được, người giữ secret cũ vẫn có thể
+đưa một pull request tuỳ ý vào Change Inbox. Vì vậy cập nhật phía nhà cung cấp ngay sau đó, và
+gửi lại những gì nó bị từ chối trong khoảng giữa.
+
+```text
+POST /api/projects/{projectId}/sources/{sourceId}/webhook-secret                    (administrator; 200, chỉ hiện một lần)
+PUT  /api/projects/{projectId}/sources/{sourceId}/webhook-secret {"webhookSecret"}  (administrator; 204)
+```
+
+`POST` sinh secret, cho GitHub và GitLab, và trả về nó một lần cùng đường dẫn webhook, trong một
+response `no-store`; với nguồn GitLab dùng header có chữ ký, nó trả về thêm `signingToken`. `PUT`
+lưu secret do nhà cung cấp tạo — signing secret của Linear, hoặc signing token mà GitLab sinh cho
+một nguồn có chữ ký, phải là `whsec_` theo sau là Base64 (nếu không thì
+`400 source_signing_token_invalid`) — và không bao giờ trả lại nó. Nguồn mà ReleaseFlow tạo
+secret trả lời `PUT` bằng `409 source_secret_generated`, Linear trả lời `POST` bằng
+`409 source_secret_pasted`, và Jira, vốn không có webhook, trả lời cả hai bằng
+`409 source_has_no_webhook`. Việc đổi secret không gọi nhà cung cấp nào.
+
+**GitHub.** Trong **Settings → Webhooks** của repository, sửa hook, dán secret mới vào
+**Secret**, rồi chọn **Update webhook**; payload URL không đổi. GitHub không bao giờ tự gửi lại
+một lần gửi bị từ chối: mở **Recent deliveries** của hook và **Redeliver** từng lần bị từ chối kể
+từ lúc đổi, GitHub cho phép làm vậy trong ba ngày. Một lần [import lịch sử](#history-import) cũng
+đọc được khoảng trống đó, và không thêm gì hai lần.
+
+**GitLab, header có chữ ký.** Hoặc gửi token của ReleaseFlow qua hooks API của GitLab, URL và
+token cùng trong một request, như trang hiển thị:
+
+```text
+PUT https://gitlab.example.com/api/v4/projects/<project-id>/hooks/<hook-id>
+PRIVATE-TOKEN: <token có quyền sửa hook>
+Content-Type: application/json
+
+{"url": "https://releaseflow.example.com/webhooks/gitlab/<webhook-id>", "signing_token": "whsec_…"}
+```
+
+hoặc chọn **Generate signing token** trên hook trong GitLab rồi dán token mà GitLab hiển thị một
+lần vào trang của nguồn. ReleaseFlow không bao giờ tự gửi request này: nó không giữ token nào có
+quyền sửa hook.
+
+**GitLab, header secret token.** Trong **Settings → Webhooks** của project, sửa hook, dán secret
+vào **Secret token**, rồi lưu; qua hooks API, gửi `url` và `token` trong cùng một request.
+
+**GitLab, cả hai chế độ.** GitLab xoá secret token của hook mỗi khi URL của nó thay đổi, một bản
+sửa bảo mật của chính GitLab
+([gitlab-org/gitlab#382260](https://gitlab.com/gitlab-org/gitlab/-/issues/382260); cảnh báo trong
+form có từ [!139865](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/139865)). Signing token
+của nó lại hành xử khác trên lab dbvault, nơi một lần chỉ sửa URL qua hooks API vẫn giữ nguyên nó,
+nhưng đừng dựa vào sự khác biệt này: mỗi khi đổi URL — chẳng hạn một địa chỉ tunnel mới — nhập
+lại token trong cùng lần lưu. Token đã bị xoá thì chỉ thay được bằng cách đổi secret một lần nữa,
+vì ReleaseFlow chỉ hiện nó một lần. Sau đó mở **Recent events** của hook và **Resend Request** từng
+sự kiện bị từ chối kể từ lúc đó; GitLab giữ chúng trong hai ngày. GitLab tắt một hook thất bại bốn
+lần liên tiếp, nên nếu điều đó đã xảy ra, bật lại hook.
+
+**Linear.** Linear không mô tả cách nào để sinh lại signing secret của một webhook, nên tạo
+webhook mới: trong **Settings → API → Webhooks**, tạo webhook thứ hai với cùng URL và sự kiện
+**Issues**, chép signing secret của nó từ trang chi tiết, dán vào trang của nguồn, rồi xoá webhook
+cũ. Cho đến lúc đó cả hai webhook đều gửi mọi sự kiện; một bản được xác minh trước khi dán và bản
+kia sau khi dán, và mỗi issue chỉ được ghi một lần, nên không bỏ sót gì. Các bản thất bại được đếm
+là lỗi chữ ký, và Linear thử lại một lần gửi bị từ chối ba lần, lần cuối khoảng sáu giờ sau.
+
+## Ngắt kết nối một nguồn {#disconnect-a-source}
+
+Quản trị viên ngắt kết nối một nguồn từ **Quản lý nguồn → Xem lại và ngắt kết nối**, nơi trước
+hết cho biết điều gì sẽ xảy ra, hoặc qua REST:
+
+```text
+POST /api/projects/{projectId}/sources/{sourceId}/disconnect   (administrator; 200)
+```
+
+- **Mọi thay đổi nguồn đã ghi được giữ nguyên**, cùng review, release, release note và bằng chứng
+  của chúng, và Change Inbox vẫn liệt kê chúng.
+- **Webhook secret và access token của nguồn bị huỷ**, cùng định danh webhook và lịch đọc. Đường
+  dẫn webhook khi đó trả lời `401 webhook_signature_invalid`, giống hệt một đường dẫn chưa từng
+  tồn tại, và không ghi lại gì.
+- **Import và các lần đọc dừng lại.** Lần import hoặc lần đọc đang chờ kết thúc với
+  `source_disconnected`; lần đang chạy dừng trước trang kế tiếp. Thay đổi đang được xử lý được
+  hoàn tất như thể nguồn không có token, nên không có danh sách tệp và cần review.
+- **Không còn gì mượn nó.** Issue liên kết, đường dẫn so sánh và release trong release note, bước
+  tiếp theo của trang tổng quan, và [action GitHub Release](automation.md#actions) chỉ tính các
+  nguồn đang kết nối. Trang xác nhận nêu tên các quy tắc đang bật mà action GitHub Release của
+  chúng sẽ thất bại; các quy tắc vẫn được bật, và action của chúng thất bại với
+  `github_source_disconnected` cho đến khi repository được kết nối lại.
+
+ReleaseFlow không gọi gì ở phía nhà cung cấp. Xoá webhook và thu hồi token ở đó: các bản cũ
+của giá trị đã mã hoá vẫn nằm trong lịch sử và bản sao lưu của cơ sở dữ liệu cho đến khi chúng hết
+hạn, và chúng vô dụng nếu không có master key, nhưng việc thu hồi phía nhà cung cấp mới là điều
+làm một token bị lộ trở nên vô hại. Ngắt kết nối một nguồn đã ngắt kết nối, đặt token hay secret
+cho nó, hoặc import vào nó đều trả lời `409 source_disconnected`.
+
+## Kết nối lại một nguồn {#reconnect-a-source}
+
+Nguồn đã ngắt kết nối quay lại với chính ID của nó, từ **Kết nối lại nguồn** trên trang Projects
+hoặc qua REST, nên ReleaseFlow vẫn nhận ra mọi thay đổi nó đã ghi: một lần import sau khi kết nối
+lại chỉ ghi những gì mới, và một pull request được gửi lại là `duplicate`.
+
+```text
+POST /api/projects/{projectId}/sources/{sourceId}/reconnect {"token"?, "webhookSecret"?, "accountEmail"?}   (administrator; 200)
+```
+
+Kết nối lại không bao giờ thay đổi bản chất của nguồn — loại, repository hay project, instance,
+workspace và Project đều giữ nguyên — nên nó chỉ nhận những gì việc kết nối loại đó cần thêm:
+
+| Loại | Body | Nhận lại |
+| --- | --- | --- |
+| GitHub | `token` tuỳ chọn | Đường dẫn webhook và secret mới, **chỉ hiện một lần** |
+| GitLab | `token` tuỳ chọn; với header có chữ ký, tuỳ chọn một `webhookSecret` do GitLab sinh | Đường dẫn webhook mới, và secret chỉ hiện một lần nếu không dán vào |
+| Linear | `webhookSecret` từ một webhook Linear mới, và `token` | Đường dẫn webhook mới; team phải vẫn ở cùng workspace |
+| Jira | `accountEmail` và `token` | Không có gì bí mật; lần đọc tiếp theo là một chu kỳ sau |
+
+Đường dẫn webhook mới nghĩa là một hook chưa ai cập nhật vẫn chết, nên trỏ hook của nhà cung
+cấp tới đường dẫn mới với secret mới. Thiếu thông tin xác thực trả lời
+`400 source_credential_required` kèm `field`; kết nối lại một nguồn đang kết nối trả lời
+`409 source_not_disconnected`. Nguồn Jira được kết nối lại sẽ đọc, ở lần đọc đầu tiên, những gì đã
+hoàn thành trong thời gian ngắt kết nối, tối đa 90 ngày trước; với GitHub và GitLab, chạy
+[import lịch sử](#history-import) để lấy những gì đã merge trong khoảng đó.
+
+Kết nối lại cùng key trong cùng Project bằng form kết nối bị từ chối với
+`409 source_reconnect_required`, vì một nguồn thứ hai sẽ là một định danh thứ hai và lần import
+của nó sẽ ghi lại mọi thay đổi. Khi một nguồn đã ngắt kết nối, một Project *khác* có thể kết nối
+cùng repository, như một nguồn mới với bản ghi riêng; Project đầu giữ các thay đổi của mình, và
+không kết nối lại được khi Project kia đang giữ nó (`409 github_repository_already_connected` và
+tương tự). Một repository bị đổi tên hoặc chuyển chỗ cũng là một nguồn mới: ReleaseFlow không
+chứng minh được hai tên là một repository, nên lần import của nó ghi lại các pull request của tên
+cũ thành thay đổi mới, để bước kiểm tra trùng lặp và [loại trừ](changes.md#excluding-a-change-from-releases)
+xử lý. Repository GitHub bị đổi tên tự lộ ra: các lần gửi của nó bị từ chối với
+`webhook_repository_mismatch`, nên nguồn cũ trở nên im lặng. Xem
+[ADR-0042](adr/0042-source-lifecycle-and-health.md).
+
 ## ReleaseFlow gọi gì tới mỗi nhà cung cấp {#what-releaseflow-asks-each-provider}
 
 Kết nối một nguồn GitHub hoặc GitLab không gọi gì cả; repository chưa được kiểm tra cho tới khi
-lưu token. Sau đó, mọi lời gọi đều diễn ra bên ngoài request webhook, trong một worker chạy nền,
+lưu token, và kết nối lại chỉ thực hiện cùng bước kiểm tra token đó khi có token. Ngắt kết nối,
+đổi webhook secret, đếm các lần gửi bị từ chối và hiển thị tình trạng không gọi nhà cung cấp nào,
+và không gửi gì tới nhà cung cấp AI hay DeepL. Sau đó, mọi lời gọi đều diễn ra bên ngoài request webhook, trong một worker chạy nền,
 hoặc khi quản trị viên lưu token:
 
 | Nhà cung cấp | Các lời gọi |
 | --- | --- |
 | GitHub | Xác nhận token với các pull request của repository; liệt kê tệp thay đổi của một pull request đã merge và, khi Project có nguồn Jira hoặc Linear, tối đa 250 commit message của nó; đọc các pull request đã đóng khi import lịch sử; đọc và tạo release cho một [action GitHub Release](automation.md#actions) |
 | GitLab | Xác nhận token với project; liệt kê diff của một merge request và, khi Project có nguồn Jira hoặc Linear, các commit message của nó; đọc các merge request đã merge khi import lịch sử |
-| Linear | Xác nhận API key và biết workspace và key của team khi kết nối team; đọc lại một issue đã hoàn thành; đọc các issue mà một thay đổi mã nguồn nhắc tới, và đọc lại khi một release được yêu cầu review |
-| Jira | Xác nhận project khi kết nối; tìm các issue vừa chuyển sang Done ở mỗi lượt đọc; đọc các issue mà một thay đổi mã nguồn nhắc tới, và đọc lại khi một release được yêu cầu review |
+| Linear | Xác nhận API key và biết workspace và key của team khi kết nối team; xác nhận lại key, và rằng nó vẫn tới đúng workspace, khi kết nối lại team; đọc lại một issue đã hoàn thành; đọc các issue mà một thay đổi mã nguồn nhắc tới, và đọc lại khi một release được yêu cầu review |
+| Jira | Xác nhận project khi kết nối, kết nối lại, hoặc nhận token mới; tìm các issue vừa chuyển sang Done ở mỗi lượt đọc; đọc các issue mà một thay đổi mã nguồn nhắc tới, và đọc lại khi một release được yêu cầu review |
 
 Thời gian chờ, địa chỉ API và chu kỳ đọc theo lịch được liệt kê trong
 [Cấu hình](configuration.md#sources).

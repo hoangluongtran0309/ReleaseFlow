@@ -115,6 +115,12 @@ trạng thái hợp lệ trả về `400 invalid_change_filter`, và Project c�
 `404 project_not_found`. Mỗi thay đổi trả về mã `category` cùng `categoryName` và
 `categoryGroup`, đúng như lúc nó được phân loại.
 
+Bảng **Đồng bộ nguồn** phía trên các thay đổi liệt kê mọi nguồn của Project cùng
+[tình trạng](sources.md#source-health) của chúng — lần gửi hoặc lần đọc cuối, các lần gửi bị từ
+chối vì chữ ký kể từ khi secret được đặt, và dấu **Im lặng**, **Quá hạn** hoặc **Đã ngắt kết
+nối** — bên cạnh [import lịch sử](sources.md#history-import) của mỗi nguồn có lịch sử. Các thay
+đổi của một nguồn đã ngắt kết nối vẫn nằm trong hộp.
+
 ![Change Inbox với các bộ lọc, trạng thái đồng bộ của nguồn Jira, GitHub và GitLab, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
 
 ![Lọc Change Inbox để chỉ còn các thay đổi bị đánh giá là thiếu context](assets/changes/c-4-context-filter.webp)

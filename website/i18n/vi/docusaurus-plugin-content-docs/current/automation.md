@@ -33,7 +33,7 @@ trước khi quy tắc nào lưu nó.
 Viết quy tắc trước; quy tắc mới luôn ở trạng thái tắt. Bật nó là lúc ReleaseFlow kiểm tra rằng
 các lần gửi có thể thực hiện được: project và mọi audience thuộc Organization của bạn, ngôn ngữ
 là một ngôn ngữ Organization của bạn viết release note, project của action GitHub Release có
-đúng một nguồn GitHub, hệ thống triển khai có khả năng thực hiện action đó, và cấu hình cùng
+đúng một nguồn GitHub đang kết nối, hệ thống triển khai có khả năng thực hiện action đó, và cấu hình cùng
 secret đều dùng được. Một quy tắc bị từ chối sẽ cho biết điều nào trong số đó không đạt.
 
 ## Action {#actions}
@@ -42,7 +42,7 @@ Có tám loại action:
 
 | Action | Cần gì | Làm gì |
 | --- | --- | --- |
-| GitHub Release | Nguồn GitHub của chính project và access token của nó | Publish release note làm nội dung release của tag phiên bản, có đánh dấu trong body để lần lặp lại nhận ra phần việc của chính nó |
+| GitHub Release | Nguồn GitHub đang kết nối của chính project và access token của nó | Publish release note làm nội dung release của tag phiên bản, có đánh dấu trong body để lần lặp lại nhận ra phần việc của chính nó |
 | Slack | Một incoming webhook URL, cũng là secret của action | Đăng release note vào channel bằng định dạng mrkdwn của Slack, tối đa 39.000 ký tự |
 | Email | `RELEASEFLOW_AUTOMATION_EMAIL_FROM` và một SMTP server | Gửi release note tới từ 1 đến 100 địa chỉ |
 | Changelog công khai | Không cần gì | Publish release note trên trang changelog và RSS feed của chính bạn |
@@ -128,6 +128,16 @@ giờ tự gửi lại; lặp lại nó sẽ yêu cầu bạn xác nhận rằng
 để action đang thực hiện ghi lại kết quả của nó và dừng các action còn lại.
 
 ![Một lần chạy có action GitHub Release thất bại với github_release_conflict: các action sau nó đang chờ, cùng nút chạy lại và huỷ](assets/automation/a-7-run-failed.webp)
+
+Action GitHub Release mượn nguồn GitHub của project, nên nó phụ thuộc vào việc nguồn đó còn kết
+nối. Một lần chạy ghi lại repository của nguồn GitHub đang kết nối duy nhất của project, hoặc,
+khi không có nguồn nào đang kết nối, của nguồn duy nhất đã
+[ngắt kết nối](sources.md#disconnect-a-source). Khi nguồn của repository đã ghi bị ngắt kết nối,
+action thất bại với `github_source_disconnected` trước khi gọi bất cứ thứ gì, và **chạy lại** sẽ
+thành công khi cùng repository đó được kết nối lại. Không có một repository duy nhất để ghi thì
+nó thất bại với `github_source_missing`. Ngắt kết nối không bao giờ tắt một quy tắc: trang xác
+nhận liệt kê các quy tắc đang bật mà nó để lại không có token, và trang Automation đánh dấu từng
+quy tắc **Chưa kết nối nguồn GitHub** cho tới khi project có lại một nguồn.
 
 ![Một action không rõ kết quả: chạy lại có thể gửi hai lần](assets/automation/a-8-run-unknown.webp)
 

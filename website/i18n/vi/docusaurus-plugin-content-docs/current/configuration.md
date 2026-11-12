@@ -44,12 +44,15 @@ Không bao giờ commit hay chia sẻ các giá trị này.
 | `RELEASEFLOW_LINEAR_TIMEOUT` | `PT5S` | Thời gian chờ kết nối và đọc với Linear |
 | `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` | `PT60S` | Một lần gửi có chữ ký từ Linear được phép cũ tới mức nào |
 | `RELEASEFLOW_JIRA_TIMEOUT` | `PT10S` | Thời gian chờ kết nối và đọc với Jira |
-| `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | Bao lâu đọc mỗi project Jira một lần |
+| `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | Bao lâu đọc mỗi project Jira một lần; nguồn có lần đọc tiếp theo trễ hơn một chu kỳ được hiển thị là [quá hạn](sources.md#source-health) |
 | `RELEASEFLOW_JIRA_POLL_OVERLAP` | `PT10M` | Mỗi lượt đọc lùi lại bao xa so với lượt đọc trước |
 | `RELEASEFLOW_JIRA_DESCRIPTION_MAX_CHARACTERS` | `8000` | Độ dài tối đa của mô tả Jira được giữ làm bằng chứng |
 | `RELEASEFLOW_JIRA_API_BASE_URL` | (trống) | Chỉ để thử nghiệm cục bộ: gửi mọi lời gọi Jira tới đây thay vì site của chính nguồn |
 
-Xem [Nguồn](sources.md).
+Xem [Nguồn](sources.md). [Tình trạng](sources.md#source-health) của một nguồn không có thiết
+lập riêng: nguồn im lặng được đo trong 90 ngày theo phân vị thứ 90 của các khoảng cách, không
+bao giờ dưới một giờ và chỉ khi đã có mười khoảng cách, và các lần gửi bị từ chối được ghi khoảng
+mỗi giây một lần ([ADR-0042](adr/0042-source-lifecycle-and-health.md)).
 
 ## Phân loại {#classification}
 

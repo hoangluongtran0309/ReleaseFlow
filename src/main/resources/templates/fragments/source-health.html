@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  A source's health, inline, for a row that already names the source (ADR-0042). `source` is
+  anything with type, lastDeliveryAt, lastSyncAt, nextPollAt, and health: a source view or a
+  sync view. It is evidence: it says what was seen and never what to conclude.
+*/-->
+<th:block th:fragment="summary(source)" th:with="health=${source.health}, polled=${source.type.isPolled()}">
+    <th:block th:if="${health.connected and !polled}">
+        <span class="text-sm text-slate-600" th:if="${source.lastDeliveryAt != null}">
+            <span th:text="#{ui.sourceHealth.lastDelivery}">last delivery</span>
+            <time th:datetime="${source.lastDeliveryAt}"
+                  th:text="|${#temporals.format(source.lastDeliveryAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">1 Nov 2026, 02:30 UTC</time>
+        </span>
+        <span class="text-sm text-slate-600" th:unless="${source.lastDeliveryAt != null}"
+              th:text="#{ui.sourceHealth.noDelivery}">no verified delivery yet</span>
+    </th:block>
+    <th:block th:replace="~{fragments/source-health :: flags(${source})}"></th:block>
+</th:block>
+
+<!--/* Only what needs a person's eye, for a page that already shows the last delivery. */-->
+<th:block th:fragment="flags(source)" th:with="health=${source.health}, polled=${source.type.isPolled()}">
+    <th:block th:unless="${health.connected}">
+        <span class="badge badge-sm badge-ghost" th:text="#{ui.sourceHealth.disconnected}">Disconnected</span>
+        <span class="text-sm text-slate-600">
+            <span th:text="#{ui.sourceHealth.disconnectedOn}">on</span>
+            <time th:datetime="${health.disconnectedAt}"
+                  th:text="|${#temporals.format(health.disconnectedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">1 Nov 2026, 15:40 UTC</time>
+        </span>
+    </th:block>
+    <th:block th:if="${health.connected and !polled}">
+        <th:block th:if="${health.quiet}">
+            <span class="badge badge-sm badge-warning badge-soft" th:text="#{ui.sourceHealth.quiet}">Quiet</span>
+            <span class="text-sm text-amber-800"
+                  th:text="#{ui.sourceHealth.quietCopy(${health.usualGapHours})}">Nothing has arrived for longer than this source usually goes, about 6 hours.</span>
+        </th:block>
+        <span class="text-sm text-red-700" th:if="${health.signatureFailureCount > 0}">
+            <span th:text="#{ui.sourceHealth.signatureFailures(${health.signatureFailureCount})}">3 deliveries refused for their signature since the secret was set</span><span
+                th:text="#{ui.sourceHealth.lastFailure}">, the last at</span>
+            <time th:datetime="${health.lastSignatureFailureAt}"
+                  th:text="|${#temporals.format(health.lastSignatureFailureAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">1 Nov 2026, 14:02 UTC</time>
+        </span>
+    </th:block>
+    <th:block th:if="${health.connected and polled and health.overdue}">
+        <span class="badge badge-sm badge-warning badge-soft" th:text="#{ui.sourceHealth.overdue}">Overdue</span>
+        <span class="text-sm text-amber-800" th:text="#{ui.sourceHealth.overdueCopy}">The next read is more than one interval late.</span>
+    </th:block>
+</th:block>
+</body>
+</html>

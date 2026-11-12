@@ -64,6 +64,9 @@
                     <td th:data-heading="#{ui.automation.column.status}">
                         <span class="badge badge-sm whitespace-nowrap badge-success badge-soft" th:if="${rule.enabled}" th:text="#{ui.automation.enabledBadge}">Enabled</span>
                         <span class="badge badge-sm whitespace-nowrap badge-ghost" th:unless="${rule.enabled}" th:text="#{ui.automation.disabledBadge}">Disabled</span>
+                        <!--/* Its GitHub Release action has no connected source to borrow (ADR-0042). */-->
+                        <span class="badge badge-sm whitespace-nowrap badge-warning badge-soft" th:if="${rule.gitHubSourceMissing}"
+                              th:id="|rule-${rule.id}-github-missing|" th:text="#{ui.automation.gitHubSourceMissing}">No GitHub source connected</span>
                     </td>
                     <td th:data-heading="#{ui.automation.column.manage}">
                         <div class="flex flex-wrap justify-end gap-2">

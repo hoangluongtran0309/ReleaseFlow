@@ -131,9 +131,11 @@ nhập; **quản trị viên** cần một quản trị viên.
 | Phương thức và đường dẫn | Vai trò |
 | --- | --- |
 | `GET /api/projects`, `POST /api/projects` | thành viên |
-| `GET /api/projects/{projectId}/sources` | thành viên |
+| `GET /api/projects/{projectId}/sources`, `GET /api/projects/{projectId}/sources/{sourceId}` | thành viên |
 | `POST /api/projects/{projectId}/sources` | quản trị viên |
 | `PUT /api/projects/{projectId}/sources/{sourceId}/token` | quản trị viên |
+| `POST /api/projects/{projectId}/sources/{sourceId}/webhook-secret`, `PUT /api/projects/{projectId}/sources/{sourceId}/webhook-secret` | quản trị viên |
+| `POST /api/projects/{projectId}/sources/{sourceId}/disconnect`, `POST /api/projects/{projectId}/sources/{sourceId}/reconnect` | quản trị viên |
 | `GET /api/projects/{projectId}/imports` | thành viên |
 | `POST /api/projects/{projectId}/sources/{sourceId}/imports` | quản trị viên |
 | `POST /api/projects/{projectId}/sources/{sourceId}/imports/resume` | quản trị viên |
@@ -234,9 +236,9 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Tài khoản | `400` | `output_language_invalid`, `ui_locale_invalid`, `invitation_invalid`, `organization_slug_invalid` |
 | Tài khoản | `404` | `invitation_not_found` |
 | Tài khoản | `409` | `email_already_registered`, `invitation_already_pending`, `invitation_email_unavailable`, `organization_slug_taken` |
-| Nguồn | `400` | `gitlab_base_url_invalid`, `gitlab_host_not_allowed`, `jira_site_invalid`, `github_token_rejected`, `gitlab_token_rejected`, `linear_token_rejected`, `jira_token_rejected` |
+| Nguồn | `400` | `gitlab_base_url_invalid`, `gitlab_host_not_allowed`, `jira_site_invalid`, `github_token_rejected`, `gitlab_token_rejected`, `linear_token_rejected`, `jira_token_rejected`, `source_credential_required`, `source_signing_token_invalid` |
 | Nguồn | `404` | `project_not_found`, `source_not_found` |
-| Nguồn | `409` | `github_repository_already_connected`, `gitlab_project_already_connected`, `linear_team_already_connected`, `jira_project_already_connected`, `source_token_missing`, `source_sync_in_progress`, `source_import_not_supported`, `source_import_not_resumable` |
+| Nguồn | `409` | `github_repository_already_connected`, `gitlab_project_already_connected`, `linear_team_already_connected`, `jira_project_already_connected`, `source_token_missing`, `source_sync_in_progress`, `source_import_not_supported`, `source_import_not_resumable`, `source_disconnected`, `source_not_disconnected`, `source_reconnect_required`, `source_has_no_webhook`, `source_secret_generated`, `source_secret_pasted` |
 | Nguồn | `503` | `github_unavailable`, `gitlab_unavailable`, `jira_unavailable` |
 | Webhook | `400` | `webhook_payload_malformed` |
 | Webhook | `401` | `webhook_signature_invalid` |

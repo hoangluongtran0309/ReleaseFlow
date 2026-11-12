@@ -7,6 +7,7 @@ import com.hoangluongtran0309.releaseflow.audience.ReleaseLanguageService;
 import com.hoangluongtran0309.releaseflow.project.ProjectNotFoundException;
 import com.hoangluongtran0309.releaseflow.project.ProjectService;
 import com.hoangluongtran0309.releaseflow.project.SourceAccess;
+import com.hoangluongtran0309.releaseflow.project.SourceTokenBorrowers;
 import com.hoangluongtran0309.releaseflow.release.ReleaseAccess;
 import com.hoangluongtran0309.releaseflow.release.ReleaseStatus;
 import com.hoangluongtran0309.releaseflow.source.SourceType;
@@ -38,7 +39,7 @@ import java.util.stream.Collectors;
  * behind, so a rule that was turned off never delivers afterwards.
  */
 @Service
-public class AutomationRuleService {
+public class AutomationRuleService implements SourceTokenBorrowers {
 
     private static final String NAME_CONSTRAINT = "automation_rules_name_unique";
     private static final String WEBHOOK_PATH_PREFIX = "/webhooks/automation/";
@@ -108,19 +109,58 @@ public class AutomationRuleService {
         Map<UUID, String> audiences = audienceNames(organizationId);
         Map<UUID, String> projects = projectNames(organizationId);
         return rules.stream()
-                .map(rule -> view(rule, byRule.getOrDefault(rule.getId(), List.of()), audiences, projects))
+                .map(rule -> {
+                    List<AutomationRuleAction> actions = byRule.getOrDefault(rule.getId(), List.of());
+                    return view(rule, actions, audiences, projects, gitHubSourceMissing(organizationId, rule, actions));
+                })
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public AutomationRuleView get(UUID organizationId, UUID ruleId) {
         AutomationRule rule = find(organizationId, ruleId);
+        List<AutomationRuleAction> actions = actionRepository.findAllByRuleIdOrderByPositionAsc(rule.getId());
         return view(
                 rule,
-                actionRepository.findAllByRuleIdOrderByPositionAsc(rule.getId()),
+                actions,
                 audienceNames(organizationId),
-                projectNames(organizationId)
+                projectNames(organizationId),
+                gitHubSourceMissing(organizationId, rule, actions)
         );
+    }
+
+    /**
+     * The enabled rules a publication in this Project runs that have a GitHub Release action,
+     * which borrows the Project's GitHub source: those of the Project and those that watch
+     * every Project.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> enabledGitHubReleaseRules(UUID organizationId, UUID projectId) {
+        List<AutomationRule> rules = ruleRepository.findAllByOrganizationIdAndActiveTrueOrderByNameAsc(organizationId)
+                .stream()
+                .filter(AutomationRule::isEnabled)
+                .filter(rule -> rule.getProjectId() == null || rule.getProjectId().equals(projectId))
+                .toList();
+        if (rules.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> borrowing = actionRepository
+                .findAllByRuleIdInOrderByRuleIdAscPositionAsc(rules.stream().map(AutomationRule::getId).toList())
+                .stream()
+                .filter(action -> action.getActionType() == ActionType.GITHUB_RELEASE)
+                .map(AutomationRuleAction::getRuleId)
+                .collect(Collectors.toSet());
+        return rules.stream().filter(rule -> borrowing.contains(rule.getId())).map(AutomationRule::getName).toList();
+    }
+
+    // An enabled rule of one Project whose GitHub Release action has no connected source to
+    // borrow fails when it runs, so its page says so until one is connected (ADR-0042).
+    private boolean gitHubSourceMissing(UUID organizationId, AutomationRule rule, List<AutomationRuleAction> actions) {
+        return rule.isEnabled()
+                && rule.getProjectId() != null
+                && actions.stream().anyMatch(action -> action.getActionType() == ActionType.GITHUB_RELEASE)
+                && !sourceAccess.hasSole(organizationId, rule.getProjectId(), SourceType.GITHUB);
     }
 
     /**
@@ -573,7 +613,8 @@ public class AutomationRuleService {
             AutomationRule rule,
             List<AutomationRuleAction> actions,
             Map<UUID, String> audiences,
-            Map<UUID, String> projects
+            Map<UUID, String> projects,
+            boolean gitHubSourceMissing
     ) {
         return new AutomationRuleView(
                 rule.getId(),
@@ -613,7 +654,8 @@ public class AutomationRuleService {
                                 action.getConfiguration().get(ZendeskTenant.USER_SEGMENT_KEY),
                                 action.hasSecret()
                         ))
-                        .toList()
+                        .toList(),
+                gitHubSourceMissing
         );
     }
 

@@ -85,7 +85,12 @@ unfinished, in a fixed order: create a project, connect a source, wait for the
 first change, collect changes into a release, finish a review, publish an approved
 release, continue a draft, or nothing waiting. A workspace with an open draft and
 no changes at all is still waiting for its first change, because there is nothing
-to put in the draft.
+to put in the draft. A disconnected source does not count as connected.
+
+Beside the figures, the overview lists the Project's sources with their
+[health](sources.md#source-health): each one's last delivery or last read, deliveries
+refused for their signature, and whether it is quiet, overdue, or disconnected. It is
+information, never a step, so it changes nothing about which step is offered.
 
 ![The overview of a new Project: every counter at zero, and the next step is to connect a source](assets/workspace/w-5a-connect-a-source.webp)
 

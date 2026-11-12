@@ -11,7 +11,7 @@ they describe.
 | ADR | Decision | Status | Date | Relations |
 | --- | --- | --- | --- | --- |
 | [0001](0001-shared-schema-tenant-isolation.md) | Shared-schema tenant isolation | Accepted | 2026-09-09 | |
-| [0002](0002-per-integration-webhook-credentials.md) | Per-integration webhook credentials | Accepted | 2026-09-10 | |
+| [0002](0002-per-integration-webhook-credentials.md) | Per-integration webhook credentials | Accepted | 2026-09-10 | Amended by [0042](0042-source-lifecycle-and-health.md) (rotation and replacement) |
 | [0003](0003-frontend-toolchain.md) | Tailwind, DaisyUI, and Alpine for server-rendered pages | Accepted | 2026-09-10 | Amended by [0028](0028-parity-ui-and-browser-tests.md) (browser tests) |
 | [0004](0004-openai-classification-as-reviewed-suggestion.md) | OpenAI classification as a reviewed suggestion | Superseded | 2026-09-11 | Superseded by [0009](0009-automatic-ai-classification.md) |
 | [0005](0005-immutable-release-note-snapshots.md) | Immutable Release Note snapshots | Accepted | 2026-09-11 | |
@@ -25,10 +25,10 @@ they describe.
 | [0013](0013-context-sufficiency-and-duplicates.md) | Context sufficiency and possible duplicates | Accepted | 2026-09-15 | |
 | [0014](0014-project-sensitive-paths.md) | Sensitive paths per Project | Accepted | 2026-09-15 | |
 | [0015](0015-multilingual-release-notes.md) | Release notes in several languages | Accepted | 2026-09-15 | Amended by [0036](0036-translation-glossary.md) (a glossary for translations) |
-| [0016](0016-integration-sources-and-history-import.md) | Integration sources and history import | Accepted | 2026-09-15 | |
-| [0017](0017-gitlab-sources.md) | GitLab sources and provider seams | Accepted | 2026-09-16 | |
-| [0018](0018-linear-sources.md) | Linear sources | Accepted | 2026-09-16 | |
-| [0019](0019-jira-sources-and-linked-context.md) | Jira sources and linked context | Accepted | 2026-09-17 | Amended by [0041](0041-linked-context-and-folding.md) (branch and Linear keys, status at review) |
+| [0016](0016-integration-sources-and-history-import.md) | Integration sources and history import | Accepted | 2026-09-15 | Amended by [0042](0042-source-lifecycle-and-health.md) (a key held per Project, imports of a disconnected source) |
+| [0017](0017-gitlab-sources.md) | GitLab sources and provider seams | Accepted | 2026-09-16 | Amended by [0042](0042-source-lifecycle-and-health.md) (rotating a GitLab secret) |
+| [0018](0018-linear-sources.md) | Linear sources | Accepted | 2026-09-16 | Amended by [0042](0042-source-lifecycle-and-health.md) (rotating a Linear secret) |
+| [0019](0019-jira-sources-and-linked-context.md) | Jira sources and linked context | Accepted | 2026-09-17 | Amended by [0041](0041-linked-context-and-folding.md) (branch and Linear keys, status at review); amended by [0042](0042-source-lifecycle-and-health.md) (polls of a disconnected source, a Jira account change) |
 | [0020](0020-automation-rules-and-runs.md) | Automation rules and runs | Accepted | 2026-09-19 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers) |
 | [0021](0021-scheduled-and-signed-automation-triggers.md) | Scheduled and signed automation triggers | Accepted | 2026-09-20 | |
 | [0022](0022-public-changelog.md) | A public changelog | Accepted | 2026-09-20 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers) |
@@ -51,6 +51,7 @@ they describe.
 | [0039](0039-ai-temperature-fallback.md) | Falling back when a model refuses the temperature | Accepted | 2026-11-01 | Amends [0038](0038-configurable-ai-temperature.md); refers to [0009](0009-automatic-ai-classification.md) |
 | [0040](0040-translation-placeholders.md) | Restoring placeholders and identifiers in translated answers | Accepted | 2026-11-02 | Amends [0036](0036-translation-glossary.md); refers to [0015](0015-multilingual-release-notes.md) |
 | [0041](0041-linked-context-and-folding.md) | One piece of work once: branch and Linear keys, folding suggestions, and issue status at review | Accepted | 2026-11-02 | Amends [0019](0019-jira-sources-and-linked-context.md); builds on [0013](0013-context-sufficiency-and-duplicates.md) and [0033](0033-change-exclusion.md) |
+| [0042](0042-source-lifecycle-and-health.md) | Disconnecting, reconnecting, and rotating a source, and showing its health | Accepted | 2026-11-11 | Amends [0002](0002-per-integration-webhook-credentials.md), [0016](0016-integration-sources-and-history-import.md), [0017](0017-gitlab-sources.md), [0018](0018-linear-sources.md), and [0019](0019-jira-sources-and-linked-context.md); refers to [0020](0020-automation-rules-and-runs.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)

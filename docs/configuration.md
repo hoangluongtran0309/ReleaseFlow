@@ -44,12 +44,15 @@ Never commit or share these values.
 | `RELEASEFLOW_LINEAR_TIMEOUT` | `PT5S` | Connect and read timeout for Linear |
 | `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` | `PT60S` | How stale a signed Linear delivery may be |
 | `RELEASEFLOW_JIRA_TIMEOUT` | `PT10S` | Connect and read timeout for Jira |
-| `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | How often each Jira project is read |
+| `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | How often each Jira project is read; a source whose next read is more than one interval late is shown as [overdue](sources.md#source-health) |
 | `RELEASEFLOW_JIRA_POLL_OVERLAP` | `PT10M` | How far each read reaches back before the previous one |
 | `RELEASEFLOW_JIRA_DESCRIPTION_MAX_CHARACTERS` | `8000` | The longest Jira description kept as evidence |
 | `RELEASEFLOW_JIRA_API_BASE_URL` | (empty) | Local testing only: send every Jira call here instead of the source's own site |
 
-See [Sources](sources.md).
+See [Sources](sources.md). A source's [health](sources.md#source-health) has no setting of
+its own: a quiet source is measured over 90 days at the 90th percentile of its gaps, never
+below an hour and only once it has ten, and refused deliveries are written about once a
+second ([ADR-0042](adr/0042-source-lifecycle-and-health.md)).
 
 ## Classification
 

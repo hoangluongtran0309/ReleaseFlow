@@ -602,6 +602,30 @@ where it first appears; ADRs are linked from the slice they record.
     security flags into the code change as a recorded review that names the folded change,
     and reads the issue it added as of review.
 
+### Source lifecycle and health (V37)
+
+- [ADR-0042](adr/0042-source-lifecycle-and-health.md) (#21), with Flyway `V37`:
+  - disconnecting a source from its page, after a confirmation that says what happens and
+    names the enabled rules whose GitHub Release action it leaves without a token, or via
+    `POST .../disconnect`: its row and every change it recorded stay; its webhook identity,
+    secret, token, and schedule are destroyed in one transaction; its path answers like an
+    unknown one; a queued import or poll ends as `source_disconnected`, a running one at
+    its next page; nothing else borrows it;
+  - reconnecting under the same ID, with a new webhook path and secret (or, for Jira, a
+    cursor no earlier than 90 days back), so a later import adds no duplicates;
+    connecting a key the Project holds disconnected answers `409 source_reconnect_required`,
+    and another Project may connect it once it is disconnected;
+  - rotating a webhook secret with the path kept and the old secret stopped at once:
+    generated for GitHub and GitLab, pasted for Linear and for a signing token GitLab
+    generated, with each provider's steps on the page; a Jira token may change account;
+  - a GitHub Release action that fails as `github_source_disconnected`, and succeeds on
+    retry after the reconnect, and an Automation page mark on rules with nothing to borrow;
+  - source health in the Change Inbox's Source sync panel (now every source), on the
+    overview, on the Projects page, and on the source's page: last delivery, deliveries
+    refused for their signature since the secret was set, counted exactly with about one
+    write per source per second, a quiet flag against each source's own rhythm, and an
+    overdue flag for Jira.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.
@@ -622,9 +646,9 @@ deliberately deferred list below, one reviewed slice at a time.
   nothing ties together, and queues or retries for work other than
   enrichment, imports, polls, translation, glossary syncs, reads at review, and the
   automation outbox and actions.
-- Validating a repository with GitHub when it is connected, disconnecting or
-  replacing a source, rotating a Linear signing secret without reconnecting, and
-  secret or token rotation reminders.
+- Validating a repository with GitHub when it is connected, recognising a renamed or
+  moved repository as the source it was, deleting a source with its changes, secret or
+  token rotation reminders, and alerts on a quiet source.
 - Interface languages other than English and Vietnamese, a language picker for
   anonymous pages (they follow `Accept-Language`), an RSS feed whose channel
   title and description follow the reader rather than staying English, localized

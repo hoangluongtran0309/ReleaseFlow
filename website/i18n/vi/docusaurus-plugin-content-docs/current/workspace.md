@@ -81,7 +81,13 @@ nhiêu thay đổi cần review, bao nhiêu thay đổi phá vỡ tương thích
 chưa xong, theo thứ tự cố định: tạo project, kết nối nguồn, chờ thay đổi đầu tiên, gom thay
 đổi vào một release, hoàn tất review, publish release đã duyệt, làm tiếp bản nháp, hoặc
 không còn gì phải chờ. Một workspace có bản nháp đang mở mà chưa có thay đổi nào vẫn được
-coi là đang chờ thay đổi đầu tiên, vì chưa có gì để đưa vào bản nháp.
+coi là đang chờ thay đổi đầu tiên, vì chưa có gì để đưa vào bản nháp. Nguồn đã ngắt kết nối
+không được tính là đang kết nối.
+
+Bên cạnh các con số, trang tổng quan liệt kê các nguồn của Project cùng
+[tình trạng](sources.md#source-health) của chúng: lần gửi hoặc lần đọc cuối, các lần gửi bị từ
+chối vì chữ ký, và nguồn có đang im lặng, quá hạn hay đã ngắt kết nối không. Đây là thông tin,
+không phải một bước, nên nó không thay đổi bước nào được đề xuất.
 
 ![Tổng quan của một Project mới: mọi bộ đếm bằng 0, và bước tiếp theo là kết nối nguồn](assets/workspace/w-5a-connect-a-source.webp)
 

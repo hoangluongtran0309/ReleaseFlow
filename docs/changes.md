@@ -120,6 +120,12 @@ code such as `feature` or `security`, in any case), `status`
 `404 project_not_found`. Each change returns its `category` code with its
 `categoryName` and `categoryGroup`, as recorded when it was classified.
 
+The **Source sync** panel above the changes lists every source of the Project with its
+[health](sources.md#source-health) — the last delivery or read, deliveries refused for
+their signature since the secret was set, and a **Quiet**, **Overdue**, or
+**Disconnected** mark — beside the [history import](sources.md#history-import) of each
+source that has one. A disconnected source's changes stay in the inbox.
+
 ![The Change Inbox with its filters, the sync state of its Jira, GitHub, and GitLab sources, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
 
 ![Filtering the Change Inbox to the changes whose context was judged insufficient](assets/changes/c-4-context-filter.webp)
