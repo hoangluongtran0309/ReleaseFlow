@@ -223,6 +223,48 @@ class LinkedIssuesAtReviewIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    void foldDecisionsAreListedByDecisionTimeThenByTrackerChange() throws Exception {
+        Workspace workspace = workspace();
+        UUID firstCode = code(workspace, 41, "feat(schedule): Quartz backup schedules", """
+                [{"key":"APP-12","title":"Quartz schedules","type":"Story","status":"Done","url":"https://acme.atlassian.net/browse/APP-12","tracker":"JIRA","statusCategory":"done"}]""");
+        UUID secondCode = code(workspace, 42, "feat(restore): restore preview", """
+                [{"key":"APP-13","title":"Restore preview","type":"Story","status":"Done","url":"https://acme.atlassian.net/browse/APP-13","tracker":"JIRA","statusCategory":"done"}]""");
+        UUID firstTracker = tracker(workspace, "JIRA", "APP-12", "APP-12: Quartz schedules",
+                "https://acme.atlassian.net/browse/APP-12");
+        UUID secondTracker = tracker(workspace, "JIRA", "APP-13", "APP-13: Restore preview",
+                "https://acme.atlassian.net/browse/APP-13");
+        String release = draft(workspace, "0.2.0", firstCode, secondCode, firstTracker, secondTracker);
+        send(workspace.admin(), post(release + "/request-review"), null)
+                .andExpect(jsonPath("$.foldingSuggestions.length()").value(2));
+        for (UUID[] fold : new UUID[][] {{firstTracker, firstCode}, {secondTracker, secondCode}}) {
+            send(workspace.member(), put(release + "/folding-suggestions/" + fold[0] + "/decision"),
+                    Map.of("codeChangeId", fold[1].toString(), "decision", "ACCEPT", "removal", "REJECT"))
+                    .andExpect(status().isOk());
+        }
+
+        // Decided at different times: the earlier decision comes first, whichever was written first.
+        jdbcTemplate.update("UPDATE release_fold_decisions SET decided_at = TIMESTAMPTZ '2026-11-12 09:00:00+00' WHERE tracker_change_id = ?",
+                secondTracker);
+        jdbcTemplate.update("UPDATE release_fold_decisions SET decided_at = TIMESTAMPTZ '2026-11-12 09:05:00+00' WHERE tracker_change_id = ?",
+                firstTracker);
+        for (int read = 0; read < 3; read++) {
+            send(workspace.admin(), get(release), null)
+                    .andExpect(jsonPath("$.foldDecisions[0].trackerChangeId").value(secondTracker.toString()))
+                    .andExpect(jsonPath("$.foldDecisions[1].trackerChangeId").value(firstTracker.toString()));
+        }
+
+        // Decided at the same instant: the tracker change breaks the tie, in the database's order.
+        jdbcTemplate.update("UPDATE release_fold_decisions SET decided_at = TIMESTAMPTZ '2026-11-12 09:00:00+00'");
+        List<String> byTracker = jdbcTemplate.queryForList(
+                "SELECT tracker_change_id::text FROM release_fold_decisions ORDER BY tracker_change_id", String.class);
+        for (int read = 0; read < 3; read++) {
+            send(workspace.admin(), get(release), null)
+                    .andExpect(jsonPath("$.foldDecisions[0].trackerChangeId").value(byTracker.get(0)))
+                    .andExpect(jsonPath("$.foldDecisions[1].trackerChangeId").value(byTracker.get(1)));
+        }
+    }
+
+    @Test
     void aConfirmedDuplicateIsSuggestedAndOnlyAnAdministratorExcludesWithAReason() throws Exception {
         Workspace workspace = workspace();
         UUID code = code(workspace, 30, "ci: rotate S3 credentials used by integration tests", null);
