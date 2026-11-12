@@ -78,10 +78,26 @@ the same moment.
 - **Who changed what, and when**, is listed under **Membership changes**, and removed
   people under **Removed members**, each with who removed them.
 
-Ending a session does not reach secrets a person saw. An administrator who leaves may have
-seen a source's webhook secret, an automation rule's call secret, or an access token they
-typed: [rotate a source's secret](sources.md#rotate-a-webhook-secret), rotate a rule's
-secret on the Automation page, and revoke a token at its provider.
+#### When someone leaves
+
+**Removing a member, or demoting an administrator, revokes nothing they saw.** It ends
+their sessions and their pending invitations, but a secret is not the person's: it proves a
+source or a rule, and keeps working for whoever still holds it. For an administrator who
+leaves, rotate:
+
+- **each source's webhook secret** they handled: generate or paste a new one, and give it
+  to the provider ([Rotate a webhook secret](sources.md#rotate-a-webhook-secret));
+- **each source's access token** they set: save a new one under the source, which the
+  provider confirms first ([Access tokens](sources.md#access-tokens));
+- **each automation rule's call secret** they saw: **Rotate secret** on the Automation page,
+  which keeps the rule's path and stops the old secret at once
+  ([A rule another system calls](automation.md#a-rule-another-system-calls));
+- **any provider token they made**, such as a GitHub, GitLab, Linear, or Jira token or a
+  Slack, Notion, or Teams credential behind an action: revoke it at the provider, because
+  ReleaseFlow cannot.
+
+ReleaseFlow shows a secret once and keeps no record of who looked, so it cannot say which
+of these a person saw.
 
 ![Inviting a teammate by email; the one-time link shown afterwards is covered](assets/workspace/w-2-invite.webp)
 

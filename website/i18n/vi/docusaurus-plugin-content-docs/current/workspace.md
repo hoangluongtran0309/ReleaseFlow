@@ -76,10 +76,26 @@ quản trị viên cùng làm một lúc.
 - **Ai đã đổi gì, và khi nào**, được liệt kê ở mục **Thay đổi thành viên**, còn người đã bị
   xoá ở mục **Thành viên đã xoá**, kèm người đã xoá họ.
 
-Kết thúc phiên không chạm tới các secret mà một người đã thấy. Một quản trị viên rời đi có
-thể đã thấy webhook secret của một nguồn, secret gọi của một quy tắc Automation, hoặc một
-access token họ đã nhập: [đổi secret của nguồn](sources.md#rotate-a-webhook-secret), đổi
-secret của quy tắc ở trang Automation, và thu hồi token ở phía nhà cung cấp.
+#### Khi có người rời đi {#when-someone-leaves}
+
+**Xoá một thành viên, hoặc hạ vai trò một quản trị viên, không thu hồi bất cứ thứ gì họ đã
+thấy.** Việc đó kết thúc các phiên và các lời mời đang chờ của họ, nhưng một secret không phải
+của người đó: nó chứng minh một nguồn hoặc một quy tắc, và vẫn hoạt động với bất kỳ ai còn giữ
+nó. Với một quản trị viên rời đi, đổi:
+
+- **webhook secret của từng nguồn** họ đã xử lý: sinh hoặc dán secret mới, rồi đưa cho nhà
+  cung cấp ([Đổi webhook secret](sources.md#rotate-a-webhook-secret));
+- **access token của từng nguồn** họ đã đặt: lưu token mới dưới nguồn đó, nhà cung cấp sẽ xác
+  nhận trước ([Access token](sources.md#access-tokens));
+- **secret gọi của từng quy tắc Automation** họ đã thấy: **Xoay secret** ở trang Automation,
+  giữ nguyên đường dẫn của quy tắc và làm secret cũ ngừng hoạt động ngay
+  ([Quy tắc do hệ thống khác gọi](automation.md#a-rule-another-system-calls));
+- **mọi token nhà cung cấp họ đã tạo**, như token GitHub, GitLab, Linear hoặc Jira, hay thông
+  tin xác thực Slack, Notion hoặc Teams đứng sau một Action: thu hồi ở phía nhà cung cấp, vì
+  ReleaseFlow không làm được.
+
+ReleaseFlow chỉ hiện một secret một lần và không ghi lại ai đã xem, nên không thể biết người đó
+đã thấy những secret nào.
 
 ![Mời một đồng đội qua email; link dùng một lần hiện ra sau đó đã được che](assets/workspace/w-2-invite.webp)
 
