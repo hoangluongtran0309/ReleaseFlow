@@ -72,7 +72,7 @@ public class InvitationService {
     @Transactional(readOnly = true)
     public List<MemberView> members(ReleaseFlowPrincipal admin) {
         requireAdmin(admin);
-        return appUserRepository.findAllByOrganizationIdOrderByCreatedAtAscIdAsc(admin.organizationId())
+        return appUserRepository.findAllByOrganizationIdAndRemovedAtIsNullOrderByCreatedAtAscIdAsc(admin.organizationId())
                 .stream()
                 .map(user -> new MemberView(
                         user.getId(),
@@ -157,7 +157,7 @@ public class InvitationService {
                 .flatMap(invitationRepository::findByTokenHash)
                 .filter(candidate -> candidate.isUsable(now))
                 .orElseThrow(InvalidInvitationException::new);
-        if (appUserRepository.existsByEmail(invitation.getEmail())) {
+        if (appUserRepository.existsByEmailAndRemovedAtIsNull(invitation.getEmail())) {
             throw new InvitationEmailUnavailableException();
         }
 
@@ -180,8 +180,9 @@ public class InvitationService {
     }
 
     private IssuedInvitation issue(ReleaseFlowPrincipal admin, String email, Instant now) {
-        // Email addresses are globally unique, so an existing account anywhere blocks the invitation.
-        if (appUserRepository.existsByEmail(email)) {
+        // An address has at most one member who is not removed, so an existing one anywhere
+        // blocks the invitation; a removed member's address is free again (ADR-0043).
+        if (appUserRepository.existsByEmailAndRemovedAtIsNull(email)) {
             throw new InvitationEmailUnavailableException();
         }
         invitationRepository.findByOrganizationIdAndEmailAndStatus(admin.organizationId(), email, InvitationStatus.PENDING)

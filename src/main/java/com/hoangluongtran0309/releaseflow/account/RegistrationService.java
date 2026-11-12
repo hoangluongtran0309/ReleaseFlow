@@ -39,7 +39,7 @@ public class RegistrationService {
     @Transactional
     public RegistrationResult register(RegistrationRequest request) {
         String canonicalEmail = EmailAddress.canonicalize(request.getEmail());
-        if (appUserRepository.existsByEmail(canonicalEmail)) {
+        if (appUserRepository.existsByEmailAndRemovedAtIsNull(canonicalEmail)) {
             throw new DuplicateEmailException();
         }
 

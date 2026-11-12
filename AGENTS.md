@@ -14,8 +14,8 @@ source, GitLab source, Linear source, Jira source, automation, automation
 trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
-context, translation glossary, linked context and folding, and source lifecycle and
-health slices: one Spring Boot application, PostgreSQL/Flyway V1-V37,
+context, translation glossary, linked context and folding, source lifecycle and
+health, and member management slices: one Spring Boot application, PostgreSQL/Flyway V1-V38,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -55,8 +55,9 @@ English or Vietnamese, chosen per person, and a Playwright suite drives the whol
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
 Sources can be disconnected, reconnected under their own ID, and have their webhook
-secret rotated, and each one's health shows where people look.
-The decisions behind all of it are ADR-0001 through ADR-0042, indexed in
+secret rotated, and each one's health shows where people look. Administrators change
+members' roles and remove members, and a changed member's sessions stop.
+The decisions behind all of it are ADR-0001 through ADR-0043, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -106,6 +107,16 @@ changing behavior.
 - Network I/O does not run inside database transactions.
 - Credentials never appear in source, logs, examples, or later API responses.
 - Invitation tokens are shown once and stored only as SHA-256 hashes.
+- An account is one membership. A member's row is never deleted: removal keeps its name
+  and email, clears its password, and frees the address, so a person invited back is a new
+  member and their old records keep the name recorded then. An Organization always keeps
+  an administrator: a role change or removal locks the Organization row before counting,
+  and a deferred trigger refuses any commit that leaves none.
+- Every authenticated request checks its member's `session_version` and removal, so a
+  role change or removal ends every session on its next request. Form sign-in is the only
+  way to act as a member; a new way (a token, remember-me, a long-lived endpoint) goes
+  through the same check. A role change or removal revokes the pending invitations of a
+  person who loses the right to invite.
 - Access tokens are write-only: only administrators set them, the provider
   confirms them first, and no response, page, or log ever contains one.
 - A GitLab instance is an HTTP or HTTPS origin the deployment allowlists, with

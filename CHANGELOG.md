@@ -14,6 +14,16 @@ section into the version's entry, and the GitHub release is written from it.
 
 ### Added
 
+- Administrators change a member's role and remove a member, on the Members page or
+  through the API. The last administrator can't be demoted or removed, even when two
+  administrators try at once ([ADR-0043](docs/adr/0043-member-roles-and-removal.md)).
+- A member whose role changes, or who is removed, is signed out of every session on its
+  next request, through the pages and the API. A removed member can't sign in, and the
+  invitations they made that are still pending are revoked, as are a demoted
+  administrator's.
+- Everything a removed member recorded keeps the name they had. Their address is free
+  again, and a person invited back joins as a new member. The Members page lists removed
+  members and who changed whose role, and when.
 - A source can be disconnected from its own page, which first says what will happen. Its
   changes stay, with their reviews and releases; its webhook secret and access token are
   destroyed, its webhook path answers like one that never existed, and its imports and
