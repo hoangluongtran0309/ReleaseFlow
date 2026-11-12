@@ -544,7 +544,8 @@ public class ReleaseService {
             return List.of();
         }
         Set<UUID> decided = foldDecisionRepository
-                .findAllByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .findAllByReleaseIdAndOrganizationIdOrderByDecidedAtAscTrackerChangeIdAsc(
+                        release.getId(), release.getOrganizationId())
                 .stream()
                 .map(ReleaseFoldDecision::getTrackerChangeId)
                 .collect(Collectors.toSet());
@@ -1113,7 +1114,8 @@ public class ReleaseService {
                 .map(job -> job.getStatus().name())
                 .orElse(null);
         List<FoldDecisionView> decisions = foldDecisionRepository
-                .findAllByReleaseIdAndOrganizationId(release.getId(), release.getOrganizationId())
+                .findAllByReleaseIdAndOrganizationIdOrderByDecidedAtAscTrackerChangeIdAsc(
+                        release.getId(), release.getOrganizationId())
                 .stream()
                 .map(ReleaseFoldDecision::view)
                 .toList();

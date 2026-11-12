@@ -51,6 +51,12 @@ section into the version's entry, and the GitHub release is written from it.
   GitHub Release action can be enabled only while its project has one connected GitHub
   source.
 
+### Fixed
+
+- The release API lists a release's fold decisions in a fixed order, by when each was
+  decided and then by the tracker change, rather than in whatever order the database read
+  them.
+
 ## [1.2.0] - 2026-11-08
 
 ### Added
