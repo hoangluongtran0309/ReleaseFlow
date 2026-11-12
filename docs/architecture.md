@@ -43,7 +43,7 @@ Registration creates an `ADMIN`. Accepting an invitation creates a `MEMBER` in
 the invitation's Organization. `SecurityConfiguration` limits these to administrators
 by URL rule, for the pages and their REST counterparts alike:
 
-- members and invitations (`/members/**`, `/api/members`, `/api/invitations/**`);
+- members and invitations (`/members/**`, `/api/members`, `/api/members/**`, `/api/invitations/**`);
 - connecting a source, setting its token, and starting or resuming an import;
 - writing a Project's sensitive paths;
 - all of audiences (`/audiences/**`, `/api/audiences/**`, reads included);
@@ -51,8 +51,8 @@ by URL rule, for the pages and their REST counterparts alike:
 - writing the release note languages, the output language, and the slug;
 - all of automation (`/automation/**`, `/api/automation/**`).
 
-`InvitationService` checks the principal's role again. Every other authenticated path
-is open to members.
+`InvitationService` and `MemberService` check the principal's role again. Every other
+authenticated path is open to members.
 
 `InvitationService` issues a 32-byte base64url token, stores only its SHA-256
 hash, and returns the raw token once with `Cache-Control: no-store`. An
@@ -66,6 +66,40 @@ step shows the Organization and email, and the accept step locks the
 invitation row, creates the member account, and marks the invitation accepted.
 Every unusable token receives the same error. See
 [ADR-0006](adr/0006-organization-roles-and-invitations.md).
+
+### Role changes and removal
+
+[ADR-0043](adr/0043-member-roles-and-removal.md). An account is one membership: an
+`app_users` row has one Organization, and its email is unique among rows that are not
+removed (`app_users_email_unique`, a partial unique index since V38). A row is never
+deleted, because 21 composite foreign keys record who did what; 18 of them keep the
+person's name as it was, and the rest read it from the row.
+
+- **`MemberService.changeRole` and `remove`** each run in one `TransactionTemplate`
+  transaction that first locks the Organization row (`OrganizationRepository.lockById`,
+  `SELECT … FOR UPDATE`), then counts its active administrators and refuses with
+  `LastAdministratorException` (`409 member_last_administrator`) when none would remain.
+  Demoting an administrator and removing anyone revoke the pending invitations that
+  person made. Each change raises `app_users.session_version` and inserts a
+  `membership_changes` row with the changer's ID and name. Removal sets `removed_at` and
+  `removed_by` and clears `password_hash`; the row keeps its name and email.
+- **The constraint trigger `app_users_keep_an_administrator`** (deferred, on updates
+  that change `role` or `removed_at`) takes the same Organization lock at commit and
+  raises when no active administrator remains, so two writers that each demote the other
+  cannot both commit, through the service or not. `MemberService` maps that commit-time
+  failure to the same `409`.
+- **`MembershipSessionFilter`** sits in the main filter chain before `AuthorizationFilter`
+  and is built there, never as a bean, so it is not also a servlet filter. For a
+  `ReleaseFlowPrincipal` it reads `session_version` and `removed_at` by ID and Organization;
+  when the member is removed or the version differs from the one copied into the principal
+  at sign-in, it invalidates the session and clears the context. An `/api` request then
+  continues anonymous and meets the API entry point's `401 authentication_required`; a
+  page is redirected to `/login?ended`. Form sign-in is the only authentication, and the
+  other filter chains are stateless and authenticate no member, so this is every request a
+  member can make.
+- **Lookups by address** — sign-in, registration, and invitations — read rows that are not
+  removed, so a removed person can sign in nowhere, and their address can be invited again,
+  which creates a new row.
 
 ## Persistence and tenant boundary
 

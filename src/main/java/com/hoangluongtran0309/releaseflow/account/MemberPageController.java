@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.UUID;
@@ -22,9 +23,56 @@ import java.util.UUID;
 public class MemberPageController {
 
     private final InvitationService invitationService;
+    private final MemberService memberService;
 
-    MemberPageController(InvitationService invitationService) {
+    MemberPageController(InvitationService invitationService, MemberService memberService) {
         this.invitationService = invitationService;
+        this.memberService = memberService;
+    }
+
+    /**
+     * A new role for a member. Their sessions stop on their next request, the administrator's
+     * own included when they change themselves, which the redirect then shows.
+     */
+    @PostMapping("/members/{memberId}/role")
+    String changeRole(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID memberId,
+            @Valid @ModelAttribute("memberRoleRequest") MemberRoleRequest request,
+            BindingResult bindingResult,
+            RedirectAttributes redirect,
+            Model model,
+            HttpServletResponse response
+    ) {
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error("validation.memberRole.known"));
+            return renderMembers(principal, model);
+        }
+        try {
+            MemberView changed = memberService.changeRole(principal, memberId, request.appUserRole());
+            UiNotice.flash(redirect, UiNotice.success("ui.members.roleChanged", changed.displayName()));
+            return "redirect:/members";
+        } catch (LastAdministratorException exception) {
+            return renderMembersWithError(principal, HttpStatus.CONFLICT, exception, model, response);
+        }
+    }
+
+    @PostMapping("/members/{memberId}/remove")
+    String remove(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID memberId,
+            RedirectAttributes redirect,
+            Model model,
+            HttpServletResponse response
+    ) {
+        try {
+            memberService.remove(principal, memberId);
+            UiNotice.flash(redirect, UiNotice.success("ui.members.removed"));
+            return "redirect:/members";
+        } catch (LastAdministratorException exception) {
+            return renderMembersWithError(principal, HttpStatus.CONFLICT, exception, model, response);
+        }
     }
 
     @GetMapping("/members")
@@ -93,6 +141,9 @@ public class MemberPageController {
         }
         model.addAttribute("members", invitationService.members(principal));
         model.addAttribute("invitations", invitationService.invitations(principal));
+        model.addAttribute("removedMembers", memberService.removed(principal));
+        model.addAttribute("membershipChanges", memberService.changes(principal));
+        model.addAttribute("viewerId", principal.userId());
         return "members";
     }
 

@@ -7,6 +7,8 @@ import com.hoangluongtran0309.releaseflow.account.InvalidInvitationException;
 import com.hoangluongtran0309.releaseflow.account.InvitationAlreadyPendingException;
 import com.hoangluongtran0309.releaseflow.account.InvitationEmailUnavailableException;
 import com.hoangluongtran0309.releaseflow.account.InvitationNotFoundException;
+import com.hoangluongtran0309.releaseflow.account.LastAdministratorException;
+import com.hoangluongtran0309.releaseflow.account.MemberNotFoundException;
 import com.hoangluongtran0309.releaseflow.account.OrganizationMemberApiController;
 import com.hoangluongtran0309.releaseflow.account.InvalidOrganizationSlugException;
 import com.hoangluongtran0309.releaseflow.account.OrganizationSlugApiController;
@@ -187,6 +189,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvitationAlreadyPendingException.class)
     ResponseEntity<ProblemDetail> invitationAlreadyPending(InvitationAlreadyPendingException exception) {
         return localized(HttpStatus.CONFLICT, "invitation_already_pending", exception);
+    }
+
+    @ExceptionHandler(MemberNotFoundException.class)
+    ResponseEntity<ProblemDetail> memberNotFound(MemberNotFoundException exception) {
+        return localized(HttpStatus.NOT_FOUND, "member_not_found", exception);
+    }
+
+    @ExceptionHandler(LastAdministratorException.class)
+    ResponseEntity<ProblemDetail> lastAdministrator(LastAdministratorException exception) {
+        return localized(HttpStatus.CONFLICT, "member_last_administrator", exception);
     }
 
     @ExceptionHandler(InvitationNotFoundException.class)

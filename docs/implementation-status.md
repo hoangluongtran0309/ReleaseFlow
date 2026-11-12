@@ -626,6 +626,22 @@ where it first appears; ADRs are linked from the slice they record.
     write per source per second, a quiet flag against each source's own rhythm, and an
     overdue flag for Jira.
 
+### Member roles and removal (V38)
+
+- [ADR-0043](adr/0043-member-roles-and-removal.md) (#20), with Flyway `V38`:
+  - administrators change a member's role and remove a member on the Members page or
+    through `PUT /api/members/{id}/role` and `DELETE /api/members/{id}`; the last
+    administrator is refused with `409 member_last_administrator`, serialised by a lock on
+    the Organization row and backed by a deferred constraint trigger;
+  - a removed member's row stays, with its name and email, and no password; their address is
+    free again, and a person invited back is a new member while their old records stay with
+    the removed one;
+  - the pending invitations of a removed member, or of a demoted administrator, are revoked;
+  - every session of a changed member is refused on its next request by
+    `MembershipSessionFilter`, through a `session_version` copied at sign-in;
+  - who changed a role or removed a member, and when, in `membership_changes`, shown on the
+    Members page and by `GET /api/members/changes`.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.
@@ -637,7 +653,8 @@ deliberately deferred list below, one reviewed slice at a time.
 
 ## Deliberately deferred
 
-- Role changes and member removal.
+- An account that belongs to several Organizations, transferring what a removed person
+  made to someone else, and erasing a person's name from the history.
 - Source providers other than GitHub, GitLab, Linear, and Jira Cloud (Jira
   Server or Data Center), Jira webhooks, and automatic AI retries.
 - GitLab group-level webhooks, Linear projects and cycles, linked context from

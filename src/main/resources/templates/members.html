@@ -41,9 +41,10 @@
         <div class="mt-4">
             <table class="stacking-table">
                 <thead><tr><th th:text="#{ui.members.column.name}">Name</th><th th:text="#{ui.members.column.email}">Email</th>
-                    <th th:text="#{ui.members.column.role}">Role</th><th th:text="#{ui.members.column.joined}">Joined</th></tr></thead>
+                    <th th:text="#{ui.members.column.role}">Role</th><th th:text="#{ui.members.column.joined}">Joined</th>
+                    <th><span class="sr-only" th:text="#{ui.members.column.actions}">Actions</span></th></tr></thead>
                 <tbody>
-                <tr th:each="member : ${members}">
+                <tr th:each="member : ${members}" th:id="|member-${member.id}|">
                     <td class="font-semibold" th:data-heading="#{ui.members.column.name}" th:text="${member.displayName}">Mai Tran</td>
                     <td th:data-heading="#{ui.members.column.email}" th:text="${member.email}">mai@example.com</td>
                     <td th:data-heading="#{ui.members.column.role}"><span class="badge badge-soft font-semibold"
@@ -51,10 +52,42 @@
                               th:text="#{${member.roleLabelKey()}}">Admin</span></td>
                     <td th:data-heading="#{ui.members.column.joined}"><time th:datetime="${member.createdAt}"
                               th:text="|${#temporals.format(member.createdAt, 'd MMM yyyy', 'UTC')}|">11 Sep 2026</time></td>
+                    <!--/* Changing a role or removing a member ends their sessions (ADR-0043). */-->
+                    <td th:data-heading="#{ui.members.column.actions}" th:with="self=${member.id == viewerId}">
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <form class="join" method="post" novalidate
+                                  th:action="@{/members/{id}/role(id=${member.id})}">
+                                <select name="role" class="select select-bordered select-sm join-item"
+                                        th:aria-label="#{ui.members.roleFor(${member.displayName})}" aria-label="Role for Mai Tran">
+                                    <option value="ADMIN" th:selected="${member.admin()}" th:text="#{ui.members.role.admin}">Administrator</option>
+                                    <option value="MEMBER" th:selected="${!member.admin()}" th:text="#{ui.members.role.member}">Member</option>
+                                </select>
+                                <button type="submit" class="btn btn-outline btn-sm join-item" th:text="#{ui.members.changeRole}">Change role</button>
+                            </form>
+                            <details class="w-full sm:w-auto">
+                                <summary class="btn btn-ghost btn-sm" th:text="#{ui.members.remove}">Remove</summary>
+                                <div class="subtle-panel mt-2 grid w-full gap-3 sm:w-80">
+                                    <p class="text-sm font-semibold"
+                                       th:text="${self} ? #{ui.members.removeSelfConfirm} : #{ui.members.removeConfirm(${member.displayName})}">Remove Mai Tran?</p>
+                                    <p class="text-xs text-slate-600" th:text="#{ui.members.removeConfirmCopy}">Their sessions end and their invitations are revoked.</p>
+                                    <form method="post" th:action="@{/members/{id}/remove(id=${member.id})}">
+                                        <button type="submit" class="btn btn-error btn-sm w-full" th:text="#{ui.members.confirmRemove}">Remove member</button>
+                                    </form>
+                                </div>
+                            </details>
+                        </div>
+                    </td>
                 </tr>
                 </tbody>
             </table>
         </div>
+    </section>
+
+    <section class="surface-card mt-6 p-6" id="offboarding">
+        <h2 class="section-heading" th:text="#{ui.members.offboardingHeading}">When someone leaves</h2>
+        <p class="section-copy" th:utext="#{ui.members.offboardingCopy}">
+            Ending a membership stops the person's sessions. Secrets they saw are not theirs: rotate them.
+        </p>
     </section>
 
     <section class="surface-card mt-6 p-6" id="invitations">
@@ -91,6 +124,42 @@
                 </tbody>
             </table>
         </div>
+    </section>
+
+    <section class="surface-card mt-6 p-6" id="removed-members" th:unless="${#lists.isEmpty(removedMembers)}">
+        <h2 class="section-heading" th:text="#{ui.members.removedHeading}">Removed members</h2>
+        <p class="section-copy" th:text="#{ui.members.removedCopy}">What they recorded keeps their name.</p>
+        <div class="mt-4">
+            <table class="stacking-table">
+                <thead><tr><th th:text="#{ui.members.column.name}">Name</th><th th:text="#{ui.members.column.email}">Email</th>
+                    <th th:text="#{ui.members.column.removed}">Removed</th><th th:text="#{ui.members.column.removedBy}">Removed by</th></tr></thead>
+                <tbody>
+                <tr th:each="removed : ${removedMembers}" th:id="|removed-${removed.id}|">
+                    <td class="font-semibold" th:data-heading="#{ui.members.column.name}" th:text="${removed.displayName}">Linh Pham</td>
+                    <td th:data-heading="#{ui.members.column.email}" th:text="${removed.email}">linh@example.com</td>
+                    <td th:data-heading="#{ui.members.column.removed}"><time th:datetime="${removed.removedAt}"
+                              th:text="|${#temporals.format(removed.removedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">12 Nov 2026, 09:14 UTC</time></td>
+                    <td th:data-heading="#{ui.members.column.removedBy}" th:text="${removed.removedByName}">Mai Tran</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="surface-card mt-6 p-6" id="membership-changes" th:unless="${#lists.isEmpty(membershipChanges)}">
+        <h2 class="section-heading" th:text="#{ui.members.changesHeading}">Membership changes</h2>
+        <ul class="mt-4 grid gap-2">
+            <li class="text-sm" th:each="change : ${membershipChanges}" th:id="|change-${change.id}|">
+                <time class="text-slate-500" th:datetime="${change.changedAt}"
+                      th:text="|${#temporals.format(change.changedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">12 Nov 2026, 09:14 UTC</time>
+                <span th:if="${change.removal()}"
+                      th:text="#{ui.members.change.removed(${change.changedByName},${change.memberName})}">Mai Tran removed Linh Pham.</span>
+                <span th:unless="${change.removal()}"
+                      th:text="#{ui.members.change.role(${change.changedByName},${change.memberName},#{${change.previousRoleLabelKey()}},#{${change.newRoleLabelKey()}})}">Mai Tran changed Linh Pham from Member to Administrator.</span>
+                <span class="text-slate-600" th:if="${change.revokedInvitations > 0}"
+                      th:text="#{ui.members.change.revokedInvitations(${change.revokedInvitations})}">2 pending invitations revoked.</span>
+            </li>
+        </ul>
     </section>
 </div>
 </body>

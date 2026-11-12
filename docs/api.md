@@ -47,8 +47,9 @@ curl -s -b "$JAR" -c "$JAR" -H "X-CSRF-TOKEN: $TOKEN" \
 
 ![Running the commands above against a deployment: a CSRF token, signing in, the session, and a new Project](assets/api/api-1-session.gif)
 
-A session ends after 30 minutes without a request, and when the application restarts;
-after that, every call answers `401 authentication_required` until the script signs in
+A session ends after 30 minutes without a request, when the application restarts, and
+on its next request once the person's [role changes or they are
+removed](workspace.md#change-a-role-or-remove-a-member); after that, every call answers `401 authentication_required` until the script signs in
 again. `POST /logout` ends it at once. Set `RELEASEFLOW_SESSION_COOKIE_SECURE=true`
 whenever the application is served over HTTPS.
 
@@ -122,7 +123,8 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `PUT /api/organization/output-language` | admin |
 | `GET /api/organization/slug` | member |
 | `PUT /api/organization/slug` | admin |
-| `GET /api/members` | admin |
+| `GET /api/members`, `GET /api/members/changes` | admin |
+| `PUT /api/members/{memberId}/role`, `DELETE /api/members/{memberId}` | admin |
 | `GET /api/invitations`, `POST /api/invitations` | admin |
 | `POST /api/invitations/{invitationId}/reissue` | admin |
 | `DELETE /api/invitations/{invitationId}` | admin |
@@ -236,8 +238,8 @@ Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
 | Area | Status | Codes |
 | --- | --- | --- |
 | Account | `400` | `output_language_invalid`, `ui_locale_invalid`, `invitation_invalid`, `organization_slug_invalid` |
-| Account | `404` | `invitation_not_found` |
-| Account | `409` | `email_already_registered`, `invitation_already_pending`, `invitation_email_unavailable`, `organization_slug_taken` |
+| Account | `404` | `invitation_not_found`, `member_not_found` |
+| Account | `409` | `email_already_registered`, `invitation_already_pending`, `invitation_email_unavailable`, `organization_slug_taken`, `member_last_administrator` |
 | Sources | `400` | `gitlab_base_url_invalid`, `gitlab_host_not_allowed`, `jira_site_invalid`, `github_token_rejected`, `gitlab_token_rejected`, `linear_token_rejected`, `jira_token_rejected`, `source_credential_required`, `source_signing_token_invalid` |
 | Sources | `404` | `project_not_found`, `source_not_found` |
 | Sources | `409` | `github_repository_already_connected`, `gitlab_project_already_connected`, `linear_team_already_connected`, `jira_project_already_connected`, `source_token_missing`, `source_sync_in_progress`, `source_import_not_supported`, `source_import_not_resumable`, `source_disconnected`, `source_not_disconnected`, `source_reconnect_required`, `source_has_no_webhook`, `source_secret_generated`, `source_secret_pasted` |

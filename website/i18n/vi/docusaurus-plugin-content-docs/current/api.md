@@ -46,8 +46,9 @@ curl -s -b "$JAR" -c "$JAR" -H "X-CSRF-TOKEN: $TOKEN" \
 
 ![Chạy các lệnh trên với một deployment: CSRF token, đăng nhập, session và một Project mới](assets/api/api-1-session.gif)
 
-Một phiên đăng nhập kết thúc sau 30 phút không có request nào, và khi ứng dụng khởi động lại;
-sau đó, mọi lời gọi trả về `401 authentication_required` cho tới khi script đăng nhập lại.
+Một phiên đăng nhập kết thúc sau 30 phút không có request nào, khi ứng dụng khởi động lại, và
+ở request tiếp theo khi [vai trò của người đó thay đổi hoặc họ bị
+xoá](workspace.md#change-a-role-or-remove-a-member); sau đó, mọi lời gọi trả về `401 authentication_required` cho tới khi script đăng nhập lại.
 `POST /logout` kết thúc phiên ngay lập tức. Đặt `RELEASEFLOW_SESSION_COOKIE_SECURE=true` mỗi
 khi ứng dụng được phục vụ qua HTTPS.
 
@@ -120,7 +121,8 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `PUT /api/organization/output-language` | quản trị viên |
 | `GET /api/organization/slug` | thành viên |
 | `PUT /api/organization/slug` | quản trị viên |
-| `GET /api/members` | quản trị viên |
+| `GET /api/members`, `GET /api/members/changes` | quản trị viên |
+| `PUT /api/members/{memberId}/role`, `DELETE /api/members/{memberId}` | quản trị viên |
 | `GET /api/invitations`, `POST /api/invitations` | quản trị viên |
 | `POST /api/invitations/{invitationId}/reissue` | quản trị viên |
 | `DELETE /api/invitations/{invitationId}` | quản trị viên |
@@ -234,8 +236,8 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Khu vực | Trạng thái | Mã |
 | --- | --- | --- |
 | Tài khoản | `400` | `output_language_invalid`, `ui_locale_invalid`, `invitation_invalid`, `organization_slug_invalid` |
-| Tài khoản | `404` | `invitation_not_found` |
-| Tài khoản | `409` | `email_already_registered`, `invitation_already_pending`, `invitation_email_unavailable`, `organization_slug_taken` |
+| Tài khoản | `404` | `invitation_not_found`, `member_not_found` |
+| Tài khoản | `409` | `email_already_registered`, `invitation_already_pending`, `invitation_email_unavailable`, `organization_slug_taken`, `member_last_administrator` |
 | Nguồn | `400` | `gitlab_base_url_invalid`, `gitlab_host_not_allowed`, `jira_site_invalid`, `github_token_rejected`, `gitlab_token_rejected`, `linear_token_rejected`, `jira_token_rejected`, `source_credential_required`, `source_signing_token_invalid` |
 | Nguồn | `404` | `project_not_found`, `source_not_found` |
 | Nguồn | `409` | `github_repository_already_connected`, `gitlab_project_already_connected`, `linear_team_already_connected`, `jira_project_already_connected`, `source_token_missing`, `source_sync_in_progress`, `source_import_not_supported`, `source_import_not_resumable`, `source_disconnected`, `source_not_disconnected`, `source_reconnect_required`, `source_has_no_webhook`, `source_secret_generated`, `source_secret_pasted` |

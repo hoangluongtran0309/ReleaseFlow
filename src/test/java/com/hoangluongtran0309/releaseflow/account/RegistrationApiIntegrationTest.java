@@ -54,7 +54,7 @@ class RegistrationApiIntegrationTest extends PostgreSqlIntegrationTest {
 
         assertThat(organizationRepository.count()).isOne();
         assertThat(appUserRepository.count()).isOne();
-        AppUser savedOwner = appUserRepository.findByEmail("owner@example.com").orElseThrow();
+        AppUser savedOwner = appUserRepository.findByEmailAndRemovedAtIsNull("owner@example.com").orElseThrow();
         assertThat(savedOwner.passwordHash()).isNotEqualTo("a-secure-password");
         assertThat(passwordEncoder.matches("a-secure-password", savedOwner.passwordHash())).isTrue();
     }

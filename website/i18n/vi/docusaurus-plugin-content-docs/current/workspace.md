@@ -50,7 +50,52 @@ Liên kết mời có dạng `/accept-invite#token=…` và chỉ hiện một l
 băm của nó. Liên kết hết hạn sau bảy ngày (đặt `RELEASEFLOW_INVITATION_TTL`, ví dụ `P3D`,
 để đổi thời hạn), chỉ dùng được một lần, và có thể cấp lại hoặc thu hồi ở trang Thành
 viên. Người được mời xác nhận Organization, chọn tên và mật khẩu, rồi đăng nhập với vai
-trò thành viên. Hiện chưa đổi được vai trò và chưa xoá được thành viên.
+trò thành viên.
+
+### Đổi vai trò hoặc xoá một thành viên {#change-a-role-or-remove-a-member}
+
+Quản trị viên đổi vai trò của một thành viên, hoặc xoá một thành viên, ngay trên dòng của
+thành viên đó ở trang **Thành viên**: **Đổi vai trò** cùng vai trò bên cạnh, hoặc **Xoá**,
+sẽ hỏi lại trước. Quản trị viên cũng có thể đổi vai trò hoặc xoá chính mình, miễn là còn
+một quản trị viên khác: **một Organization luôn giữ một quản trị viên**, và việc đổi hay
+xoá quản trị viên cuối cùng bị từ chối với `409 member_last_administrator`, kể cả khi hai
+quản trị viên cùng làm một lúc.
+
+- **Các phiên của họ dừng ở request tiếp theo**, trên mọi trình duyệt và qua API. Thành
+  viên bị đổi vai trò đăng nhập lại và nhận vai trò mới; thành viên bị xoá không đăng nhập
+  được nữa. Trang họ mở sau đó giải thích rằng quyền truy cập của họ đã thay đổi.
+- **Các lời mời đang chờ của họ bị thu hồi** khi họ bị xoá, và khi một quản trị viên bị hạ
+  vai trò, vì chỉ quản trị viên mới mời được người khác. Lịch sử ghi lại bao nhiêu lời mời.
+- **Những gì họ đã ghi vẫn giữ tên họ**: review, phê duyệt, publish, chỉnh sửa release
+  note, loại trừ, trạng thái được chấp nhận lúc review, quyết định gộp và các thứ khác đều
+  hiện tên họ có lúc làm việc đó.
+- **Người bị xoá được mời lại là một thành viên mới.** Địa chỉ email của họ được giải phóng,
+  nên quản trị viên có thể mời lại, hoặc người đó có thể tham gia hay đăng ký một
+  Organization khác. Việc nhận lời mời tạo một thành viên mới với tên mới; mọi thứ họ làm
+  trước đây vẫn thuộc về thành viên đã bị xoá, dưới tên được ghi lúc đó.
+- **Ai đã đổi gì, và khi nào**, được liệt kê ở mục **Thay đổi thành viên**, còn người đã bị
+  xoá ở mục **Thành viên đã xoá**, kèm người đã xoá họ.
+
+#### Khi có người rời đi {#when-someone-leaves}
+
+**Xoá một thành viên, hoặc hạ vai trò một quản trị viên, không thu hồi bất cứ thứ gì họ đã
+thấy.** Việc đó kết thúc các phiên và các lời mời đang chờ của họ, nhưng một secret không phải
+của người đó: nó chứng minh một nguồn hoặc một quy tắc, và vẫn hoạt động với bất kỳ ai còn giữ
+nó. Với một quản trị viên rời đi, đổi:
+
+- **webhook secret của từng nguồn** họ đã xử lý: sinh hoặc dán secret mới, rồi đưa cho nhà
+  cung cấp ([Đổi webhook secret](sources.md#rotate-a-webhook-secret));
+- **access token của từng nguồn** họ đã đặt: lưu token mới dưới nguồn đó, nhà cung cấp sẽ xác
+  nhận trước ([Access token](sources.md#access-tokens));
+- **secret gọi của từng quy tắc Automation** họ đã thấy: **Xoay secret** ở trang Automation,
+  giữ nguyên đường dẫn của quy tắc và làm secret cũ ngừng hoạt động ngay
+  ([Quy tắc do hệ thống khác gọi](automation.md#a-rule-another-system-calls));
+- **mọi token nhà cung cấp họ đã tạo**, như token GitHub, GitLab, Linear hoặc Jira, hay thông
+  tin xác thực Slack, Notion hoặc Teams đứng sau một Action: thu hồi ở phía nhà cung cấp, vì
+  ReleaseFlow không làm được.
+
+ReleaseFlow chỉ hiện một secret một lần và không ghi lại ai đã xem, nên không thể biết người đó
+đã thấy những secret nào.
 
 ![Mời một đồng đội qua email; link dùng một lần hiện ra sau đó đã được che](assets/workspace/w-2-invite.webp)
 
@@ -60,6 +105,9 @@ REST client tuân theo cùng các quy tắc:
 
 ```text
 GET    /api/members                         (administrator)
+PUT    /api/members/{id}/role {"role"}      (administrator; ADMIN or MEMBER)
+DELETE /api/members/{id}                    (administrator; 204)
+GET    /api/members/changes                 (administrator; newest first)
 GET    /api/invitations                     (administrator)
 POST   /api/invitations {"email"}           (administrator; 201, returns acceptancePath once)
 POST   /api/invitations/{id}/reissue        (administrator)
@@ -70,8 +118,12 @@ POST   /api/public/invitations/accept  {"token", "displayName", "password"}
 
 Các endpoint công khai cần CSRF token lấy từ `GET /api/csrf`. Mọi token không dùng được
 đều trả về `400 invitation_invalid`. Các lỗi khác là `409 invitation_already_pending`,
-`409 invitation_email_unavailable` (email đã có tài khoản), `404 invitation_not_found`, và
-`403 access_denied` khi thành viên gọi endpoint dành cho quản trị viên.
+`409 invitation_email_unavailable` (email đã thuộc về một thành viên chưa bị xoá),
+`404 invitation_not_found`, `404 member_not_found` (thành viên không tồn tại, đã bị xoá,
+hoặc thuộc Organization khác), `409 member_last_administrator`, và `403 access_denied` khi
+thành viên gọi endpoint dành cho quản trị viên. Phiên bị từ chối vì thành viên của nó đã
+thay đổi trả lời `401 authentication_required`, như mọi request không có phiên. Xem
+[ADR-0043](adr/0043-member-roles-and-removal.md).
 
 ## Tổng quan workspace {#workspace-overview}
 

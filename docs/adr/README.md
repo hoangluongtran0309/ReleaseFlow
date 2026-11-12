@@ -15,7 +15,7 @@ they describe.
 | [0003](0003-frontend-toolchain.md) | Tailwind, DaisyUI, and Alpine for server-rendered pages | Accepted | 2026-09-10 | Amended by [0028](0028-parity-ui-and-browser-tests.md) (browser tests) |
 | [0004](0004-openai-classification-as-reviewed-suggestion.md) | OpenAI classification as a reviewed suggestion | Superseded | 2026-09-11 | Superseded by [0009](0009-automatic-ai-classification.md) |
 | [0005](0005-immutable-release-note-snapshots.md) | Immutable Release Note snapshots | Accepted | 2026-09-11 | |
-| [0006](0006-organization-roles-and-invitations.md) | Organization roles and invitations | Accepted | 2026-09-14 | |
+| [0006](0006-organization-roles-and-invitations.md) | Organization roles and invitations | Accepted | 2026-09-14 | Amended by [0043](0043-member-roles-and-removal.md) (role changes and removal) |
 | [0007](0007-ci-and-container-supply-chain.md) | CI gates and container supply chain | Accepted | 2026-09-14 | Amended by [0026](0026-deployment-observability.md) (health check on the management port) |
 | [0008](0008-durable-change-processing.md) | Durable change processing and changed-file review triggers | Accepted | 2026-09-14 | |
 | [0009](0009-automatic-ai-classification.md) | Automatic AI classification and neutral summaries | Accepted | 2026-09-14 | Supersedes [0004](0004-openai-classification-as-reviewed-suggestion.md); amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (Project context, migration kind, limitations) |
@@ -52,6 +52,7 @@ they describe.
 | [0040](0040-translation-placeholders.md) | Restoring placeholders and identifiers in translated answers | Accepted | 2026-11-02 | Amends [0036](0036-translation-glossary.md); refers to [0015](0015-multilingual-release-notes.md) |
 | [0041](0041-linked-context-and-folding.md) | One piece of work once: branch and Linear keys, folding suggestions, and issue status at review | Accepted | 2026-11-02 | Amends [0019](0019-jira-sources-and-linked-context.md); builds on [0013](0013-context-sufficiency-and-duplicates.md) and [0033](0033-change-exclusion.md) |
 | [0042](0042-source-lifecycle-and-health.md) | Disconnecting, reconnecting, and rotating a source, and showing its health | Accepted | 2026-11-11 | Amends [0002](0002-per-integration-webhook-credentials.md), [0016](0016-integration-sources-and-history-import.md), [0017](0017-gitlab-sources.md), [0018](0018-linear-sources.md), and [0019](0019-jira-sources-and-linked-context.md); refers to [0020](0020-automation-rules-and-runs.md) |
+| [0043](0043-member-roles-and-removal.md) | Changing a member's role and removing a member | Accepted | 2026-11-12 | Amends [0006](0006-organization-roles-and-invitations.md); refers to [0034](0034-account-language-per-request.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)
