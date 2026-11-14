@@ -345,6 +345,31 @@
                             </ul>
                         </section>
 
+                        <!--/* ADR-0044: an audience brought back has no narrative for the changes classified
+                               while it was retired. Its notes still include them, under their headline. */-->
+                        <section class="mt-4 rounded-box border border-info p-4" id="missing-narratives"
+                                 th:if="${(inReview or approved) and !#lists.isEmpty(release.missingNarratives)}"
+                                 aria-labelledby="missing-narratives-heading">
+                            <h3 class="text-sm font-semibold" id="missing-narratives-heading" th:text="#{ui.release.missingNarrativesHeading}">Changes with no narrative for an audience</h3>
+                            <p class="mt-1 text-xs text-slate-600" th:text="#{ui.release.missingNarrativesCopy}">Their notes include them under their headline. Write the narrative, or ask the AI for it.</p>
+                            <ul class="mt-3 grid gap-3">
+                                <li class="flex flex-wrap items-start justify-between gap-3" th:each="missing : ${release.missingNarratives}"
+                                    th:id="|missing-narrative-${missing.changeId}|">
+                                    <div class="min-w-0 text-sm">
+                                        <a class="link font-medium" th:href="|#review-${missing.changeId}|" th:text="${missing.reference}">#21</a>
+                                        <span th:text="${missing.title}">feat: add CSV export</span>
+                                        <p class="text-xs text-slate-600"
+                                           th:text="#{ui.release.missingNarrativesFor(${#strings.listJoin(missing.audienceNames, ', ')})}">No narrative for Support</p>
+                                    </div>
+                                    <form method="post" th:if="${missing.estimatedTokens > 0}"
+                                          th:action="${releasePath + '/changes/' + missing.changeId + '/missing-narratives'}">
+                                        <button type="submit" class="btn btn-outline btn-sm"
+                                                th:text="#{ui.release.askAiForNarratives(${missing.estimatedTokens})}">Ask the AI (about 2,400 tokens)</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </section>
+
                         <ul class="mt-4 divide-y divide-slate-200" th:unless="${draft}">
                             <li class="py-4" th:each="change : ${release.changes}" th:id="|review-${change.id}|"
                                 th:with="decision=${release.decision(change.id)}">

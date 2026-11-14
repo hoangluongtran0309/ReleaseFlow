@@ -98,6 +98,19 @@ public class ChangeApiController {
         return exclusionService.include(principal, projectId, changeId);
     }
 
+    /**
+     * Asks the AI for the narratives this change lacks for active audiences, and writes only
+     * those (ADR-0044). Made only when a person asks.
+     */
+    @PostMapping("/api/projects/{projectId}/changes/{changeId}/missing-narratives")
+    ChangeView requestMissingNarratives(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID changeId
+    ) {
+        return aiClassificationService.requestMissingNarratives(principal.organizationId(), projectId, changeId);
+    }
+
     @PostMapping("/api/projects/{projectId}/changes/{changeId}/ai-classification")
     ChangeView classifyWithAi(
             @AuthenticationPrincipal ReleaseFlowPrincipal principal,

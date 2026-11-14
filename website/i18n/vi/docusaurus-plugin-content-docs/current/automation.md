@@ -127,6 +127,15 @@ khi request đã đi, hoặc worker dừng trong năm phút — được ghi là
 giờ tự gửi lại; lặp lại nó sẽ yêu cầu bạn xác nhận rằng lần gửi có thể xảy ra hai lần. **Huỷ**
 để action đang thực hiện ghi lại kết quả của nó và dừng các action còn lại.
 
+Một action cho một audience đã [ngừng dùng](release-notes.md#retiring-an-audience) được **bỏ
+qua** với `audience_retired` trước khi gọi bất cứ thứ gì: không có gì được gửi cho nó, các action
+phía sau vẫn chạy, và một lần chạy mà các action khác thành công thì thành công. Lịch sử chạy
+đánh dấu action đó **Đã bỏ qua** và nói lý do, và trang Automation đánh dấu một quy tắc vẫn gửi
+tới audience đã ngừng dùng. Bật một quy tắc như vậy bị từ chối với
+`409 automation_audience_retired`; trước hết hãy trỏ action sang một audience đang dùng, hoặc
+dùng lại audience đó. Trạng thái của một action qua API là `PENDING`, `RUNNING`, `SUCCEEDED`,
+`FAILED`, `UNKNOWN`, `CANCELLED` hoặc `SKIPPED`.
+
 ![Một lần chạy có action GitHub Release thất bại với github_release_conflict: các action sau nó đang chờ, cùng nút chạy lại và huỷ](assets/automation/a-7-run-failed.webp)
 
 Action GitHub Release mượn nguồn GitHub của project, nên nó phụ thuộc vào việc nguồn đó còn kết
@@ -207,7 +216,7 @@ Các lời từ chối mang mã cố định:
 | Trạng thái | Mã |
 | --- | --- |
 | `404` | `automation_rule_not_found`, `automation_run_not_found` — kể cả với quy tắc hoặc lần chạy của Organization khác, không bao giờ là `403`, và với quy tắc đã lưu trữ: `GET`, `PUT`, bật, tắt và `DELETE` một quy tắc như vậy đều trả `404 automation_rule_not_found` |
-| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required` |
+| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required`, `automation_audience_retired` |
 | `400`, quy tắc | `automation_action_required`, `automation_project_not_found`, `automation_audience_not_found`, `automation_language_not_configured`, `automation_secret_not_allowed`, `automation_request_id_required`, `invalid_automation_run_page` |
 | `400`, lịch | `automation_cron_invalid`, `automation_cron_time_zone_invalid`, `automation_cron_no_occurrence`, `automation_cron_release_required`, `automation_reminder_days_invalid` |
 | `400`, Slack và email | `automation_slack_webhook_required`, `automation_slack_webhook_invalid`, `automation_email_recipients_required`, `automation_email_recipient_invalid` |

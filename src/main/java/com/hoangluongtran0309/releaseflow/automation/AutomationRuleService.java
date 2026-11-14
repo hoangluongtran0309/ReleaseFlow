@@ -1,6 +1,7 @@
 package com.hoangluongtran0309.releaseflow.automation;
 
 import com.hoangluongtran0309.releaseflow.audience.AudienceNotFoundException;
+import com.hoangluongtran0309.releaseflow.audience.AudienceDeliverers;
 import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.audience.AudienceView;
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLanguageService;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
  * behind, so a rule that was turned off never delivers afterwards.
  */
 @Service
-public class AutomationRuleService implements SourceTokenBorrowers {
+public class AutomationRuleService implements SourceTokenBorrowers, AudienceDeliverers {
 
     private static final String NAME_CONSTRAINT = "automation_rules_name_unique";
     private static final String WEBHOOK_PATH_PREFIX = "/webhooks/automation/";
@@ -111,7 +112,8 @@ public class AutomationRuleService implements SourceTokenBorrowers {
         return rules.stream()
                 .map(rule -> {
                     List<AutomationRuleAction> actions = byRule.getOrDefault(rule.getId(), List.of());
-                    return view(rule, actions, audiences, projects, gitHubSourceMissing(organizationId, rule, actions));
+                    return view(rule, actions, audiences, projects, gitHubSourceMissing(organizationId, rule, actions),
+                            deliversRetiredAudience(organizationId, rule, actions));
                 })
                 .toList();
     }
@@ -125,8 +127,16 @@ public class AutomationRuleService implements SourceTokenBorrowers {
                 actions,
                 audienceNames(organizationId),
                 projectNames(organizationId),
-                gitHubSourceMissing(organizationId, rule, actions)
+                gitHubSourceMissing(organizationId, rule, actions),
+                deliversRetiredAudience(organizationId, rule, actions)
         );
+    }
+
+    // An enabled rule whose action names a retired audience skips that action when it runs,
+    // so its page says so until the audience comes back or the action changes (ADR-0044).
+    private boolean deliversRetiredAudience(UUID organizationId, AutomationRule rule, List<AutomationRuleAction> actions) {
+        return rule.isEnabled()
+                && actions.stream().anyMatch(action -> audienceService.isRetired(organizationId, action.getAudienceId()));
     }
 
     /**
@@ -152,6 +162,26 @@ public class AutomationRuleService implements SourceTokenBorrowers {
                 .map(AutomationRuleAction::getRuleId)
                 .collect(Collectors.toSet());
         return rules.stream().filter(rule -> borrowing.contains(rule.getId())).map(AutomationRule::getName).toList();
+    }
+
+    /** The enabled rules with an action that delivers this audience, by name. */
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> enabledRulesDelivering(UUID organizationId, UUID audienceId) {
+        List<AutomationRule> rules = ruleRepository.findAllByOrganizationIdAndActiveTrueOrderByNameAsc(organizationId)
+                .stream()
+                .filter(AutomationRule::isEnabled)
+                .toList();
+        if (rules.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> delivering = actionRepository
+                .findAllByRuleIdInOrderByRuleIdAscPositionAsc(rules.stream().map(AutomationRule::getId).toList())
+                .stream()
+                .filter(action -> audienceId.equals(action.getAudienceId()))
+                .map(AutomationRuleAction::getRuleId)
+                .collect(Collectors.toSet());
+        return rules.stream().filter(rule -> delivering.contains(rule.getId())).map(AutomationRule::getName).toList();
     }
 
     // An enabled rule of one Project whose GitHub Release action has no connected source to
@@ -312,6 +342,10 @@ public class AutomationRuleService implements SourceTokenBorrowers {
         List<String> languages = releaseLanguageService.targetLanguages(organizationId);
         for (AutomationRuleAction action : actions) {
             requireAudience(organizationId, action.getAudienceId());
+            // Enabling promises the deliveries can be made; a retired audience gets no notes.
+            if (audienceService.isRetired(organizationId, action.getAudienceId())) {
+                throw AutomationConflictException.audienceRetired();
+            }
             requireLanguage(languages, action.getTargetLanguage());
             if (action.getActionType() == ActionType.GITHUB_RELEASE && rule.getProjectId() != null
                     && sourceAccess.findSole(organizationId, rule.getProjectId(), SourceType.GITHUB).isEmpty()) {
@@ -614,7 +648,8 @@ public class AutomationRuleService implements SourceTokenBorrowers {
             List<AutomationRuleAction> actions,
             Map<UUID, String> audiences,
             Map<UUID, String> projects,
-            boolean gitHubSourceMissing
+            boolean gitHubSourceMissing,
+            boolean deliversRetiredAudience
     ) {
         return new AutomationRuleView(
                 rule.getId(),
@@ -655,7 +690,8 @@ public class AutomationRuleService implements SourceTokenBorrowers {
                                 action.hasSecret()
                         ))
                         .toList(),
-                gitHubSourceMissing
+                gitHubSourceMissing,
+                deliversRetiredAudience
         );
     }
 

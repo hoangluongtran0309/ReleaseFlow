@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Puts a release's changes, and its own summary, into one note language. A change whose
@@ -45,8 +46,12 @@ class ReleaseNoteWriter {
 
     /**
      * @param retry whether to start failed translations over first
+     * @param untranslated the audience codes whose narratives no note of this release needs:
+     *                     the retired audiences it has no note for (ADR-0044); empty when none
+     *                     is retired, so the texts are what they always were
      */
-    Localized localize(Release release, List<ChangeView> changes, String language, boolean retry) {
+    Localized localize(Release release, List<ChangeView> changes, String language, boolean retry,
+                       Set<String> untranslated) {
         List<ChangeView> localized = new ArrayList<>(changes.size());
         TranslationState.Status status = TranslationState.Status.READY;
         List<GlossaryUse> glossary = new ArrayList<>();
@@ -57,7 +62,7 @@ class ReleaseNoteWriter {
                 localized.add(change);
                 continue;
             }
-            Map<String, String> texts = texts(change);
+            Map<String, String> texts = texts(change, untranslated);
             TranslationState state = retry
                     ? translationService.retry(release.getOrganizationId(), release.getProjectId(), change.id(),
                     change.contentLanguage(), language, texts)
@@ -90,8 +95,16 @@ class ReleaseNoteWriter {
         return new Localized(localized, summary, status, GlossaryUse.combine(glossary));
     }
 
-    /** The texts of a change that are translated: its summary fields and each audience's headline and body. */
     static Map<String, String> texts(ChangeView change) {
+        return texts(change, Set.of());
+    }
+
+    /**
+     * The texts of a change that are translated: its summary fields and each active
+     * audience's headline and body. With no audience retired, these are every audience's, so
+     * the request and its input hash are what they always were.
+     */
+    static Map<String, String> texts(ChangeView change, Set<String> retired) {
         NeutralSummary summary = change.neutralSummary();
         Map<String, String> texts = new LinkedHashMap<>();
         texts.put(WHAT_CHANGED, summary.whatChanged());
@@ -101,6 +114,9 @@ class ReleaseNoteWriter {
         // Blank texts are never sent, so a summary without limitations hashes as it did before.
         texts.put(LIMITATIONS, summary.limitations());
         change.audienceNarrativeDetails().forEach((code, narrative) -> {
+            if (retired.contains(code)) {
+                return;
+            }
             texts.put(NARRATIVE + code, narrative.body());
             // Blank, so not sent, for a narrative without one: its translation hashes as before.
             texts.put(HEADLINE + code, narrative.headline());

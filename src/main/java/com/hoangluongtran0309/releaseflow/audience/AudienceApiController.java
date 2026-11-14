@@ -73,6 +73,17 @@ public class AudienceApiController {
         return ResponseEntity.noContent().build();
     }
 
+    // A retired audience gets no narrative, no note, and no translation; its notes stay (ADR-0044).
+    @PostMapping("/{audienceId}/retire")
+    AudienceView retire(@AuthenticationPrincipal ReleaseFlowPrincipal principal, @PathVariable UUID audienceId) {
+        return audienceService.retire(principal, audienceId);
+    }
+
+    @PostMapping("/{audienceId}/restore")
+    AudienceView restore(@AuthenticationPrincipal ReleaseFlowPrincipal principal, @PathVariable UUID audienceId) {
+        return audienceService.restore(principal, audienceId);
+    }
+
     @PostMapping("/{audienceId}/reset-to-preset")
     AudienceView resetToPreset(@AuthenticationPrincipal ReleaseFlowPrincipal principal, @PathVariable UUID audienceId) {
         return audienceService.resetToPreset(principal.organizationId(), audienceId);

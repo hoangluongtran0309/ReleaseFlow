@@ -151,6 +151,7 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `POST /api/projects/{projectId}/changes/{changeId}/exclusion` | quản trị viên |
 | `DELETE /api/projects/{projectId}/changes/{changeId}/exclusion` | quản trị viên |
 | `POST /api/projects/{projectId}/changes/{changeId}/ai-classification` | thành viên |
+| `POST /api/projects/{projectId}/changes/{changeId}/missing-narratives` | thành viên |
 | `GET /api/projects/{projectId}/duplicate-candidates` | thành viên |
 | `POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision` | thành viên |
 | `GET /api/projects/{projectId}/sensitive-paths` | thành viên |
@@ -191,6 +192,7 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `GET /api/audiences`, `POST /api/audiences` | quản trị viên |
 | `GET`, `PUT`, `DELETE /api/audiences/{audienceId}` | quản trị viên |
 | `PUT /api/audiences/{audienceId}/templates/{language}` | quản trị viên |
+| `POST /api/audiences/{audienceId}/retire`, `POST /api/audiences/{audienceId}/restore` | quản trị viên |
 | `POST /api/audiences/{audienceId}/reset-to-preset` | quản trị viên |
 | `POST /api/audiences/preview` | quản trị viên |
 | `GET /api/organization/release-languages` | thành viên |
@@ -255,7 +257,7 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Category | `409` | `category_code_taken`, `category_system`, `category_suggestion_decided` |
 | Audience | `400` | `template_invalid`, `template_narratives_path`, `template_language_not_targeted`, `invalid_release_languages` |
 | Audience | `404` | `audience_not_found` |
-| Audience | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
+| Audience | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_last_active`, `audience_already_retired`, `audience_not_retired`, `audience_in_use`, `audience_not_preset` |
 | Bảng thuật ngữ | `404` | `glossary_term_not_found` |
 | Bảng thuật ngữ | `409` | `glossary_term_taken`, `glossary_limit` |
 | Release | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision` |

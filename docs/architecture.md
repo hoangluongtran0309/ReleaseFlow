@@ -244,6 +244,11 @@ audience_definitions
   communication_intent, template_body (Mustache, at most 10000 characters)
   footer_template_body (V34, Mustache over the release's values; blank adds nothing)
   preset, created_at, updated_at
+  retired_at, retired_by (composite FK -> app_users), retirer_name (V39; all three or none)
+
+audience_status_changes (V39, only ever inserted)
+  id (UUID PK); (audience_id, organization_id) FK -> audience_definitions
+  kind (RETIRED | RESTORED), changed_by (composite FK -> app_users), changer_name, changed_at
 
 audience_template_variants (V17)
   id (UUID PK); (audience_id, organization_id) FK -> audience_definitions, ON DELETE CASCADE
@@ -376,7 +381,8 @@ automation_action_runs (V22)
   id (UUID PK), run_id, organization_id, rule_action_id; run_id + position unique
   action_type, audience_id, audience_name_snapshot, language_snapshot
   note_content_snapshot, configuration_snapshot, secret_nonce_snapshot + secret_ciphertext_snapshot
-  status (as runs), external_reference, error_code (exactly when FAILED or UNKNOWN)
+  status (as runs, plus SKIPPED since V39), external_reference
+  error_code (exactly when FAILED, UNKNOWN, or SKIPPED)
   attempts, claimed_at, started_at, completed_at
 
 automation_publish_jobs (V22, the publication outbox)
@@ -1281,6 +1287,37 @@ through the `migration<Kind>` sections, keeping the neutral label for
 `unspecified`, keep their detail lines inside `{{^brief}}`, and print a required
 step outside it; the end-user one prints a step only when it is required.
 
+### Retired audiences
+
+[ADR-0044](adr/0044-retire-an-audience.md) adds retirement beside deletion.
+`AudienceService.retire` runs in its own transaction: it locks every audience row of the
+Organization, refuses the last active one with `audience_last_active`, sets the three
+`retired_*` columns, and inserts an `audience_status_changes` row with the
+administrator's name at the time; `restore` clears the columns and records the return.
+The `audience_definitions_keep_an_active_audience` constraint trigger is the backstop: it
+fires deferred, at commit, on any update that changes `retired_at`, locks the
+Organization row, and raises when no active audience is left, so of two transactions
+retiring the last two, the second waits for the first and fails. `retire` maps that
+commit-time failure to the same `409`. Deleting the last active audience is refused with
+`audience_last`; a retired one can be deleted when nothing names it.
+
+`briefs` and `active` leave retired audiences out, so the AI request, note writing, and
+note previews never see one, and `retiredCodes` tells the writer which narratives not to
+translate. A narrative a retired audience already has is kept: the summary edit puts the
+request's active narratives over the stored ones, so leaving a retired code out no longer
+erases it. Re-rendering an approved release leaves out the retired audiences that have no
+note in it, so a release approved before a retirement keeps that note. With nothing
+retired, briefs, translation texts, and notes are byte for byte what they were.
+
+`MissingNarratives` lists, for a release in review or approved, the changes the AI
+classified that have no narrative for some active audience, with the rough token size of
+the request that would ask for them: the system prompt, the user message, and the
+response schema, over four, computed without sending anything. Asking sends that one
+request with the same evidence as the classification and only the missing audiences, and
+`Change.addMissingNarratives` adds only the codes asked for that are still absent, so
+nothing a person wrote and no other field changes. Each request is made only when a
+person asks.
+
 `AudienceTemplate` wraps JMustache in standards mode with strict sections,
 empty strings as false, and no escaping, because the output is Markdown. It
 validates a template on save by compiling it and rendering sample values, and
@@ -1568,7 +1605,8 @@ write-only: responses and pages say only that one is configured.
 ### Enabling
 
 `AutomationRuleService.enable` checks, in order, the project's ownership,
-every audience's ownership and language, a single connected GitHub source for a GitHub
+every audience's ownership, language, and activity (`automation_audience_retired`), a
+single connected GitHub source for a GitHub
 Release action on a project-scoped rule, whether the deployment can carry the action out at
 all, and the action's own configuration and decrypted secret.
 
@@ -1632,14 +1670,17 @@ path and stops the old secret at once.
 
 It ticks every second and drains what it finds. A claim takes the next
 pending action of a run that is neither finished nor being cancelled, and only once
-every earlier action has succeeded, with `FOR UPDATE OF action_run SKIP LOCKED`. The
+every earlier action has succeeded or been skipped, with `FOR UPDATE OF action_run SKIP LOCKED`. The
 provider is called with no transaction open, and the result is written in a short
-transaction that first checks the claim is still this worker's.
+transaction that first checks the claim is still this worker's. An action whose audience
+is retired is skipped with `audience_retired` before any provider is called; no metric is
+recorded for it, since nothing was delivered.
 
 ### Outcomes
 
-`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`. The
-first action that fails or ends unknown stops the ones behind it. An action whose
+`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`, and, for an
+action, `SKIPPED`, which counts as done: a run whose actions all succeeded or were skipped
+succeeds. The first action that fails or ends unknown stops the ones behind it. An action whose
 worker stopped becomes `UNKNOWN` after five minutes and is never sent again on its own;
 a person repeating it confirms the duplicate. A retry resets only the first action that
 did not succeed. Cancelling lets the action already running record its result and stops

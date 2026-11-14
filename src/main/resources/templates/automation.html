@@ -67,6 +67,8 @@
                         <!--/* Its GitHub Release action has no connected source to borrow (ADR-0042). */-->
                         <span class="badge badge-sm whitespace-nowrap badge-warning badge-soft" th:if="${rule.gitHubSourceMissing}"
                               th:id="|rule-${rule.id}-github-missing|" th:text="#{ui.automation.gitHubSourceMissing}">No GitHub source connected</span>
+                        <span class="badge badge-sm whitespace-nowrap badge-warning badge-soft" th:if="${rule.deliversRetiredAudience}"
+                              th:id="|rule-${rule.id}-audience-retired|" th:text="#{ui.automation.deliversRetiredAudience}">Delivers a retired audience</span>
                     </td>
                     <td th:data-heading="#{ui.automation.column.manage}">
                         <div class="flex flex-wrap justify-end gap-2">
@@ -396,6 +398,9 @@
                             <li th:each="action : ${run.actions}" th:id="|action-run-${action.id}|">
                                 <span th:text="#{ui.automation.runActionLine(${action.position + 1},#{${action.actionType.labelKey}},#{${action.status.labelKey}})}">1. Slack — Succeeded</span>
                                 <code class="text-xs" th:if="${action.errorCode != null}" th:text="${action.errorCode}">slack_rejected</code>
+                                <!--/* Skipped, not failed: the actions behind it still ran (ADR-0044). */-->
+                                <span class="text-xs text-slate-600" th:if="${action.status.name() == 'SKIPPED'}"
+                                      th:text="#{ui.automation.skippedRetired}">Its audience is retired, so nothing was sent.</span>
                                 <a class="link" th:if="${action.externalReference != null}" th:href="${action.externalReference}"
                                    rel="noreferrer noopener" target="_blank" th:text="#{ui.automation.open}">Open</a>
                             </li>

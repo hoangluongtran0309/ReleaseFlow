@@ -194,6 +194,47 @@ class AutomationActionIntegrationTest extends AutomationIntegrationTestBase {
     }
 
     @Test
+    void anActionForARetiredAudienceIsSkippedAndTheRestOfTheRunStillDelivers() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID endUser = audienceId(owner, "end_user");
+        UUID operator = audienceId(owner, "operator");
+        UUID ruleId = createdRuleId(createRule(owner, """
+                {"name":"Announce","triggerType":"MANUAL","projectId":"%s","actions":[
+                  {"actionType":"SLACK","audienceId":"%s","language":"en","secret":"%s"},
+                  {"actionType":"SLACK","audienceId":"%s","language":"en","secret":"%s"}]}
+                """.formatted(projectId, endUser, slackWebhook(), operator, slackWebhook())).andExpect(status().isCreated()));
+        enable(owner, ruleId).andExpect(status().isOk());
+        UUID releaseId = publishedRelease(owner, projectId, "1.4.0");
+
+        // Retired after the rule was enabled, and after its note for this release was published.
+        mockMvc.perform(post("/api/audiences/{id}/retire", endUser).session(owner.session()).with(csrf()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/automation/rules/{ruleId}", ruleId).session(owner.session()))
+                .andExpect(jsonPath("$.deliversRetiredAudience").value(true));
+        UUID runId = run(owner, ruleId, releaseId);
+        work();
+
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.actions[0].status").value("SKIPPED"))
+                .andExpect(jsonPath("$.actions[0].errorCode").value("audience_retired"))
+                .andExpect(jsonPath("$.actions[1].status").value("SUCCEEDED"));
+        assertThat(SLACK.messages()).hasSize(1);
+        mockMvc.perform(get("/automation").session(owner.session()))
+                .andExpect(content().string(containsString("Skipped")))
+                .andExpect(content().string(containsString("Its audience is retired")))
+                .andExpect(content().string(containsString("Delivers a retired audience")));
+
+        // A rule is still written freely, but enabling one for a retired audience is refused.
+        UUID another = createdRuleId(createRule(owner, slackRule("Tell users", "MANUAL", projectId, endUser, "en"))
+                .andExpect(status().isCreated()));
+        enable(owner, another)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("automation_audience_retired"));
+    }
+
+    @Test
     void postsTheNoteToSlackAndReportsWhatSlackRefuses() throws Exception {
         Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
         UUID projectId = createProject(owner);

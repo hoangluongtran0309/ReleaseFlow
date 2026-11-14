@@ -133,6 +133,9 @@ public abstract class AutomationIntegrationTestBase extends PostgreSqlIntegratio
         jdbcTemplate.update("DELETE FROM changes");
         jdbcTemplate.update("DELETE FROM integration_sources");
         jdbcTemplate.update("DELETE FROM projects");
+        // A retired audience names who retired it, so it is let go before its people are.
+        jdbcTemplate.update("DELETE FROM audience_status_changes");
+        jdbcTemplate.update("UPDATE audience_definitions SET retired_at = NULL, retired_by = NULL, retirer_name = NULL");
         jdbcTemplate.update("DELETE FROM app_users");
         deleteOrganizationSettings();
         jdbcTemplate.update("DELETE FROM organizations");
