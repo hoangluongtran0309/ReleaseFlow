@@ -106,14 +106,17 @@ Four facts of the current model decide what follows:
   headline — its `whatChanged` — with no narrative. A release in review when the audience
   comes back is approved with a note for it, built that way.
 - **The Review tab lists those changes**: the changes of the release that the AI
-  classified and that have no narrative for an active audience, grouped by audience. For
-  each, a person either writes the narrative on the release page, or asks the AI for the
+  classified and that have no narrative for an active audience, each naming the audiences
+  it has none for. For each, a person either writes the narrative on the release page, or asks the AI for the
   missing narratives. That request is the same evidence the change was classified from,
   asking only for the audiences without a narrative; it writes those narratives and nothing
   else — never the category, the flags, the summary, or a narrative that exists — so it
   never undoes a recorded review or a person's words. It is made only when a person asks,
-  never automatically, and the page shows its rough cost before it is sent: the number of
-  requests and the estimated tokens, from the length of the request it would send. A full
+  never automatically, and the page shows its rough cost before it is sent: one request
+  per change, and that request's estimated tokens, from the length of the request it would
+  send (system prompt, user message, and response schema, over four), worked out without
+  sending anything. Classifying a change again this way, for a returning audience, started
+  by a person with the cost shown, is decided here. A full
   second classification is not offered, because it would replace what a human review
   settled.
 - **An approved release stays as it was approved**, without a note for it; returning it to
@@ -195,7 +198,8 @@ asks.
 - An audience nobody reads stops costing AI tokens, DeepL characters, and a note per
   release, and nothing it produced is lost.
 - An audience brought back has gaps: the changes classified while it was retired have no
-  narrative for it, and are never asked again.
+  narrative for it. They are never asked again automatically; a person fills each gap by
+  writing the narrative or by asking the AI for it at the cost shown.
 - An approved release keeps the note of an audience retired after its approval, unless it
   is approved again.
 - A person's summary edit no longer erases the narratives of retired audiences. Before, an
@@ -206,5 +210,5 @@ asks.
 ## Not decided here
 
 - Deleting an audience together with its notes, and archiving its published notes.
-- Asking the AI again, for a returning audience, about changes classified while it was
-  retired.
+- Asking the AI for a returning audience's missing narratives without a person asking, or
+  for every such change of a release in one step.
