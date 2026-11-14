@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -133,9 +132,7 @@ class TranslationWorker {
         String glossaryId = claim.attempt() < MAX_ATTEMPTS ? claim.glossary().deeplGlossaryId() : null;
         String withoutReason = claim.glossary().reasonWithout() != null ? claim.glossary().reasonWithout()
                 : GlossaryUse.SYNC_FAILED;
-        List<String> missing = new ArrayList<>(new LinkedHashSet<>(claim.input().values().stream()
-                .filter(text -> !claim.cached().containsKey(text))
-                .toList()));
+        List<String> missing = missing(claim.input(), claim.cached());
         UntranslatedGuard guard = new UntranslatedGuard(claim.targetLanguage(), claim.verbatimTerms());
         Map<String, String> fresh = new HashMap<>();
         Set<String> withoutGlossary = new HashSet<>();
@@ -273,6 +270,21 @@ class TranslationWorker {
                         job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(), byHash.keySet())
                 .forEach(entry -> cached.put(byHash.get(entry.getTextHash()), entry.getTranslatedText()));
         return cached;
+    }
+
+    /**
+     * The texts to send, once each, in the order of their keys. A job's input comes back
+     * from the database as a map whose order nothing promises, so the request would
+     * otherwise list the same texts in another order from one run to the next. DeepL
+     * translates each text on its own, so the order changes no translation.
+     */
+    static List<String> missing(Map<String, String> input, Map<String, String> cached) {
+        return input.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue)
+                .filter(text -> !cached.containsKey(text))
+                .distinct()
+                .toList();
     }
 
     // 2, 4, 8 … seconds, capped at five minutes.
