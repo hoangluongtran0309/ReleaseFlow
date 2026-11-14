@@ -73,6 +73,14 @@ public record ReleaseView(
         return linkedIssues.stream().filter(LinkedIssueStatusView::warning).toList();
     }
 
+    /**
+     * The linked issues still open while their change ships, whose status a person accepted
+     * showing, so the notes print it (ADR-0041).
+     */
+    public List<LinkedIssueStatusView> acceptedLinkedIssues() {
+        return linkedIssues.stream().filter(issue -> issue.open() && issue.accepted()).toList();
+    }
+
     /** The folding suggestions for one tracker change of this release. */
     public List<FoldingSuggestion> foldingSuggestionsFor(UUID trackerChangeId) {
         return foldingSuggestions.stream().filter(suggestion -> suggestion.trackerChangeId().equals(trackerChangeId)).toList();

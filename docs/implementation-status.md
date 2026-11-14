@@ -662,6 +662,16 @@ where it first appears; ADRs are linked from the slice they record.
     it has no narrative; the Review tab lists those changes, and a person asks the AI for
     only the missing narratives, with the request's rough token size shown first.
 
+### Accepted statuses on the Review tab
+
+- #73, under [ADR-0041](adr/0041-linked-context-and-folding.md), with no migration:
+  - the Review tab lists each linked issue whose open status a person accepted, with its
+    key, the status the notes print, who accepted it under their name then, and when, while
+    the release is in review or approved, in both interface languages;
+  - the release API already carried the same on each linked issue;
+  - the browser suite reaches it through `tests/e2e/provider-stand-in.mjs`, a Jira and
+    GitHub stand-in that only the suite runs.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.

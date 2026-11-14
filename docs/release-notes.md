@@ -523,8 +523,14 @@ or a Linear issue that is completed or canceled. An issue recorded before 1.2.0,
 from a tracker that did not say, counts as not finished. Under **Linked issues still
 open**, the Review tab lists each issue whose status is not finished while its change
 ships, with **Show this status**: a member who chooses it lets every note print that very
-status, and ReleaseFlow records who and when. A later read that returns another status asks
-again. The warning never holds up approval or publication. Notes are written at approval
+status, and ReleaseFlow records who and when. The issue then moves to **Open statuses the
+notes show**, which lists, while the release is in review or approved, each issue whose
+open status a person accepted: its key, the status the notes print, who accepted it under
+the name they had then, and when. A later read that returns another status takes it off
+that list and asks again. The release's `GET` carries the same on each of its
+`linkedIssues`: `key`, `status`, `open`, `accepted`, `accepterName`, and `acceptedAt`; the
+notes print `status` when `accepted` is `true`. The warning never holds up approval or
+publication. Notes are written at approval
 from the statuses read by then; a read that finishes later writes again the notes that
 still follow their template, until the release is published.
 

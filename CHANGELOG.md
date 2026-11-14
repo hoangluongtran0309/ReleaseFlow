@@ -53,6 +53,11 @@ section into the version's entry, and the GitHub release is written from it.
   ask the AI for only the missing narratives, with the request's rough size in tokens
   shown before anything is sent.
 
+- The Review tab lists the linked issues whose open status a person accepted showing, under
+  **Open statuses the notes show**: each with its key, the status the notes print, who
+  accepted it, and when, while the release is in review or approved. Before, an issue left
+  the page once its status was accepted, and only the API said who had chosen it.
+
 ### Changed
 
 - A GitHub Release action whose repository's source is disconnected fails as

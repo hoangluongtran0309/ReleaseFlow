@@ -495,8 +495,14 @@ hoặc là issue Linear đã hoàn thành hay đã huỷ. Issue được ghi nh�
 công cụ theo dõi không cho biết điều đó, được coi là chưa hoàn tất. Trong mục **Issue được liên
 kết vẫn chưa hoàn tất**, tab Review liệt kê từng issue có trạng thái chưa hoàn tất trong khi thay
 đổi của nó vẫn phát hành, kèm **Hiển thị trạng thái này**: thành viên chọn nút này cho phép mọi
-note in đúng trạng thái đó, và ReleaseFlow ghi lại ai chọn và lúc nào. Một lần đọc sau trả về
-trạng thái khác sẽ hỏi lại. Cảnh báo này không bao giờ chặn việc duyệt hay publish. Note được viết
+note in đúng trạng thái đó, và ReleaseFlow ghi lại ai chọn và lúc nào. Issue đó sau đó chuyển
+sang mục **Trạng thái chưa hoàn tất mà note hiển thị**, liệt kê, khi release đang review hoặc đã
+duyệt, từng issue có trạng thái chưa hoàn tất mà một người đã chấp nhận: mã issue, trạng thái note
+in ra, người đã chấp nhận với tên của họ lúc đó, và thời điểm. Một lần đọc sau trả về trạng thái
+khác sẽ đưa issue ra khỏi danh sách đó và hỏi lại. `GET` của release cũng mang đúng những thông
+tin này trên mỗi phần tử của `linkedIssues`: `key`, `status`, `open`, `accepted`, `accepterName`
+và `acceptedAt`; note in `status` khi `accepted` là `true`. Cảnh báo này không bao giờ chặn việc
+duyệt hay publish. Note được viết
 lúc duyệt từ các trạng thái đã đọc tới khi đó; một lần đọc xong muộn hơn sẽ viết lại các note vẫn
 theo template, cho tới khi release được publish.
 

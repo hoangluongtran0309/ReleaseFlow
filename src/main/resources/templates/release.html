@@ -345,6 +345,28 @@
                             </ul>
                         </section>
 
+                        <!--/* ADR-0041: an open status a person accepted is printed by the notes; the
+                               page says which, and who chose it under their name at the time. */-->
+                        <section class="mt-4 rounded-box border border-base-300 p-4" id="accepted-linked-issues"
+                                 th:if="${(inReview or approved) and !#lists.isEmpty(release.acceptedLinkedIssues())}"
+                                 aria-labelledby="accepted-linked-issues-heading">
+                            <h3 class="text-sm font-semibold" id="accepted-linked-issues-heading" th:text="#{ui.release.acceptedIssuesHeading}">Open statuses the notes show</h3>
+                            <p class="mt-1 text-xs text-slate-600" th:text="#{ui.release.acceptedIssuesCopy}">A person accepted showing these statuses.</p>
+                            <ul class="mt-3 grid gap-3">
+                                <li class="text-sm" th:each="issue : ${release.acceptedLinkedIssues()}"
+                                    th:id="|accepted-issue-${issue.tracker}-${issue.key}|">
+                                    <a class="link font-medium" th:href="${issue.url}" target="_blank" rel="noopener noreferrer" th:text="${issue.key}">DBV-53</a>
+                                    <span th:text="${issue.title}">Retention preview</span>
+                                    <p class="text-xs text-slate-600" th:text="#{ui.release.acceptedIssueStatus(${issue.status})}">The notes print: In Progress</p>
+                                    <p class="text-xs text-slate-500">
+                                        <span th:text="#{ui.release.acceptedIssueBy(${issue.accepterName})}">Accepted by Mai Tran on</span>
+                                        <time th:datetime="${issue.acceptedAt}"
+                                              th:text="|${#temporals.format(issue.acceptedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">14 Nov 2026, 09:14 UTC</time>
+                                    </p>
+                                </li>
+                            </ul>
+                        </section>
+
                         <!--/* ADR-0044: an audience brought back has no narrative for the changes classified
                                while it was retired. Its notes still include them, under their headline. */-->
                         <section class="mt-4 rounded-box border border-info p-4" id="missing-narratives"
