@@ -73,6 +73,9 @@ section into the version's entry, and the GitHub release is written from it.
 
 ### Fixed
 
+- A DeepL request lists a job's texts in the order of their keys, so the same texts go in
+  the same order on every run. Before, the order changed from one run to the next. DeepL
+  translates each text on its own, so no translation or note changes.
 - The release API lists a release's fold decisions in a fixed order, by when each was
   decided and then by the tracker change, rather than in whatever order the database read
   them.

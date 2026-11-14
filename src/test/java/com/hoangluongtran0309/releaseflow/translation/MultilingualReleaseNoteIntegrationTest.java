@@ -120,8 +120,9 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(DEEPL.requests()).singleElement().satisfies(request -> {
             assertThat(request.sourceLanguage()).isEqualTo("EN");
             assertThat(request.targetLanguage()).isEqualTo("VI");
-            assertThat(request.texts()).containsExactlyInAnyOrder("Tables export as CSV.", "Users asked.", "Streams rows.",
-                    "Watch the export queue.", "Use ExportJob.", "Download any table.");
+            // In the order of their keys, so a run sends what the run before it sent.
+            assertThat(request.texts()).containsExactly("Use ExportJob.", "Download any table.",
+                    "Watch the export queue.", "Streams rows.", "Tables export as CSV.", "Users asked.");
         });
         String notes = mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes").session(owner.session()))
                 .andExpect(jsonPath("$[*].translationStatus").value(everyItem(is("READY"))))

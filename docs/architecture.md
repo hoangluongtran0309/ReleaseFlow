@@ -1487,7 +1487,8 @@ ADR-0015 writes a note per audience and **release note language**; see
   (`translation_disabled`) without a provider, and `PENDING` otherwise.
 - **Worker.** `TranslationWorker` runs every second. It claims one due job with
   `FOR UPDATE SKIP LOCKED`, looks its texts up in the cache, and sends only the
-  missing ones to `DeepLTranslator` outside any transaction: `POST
+  missing ones, each once and in the order of their keys, so every run sends the same
+  list, to `DeepLTranslator` outside any transaction: `POST
   /v2/translate` with `DeepL-Auth-Key`, the job's context as `context` when it has
   one, batches of at most 50 texts and 120 KiB,
   source as the primary language and English or Portuguese targets with a
