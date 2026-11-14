@@ -156,6 +156,92 @@ class LinkedIssuesAtReviewIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    void theReviewTabListsEachAcceptedOpenStatusWithWhoAcceptedItUnderTheirNameThen() throws Exception {
+        Workspace workspace = workspace();
+        UUID change = code(workspace, 1, "feat: preview a retention policy", """
+                [{"key":"APP-53","title":"Retention preview","type":"Story","status":"In Progress","url":"https://acme.atlassian.net/browse/APP-53","tracker":"JIRA","statusCategory":"open"}]""");
+        String release = draft(workspace, "1.0.0", change);
+        String page = release.substring("/api".length());
+        send(workspace.admin(), post(release + "/request-review"), null).andExpect(status().isOk());
+        JIRA.respondWithIssue("APP-53", "Retention preview", "Story", "In Progress", "");
+        drainReads();
+        mockMvc.perform(get(page).session(workspace.admin()))
+                .andExpect(content().string(containsString("id=\"open-linked-issues\"")))
+                .andExpect(content().string(not(containsString("id=\"accepted-linked-issues\""))));
+
+        send(workspace.member(), post(release + "/linked-issues/acceptance"),
+                Map.of("tracker", "JIRA", "key", "APP-53", "status", "In Progress"))
+                .andExpect(status().isOk());
+        // The page keeps the name the person had when they accepted it.
+        jdbcTemplate.update("UPDATE app_users SET display_name = 'Member Renamed' WHERE email = 'member@acme.test'");
+        String acceptedAt = JsonPath.read(send(workspace.admin(), get(release), null)
+                .andExpect(jsonPath("$.linkedIssues[0].key").value("APP-53"))
+                .andExpect(jsonPath("$.linkedIssues[0].status").value("In Progress"))
+                .andExpect(jsonPath("$.linkedIssues[0].open").value(true))
+                .andExpect(jsonPath("$.linkedIssues[0].accepted").value(true))
+                .andExpect(jsonPath("$.linkedIssues[0].accepterName").value("Member"))
+                .andReturn().getResponse().getContentAsString(), "$.linkedIssues[0].acceptedAt");
+        String shown = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", java.util.Locale.ENGLISH)
+                .withZone(java.time.ZoneOffset.UTC).format(java.time.Instant.parse(acceptedAt)) + " UTC";
+
+        mockMvc.perform(get(page).session(workspace.admin()))
+                .andExpect(content().string(not(containsString("id=\"open-linked-issues\""))))
+                .andExpect(content().string(containsString("id=\"accepted-linked-issues\"")))
+                .andExpect(content().string(containsString("Open statuses the notes show")))
+                .andExpect(content().string(containsString("id=\"accepted-issue-JIRA-APP-53\"")))
+                .andExpect(content().string(containsString(">APP-53</a>")))
+                .andExpect(content().string(containsString("The notes print: In Progress")))
+                .andExpect(content().string(containsString("Accepted by Member on")))
+                .andExpect(content().string(not(containsString("Member Renamed"))))
+                .andExpect(content().string(containsString("datetime=\"" + acceptedAt + "\"")))
+                .andExpect(content().string(containsString(shown)));
+        mockMvc.perform(get(page).session(workspace.admin()).cookie(new jakarta.servlet.http.Cookie("releaseflow_lang", "vi")))
+                .andExpect(content().string(containsString("Trạng thái chưa hoàn tất mà note hiển thị")))
+                .andExpect(content().string(containsString("Note ghi: In Progress")))
+                .andExpect(content().string(containsString("Được Member chấp nhận lúc")));
+
+        // Approved, the list stays; the notes print the status it names.
+        approveAll(workspace, release, change);
+        assertThat(note(release)).contains("[APP-53] (In Progress)");
+        mockMvc.perform(get(page).session(workspace.admin()))
+                .andExpect(content().string(containsString("id=\"accepted-issue-JIRA-APP-53\"")));
+
+        // Published, the release is no longer reviewed, so the list is gone.
+        send(workspace.admin(), post(release + "/publish"), null).andExpect(status().isOk());
+        mockMvc.perform(get(page).session(workspace.admin()))
+                .andExpect(content().string(not(containsString("id=\"accepted-linked-issues\""))));
+    }
+
+    @Test
+    void anAcceptedStatusLeavesTheListWhenAReadAtTheNextReviewFindsAnother() throws Exception {
+        Workspace workspace = workspace();
+        UUID change = code(workspace, 1, "feat: preview a retention policy", """
+                [{"key":"APP-53","title":"Retention preview","type":"Story","status":"In Progress","url":"https://acme.atlassian.net/browse/APP-53","tracker":"JIRA","statusCategory":"open"}]""");
+        String release = draft(workspace, "1.0.0", change);
+        String page = release.substring("/api".length());
+        send(workspace.admin(), post(release + "/request-review"), null).andExpect(status().isOk());
+        JIRA.respondWithIssue("APP-53", "Retention preview", "Story", "In Progress", "");
+        drainReads();
+        send(workspace.admin(), post(release + "/linked-issues/acceptance"),
+                Map.of("tracker", "JIRA", "key", "APP-53", "status", "In Progress"))
+                .andExpect(status().isOk());
+
+        send(workspace.admin(), post(release + "/return-to-draft"), null).andExpect(status().isOk());
+        send(workspace.admin(), post(release + "/request-review"), null).andExpect(status().isOk());
+        JIRA.respondWithIssue("APP-53", "Retention preview", "Story", "In Review", "");
+        drainReads();
+
+        send(workspace.admin(), get(release), null)
+                .andExpect(jsonPath("$.linkedIssues[0].status").value("In Review"))
+                .andExpect(jsonPath("$.linkedIssues[0].accepted").value(false))
+                .andExpect(jsonPath("$.linkedIssues[0].accepterName").doesNotExist());
+        mockMvc.perform(get(page).session(workspace.admin()))
+                .andExpect(content().string(containsString("id=\"open-linked-issues\"")))
+                .andExpect(content().string(containsString("Status: In Review")))
+                .andExpect(content().string(not(containsString("id=\"accepted-linked-issues\""))));
+    }
+
+    @Test
     void aReadThatFinishesAfterApprovalRendersTheNotesAgainAndAnUnreadIssueKeepsItsRecordedStatus() throws Exception {
         Workspace workspace = workspace();
         UUID change = code(workspace, 2, "feat: preview the retention policy", """

@@ -1240,6 +1240,10 @@ publication.
   are empty. `SectionValue` lets `{{#status}} ({{status}}){{/status}}` print the value in
   Mustache standards mode. An acceptance names the status the person saw, and one that no
   longer matches the last read is `409 linked_issue_status_changed`.
+  `ReleaseView.openLinkedIssues` is the warning, the open issues nobody accepted, and
+  `acceptedLinkedIssues` the open ones whose current status matches the accepted one, which
+  the Review tab lists with `accepter_name` and `accepted_at` while the release is in review
+  or approved. Both come from the same `LinkedIssueStatusView`s the API returns.
 - **Folding suggestions.** `ReleaseService` computes them from stored data alone while the
   release is `IN_REVIEW`: a Jira or Linear change of the release whose key a GitHub or
   GitLab change of the release lists among its linked issues, or which
@@ -1933,7 +1937,10 @@ violation, at 360 px in the light theme and 1440 px in the dark one. The page sw
 in both interface languages and also checks horizontal overflow and disclosure target
 sizes; interaction cases cover navigation focus, Project switching, validation focus,
 clipboard fallback, polling timeout, confirmations, and the no-JavaScript form path.
-Three suites cover the release pipeline, invitations, and every page. There are no JavaScript
+Three suites cover the release pipeline, invitations, and every page. The only stand-in is
+for providers: `tests/e2e/compose.yaml` adds `tests/e2e/provider-stand-in.mjs`, a Jira that
+answers a project and an issue still open and a GitHub that accepts a token, so the suite
+reaches a release's linked-issue sections. There are no JavaScript
 unit tests, and deliberately so: what is left in `app.js` only means anything in a
 page.
 
