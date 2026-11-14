@@ -153,6 +153,7 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `POST /api/projects/{projectId}/changes/{changeId}/exclusion` | admin |
 | `DELETE /api/projects/{projectId}/changes/{changeId}/exclusion` | admin |
 | `POST /api/projects/{projectId}/changes/{changeId}/ai-classification` | member |
+| `POST /api/projects/{projectId}/changes/{changeId}/missing-narratives` | member |
 | `GET /api/projects/{projectId}/duplicate-candidates` | member |
 | `POST /api/projects/{projectId}/duplicate-candidates/{candidateId}/decision` | member |
 | `GET /api/projects/{projectId}/sensitive-paths` | member |
@@ -193,6 +194,7 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `GET /api/audiences`, `POST /api/audiences` | admin |
 | `GET`, `PUT`, `DELETE /api/audiences/{audienceId}` | admin |
 | `PUT /api/audiences/{audienceId}/templates/{language}` | admin |
+| `POST /api/audiences/{audienceId}/retire`, `POST /api/audiences/{audienceId}/restore` | admin |
 | `POST /api/audiences/{audienceId}/reset-to-preset` | admin |
 | `POST /api/audiences/preview` | admin |
 | `GET /api/organization/release-languages` | member |
@@ -257,7 +259,7 @@ Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
 | Categories | `409` | `category_code_taken`, `category_system`, `category_suggestion_decided` |
 | Audiences | `400` | `template_invalid`, `template_narratives_path`, `template_language_not_targeted`, `invalid_release_languages` |
 | Audiences | `404` | `audience_not_found` |
-| Audiences | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_in_use`, `audience_not_preset` |
+| Audiences | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_last_active`, `audience_already_retired`, `audience_not_retired`, `audience_in_use`, `audience_not_preset` |
 | Glossary | `404` | `glossary_term_not_found` |
 | Glossary | `409` | `glossary_term_taken`, `glossary_limit` |
 | Releases | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision` |

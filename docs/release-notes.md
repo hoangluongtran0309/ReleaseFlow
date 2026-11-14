@@ -210,6 +210,40 @@ which of these holds it. A preset can be reset to its shipped version in the cur
 output language, and so can an audience your team added under a shipped code (`operator`,
 `contributor`, `end_user`, or `support`), which becomes a preset from then on. See [ADR-0011](adr/0011-audience-release-notes.md).
 
+### Retiring an audience
+
+An audience nobody writes for any more can be **retired** instead of deleted, which works
+even while notes, rules, or runs name it. Open it on the **Audiences** page and choose
+**Retire audience**; the list then marks it **Retired** and says who retired it and when.
+From the next approval a retired audience gets no note, the AI is not asked for its
+narrative, and nothing is translated for it. Everything it already has stays: its
+templates, its footer, the narratives its changes carry, and every note written for it,
+which still opens and downloads. A release approved before the retirement keeps its note
+for the audience until it is approved again. The retirement confirmation lists the
+enabled automation rules that deliver the audience: their action for it is
+[skipped](automation.md#runs) rather than failed, and enabling a rule that delivers a
+retired audience is refused.
+
+**Bring back** makes it active again, and the page says who brought it back and when. A
+change the AI classified while the audience was retired has no narrative for it; its note
+still includes the change under the neutral headline (`whatChanged`), with no narrative,
+and never leaves it out. The release's **Review** tab lists those changes under
+**Changes with no narrative for an audience**, so a person writes the narrative with
+**Edit summary**, or asks the AI for only the missing narratives. The button shows the
+request's rough size in tokens, worked out from its text without sending anything; the
+answer adds those narratives and changes nothing else about the change. Through the API, a
+release in review or approved lists them as `missingNarratives` (`changeId`, `reference`,
+`title`, `audienceNames`, `estimatedTokens`), and any member asks the AI with
+`POST /api/projects/{projectId}/changes/{changeId}/missing-narratives`, which answers the
+change. A change the AI did not classify is refused with `409 change_not_eligible_for_ai`;
+without AI the answer is `503 ai_classification_unavailable`, and a failed request
+`502 ai_classification_failed`, which records nothing.
+
+An Organization always keeps at least one active audience: retiring the last one is
+refused, and so is deleting the last active one. Every retirement and return is recorded
+with the administrator's name at the time. See
+[ADR-0044](adr/0044-retire-an-audience.md).
+
 Every audience endpoint is for administrators only:
 
 ```text
@@ -219,6 +253,8 @@ GET    /api/audiences/{audienceId}
 PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
 PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody", "footerTemplateBody"}
 DELETE /api/audiences/{audienceId}
+POST   /api/audiences/{audienceId}/retire
+POST   /api/audiences/{audienceId}/restore
 POST   /api/audiences/{audienceId}/reset-to-preset
 POST   /api/audiences/preview                  {"templateBody", "footerTemplateBody"} -> {"markdown", "html"}
 ```
@@ -226,7 +262,8 @@ POST   /api/audiences/preview                  {"templateBody", "footerTemplateB
 An audience returns `footerTemplateBody` beside `templateBody`, and
 `footerTemplateVariants` beside `templateVariants`, each keyed by language. A request that
 leaves `footerTemplateBody` out keeps the footer the audience or language has, and a new
-audience then has none, so callers written before footers keep working.
+audience then has none, so callers written before footers keep working. An audience also
+returns `retiredAt` and `retirerName`, both `null` while it is active.
 
 | Situation | Response |
 | --- | --- |
@@ -236,7 +273,9 @@ audience then has none, so callers written before footers keep working.
 | A template naming `narratives.<code>` | `400 template_narratives_path` |
 | The code is already used | `409 audience_code_taken` |
 | The Organization already has 20 audiences | `409 audience_limit` |
-| Deleting the last audience | `409 audience_last` |
+| Deleting the last active audience | `409 audience_last` |
+| Retiring the last active audience | `409 audience_last_active` |
+| Retiring an audience that is retired, or bringing back one that is not | `409 audience_already_retired`, `409 audience_not_retired` |
 | Deleting an audience that has release notes, that an automation rule's action delivers to (enabled, disabled, or archived), or that a run's history names | `409 audience_in_use`; `detail` says which |
 | Resetting an audience whose code no shipped audience has | `409 audience_not_preset` |
 | A language template for a language that is not a release note language | `400 template_language_not_targeted` |
@@ -572,7 +611,8 @@ the output language.
 During review and after approval, **Edit summary** on the Review tab lets a
 person write or correct a change's summary, including its migration kind and
 limitations, and each audience's relevance, headline, and narrative. This works whether
-or not the AI wrote one, and the AI never replaces what a person chose. Through the API,
+or not the AI wrote one, and the AI never replaces what a person chose. The form shows the
+active audiences only, and saving it keeps a retired audience's narrative as it was. Through the API,
 each audience's narrative is `{"relevance": "NONE" | "BRIEF" | "FULL", "headline", "body"}`
 or, as callers written before relevance existed send, a plain string, which is a full
 narrative without a headline. A full narrative with neither headline nor body is not
@@ -580,7 +620,8 @@ kept, since it says no more than having none; an unknown relevance returns
 `400 malformed_request`. A request that names no `migrationKind`, as callers written before it
 existed send, records `UNSPECIFIED` for a step and `NONE` without one; a kind that
 does not match the step (`NONE` with a step, any other without) returns
-`400 validation_failed`. The change records who wrote it, and the
+`400 validation_failed`. A narrative for a retired audience that the request leaves out is
+kept. The change records who wrote it, and the
 notes of an approved release that still follow their template are rendered
 again. Notes reflect the changes at approval: to pick up a classification
 corrected later in the Change Inbox, return the release to draft and approve it

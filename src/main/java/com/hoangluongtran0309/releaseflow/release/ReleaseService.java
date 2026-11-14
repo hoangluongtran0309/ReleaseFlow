@@ -20,6 +20,8 @@ import com.hoangluongtran0309.releaseflow.change.ChangeSummaryRequest;
 import com.hoangluongtran0309.releaseflow.change.ChangeSummaryService;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.InvalidChangeReviewException;
+import com.hoangluongtran0309.releaseflow.change.MissingNarrative;
+import com.hoangluongtran0309.releaseflow.change.MissingNarratives;
 import com.hoangluongtran0309.releaseflow.jira.LinkedIssue;
 import com.hoangluongtran0309.releaseflow.project.ProjectService;
 import com.hoangluongtran0309.releaseflow.source.SourceType;
@@ -37,6 +39,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -83,6 +86,7 @@ public class ReleaseService {
     private final ReleaseLinkedIssueRepository linkedIssueRepository;
     private final LinkedIssueReadRepository linkedIssueReadRepository;
     private final ReleaseFoldDecisionRepository foldDecisionRepository;
+    private final MissingNarratives missingNarratives;
     private final ChangeFoldingService changeFoldingService;
     private final ChangeExclusionService changeExclusionService;
     private final ObjectMapper objectMapper;
@@ -107,6 +111,7 @@ public class ReleaseService {
             ReleaseLinkedIssueRepository linkedIssueRepository,
             LinkedIssueReadRepository linkedIssueReadRepository,
             ReleaseFoldDecisionRepository foldDecisionRepository,
+            MissingNarratives missingNarratives,
             ChangeFoldingService changeFoldingService,
             ChangeExclusionService changeExclusionService,
             ObjectMapper objectMapper,
@@ -130,6 +135,7 @@ public class ReleaseService {
         this.linkedIssueRepository = linkedIssueRepository;
         this.linkedIssueReadRepository = linkedIssueReadRepository;
         this.foldDecisionRepository = foldDecisionRepository;
+        this.missingNarratives = missingNarratives;
         this.changeFoldingService = changeFoldingService;
         this.changeExclusionService = changeExclusionService;
         this.objectMapper = objectMapper;
@@ -895,7 +901,8 @@ public class ReleaseService {
         String language = outputLanguageService.outputLanguage(organizationId).tag();
         ReleaseLinks links = links(release);
         IssueStatuses statuses = statuses(release);
-        return audienceService.list(organizationId).stream()
+        // A retired audience gets no note, so no preview either (ADR-0044).
+        return audienceService.active(organizationId).stream()
                 .map(audience -> new AudienceNotePreview(
                         audience.code(),
                         audience.displayName(),
@@ -923,12 +930,14 @@ public class ReleaseService {
     // One note per current audience and release note language, from a snapshot of the
     // audience's template and footer for that language.
     private List<AudienceReleaseNote> writeNotes(Release release, List<ChangeView> changes, Instant now) {
-        List<AudienceView> audiences = audienceService.list(release.getOrganizationId());
+        // One note per active audience: a retired one gets none at this approval (ADR-0044).
+        List<AudienceView> audiences = audienceService.active(release.getOrganizationId());
         List<AudienceReleaseNote> notes = new ArrayList<>();
         ReleaseLinks links = links(release);
         IssueStatuses statuses = statuses(release);
         for (String language : releaseLanguageService.targetLanguages(release.getOrganizationId())) {
-            ReleaseNoteWriter.Localized localized = noteWriter.localize(release, changes, language, false);
+            ReleaseNoteWriter.Localized localized = noteWriter.localize(release, changes, language, false,
+                    audienceService.retiredCodes(release.getOrganizationId()));
             for (AudienceView audience : audiences) {
                 String template = audience.templateFor(language);
                 String footer = audience.footerFor(language);
@@ -960,12 +969,16 @@ public class ReleaseService {
         Map<String, ReleaseNoteWriter.Localized> byLanguage = new LinkedHashMap<>();
         ReleaseLinks links = links(release);
         IssueStatuses statuses = statuses(release);
-        for (AudienceReleaseNote note : notes(release)) {
+        List<AudienceReleaseNote> notes = notes(release);
+        // A note written before its audience was retired still needs that audience's narratives.
+        Set<String> untranslated = new HashSet<>(audienceService.retiredCodes(release.getOrganizationId()));
+        notes.forEach(note -> untranslated.remove(note.getAudienceCode()));
+        for (AudienceReleaseNote note : notes) {
             if (!note.isAutoRerender() || (onlyLanguage != null && !onlyLanguage.equals(note.getLanguage()))) {
                 continue;
             }
             ReleaseNoteWriter.Localized localized = byLanguage.computeIfAbsent(note.getLanguage(),
-                    language -> noteWriter.localize(release, changes, language, retry));
+                    language -> noteWriter.localize(release, changes, language, retry, untranslated));
             note.rerender(render(localized.summary(), localized.changes(), note.getTemplateBodySnapshot(),
                     note.getFooterTemplateSnapshot(), links, note.getAudienceCode(), note.getLanguage(),
                     note.getAudienceName(), statuses), localized.status(), localized.glossary(), now);
@@ -1101,7 +1114,8 @@ public class ReleaseService {
             List<LinkedIssueStatusView> linkedIssues,
             String linkedIssueRead,
             List<FoldingSuggestion> foldingSuggestions,
-            List<FoldDecisionView> foldDecisions
+            List<FoldDecisionView> foldDecisions,
+            List<MissingNarrative> missingNarratives
     ) {
     }
 
@@ -1119,7 +1133,12 @@ public class ReleaseService {
                 .stream()
                 .map(ReleaseFoldDecision::view)
                 .toList();
-        return new Review(linkedIssues(changes, statuses, rows), read, foldingSuggestions(release, changes), decisions);
+        // A published note is frozen, so nothing missing can be written into it any more.
+        List<MissingNarrative> missing = release.getStatus() == ReleaseStatus.PUBLISHED
+                ? List.of()
+                : missingNarratives.of(release.getOrganizationId(), release.getProjectId(), changes);
+        return new Review(linkedIssues(changes, statuses, rows), read, foldingSuggestions(release, changes), decisions,
+                missing);
     }
 
     private static ReleaseView view(
@@ -1158,7 +1177,8 @@ public class ReleaseService {
                 review.linkedIssues(),
                 review.linkedIssueRead(),
                 review.foldingSuggestions(),
-                review.foldDecisions()
+                review.foldDecisions(),
+                review.missingNarratives()
         );
     }
 

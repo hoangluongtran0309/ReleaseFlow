@@ -149,6 +149,12 @@ class AutomationActionRun {
         this.completedAt = now;
     }
 
+    void skip(String reason, Instant now) {
+        this.status = ExecutionStatus.SKIPPED;
+        this.errorCode = reason;
+        this.completedAt = now;
+    }
+
     void markUnknown(String errorCode, Instant now) {
         this.status = ExecutionStatus.UNKNOWN;
         this.errorCode = errorCode;

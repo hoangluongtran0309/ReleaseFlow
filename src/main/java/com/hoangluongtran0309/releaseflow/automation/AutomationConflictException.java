@@ -22,6 +22,11 @@ public class AutomationConflictException extends LocalizedException {
         return new AutomationConflictException("automation_rule_archived");
     }
 
+    /** A rule cannot promise to deliver an audience that gets no notes (ADR-0044). */
+    static AutomationConflictException audienceRetired() {
+        return new AutomationConflictException("automation_audience_retired");
+    }
+
     static AutomationConflictException gitHubSourceMissing() {
         return new AutomationConflictException("automation_github_source_missing");
     }

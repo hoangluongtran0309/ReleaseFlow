@@ -132,6 +132,15 @@ stopped for five minutes — is recorded as unknown and never sent again on its
 own; repeating it asks you to confirm the delivery may happen twice. **Cancel**
 lets the action already on its way record its result and stops the rest.
 
+An action for an audience that has been [retired](release-notes.md#retiring-an-audience)
+is **skipped** with `audience_retired` before it calls anything: nothing is sent for it,
+the actions behind it still run, and a run whose other actions succeed succeeds. The run
+history marks the action **Skipped** and says why, and the Automation page marks a rule
+that still delivers a retired audience. Enabling such a rule is refused with
+`409 automation_audience_retired`; point the action at an active audience, or bring the
+audience back, first. An action's status through the API is `PENDING`, `RUNNING`,
+`SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`, or `SKIPPED`.
+
 ![A run whose GitHub Release action failed with github_release_conflict: the actions behind it are pending, with Run again and Cancel](assets/automation/a-7-run-failed.webp)
 
 A GitHub Release action borrows the project's GitHub source, so it depends on that
@@ -213,7 +222,7 @@ Refusals carry a stable code:
 | Status | Codes |
 | --- | --- |
 | `404` | `automation_rule_not_found`, `automation_run_not_found` — also for a rule or run of another Organization, never `403`, and for an archived rule: `GET`, `PUT`, enable, disable, and `DELETE` of one all answer `404 automation_rule_not_found` |
-| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required` |
+| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required`, `automation_audience_retired` |
 | `400`, rule | `automation_action_required`, `automation_project_not_found`, `automation_audience_not_found`, `automation_language_not_configured`, `automation_secret_not_allowed`, `automation_request_id_required`, `invalid_automation_run_page` |
 | `400`, schedule | `automation_cron_invalid`, `automation_cron_time_zone_invalid`, `automation_cron_no_occurrence`, `automation_cron_release_required`, `automation_reminder_days_invalid` |
 | `400`, Slack and email | `automation_slack_webhook_required`, `automation_slack_webhook_invalid`, `automation_email_recipients_required`, `automation_email_recipient_invalid` |

@@ -42,6 +42,16 @@ section into the version's entry, and the GitHub release is written from it.
   one was, a **Quiet** mark when it has been silent for longer than it usually goes, and
   an **Overdue** mark for a Jira source whose read is late. Nothing about a refused
   delivery is kept beyond its count and time.
+- An administrator can retire an audience instead of deleting it, even while notes,
+  rules, or runs name it, and bring it back later. From the next approval a retired
+  audience gets no note, no AI narrative, and no translation. Its templates, narratives,
+  and published notes stay, and who retired it or brought it back is shown
+  ([ADR-0044](docs/adr/0044-retire-an-audience.md)). The last active audience can't be
+  retired, even when two administrators try at once.
+- When an audience comes back, its notes include every change, under its neutral headline
+  when it has no narrative. The release's Review tab lists those changes, and a person can
+  ask the AI for only the missing narratives, with the request's rough size in tokens
+  shown before anything is sent.
 
 ### Changed
 
@@ -50,6 +60,16 @@ section into the version's entry, and the GitHub release is written from it.
   Automation page marks an enabled rule that has no GitHub source to borrow. A rule with a
   GitHub Release action can be enabled only while its project has one connected GitHub
   source.
+- **Behavior change:** editing a change's summary now keeps the narratives of retired
+  audiences. Before, saving the summary kept only the narratives the request listed, so a
+  narrative for an audience it left out was erased; now each narrative it does not
+  replace is kept.
+- An automation action for a retired audience is skipped, with `audience_retired`, instead
+  of being attempted: nothing is sent for it, the actions behind it still run, and the run
+  page marks it **Skipped**. Action runs gain the `SKIPPED` status. A rule that delivers a
+  retired audience can't be enabled (`409 automation_audience_retired`).
+- Deleting the last *active* audience is refused with `409 audience_last`; a retired
+  audience nothing names can still be deleted.
 
 ### Fixed
 

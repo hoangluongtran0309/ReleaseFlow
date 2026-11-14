@@ -15,7 +15,8 @@ trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
 context, translation glossary, linked context and folding, source lifecycle and
-health, and member management slices: one Spring Boot application, PostgreSQL/Flyway V1-V38,
+health, member management, and audience retirement slices: one Spring Boot application,
+PostgreSQL/Flyway V1-V39,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -56,8 +57,9 @@ application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
 Sources can be disconnected, reconnected under their own ID, and have their webhook
 secret rotated, and each one's health shows where people look. Administrators change
-members' roles and remove members, and a changed member's sessions stop.
-The decisions behind all of it are ADR-0001 through ADR-0043, indexed in
+members' roles and remove members, and a changed member's sessions stop. An audience
+can be retired, so it gets no note, narrative, or translation, and brought back.
+The decisions behind all of it are ADR-0001 through ADR-0044, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -264,6 +266,17 @@ changing behavior.
   release links come from the Project's one code host as stored, each version used as
   its tag name exactly as written; notes are written at approval from a snapshot of each
   audience's template and footer and are frozen at publication.
+- An Organization always has at least one active audience: retiring locks the
+  Organization's audience rows before counting, and a deferred trigger refuses any commit
+  that leaves none. A retired audience is never asked of the AI, written a note, previewed,
+  or translated, and nothing it has is deleted: its templates, narratives, and published
+  notes stay, and an approved release keeps the note it already has. A person's summary
+  edit never erases a retired audience's narrative. With nothing retired, every brief,
+  translation text, and note is exactly what it was.
+- A brought-back audience's note includes every change, under its neutral headline when it
+  has no narrative. Its missing narratives are asked of the AI only when a person asks, in
+  one request with the change's own evidence and only the missing audiences, and the answer
+  adds only those narratives; the cost shown first is computed without sending anything.
 - A relevance only leaves a change out of an audience's note when it is `none`
   and the change is not breaking: a breaking change is in every note, and a
   change with no narrative for the audience is included. An audience nothing
@@ -312,6 +325,10 @@ changing behavior.
   confirm is recorded as unknown, never retried on its own, and repeated only
   when a person confirms the duplicate. The first action of a run that does not
   succeed stops the ones behind it, and a retry resets only that action.
+- An action for a retired audience is `SKIPPED` with `audience_retired` before it calls
+  anything; a skipped action stops nothing and records no delivery metric, and a run
+  whose actions all succeeded or were skipped succeeds. Enabling a rule that delivers a
+  retired audience is refused.
 - An action's secret is bound to its own action, written once and never read back
   into a response, a page, or a log. A GitHub Release action has no secret: it
   borrows the project's one GitHub source and its token, and fails when the

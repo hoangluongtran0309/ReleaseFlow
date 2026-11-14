@@ -642,6 +642,26 @@ where it first appears; ADRs are linked from the slice they record.
   - who changed a role or removed a member, and when, in `membership_changes`, shown on the
     Members page and by `GET /api/members/changes`.
 
+### Retiring an audience (V39)
+
+- [ADR-0044](adr/0044-retire-an-audience.md) (#72), with Flyway `V39`:
+  - administrators retire an audience and bring it back on the Audiences page or through
+    `POST /api/audiences/{id}/retire` and `/restore`, even while notes, rules, or runs
+    name it; who did it and when is recorded in `audience_status_changes` and shown;
+  - a retired audience gets no AI narrative, no note, no preview, and no translation from
+    the next approval, and keeps its templates, narratives, and published notes; with
+    nothing retired, notes and translation requests are unchanged;
+  - the last active audience is refused with `409 audience_last_active`, serialised by a
+    lock on the Organization's audience rows and backed by a deferred constraint trigger,
+    and deleting the last active one with `409 audience_last`;
+  - the summary edit keeps a retired audience's narrative instead of erasing it;
+  - an automation action for a retired audience is `SKIPPED` with `audience_retired` and
+    the run goes on; enabling such a rule is refused with
+    `409 automation_audience_retired`, and the Automation page marks it;
+  - a brought-back audience's note includes every change, under its neutral headline when
+    it has no narrative; the Review tab lists those changes, and a person asks the AI for
+    only the missing narratives, with the request's rough token size shown first.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.
@@ -695,3 +715,5 @@ deliberately deferred list below, one reviewed slice at a time.
 - Review history, comments, reviewer roles, and bulk review.
 - Item reordering.
 - Unpublishing or correcting published release notes.
+- Deleting an audience together with its notes, archiving its published notes, and asking
+  the AI for a returning audience's missing narratives without a person asking.
