@@ -11,7 +11,6 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Optional;
-import java.util.UUID;
 
 @Component
 public class GitHubWebhookVerifier {
@@ -22,26 +21,36 @@ public class GitHubWebhookVerifier {
 
     private final IntegrationSourceRepository sourceRepository;
     private final CredentialCipher credentialCipher;
+    private final SignatureFailureRecorder failures;
 
-    GitHubWebhookVerifier(IntegrationSourceRepository sourceRepository, CredentialCipher credentialCipher) {
+    GitHubWebhookVerifier(
+            IntegrationSourceRepository sourceRepository,
+            CredentialCipher credentialCipher,
+            SignatureFailureRecorder failures
+    ) {
         this.sourceRepository = sourceRepository;
         this.credentialCipher = credentialCipher;
+        this.failures = failures;
     }
 
     /**
      * Resolves the source addressed by the untrusted path and returns it only
-     * when its own secret produced the X-Hub-Signature-256 value for these exact bytes.
+     * when its own secret produced the X-Hub-Signature-256 value for these exact bytes. A
+     * missing or wrong signature on a path that resolved is counted against that source.
      */
     public Optional<VerifiedWebhook> verify(String webhookId, String signatureHeader, byte[] body) {
-        Optional<byte[]> suppliedSignature = parseSignature(signatureHeader);
-        Optional<UUID> parsedWebhookId = WebhookSources.parseWebhookId(webhookId);
-        if (suppliedSignature.isEmpty() || parsedWebhookId.isEmpty()) {
+        Optional<IntegrationSource> source = WebhookSources.parseWebhookId(webhookId)
+                .flatMap(sourceRepository::findByWebhookId)
+                .filter(candidate -> candidate.getSourceType() == SourceType.GITHUB);
+        if (source.isEmpty()) {
             return Optional.empty();
         }
-        return sourceRepository.findByWebhookId(parsedWebhookId.get())
-                .filter(source -> source.getSourceType() == SourceType.GITHUB)
-                .filter(source -> signatureMatches(source, body, suppliedSignature.get()))
-                .map(WebhookSources::verified);
+        Optional<byte[]> suppliedSignature = parseSignature(signatureHeader);
+        if (suppliedSignature.isEmpty() || !signatureMatches(source.get(), body, suppliedSignature.get())) {
+            failures.record(source.get());
+            return Optional.empty();
+        }
+        return source.map(WebhookSources::verified);
     }
 
     @Transactional

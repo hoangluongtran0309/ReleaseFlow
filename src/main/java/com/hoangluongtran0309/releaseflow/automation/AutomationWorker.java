@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.automation;
 
+import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.release.ReleaseAccess;
 import com.hoangluongtran0309.releaseflow.release.ReleaseStatus;
 import org.slf4j.Logger;
@@ -55,6 +56,7 @@ class AutomationWorker {
     private final Map<ActionType, RuleActionExecutor> executors;
     private final TransactionTemplate transactionTemplate;
     private final AutomationMetrics metrics;
+    private final AudienceService audienceService;
     private final Clock clock;
     private final boolean enabled;
 
@@ -68,6 +70,7 @@ class AutomationWorker {
             ReleaseAccess releaseAccess,
             List<RuleActionExecutor> executors,
             AutomationMetrics metrics,
+            AudienceService audienceService,
             PlatformTransactionManager transactionManager,
             Clock clock,
             @Value("${releaseflow.automation.worker-enabled}") boolean enabled
@@ -88,6 +91,7 @@ class AutomationWorker {
                 () -> new EnumMap<>(ActionType.class)
         ));
         this.metrics = metrics;
+        this.audienceService = audienceService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.clock = clock;
         this.enabled = enabled;
@@ -122,8 +126,9 @@ class AutomationWorker {
             return false;
         }
         ActionResult result = execute(claim.get());
-        if (finish(claim.get(), result)) {
-            // Counted only after the outcome is durable, and never for a claim that went stale.
+        // Counted only after the outcome is durable, and never for a claim that went stale. A
+        // skipped action attempted no delivery, so it is not a delivery outcome at all.
+        if (finish(claim.get(), result) && result.outcome() != ExecutionStatus.SKIPPED) {
             metrics.recordExecution(claim.get().triggerType(), result.outcome());
         }
         return true;
@@ -232,6 +237,7 @@ class AutomationWorker {
                     run.getReleaseId(),
                     run.getReleaseVersionSnapshot(),
                     action.getActionType(),
+                    action.getAudienceId(),
                     action.getAudienceNameSnapshot(),
                     action.getLanguageSnapshot(),
                     action.getNoteContentSnapshot(),
@@ -249,6 +255,11 @@ class AutomationWorker {
     }
 
     private ActionResult execute(Claim claim) {
+        // Checked when the action runs, before any call: a retired audience is skipped even
+        // when a published note for it exists, and the run goes on (ADR-0044).
+        if (audienceService.isRetired(claim.organizationId(), claim.audienceId())) {
+            return ActionResult.skipped(ActionResult.AUDIENCE_RETIRED);
+        }
         if (claim.noteContent() == null) {
             return ActionResult.failed(ActionResult.NOTE_MISSING);
         }
@@ -290,6 +301,7 @@ class AutomationWorker {
                     switch (result.outcome()) {
                         case SUCCEEDED -> action.succeed(result.externalReference(), now);
                         case FAILED -> action.fail(result.errorCode(), now);
+                        case SKIPPED -> action.skip(result.errorCode(), now);
                         default -> action.markUnknown(result.errorCode(), now);
                     }
                     actionRunRepository.flush();
@@ -324,6 +336,7 @@ class AutomationWorker {
             UUID releaseId,
             String releaseVersion,
             ActionType actionType,
+            UUID audienceId,
             String audienceName,
             String language,
             String noteContent,

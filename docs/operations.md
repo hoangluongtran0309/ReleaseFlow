@@ -92,6 +92,13 @@ stay behind a VPN or an allowlist. Once your Organization exists, refuse `/regis
 [registration stays open](workspace.md#registration). Never route the management port
 through the proxy.
 
+**Webhooks.** ReleaseFlow has no inbound rate limit either: a webhook request is bounded
+only by the 1 MiB body limit, checked first. A refused delivery to a known source's path
+is counted on the source's page, coalesced to about one row update per source per second
+however many arrive ([ADR-0042](adr/0042-source-lifecycle-and-health.md)), but each one
+still costs a lookup and a signature check. If you expect floods, limit `/webhooks/**` at
+the proxy.
+
 **Signing in.** ReleaseFlow does not limit failed sign-in attempts, so rate-limit
 `POST /login` at the proxy. Sessions live in the application's memory: a restart signs
 everybody out.
@@ -108,10 +115,10 @@ constraints, and triggers when the application starts.
 
 **Backups.** Back up the database and `RELEASEFLOW_CREDENTIAL_MASTER_KEY` together, and
 store them apart. A database restored without its key still starts, but every stored
-secret is unreadable. Access tokens and action secrets can be entered again; a source's
-webhook secret cannot, because a source cannot be replaced yet, so its every delivery is
-refused with `401 webhook_signature_invalid` and the log says
-`Could not decrypt the webhook secret of source …`. Restore a whole dump into an empty
+secret is unreadable. Access tokens and action secrets can be entered again. A source's
+webhook secret is refused at every delivery with `401 webhook_signature_invalid`, and the
+log says `Could not decrypt the webhook secret of source …`, until it is
+[rotated](sources.md#rotate-a-webhook-secret) and the new one given to the provider. Restore a whole dump into an empty
 database:
 
 ```bash
@@ -133,8 +140,9 @@ From 1.1.0 every classification request asks for the same temperature, `0` unles
 `RELEASEFLOW_AI_TEMPERATURE` names another
 ([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
 [ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 sent none. A model that accepts
-only its default temperature refuses a request that names one: OpenAI's reasoning models
-and Claude models released after Opus 4.6 do.
+only its default temperature refuses a request that names one: OpenAI's reasoning models do,
+and so did Claude models released after Opus 4.6 until Anthropic requests stopped carrying a
+temperature (see [Upgrading with Anthropic](#upgrading-with-anthropic)).
 
 **No action is needed.** When the provider refuses the temperature, ReleaseFlow sends the
 same request once more without it, and leaves it out of every later request until it
@@ -154,6 +162,37 @@ Requests then leave the temperature out from the first, as every request did bef
 Docker Compose, put it in the `.env` beside the Compose file, which forwards it and sends `0`
 when it is not set. A deployment whose model accepts a temperature sends `0` and sees no
 refusal.
+
+### Upgrading with Anthropic
+
+From 1.3.0 ReleaseFlow calls Claude with Anthropic API version `2026-10-21`, which takes no
+temperature ([ADR-0045](adr/0045-anthropic-api-version-2026-10-21.md)). For a deployment
+with `RELEASEFLOW_AI_PROVIDER=anthropic`:
+
+- **No setting needs to change.** Requests carry no temperature, whatever
+  `RELEASEFLOW_AI_TEMPERATURE` says. A number other than `0` logs one warning at startup and
+  can be removed:
+
+  ```text
+  RELEASEFLOW_AI_TEMPERATURE is ignored for anthropic: Anthropic API version 2026-10-21 takes no temperature, so Claude samples with its default. Remove the setting to silence this warning.
+  ```
+
+- **On Claude 4.7 and later, classification samples as before.** The first request after
+  each start is no longer refused for its temperature, so its warning goes away.
+- **On Claude 4.6 and earlier** (such as Sonnet 4.6, Opus 4.6, or Haiku 4.5),
+  classification runs at the model's default temperature, `1.0`, instead of `0`, so notes
+  vary more between runs than on 1.2: a change classified again may be worded differently,
+  or, where its evidence is thin, get another category. No setting brings `0` back on
+  Anthropic; OpenAI and DeepSeek still take it. Rules, mandatory review, and one request per
+  change are unchanged.
+- **The API key is sent as `Authorization: Bearer <key>`** instead of `x-api-key`, with
+  `anthropic-version: 2026-10-21`. A proxy or gateway at `RELEASEFLOW_ANTHROPIC_BASE_URL` that
+  reads or sets `x-api-key`, or checks `anthropic-version`, must accept these before the
+  upgrade; one that forwards to Amazon Bedrock accepts `2026-10-21` only for Claude 4.7 and
+  later. The Claude API itself accepts either header.
+
+The Anthropic SDK inside the JAR and the image is now under the Apache License 2.0 instead of
+MIT. It ships no `NOTICE` file, and its licence files stay inside its jars.
 
 ### Upgrading to the glossary
 

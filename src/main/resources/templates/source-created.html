@@ -13,7 +13,8 @@
     <header class="page-header">
         <div>
             <p class="page-eyebrow"
-               th:text="#{'ui.sourceCreated.connected.' + ${source.type.name()}}">GitHub connected</p>
+               th:text="${reconnected == true} ? #{ui.sourceCreated.reconnected(${source.type.displayName()})}
+                       : #{'ui.sourceCreated.connected.' + ${source.type.name()}}">GitHub connected</p>
             <h1 class="page-heading"
                 th:text="${linear} ? #{ui.sourceCreated.headingTeam}
                         : (${jira} ? #{ui.sourceCreated.headingProject} : #{ui.sourceCreated.headingSecret})">
@@ -131,6 +132,12 @@
 
         <p class="mt-6 text-sm text-slate-600" th:if="${jira}" th:utext="#{ui.sourceCreated.jiraSteps}">
             The first read happens a few minutes from now, and every few minutes after that.
+        </p>
+
+        <!--/* A reconnect keeps the source's ID, so nothing it recorded comes in twice (ADR-0042). */-->
+        <p class="mt-3 text-sm text-slate-600" th:if="${reconnected == true}"
+           th:text="#{'ui.sourceCreated.reconnectedNote.' + ${source.type.name()}}">
+            Run a history import to pick up what merged while it was disconnected.
         </p>
 
         <a class="btn btn-primary mt-6" th:href="@{/projects}"

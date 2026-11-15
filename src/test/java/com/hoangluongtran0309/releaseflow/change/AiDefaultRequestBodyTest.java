@@ -22,8 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * ADR-0038: a deployment that leaves {@code RELEASEFLOW_AI_TEMPERATURE} unset, or sets it to
- * nothing, sends every provider exactly the bytes it sent before the setting existed, so
- * recorded requests still match. The setting is read as the application reads it, from
+ * nothing, sends OpenAI and DeepSeek exactly the bytes they were sent before the setting
+ * existed, so recorded requests still match. Anthropic is sent the body captured when it
+ * moved to API version 2026-10-21, which takes no temperature, whatever the setting says
+ * (ADR-0045). The setting is read as the application reads it, from
  * {@code application.properties} over the environment.
  */
 class AiDefaultRequestBodyTest {
@@ -42,6 +44,12 @@ class AiDefaultRequestBodyTest {
         assertThat(temperature).isEqualTo(UNSET.equals(environmentValue) ? "0" : environmentValue);
 
         assertThat(requestBody(provider, temperature)).isEqualTo(fixture(provider));
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {"unset", "''", "0", "0.5", "1", "default"})
+    void sendsAnthropicTheSameBodyForEveryTemperature(String environmentValue) throws Exception {
+        assertThat(requestBody("anthropic", resolvedTemperature(environmentValue))).isEqualTo(fixture("anthropic"));
     }
 
     // What @Value("${releaseflow.ai.temperature}") receives for this environment.

@@ -5,6 +5,7 @@ import com.hoangluongtran0309.releaseflow.account.RegistrationResult;
 import com.hoangluongtran0309.releaseflow.account.RegistrationService;
 import com.hoangluongtran0309.releaseflow.support.OpenAiStub;
 import com.hoangluongtran0309.releaseflow.support.PostgreSqlIntegrationTest;
+import com.hoangluongtran0309.releaseflow.support.TestChanges;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +50,9 @@ class ChangeAiClassificationIntegrationTest extends PostgreSqlIntegrationTest {
 
     @Autowired
     private ChangeRepository changeRepository;
+
+    @Autowired
+    private ChangeAiClassificationService aiClassificationService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -224,6 +229,48 @@ class ChangeAiClassificationIntegrationTest extends PostgreSqlIntegrationTest {
                         .with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(containsString("Change was not found.")));
+    }
+
+    @Test
+    void aReturningAudienceGetsOnlyItsMissingNarrativeAndNothingElseChanges() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com");
+        UUID projectId = createProject(owner.session());
+        UUID changeId = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, 1,
+                "feat: add table export", "FEATURE", false, false, null);
+        TestChanges.summarize(jdbcTemplate, changeId, "Tables export as CSV.", """
+                {"operator":"Watch the export queue.","contributor":"Use ExportJob.","end_user":"Download any table."}""");
+
+        // The estimate builds the request without sending it.
+        assertThat(aiClassificationService.estimateMissingNarrativeTokens(owner.organizationId(), projectId, changeId))
+                .isPositive();
+        assertThat(OPENAI.requests()).isEmpty();
+
+        // The answer also tries to change the category, the summary, and a narrative that exists.
+        OPENAI.respondWithNarratives("fix", "Something else entirely.",
+                Map.of("support", "Tell customers where the button is.", "operator", "Overwritten."));
+        mockMvc.perform(post("/api/projects/{projectId}/changes/{changeId}/missing-narratives", projectId, changeId)
+                        .session(owner.session()).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.category").value("FEATURE"))
+                .andExpect(jsonPath("$.neutralSummary.whatChanged").value("Tables export as CSV."));
+
+        // The request lists only the audience without a narrative.
+        assertThat(OPENAI.requests()).singleElement().satisfies(request -> {
+            String user = JsonPath.read(request.body(), "$.messages[1].content");
+            assertThat(JsonPath.<List<String>>read(user, "$.audiences[*].code")).containsExactly("support");
+        });
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT audience_narratives -> 'support' ->> 'body' FROM changes WHERE id = ?", String.class, changeId))
+                .isEqualTo("Tell customers where the button is.");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT audience_narratives -> 'operator' ->> 'body' FROM changes WHERE id = ?", String.class, changeId))
+                .isEqualTo("Watch the export queue.");
+
+        // Nothing is missing now, so nothing more is asked.
+        mockMvc.perform(post("/api/projects/{projectId}/changes/{changeId}/missing-narratives", projectId, changeId)
+                        .session(owner.session()).with(csrf()))
+                .andExpect(status().isOk());
+        assertThat(OPENAI.requests()).hasSize(1);
     }
 
     private ResultActions classify(Owner owner, UUID projectId, UUID changeId) throws Exception {

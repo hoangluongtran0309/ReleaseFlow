@@ -3,6 +3,7 @@ package com.hoangluongtran0309.releaseflow.change;
 import com.hoangluongtran0309.releaseflow.account.ReleaseFlowPrincipal;
 import com.hoangluongtran0309.releaseflow.project.IntegrationSourceService;
 import com.hoangluongtran0309.releaseflow.project.IntegrationSourceView;
+import com.hoangluongtran0309.releaseflow.project.SourceLifecycleException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -115,16 +116,21 @@ class SourceImportService {
         return sources.stream().map(source -> view(source, latest.get(source.id()))).toList();
     }
 
-    // A polled source syncs itself, so asking for an import by hand is refused too.
+    // A polled source syncs itself, so asking for an import by hand is refused too; a
+    // disconnected source has nothing to read with.
     private static void requireImportable(IntegrationSourceView source) {
         if (!source.type().supportsHistoryImport()) {
             throw new SourceImportNotSupportedException(source.type());
+        }
+        if (!source.connected()) {
+            throw SourceLifecycleException.disconnected();
         }
     }
 
     static SourceSyncView view(IntegrationSourceView source, SourceSyncJob job) {
         return new SourceSyncView(
                 source.id(),
+                source.type(),
                 source.externalProjectKey(),
                 source.deliveryMechanism(),
                 source.type().supportsHistoryImport(),
@@ -144,7 +150,9 @@ class SourceImportService {
                 job == null ? null : job.getLastError(),
                 source.lastSyncAt(),
                 source.lastErrorCode(),
-                job != null && job.isResumable()
+                source.connected() && job != null && job.isResumable(),
+                source.lastDeliveryAt(),
+                source.health()
         );
     }
 

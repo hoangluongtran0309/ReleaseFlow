@@ -1,5 +1,7 @@
 package com.hoangluongtran0309.releaseflow.change;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,13 +20,16 @@ import java.util.stream.Collectors;
  * provider needs its API key and model; there is no default model. Credentials for
  * a provider that is not selected stop startup, so AI is never switched off silently.
  * {@code RELEASEFLOW_AI_TEMPERATURE} is checked against the selected provider's range
- * (ADR-0038); without a provider it is not read, since nothing is sent.
+ * (ADR-0038); without a provider it is not read, since nothing is sent. Anthropic is sent
+ * no temperature whatever it says (ADR-0045).
  */
 @Configuration(proxyBeanMethods = false)
 class AiClassifierConfiguration {
 
     /** The value of {@code RELEASEFLOW_AI_TEMPERATURE} that leaves the temperature out of the request. */
     static final String PROVIDER_DEFAULT_TEMPERATURE = "default";
+
+    private static final Logger log = LoggerFactory.getLogger(AiClassifierConfiguration.class);
 
     @Bean
     AiClassifiers aiClassifiers(
@@ -82,8 +87,23 @@ class AiClassifierConfiguration {
                     objectMapper);
             case DEEPSEEK -> OpenAiCompatibleClassifier.deepSeek(apiKey, model, temperature, baseUrl, timeout,
                     objectMapper);
-            case ANTHROPIC -> new AnthropicChangeClassifier(apiKey, model, temperature, baseUrl, timeout, objectMapper);
+            case ANTHROPIC -> {
+                warnIfIgnored(temperature);
+                yield new AnthropicChangeClassifier(apiKey, model, baseUrl, timeout, objectMapper);
+            }
         }, metrics));
+    }
+
+    /**
+     * Anthropic takes no temperature, so a number other than 0 is a choice it cannot honour.
+     * Zero is also what Compose forwards for an unset variable, and {@code default} asks for
+     * what Anthropic does anyway, so neither is worth a warning (ADR-0045).
+     */
+    private static void warnIfIgnored(OptionalDouble temperature) {
+        if (temperature.isPresent() && temperature.getAsDouble() != 0) {
+            log.warn("RELEASEFLOW_AI_TEMPERATURE is ignored for anthropic: Anthropic API version 2026-10-21 takes no "
+                    + "temperature, so Claude samples with its default. Remove the setting to silence this warning.");
+        }
     }
 
     /**

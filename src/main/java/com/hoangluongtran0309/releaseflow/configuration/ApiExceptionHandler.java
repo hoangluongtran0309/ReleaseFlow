@@ -7,6 +7,8 @@ import com.hoangluongtran0309.releaseflow.account.InvalidInvitationException;
 import com.hoangluongtran0309.releaseflow.account.InvitationAlreadyPendingException;
 import com.hoangluongtran0309.releaseflow.account.InvitationEmailUnavailableException;
 import com.hoangluongtran0309.releaseflow.account.InvitationNotFoundException;
+import com.hoangluongtran0309.releaseflow.account.LastAdministratorException;
+import com.hoangluongtran0309.releaseflow.account.MemberNotFoundException;
 import com.hoangluongtran0309.releaseflow.account.OrganizationMemberApiController;
 import com.hoangluongtran0309.releaseflow.account.InvalidOrganizationSlugException;
 import com.hoangluongtran0309.releaseflow.account.OrganizationSlugApiController;
@@ -67,6 +69,8 @@ import com.hoangluongtran0309.releaseflow.jira.InvalidJiraSiteException;
 import com.hoangluongtran0309.releaseflow.project.ProjectApiController;
 import com.hoangluongtran0309.releaseflow.project.ProjectNotFoundException;
 import com.hoangluongtran0309.releaseflow.project.SourceAlreadyConnectedException;
+import com.hoangluongtran0309.releaseflow.project.SourceCredentialInvalidException;
+import com.hoangluongtran0309.releaseflow.project.SourceLifecycleException;
 import com.hoangluongtran0309.releaseflow.project.SourceNotFoundException;
 import com.hoangluongtran0309.releaseflow.project.SourceTokenRejectedException;
 import com.hoangluongtran0309.releaseflow.project.SourceUnavailableException;
@@ -187,6 +191,16 @@ public class ApiExceptionHandler {
         return localized(HttpStatus.CONFLICT, "invitation_already_pending", exception);
     }
 
+    @ExceptionHandler(MemberNotFoundException.class)
+    ResponseEntity<ProblemDetail> memberNotFound(MemberNotFoundException exception) {
+        return localized(HttpStatus.NOT_FOUND, "member_not_found", exception);
+    }
+
+    @ExceptionHandler(LastAdministratorException.class)
+    ResponseEntity<ProblemDetail> lastAdministrator(LastAdministratorException exception) {
+        return localized(HttpStatus.CONFLICT, "member_last_administrator", exception);
+    }
+
     @ExceptionHandler(InvitationNotFoundException.class)
     ResponseEntity<ProblemDetail> invitationNotFound(InvitationNotFoundException exception) {
         return localized(HttpStatus.NOT_FOUND, "invitation_not_found", exception);
@@ -200,6 +214,18 @@ public class ApiExceptionHandler {
     @ExceptionHandler(SourceAlreadyConnectedException.class)
     ResponseEntity<ProblemDetail> sourceAlreadyConnected(SourceAlreadyConnectedException exception) {
         return localized(HttpStatus.CONFLICT, exception.code(), exception);
+    }
+
+    @ExceptionHandler(SourceLifecycleException.class)
+    ResponseEntity<ProblemDetail> sourceLifecycle(SourceLifecycleException exception) {
+        return localized(exception.status(), exception.code(), exception);
+    }
+
+    @ExceptionHandler(SourceCredentialInvalidException.class)
+    ResponseEntity<ProblemDetail> sourceCredentialInvalid(SourceCredentialInvalidException exception) {
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, exception.code(), messages.of(exception));
+        problem.setProperty("field", exception.field());
+        return response(problem);
     }
 
     @ExceptionHandler(SourceNotFoundException.class)

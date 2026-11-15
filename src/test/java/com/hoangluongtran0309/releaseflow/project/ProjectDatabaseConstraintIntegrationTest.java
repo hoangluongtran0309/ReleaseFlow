@@ -51,6 +51,36 @@ class ProjectDatabaseConstraintIntegrationTest extends PostgreSqlIntegrationTest
     }
 
     @Test
+    void aDisconnectedSourceHoldsNoCredentialAndFreesItsRepository() {
+        UUID organization = insertOrganization("First");
+        UUID project = insertProject(organization, "First project");
+        UUID anotherProject = insertProject(organization, "Another project");
+        UUID administrator = insertAdministrator(organization);
+        UUID disconnected = insertIntegration(organization, project, "acme", "releaseflow", validNonce(), validCiphertext());
+        String clean = """
+                UPDATE integration_sources SET webhook_id = NULL, secret_nonce = NULL, secret_ciphertext = NULL,
+                    disconnected_at = now(), disconnected_by = ? WHERE id = ?""";
+
+        // Disconnecting while keeping the secret, or without saying who, is refused.
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "UPDATE integration_sources SET disconnected_at = now(), disconnected_by = ? WHERE id = ?",
+                administrator, disconnected)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                UPDATE integration_sources SET webhook_id = NULL, secret_nonce = NULL, secret_ciphertext = NULL,
+                    disconnected_at = now() WHERE id = ?""", disconnected))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatCode(() -> jdbcTemplate.update(clean, administrator, disconnected)).doesNotThrowAnyException();
+
+        // Another Project may now connect the repository; the same Project holds it only once.
+        assertThatCode(() -> insertIntegration(
+                organization, anotherProject, "acme", "releaseflow", validNonce(), validCiphertext()
+        )).doesNotThrowAnyException();
+        assertThatThrownBy(() -> insertIntegration(
+                organization, project, "acme", "releaseflow", validNonce(), validCiphertext()
+        )).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
     void rejectsCrossTenantProjectLinksAndInvalidEncryptionEnvelope() {
         UUID firstOrganization = insertOrganization("First");
         UUID secondOrganization = insertOrganization("Second");
@@ -87,7 +117,15 @@ class ProjectDatabaseConstraintIntegrationTest extends PostgreSqlIntegrationTest
         return id;
     }
 
-    private void insertIntegration(
+    private UUID insertAdministrator(UUID organizationId) {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO app_users (id, organization_id, email, password_hash, display_name, role, created_at)
+                VALUES (?, ?, 'admin@example.com', 'x', 'Admin', 'ADMIN', now())""", id, organizationId);
+        return id;
+    }
+
+    private UUID insertIntegration(
             UUID organizationId,
             UUID projectId,
             String owner,
@@ -95,6 +133,7 @@ class ProjectDatabaseConstraintIntegrationTest extends PostgreSqlIntegrationTest
             byte[] nonce,
             byte[] ciphertext
     ) {
+        UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 """
                         INSERT INTO integration_sources
@@ -102,7 +141,7 @@ class ProjectDatabaseConstraintIntegrationTest extends PostgreSqlIntegrationTest
                              repository_name, webhook_auth_mode, webhook_id, secret_nonce, secret_ciphertext, created_at)
                         VALUES (?, ?, ?, 'GITHUB', ?, ?, ?, 'GITHUB_HMAC', ?, ?, ?, ?)
                         """,
-                UUID.randomUUID(),
+                id,
                 organizationId,
                 projectId,
                 owner + "/" + repository,
@@ -113,6 +152,7 @@ class ProjectDatabaseConstraintIntegrationTest extends PostgreSqlIntegrationTest
                 ciphertext,
                 Timestamp.from(Instant.now())
         );
+        return id;
     }
 
     private static byte[] validNonce() {

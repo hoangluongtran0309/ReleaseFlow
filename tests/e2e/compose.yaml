@@ -1,0 +1,27 @@
+# The browser suite's additions to docker-compose.demo.yml, and only the suite's: a stand-in
+# for Jira and GitHub, so a change can link an issue that is still open, and the application
+# pointed at it. Every other provider stays unconfigured, as playwright.config.js leaves them.
+# Paths are relative to the first Compose file, the demo one at the repository root.
+services:
+  providers:
+    image: node:22.22.3-alpine@sha256:e58326d0d441090181ac150dc2078d3e2cf6a0d42e809aebba3ef5880935ffdd
+    command: ["node", "/stand-in/provider-stand-in.mjs"]
+    user: node
+    read_only: true
+    volumes:
+      - ./tests/e2e/provider-stand-in.mjs:/stand-in/provider-stand-in.mjs:ro,Z
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    networks:
+      - releaseflow
+
+  app:
+    environment:
+      RELEASEFLOW_GITHUB_API_BASE_URL: http://providers:8080/github
+      RELEASEFLOW_JIRA_API_BASE_URL: http://providers:8080/jira
+    depends_on:
+      providers:
+        condition: service_healthy

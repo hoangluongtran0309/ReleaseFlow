@@ -1,6 +1,9 @@
 // Drives the real application through a browser: the demo Compose stack, which already
 // brings its own PostgreSQL. Nothing here stubs the server, so a page that only works
-// with JavaScript, or an accessibility rule ReleaseFlow breaks, is caught for real.
+// with JavaScript, or an accessibility rule ReleaseFlow breaks, is caught for real. The
+// only stand-ins are for providers: tests/e2e/compose.yaml adds a Jira that answers with an
+// open issue, and a GitHub that accepts a token, so the suite can reach the linked-issue
+// sections of a release.
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.RELEASEFLOW_E2E_BASE_URL ?? 'http://127.0.0.1:8080';
@@ -51,7 +54,7 @@ export default defineConfig({
   webServer: process.env.RELEASEFLOW_E2E_BASE_URL
     ? undefined
     : {
-        command: 'docker compose -f docker-compose.demo.yml up --build app db',
+        command: 'docker compose -f docker-compose.demo.yml -f tests/e2e/compose.yaml up --build app db providers',
         env: NO_PROVIDERS,
         url: `${baseURL}/api/status`,
         // An application already answering may have been started from .env with a provider,

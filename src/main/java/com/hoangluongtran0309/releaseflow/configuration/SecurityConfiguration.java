@@ -1,5 +1,7 @@
 package com.hoangluongtran0309.releaseflow.configuration;
 
+import com.hoangluongtran0309.releaseflow.account.AppUserRepository;
+import com.hoangluongtran0309.releaseflow.account.MembershipSessionFilter;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.boot.micrometer.metrics.autoconfigure.export.prometheus.PrometheusScrapeEndpoint;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
@@ -13,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import java.time.Clock;
@@ -110,9 +113,13 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             ApiAuthenticationEntryPoint authenticationEntryPoint,
-            ApiAccessDeniedHandler accessDeniedHandler
+            ApiAccessDeniedHandler accessDeniedHandler,
+            AppUserRepository appUserRepository
     ) throws Exception {
         http
+                // Every authenticated request checks that its member is unchanged, before any
+                // authority from the session is used (ADR-0043).
+                .addFilterBefore(new MembershipSessionFilter(appUserRepository), AuthorizationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/",
@@ -131,7 +138,7 @@ public class SecurityConfiguration {
                                 "/accept-invite/**",
                                 "/api/public/invitations/**"
                         ).permitAll()
-                        .requestMatchers("/members", "/members/**", "/api/members", "/api/invitations/**")
+                        .requestMatchers("/members", "/members/**", "/api/members", "/api/members/**", "/api/invitations/**")
                         .hasRole("ADMIN")
                         // Audiences shape every release note the Organization writes.
                         .requestMatchers("/audiences", "/audiences/**", "/api/audiences", "/api/audiences/**")
@@ -154,6 +161,18 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/projects/*/sources/*/token")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/projects/*/sources/*/token")
+                        .hasRole("ADMIN")
+                        // Disconnecting destroys a source's credentials; reconnecting and a new
+                        // webhook secret make new ones (ADR-0042).
+                        .requestMatchers(HttpMethod.POST,
+                                "/projects/*/sources/*/disconnect", "/api/projects/*/sources/*/disconnect",
+                                "/projects/*/sources/*/reconnect", "/api/projects/*/sources/*/reconnect",
+                                "/projects/*/sources/*/webhook-secret", "/projects/*/sources/*/webhook-secret/generate",
+                                "/api/projects/*/sources/*/webhook-secret")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/projects/*/sources/*/disconnect")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/projects/*/sources/*/webhook-secret")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/projects/*/sources/*/imports", "/projects/*/sources/*/imports/resume",
                                 "/api/projects/*/sources/*/imports", "/api/projects/*/sources/*/imports/resume")

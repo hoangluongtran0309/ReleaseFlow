@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
+<head>
+    <title th:text="#{ui.source.title(${source.externalProjectKey})}">Source owner/repository</title>
+</head>
+<body>
+<p layout:fragment="page-title" th:text="#{ui.nav.projects}">Projects</p>
+<div layout:fragment="content"
+     th:with="type=${source.type.name()}, delivered=${!source.type.isPolled()},
+              signedGitLab=${type == 'GITLAB' and source.webhookAuthMode.name() == 'GITLAB_SIGNING_TOKEN'},
+              pastes=${type == 'LINEAR' or signedGitLab}, generates=${type == 'GITHUB' or type == 'GITLAB'}">
+    <header class="page-header">
+        <div class="min-w-0">
+            <p class="page-eyebrow" th:text="|${project.name} · ${source.type.displayName()}|">Checkout · GitHub</p>
+            <h1 class="page-heading [overflow-wrap:anywhere]" th:text="${source.externalProjectKey}">owner/repository</h1>
+            <p class="page-subtitle" th:if="${type == 'GITLAB'}" th:text="${source.apiBaseUrl}">https://gitlab.com</p>
+            <p class="page-subtitle" th:if="${type == 'LINEAR'}"
+               th:text="#{ui.projects.workspace(${source.externalWorkspaceKey})}">Workspace acme</p>
+            <p class="page-subtitle" th:if="${type == 'JIRA'}"
+               th:text="#{ui.projects.jiraIdentity(${source.apiBaseUrl},${source.credentialIdentity})}">https://acme.atlassian.net as ops@acme.test</p>
+        </div>
+        <a class="btn btn-outline" th:href="@{/projects}" th:text="#{ui.source.backToProjects}">Back to projects</a>
+    </header>
+
+    <div class="grid max-w-3xl gap-6">
+        <section class="surface-card p-6" id="source-health" th:aria-label="#{ui.source.healthHeading}" aria-label="Health">
+            <h2 class="section-heading" th:text="#{ui.source.healthHeading}">Health</h2>
+            <p class="mt-3 flex flex-wrap items-center gap-2">
+                <th:block th:replace="~{fragments/source-health :: summary(${source})}"></th:block>
+            </p>
+            <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                <div th:if="${source.webhookPath != null}">
+                    <dt class="text-slate-500" th:text="#{ui.projects.webhookPath}">Webhook path</dt>
+                    <dd class="mt-1 font-mono text-xs [overflow-wrap:anywhere]" th:text="${source.webhookPath}">/webhooks/github/…</dd>
+                </div>
+                <div th:if="${source.connected and delivered and source.health.secretUpdatedAt != null}">
+                    <dt class="text-slate-500" th:text="#{ui.source.secretSet}">Webhook secret set</dt>
+                    <dd class="mt-1 font-semibold">
+                        <time th:datetime="${source.health.secretUpdatedAt}"
+                              th:text="|${#temporals.format(source.health.secretUpdatedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">1 Nov 2026, 15:40 UTC</time>
+                    </dd>
+                </div>
+                <div th:if="${source.connected}">
+                    <dt class="text-slate-500" th:text="#{ui.projects.accessToken}">Access token</dt>
+                    <dd class="mt-1 font-semibold" th:if="${source.accessTokenConfigured}">
+                        <time th:datetime="${source.accessTokenUpdatedAt}"
+                              th:text="|${#temporals.format(source.accessTokenUpdatedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">12 Sep 2026, 10:02 UTC</time>
+                    </dd>
+                    <dd class="mt-1 text-amber-700" th:unless="${source.accessTokenConfigured}" th:text="#{ui.projects.tokenMissing}">Not configured.</dd>
+                </div>
+            </dl>
+            <p class="mt-4 text-sm text-slate-600" th:if="${source.connected and delivered}" th:text="#{ui.source.healthCopy}">
+                A source is quiet when nothing has arrived for longer than it usually goes.
+            </p>
+            <p class="mt-4 text-sm text-slate-600" th:if="${!source.connected and !viewer.admin}"
+               th:text="#{ui.source.memberDisconnected}">An administrator can reconnect it.</p>
+        </section>
+
+        <!--/* A new secret keeps the path and stops the old one at once (ADR-0042). */-->
+        <section class="surface-card grid gap-4 p-6" id="webhook-secret" th:if="${viewer.admin and source.connected and delivered}"
+                 th:aria-label="#{ui.source.secretHeading}" aria-label="Webhook secret">
+            <div>
+                <h2 class="section-heading" th:text="#{ui.source.secretHeading}">Webhook secret</h2>
+                <p class="section-copy" th:text="#{ui.source.secretCopy}">The path stays. The current secret stops working at once.</p>
+            </div>
+            <form method="post" th:if="${generates}" novalidate
+                  th:action="@{/projects/{projectId}/sources/{sourceId}/webhook-secret/generate(projectId=${project.id},sourceId=${source.id})}">
+                <button type="submit" class="btn btn-primary" th:text="#{ui.source.generateSecret}">Generate a new secret</button>
+            </form>
+            <form class="grid gap-3" method="post" th:if="${pastes}" novalidate th:object="${webhookSecretRequest}"
+                  th:action="@{/projects/{projectId}/sources/{sourceId}/webhook-secret(projectId=${project.id},sourceId=${source.id})}">
+                <p class="text-sm text-slate-600" th:if="${type == 'LINEAR'}" th:utext="#{ui.source.pasteLinearCopy}">
+                    Create a second webhook in Linear with the same URL, paste its signing secret here, then delete the old one.
+                </p>
+                <p class="text-sm text-slate-600" th:if="${signedGitLab}" th:utext="#{ui.source.pasteGitLabCopy}">
+                    Or select Generate signing token on the hook in GitLab and paste it here.
+                </p>
+                <th:block th:replace="~{fragments/form :: errorSummary(${secretFailing == true})}"></th:block>
+                <label class="form-control">
+                    <span class="label-text font-medium"
+                          th:text="${type == 'LINEAR'} ? #{ui.source.linearSecret} : #{ui.source.gitLabSigningToken}">Signing secret from Linear</span>
+                    <input id="webhook-secret-input" type="password" name="webhookSecret" maxlength="255" required autocomplete="off" spellcheck="false"
+                           class="input input-bordered w-full font-mono"
+                           th:classappend="${secretFailing == true and #fields.hasErrors('webhookSecret')} ? 'input-error'"
+                           th:attr="aria-invalid=${secretFailing == true and #fields.hasErrors('webhookSecret')} ? 'true' : null,aria-describedby=${secretFailing == true and #fields.hasErrors('webhookSecret')} ? 'webhook-secret-error' : null">
+                    <span id="webhook-secret-error" class="field-error" th:if="${secretFailing == true and #fields.hasErrors('webhookSecret')}" th:errors="*{webhookSecret}"></span>
+                </label>
+                <button type="submit" class="btn btn-outline" th:text="#{ui.source.saveSecret}">Save the new secret</button>
+            </form>
+        </section>
+
+        <section class="surface-card grid gap-3 p-6" id="disconnect" th:if="${viewer.admin and source.connected}"
+                 th:aria-label="#{ui.source.disconnectHeading}" aria-label="Disconnect">
+            <h2 class="section-heading" th:text="#{ui.source.disconnectHeading}">Disconnect</h2>
+            <p class="section-copy" th:text="#{ui.source.disconnectCopy}">Its changes stay. Its secret and token are destroyed.</p>
+            <a class="btn btn-outline w-fit"
+               th:href="@{/projects/{projectId}/sources/{sourceId}/disconnect(projectId=${project.id},sourceId=${source.id})}"
+               th:text="#{ui.source.disconnectReview}">Review and disconnect</a>
+        </section>
+
+        <!--/* A reconnect keeps the source's ID, so intake recognises every change it recorded. */-->
+        <section class="surface-card p-6" id="reconnect" th:if="${viewer.admin and !source.connected}"
+                 th:aria-label="#{ui.source.reconnectHeading}" aria-label="Reconnect">
+            <h2 class="section-heading" th:text="#{ui.source.reconnectHeading}">Reconnect</h2>
+            <p class="section-copy" th:text="#{'ui.source.reconnectCopy.' + ${type}}">It keeps its changes. It gets a new webhook path and secret.</p>
+            <form class="mt-4 grid gap-4" method="post" novalidate th:object="${reconnectRequest}"
+                  th:with="failed=${reconnectFailing == true}"
+                  th:action="@{/projects/{projectId}/sources/{sourceId}/reconnect(projectId=${project.id},sourceId=${source.id})}">
+                <th:block th:replace="~{fragments/form :: errorSummary(${failed})}"></th:block>
+                <label class="form-control" th:if="${type == 'LINEAR'}">
+                    <span class="label-text font-medium" th:text="#{ui.source.linearSecret}">Signing secret from Linear</span>
+                    <input id="reconnect-secret" type="password" name="webhookSecret" maxlength="255" required autocomplete="off" spellcheck="false"
+                           class="input input-bordered w-full font-mono"
+                           th:classappend="${failed and #fields.hasErrors('webhookSecret')} ? 'input-error'"
+                           th:attr="aria-invalid=${failed and #fields.hasErrors('webhookSecret')} ? 'true' : null,aria-describedby=${failed and #fields.hasErrors('webhookSecret')} ? 'reconnect-secret-error' : null">
+                    <span id="reconnect-secret-error" class="field-error" th:if="${failed and #fields.hasErrors('webhookSecret')}" th:errors="*{webhookSecret}"></span>
+                </label>
+                <label class="form-control" th:if="${signedGitLab}">
+                    <span class="label-text font-medium" th:text="#{ui.source.gitLabSigningTokenOptional}">Signing token GitLab generated, if you have one</span>
+                    <input id="reconnect-signing" type="password" name="webhookSecret" maxlength="255" autocomplete="off" spellcheck="false"
+                           class="input input-bordered w-full font-mono"
+                           th:classappend="${failed and #fields.hasErrors('webhookSecret')} ? 'input-error'"
+                           th:attr="aria-invalid=${failed and #fields.hasErrors('webhookSecret')} ? 'true' : null,aria-describedby=${failed and #fields.hasErrors('webhookSecret')} ? 'reconnect-signing-error' : null">
+                    <span class="label-text-alt text-slate-500" th:text="#{ui.source.gitLabSigningTokenHint}">Leave empty and ReleaseFlow generates one.</span>
+                    <span id="reconnect-signing-error" class="field-error" th:if="${failed and #fields.hasErrors('webhookSecret')}" th:errors="*{webhookSecret}"></span>
+                </label>
+                <label class="form-control" th:if="${type == 'JIRA'}">
+                    <span class="label-text font-medium" th:text="#{ui.projects.accountEmail}">Account email</span>
+                    <input id="reconnect-account" type="email" name="accountEmail" maxlength="255" required autocomplete="off"
+                           class="input input-bordered w-full"
+                           th:value="${failed} ? ${reconnectRequest.accountEmail} : ${source.credentialIdentity}"
+                           th:classappend="${failed and #fields.hasErrors('accountEmail')} ? 'input-error'"
+                           th:attr="aria-invalid=${failed and #fields.hasErrors('accountEmail')} ? 'true' : null,aria-describedby=${failed and #fields.hasErrors('accountEmail')} ? 'reconnect-account-error' : null">
+                    <span id="reconnect-account-error" class="field-error" th:if="${failed and #fields.hasErrors('accountEmail')}" th:errors="*{accountEmail}"></span>
+                </label>
+                <label class="form-control">
+                    <span class="label-text font-medium"
+                          th:text="${type == 'GITHUB' or type == 'GITLAB'} ? #{ui.source.tokenOptional} : #{ui.source.tokenRequired}">Access token, optional</span>
+                    <input id="reconnect-token" type="password" name="token" maxlength="255" autocomplete="off" spellcheck="false"
+                           class="input input-bordered w-full font-mono"
+                           th:attr="required=${type == 'LINEAR' or type == 'JIRA'} ? 'required' : null,aria-invalid=${failed and #fields.hasErrors('token')} ? 'true' : null,aria-describedby=${failed and #fields.hasErrors('token')} ? 'reconnect-token-error' : null"
+                           th:classappend="${failed and #fields.hasErrors('token')} ? 'input-error'">
+                    <span id="reconnect-token-error" class="field-error" th:if="${failed and #fields.hasErrors('token')}" th:errors="*{token}"></span>
+                </label>
+                <button type="submit" class="btn btn-primary w-fit" th:text="#{ui.source.reconnect}">Reconnect</button>
+            </form>
+        </section>
+    </div>
+</div>
+</body>
+</html>

@@ -243,7 +243,7 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(JIRA.issueRequests()).filteredOn(request -> request.path().endsWith("/APP-404"))
                 .hasSize(ChangeProcessingWorker.MAX_ATTEMPTS);
         mockMvc.perform(get("/changes").param("project", project.projectId().toString()).session(project.session()))
-                .andExpect(content().string(containsString("Jira did not return every issue")));
+                .andExpect(content().string(containsString("Not every issue this change mentions could be read from its tracker.")));
     }
 
     @Test
@@ -352,6 +352,14 @@ class LinkedContextIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(change.getLinkedContextStatus()).isEqualTo(LinkedContextStatus.UNAVAILABLE);
         assertThat(change.getReviewTriggers())
                 .contains(new ReviewTrigger(ReviewTriggerType.LINKED_CONTEXT_UNAVAILABLE, "UNAVAILABLE"));
+        // The card names no tracker: an identifier Linear would not show reads the same as a Jira key.
+        mockMvc.perform(get("/changes").param("project", project.projectId().toString()).session(project.session()))
+                .andExpect(content().string(containsString("Not every issue this change mentions could be read from its tracker.")))
+                .andExpect(content().string(not(containsString("Jira did not return"))));
+        mockMvc.perform(get("/changes").param("project", project.projectId().toString()).param("lang", "vi")
+                        .session(project.session()))
+                .andExpect(content().string(containsString(
+                        "Không phải issue nào mà thay đổi này nhắc tới cũng đọc được từ công cụ theo dõi của nó.")));
     }
 
     private JsonNode userPrompt() {

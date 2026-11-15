@@ -85,7 +85,12 @@
                             <span class="block truncate" th:text="${audience.displayName}">Operator</span>
                             <span class="audience-code block truncate font-mono text-xs" th:text="${audience.code}">operator</span>
                         </span>
-                        <span class="badge badge-ghost badge-sm" th:if="${audience.preset}" th:text="#{ui.audiences.preset}">Preset</span>
+                        <span class="flex shrink-0 flex-col items-end gap-1">
+                            <span class="badge badge-ghost badge-sm" th:if="${audience.preset}" th:text="#{ui.audiences.preset}">Preset</span>
+                            <!--/* A retired audience gets no narrative, note, or translation (ADR-0044). */-->
+                            <span class="badge badge-warning badge-soft badge-sm" th:if="${audience.retired()}"
+                                  th:text="#{ui.audiences.retiredBadge}">Retired</span>
+                        </span>
                     </a>
                 </li>
             </ul>
@@ -212,6 +217,39 @@
 
             <section class="surface-card p-6" id="audience-actions" th:if="${selected != null}">
                 <h2 class="section-heading" th:text="#{ui.audiences.manageHeading}">Manage audience</h2>
+                <th:block th:if="${selected.retired()}">
+                    <p class="mt-2 text-sm text-slate-700" id="audience-retired">
+                        <span th:text="#{ui.audiences.retiredBy(${selected.retirerName})}">Retired by Mai Tran</span>
+                        <time th:datetime="${selected.retiredAt}"
+                              th:text="|${#temporals.format(selected.retiredAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">12 Nov 2026, 09:14 UTC</time>
+                    </p>
+                    <p class="mt-1 text-sm text-slate-600" th:text="#{ui.audiences.retiredCopy}">
+                        It gets no narrative, note, or translation; its published notes stay.
+                    </p>
+                    <form class="mt-3" method="post" th:action="@{/audiences/{id}/restore(id=${selected.id})}">
+                        <button type="submit" class="btn btn-primary btn-sm" th:text="#{ui.audiences.restore}">Bring back</button>
+                    </form>
+                </th:block>
+                <p class="mt-2 text-sm text-slate-600" th:if="${!selected.retired() and lastRestoration != null}" id="audience-restored">
+                    <span th:text="#{ui.audiences.restoredBy(${lastRestoration.changerName})}">Brought back by Mai Tran</span>
+                    <time th:datetime="${lastRestoration.changedAt}"
+                          th:text="|${#temporals.format(lastRestoration.changedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">12 Nov 2026, 09:14 UTC</time>
+                </p>
+                <details class="mt-3" th:unless="${selected.retired()}" id="retire-audience">
+                    <summary class="cursor-pointer font-semibold text-amber-800" th:text="#{ui.audiences.retireSummary}">Retire audience</summary>
+                    <p class="mt-2 text-sm text-slate-600" th:text="#{ui.audiences.retireCopy}">
+                        The next approvals write no note for it, and the AI is not asked for its narratives.
+                    </p>
+                    <div class="mt-2 text-sm" th:unless="${#lists.isEmpty(deliveringRules)}" id="retire-rules">
+                        <p class="font-semibold" th:text="#{ui.audiences.retireRules}">These enabled rules deliver it; that action will be skipped:</p>
+                        <ul class="list-disc pl-5">
+                            <li th:each="rule : ${deliveringRules}" th:text="${rule}">Announce</li>
+                        </ul>
+                    </div>
+                    <form class="mt-3" method="post" th:action="@{/audiences/{id}/retire(id=${selected.id})}">
+                        <button type="submit" class="btn btn-outline btn-sm" th:text="#{ui.audiences.retire}">Retire this audience</button>
+                    </form>
+                </details>
                 <details class="mt-3" th:if="${resettable}" id="reset-audience">
                     <summary class="cursor-pointer font-semibold text-indigo-700" th:text="#{ui.audiences.resetSummary}">Reset to preset</summary>
                     <p class="mt-2 text-sm text-slate-600" th:if="${!selected.preset}" th:text="#{ui.audiences.resetAdoptCopy}">
