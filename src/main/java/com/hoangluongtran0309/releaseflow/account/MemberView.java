@@ -6,6 +6,10 @@ import java.util.UUID;
 public record MemberView(UUID id, String email, String displayName, AppUserRole role, Instant createdAt) {
 
     public String roleLabelKey() {
+        return roleLabelKey(role);
+    }
+
+    static String roleLabelKey(AppUserRole role) {
         return role == AppUserRole.ADMIN ? "ui.members.role.admin" : "ui.members.role.member";
     }
 

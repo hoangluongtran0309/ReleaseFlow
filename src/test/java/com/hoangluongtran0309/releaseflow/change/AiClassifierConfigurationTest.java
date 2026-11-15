@@ -2,9 +2,12 @@ package com.hoangluongtran0309.releaseflow.change;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
@@ -14,10 +17,15 @@ import java.util.OptionalDouble;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@ExtendWith(OutputCaptureExtension.class)
 class AiClassifierConfigurationTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
+    private static final Map<String, String> ANTHROPIC = Map.of("anthropic.api-key", "k", "anthropic.model", "claude-test");
+    private static final String IGNORED = "RELEASEFLOW_AI_TEMPERATURE is ignored for anthropic: Anthropic API version "
+            + "2026-10-21 takes no temperature, so Claude samples with its default. Remove the setting to silence this "
+            + "warning.";
 
     @Test
     void noProviderMeansNoAi() throws Exception {
@@ -94,6 +102,36 @@ class AiClassifierConfigurationTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("RELEASEFLOW_AI_TEMPERATURE must be a number from 0 to " + max + " for " + provider
                         + ", or default to send none.");
+    }
+
+    // ADR-0045: a number other than 0 is a choice Anthropic cannot honour, so it is told once.
+    @ParameterizedTest
+    @ValueSource(strings = {"0.5", "1", "0.01"})
+    void warnsOnceThatAnthropicIgnoresATemperatureOtherThanZero(String value, CapturedOutput output) throws Exception {
+        try (AiClassifiers classifiers = create("anthropic", value, ANTHROPIC)) {
+            assertThat(classifiers.active().orElseThrow().provider()).isEqualTo(AiProvider.ANTHROPIC);
+        }
+        assertThat(output.getOut()).containsOnlyOnce(IGNORED);
+    }
+
+    // Zero is what Compose forwards for an unset variable, and default is what Anthropic does anyway.
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "", "  ", "0.0", "default"})
+    void saysNothingForAnthropicAtZeroOrTheDefault(String value, CapturedOutput output) throws Exception {
+        try (AiClassifiers classifiers = create("anthropic", value, ANTHROPIC)) {
+            assertThat(classifiers.isEnabled()).isTrue();
+        }
+        assertThat(output.getOut()).doesNotContain("RELEASEFLOW_AI_TEMPERATURE");
+    }
+
+    @Test
+    void saysNothingWhenOpenAiOrDeepSeekTakeTheTemperature(CapturedOutput output) throws Exception {
+        try (AiClassifiers openAi = create("openai", "0.5", Map.of("openai.api-key", "k", "openai.model", "gpt-test"));
+             AiClassifiers deepSeek = create("deepseek", "0.5", Map.of("deepseek.api-key", "k", "deepseek.model", "ds"))) {
+            assertThat(openAi.isEnabled()).isTrue();
+            assertThat(deepSeek.isEnabled()).isTrue();
+        }
+        assertThat(output.getOut()).doesNotContain("RELEASEFLOW_AI_TEMPERATURE");
     }
 
     @Test

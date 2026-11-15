@@ -125,7 +125,9 @@ class AutomationRun {
             finish(ExecutionStatus.FAILED, now);
         } else if (actions.stream().anyMatch(action -> action.getStatus() == ExecutionStatus.CANCELLED)) {
             finish(ExecutionStatus.CANCELLED, now);
-        } else if (actions.stream().allMatch(action -> action.getStatus() == ExecutionStatus.SUCCEEDED)) {
+        } else if (actions.stream().allMatch(action -> action.getStatus() == ExecutionStatus.SUCCEEDED
+                || action.getStatus() == ExecutionStatus.SKIPPED)) {
+            // A skipped action attempted nothing, so the others decide the run (ADR-0044).
             finish(ExecutionStatus.SUCCEEDED, now);
         } else {
             this.status = ExecutionStatus.PENDING;

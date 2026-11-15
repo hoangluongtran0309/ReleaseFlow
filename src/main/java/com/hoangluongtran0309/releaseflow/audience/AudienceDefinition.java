@@ -49,6 +49,16 @@ class AudienceDefinition {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    // A retired audience gets no narrative, no note, and no translation; its row stays (ADR-0044).
+    @Column(name = "retired_at")
+    private Instant retiredAt;
+
+    @Column(name = "retired_by")
+    private UUID retiredBy;
+
+    @Column(name = "retirer_name", length = 120)
+    private String retirerName;
+
     protected AudienceDefinition() {
     }
 
@@ -91,7 +101,29 @@ class AudienceDefinition {
 
     AudienceView view(Map<String, String> templateVariants, Map<String, String> footerVariants) {
         return new AudienceView(id, code, displayName, communicationIntent, templateBody, footerTemplateBody, preset,
-                createdAt, updatedAt, templateVariants, footerVariants);
+                createdAt, updatedAt, templateVariants, footerVariants, retiredAt, retirerName);
+    }
+
+    boolean isRetired() {
+        return retiredAt != null;
+    }
+
+    void retire(UUID administratorId, String administratorName, Instant at) {
+        if (isRetired()) {
+            throw AudienceConflictException.alreadyRetired();
+        }
+        this.retiredAt = at;
+        this.retiredBy = administratorId;
+        this.retirerName = administratorName;
+    }
+
+    void restore() {
+        if (!isRetired()) {
+            throw AudienceConflictException.notRetired();
+        }
+        this.retiredAt = null;
+        this.retiredBy = null;
+        this.retirerName = null;
     }
 
     UUID getId() {

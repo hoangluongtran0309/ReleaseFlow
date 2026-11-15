@@ -14,7 +14,8 @@ import java.util.UUID;
 
 /**
  * The only way other capabilities obtain a source's coordinates and decrypted access
- * token, always scoped by Organization and Project.
+ * token, always scoped by Organization and Project. A disconnected source lends nothing:
+ * every lookup here answers as if it were not there (ADR-0042).
  */
 @Component
 public class SourceAccess {
@@ -35,6 +36,7 @@ public class SourceAccess {
             return Optional.empty();
         }
         return sourceRepository.findByIdAndOrganizationIdAndProjectId(sourceId, organizationId, projectId)
+                .filter(IntegrationSource::isConnected)
                 .map(this::credentials);
     }
 
@@ -49,6 +51,7 @@ public class SourceAccess {
                 .findAllByOrganizationIdAndProjectIdAndSourceTypeOrderByCreatedAtAscIdAsc(
                         organizationId, projectId, sourceType)
                 .stream()
+                .filter(IntegrationSource::isConnected)
                 .findFirst()
                 .map(this::credentials);
     }
@@ -60,16 +63,55 @@ public class SourceAccess {
      */
     @Transactional(readOnly = true)
     public Optional<SourceCredentials> findSole(UUID organizationId, UUID projectId, SourceType sourceType) {
-        List<IntegrationSource> sources = sourceRepository
+        List<IntegrationSource> sources = connected(organizationId, projectId, sourceType);
+        return sources.size() == 1 ? Optional.of(credentials(sources.getFirst())) : Optional.empty();
+    }
+
+    /**
+     * The repository key a GitHub Release run records: the Project's one connected source of
+     * the type, or, when none is connected, its one disconnected source, so a run created
+     * while it is disconnected still says which repository it was for and can be retried
+     * once it is reconnected.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> soleExternalKey(UUID organizationId, UUID projectId, SourceType sourceType) {
+        List<IntegrationSource> all = sourceRepository
                 .findAllByOrganizationIdAndProjectIdAndSourceTypeOrderByCreatedAtAscIdAsc(
                         organizationId, projectId, sourceType);
-        return sources.size() == 1 ? Optional.of(credentials(sources.getFirst())) : Optional.empty();
+        List<IntegrationSource> connected = all.stream().filter(IntegrationSource::isConnected).toList();
+        List<IntegrationSource> candidates = connected.isEmpty() ? all : connected;
+        return candidates.size() == 1 ? Optional.of(candidates.getFirst().getExternalProjectKey()) : Optional.empty();
+    }
+
+    /** Whether the Project has exactly one connected source of the type, without decrypting anything. */
+    @Transactional(readOnly = true)
+    public boolean hasSole(UUID organizationId, UUID projectId, SourceType sourceType) {
+        return connected(organizationId, projectId, sourceType).size() == 1;
+    }
+
+    /** Whether the Project holds this key only as a disconnected source. */
+    @Transactional(readOnly = true)
+    public boolean isDisconnected(UUID organizationId, UUID projectId, SourceType sourceType, String externalKey) {
+        return sourceRepository.findByOrganizationIdAndProjectIdAndSourceTypeAndExternalProjectKey(
+                        organizationId, projectId, sourceType, externalKey)
+                .map(source -> !source.isConnected())
+                .orElse(false);
+    }
+
+    private List<IntegrationSource> connected(UUID organizationId, UUID projectId, SourceType sourceType) {
+        return sourceRepository
+                .findAllByOrganizationIdAndProjectIdAndSourceTypeOrderByCreatedAtAscIdAsc(
+                        organizationId, projectId, sourceType)
+                .stream()
+                .filter(IntegrationSource::isConnected)
+                .toList();
     }
 
     /** The polled sources whose next poll is due, oldest cursor first. */
     @Transactional(readOnly = true)
     public List<PolledSource> findDuePolls(SourceType sourceType, Instant now) {
         return sourceRepository.findAllBySourceTypeAndNextPollAtLessThanEqual(sourceType, now).stream()
+                .filter(IntegrationSource::isConnected)
                 .map(source -> new PolledSource(
                         source.getId(),
                         source.getOrganizationId(),

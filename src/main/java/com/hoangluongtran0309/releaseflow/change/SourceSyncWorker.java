@@ -40,7 +40,8 @@ class SourceSyncWorker {
     static final String ACCESS_REJECTED = ChangedFiles.ACCESS_REJECTED;
     static final String RATE_LIMITED = "rate_limited";
     static final String INVALID_RESPONSE = ChangedFiles.INVALID_RESPONSE;
-    static final String SOURCE_MISSING = "source_missing";
+    // Sources are never deleted, so a job whose source lends nothing was disconnected (ADR-0042).
+    static final String SOURCE_DISCONNECTED = "source_disconnected";
     static final String UNEXPECTED_ERROR = "unexpected_error";
 
     private static final Logger log = LoggerFactory.getLogger(SourceSyncWorker.class);
@@ -129,11 +130,10 @@ class SourceSyncWorker {
         Optional<SourceCredentials> credentials = sourceAccess
                 .find(claim.organizationId(), claim.projectId(), claim.sourceId());
         if (credentials.isEmpty()) {
-            fail(claim, SOURCE_MISSING, false);
+            fail(claim, SOURCE_DISCONNECTED, false);
             return;
         }
-        Optional<String> token = credentials.get().accessToken();
-        if (token.isEmpty()) {
+        if (credentials.get().accessToken().isEmpty()) {
             fail(claim, NO_ACCESS_TOKEN, false);
             return;
         }
@@ -141,6 +141,18 @@ class SourceSyncWorker {
         SyncCursor cursor = claim.cursor();
         int imported = claim.importedSoFar();
         while (true) {
+            // Read again before every call, so a source disconnected mid-import is not read
+            // once more, and a token rotated mid-import is used from the next page.
+            credentials = sourceAccess.find(claim.organizationId(), claim.projectId(), claim.sourceId());
+            if (credentials.isEmpty()) {
+                fail(claim, SOURCE_DISCONNECTED, false);
+                return;
+            }
+            Optional<String> token = credentials.get().accessToken();
+            if (token.isEmpty()) {
+                fail(claim, NO_ACCESS_TOKEN, false);
+                return;
+            }
             HistoryPage page = reader.read(
                     credentials.get(), token.get(), cursor.provider(), claim.windowStart(), claim.windowEnd());
             switch (page.status()) {

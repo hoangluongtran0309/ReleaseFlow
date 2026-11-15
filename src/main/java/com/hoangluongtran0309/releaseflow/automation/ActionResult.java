@@ -9,6 +9,7 @@ record ActionResult(ExecutionStatus outcome, String externalReference, String er
     static final String OUTCOME_UNKNOWN = "execution_outcome_unknown";
     static final String NOTE_MISSING = "release_note_missing";
     static final String ACTION_UNSUPPORTED = "action_unsupported";
+    static final String AUDIENCE_RETIRED = "audience_retired";
 
     static ActionResult succeeded(String externalReference) {
         return new ActionResult(ExecutionStatus.SUCCEEDED, externalReference, null);
@@ -16,6 +17,11 @@ record ActionResult(ExecutionStatus outcome, String externalReference, String er
 
     static ActionResult failed(String errorCode) {
         return new ActionResult(ExecutionStatus.FAILED, null, errorCode);
+    }
+
+    /** Nothing was attempted, and the actions behind it still run (ADR-0044). */
+    static ActionResult skipped(String reason) {
+        return new ActionResult(ExecutionStatus.SKIPPED, null, reason);
     }
 
     static ActionResult unknown(String errorCode) {

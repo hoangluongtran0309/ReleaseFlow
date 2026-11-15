@@ -29,10 +29,16 @@ public class AudiencePageController {
 
     private final AudienceService audienceService;
     private final ReleaseLanguageService releaseLanguageService;
+    private final AudienceDeliverers deliverers;
 
-    AudiencePageController(AudienceService audienceService, ReleaseLanguageService releaseLanguageService) {
+    AudiencePageController(
+            AudienceService audienceService,
+            ReleaseLanguageService releaseLanguageService,
+            AudienceDeliverers deliverers
+    ) {
         this.audienceService = audienceService;
         this.releaseLanguageService = releaseLanguageService;
+        this.deliverers = deliverers;
     }
 
     @GetMapping("/audiences")
@@ -124,6 +130,40 @@ public class AudiencePageController {
             audienceService.delete(principal.organizationId(), audienceId);
             UiNotice.flash(redirect, UiNotice.success("ui.audiences.deleted"));
             return "redirect:/audiences";
+        } catch (AudienceConflictException exception) {
+            return renderWithError(principal, audienceId, HttpStatus.CONFLICT, exception, model, response);
+        }
+    }
+
+    @PostMapping("/audiences/{audienceId}/retire")
+    String retire(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID audienceId,
+            RedirectAttributes redirect,
+            Model model,
+            HttpServletResponse response
+    ) {
+        try {
+            audienceService.retire(principal, audienceId);
+            UiNotice.flash(redirect, UiNotice.success("ui.audiences.retired"));
+            return "redirect:/audiences/" + audienceId;
+        } catch (AudienceConflictException exception) {
+            return renderWithError(principal, audienceId, HttpStatus.CONFLICT, exception, model, response);
+        }
+    }
+
+    @PostMapping("/audiences/{audienceId}/restore")
+    String restore(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID audienceId,
+            RedirectAttributes redirect,
+            Model model,
+            HttpServletResponse response
+    ) {
+        try {
+            audienceService.restore(principal, audienceId);
+            UiNotice.flash(redirect, UiNotice.success("ui.audiences.restored"));
+            return "redirect:/audiences/" + audienceId;
         } catch (AudienceConflictException exception) {
             return renderWithError(principal, audienceId, HttpStatus.CONFLICT, exception, model, response);
         }
@@ -235,6 +275,8 @@ public class AudiencePageController {
             AudienceView selected = audienceService.get(organizationId, selectedId);
             model.addAttribute("selected", selected);
             model.addAttribute("resettable", AudiencePresets.shipped(selected.code()));
+            model.addAttribute("deliveringRules", deliverers.enabledRulesDelivering(organizationId, selected.id()));
+            model.addAttribute("lastRestoration", audienceService.lastRestorations(organizationId).get(selected.id()));
             if (!model.containsAttribute(FORM)) {
                 model.addAttribute(FORM, form(selected));
             }

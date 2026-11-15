@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -544,6 +545,25 @@ class Change {
         this.summaryEditedBy = editor;
         this.summaryEditorName = name;
         this.summaryEditedAt = at;
+    }
+
+    /**
+     * Adds the narratives the AI wrote for audiences this change had none for, and nothing
+     * else: a narrative that exists — the AI's or a person's — is never replaced (ADR-0044).
+     */
+    void addMissingNarratives(Map<String, AudienceNarrative> answered, Set<String> asked) {
+        if (isProcessing()) {
+            throw new ChangeProcessingException();
+        }
+        Map<String, AudienceNarrative> narratives = audienceNarratives == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(audienceNarratives);
+        answered.forEach((code, narrative) -> {
+            if (asked.contains(code) && !narratives.containsKey(code) && !narrative.saysNothing()) {
+                narratives.put(code, narrative);
+            }
+        });
+        this.audienceNarratives = narratives;
     }
 
     UUID getId() {

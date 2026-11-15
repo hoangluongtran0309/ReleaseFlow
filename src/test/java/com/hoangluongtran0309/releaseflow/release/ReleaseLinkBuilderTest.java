@@ -2,6 +2,7 @@ package com.hoangluongtran0309.releaseflow.release;
 
 import com.hoangluongtran0309.releaseflow.audience.ReleaseLinks;
 import com.hoangluongtran0309.releaseflow.project.IntegrationSourceView;
+import com.hoangluongtran0309.releaseflow.project.SourceHealth;
 import com.hoangluongtran0309.releaseflow.source.SourceType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -115,8 +116,24 @@ class ReleaseLinkBuilderTest {
         assertThat(ReleaseLinkBuilder.validatedUpgradeGuideUrl(null)).isNull();
     }
 
+    @Test
+    void aDisconnectedRepositoryIsNotTheProjectsCodeHost() {
+        IntegrationSourceView old = source(SourceType.GITHUB, "acme/old-app", "acme", "old-app", null, false);
+
+        assertThat(ReleaseLinkBuilder.links(List.of(old, GITHUB), "v1.0.0", "v0.3.0", null).compareUrl())
+                .isEqualTo("https://github.com/acme/app/compare/v0.3.0...v1.0.0");
+        assertThat(ReleaseLinkBuilder.links(List.of(old), "v1.0.0", "v0.3.0", null).compareUrl()).isEmpty();
+    }
+
     private static IntegrationSourceView source(SourceType type, String key, String owner, String repository, String baseUrl) {
+        return source(type, key, owner, repository, baseUrl, true);
+    }
+
+    private static IntegrationSourceView source(
+            SourceType type, String key, String owner, String repository, String baseUrl, boolean connected) {
+        SourceHealth health = new SourceHealth(connected, connected ? null : Instant.EPOCH, null, 0, null, false, null,
+                null, false);
         return new IntegrationSourceView(UUID.randomUUID(), type, "webhook", key, owner, repository, baseUrl, null, null,
-                null, null, null, Instant.EPOCH, null, false, null, null, null, null, null);
+                null, null, null, Instant.EPOCH, null, false, null, null, null, null, null, health);
     }
 }

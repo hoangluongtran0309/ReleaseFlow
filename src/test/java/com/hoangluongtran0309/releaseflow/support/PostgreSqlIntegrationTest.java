@@ -50,6 +50,7 @@ public abstract class PostgreSqlIntegrationTest {
         supportJdbcTemplate.update("DELETE FROM organization_translation_settings");
         supportJdbcTemplate.update("DELETE FROM category_suggestions");
         supportJdbcTemplate.update("DELETE FROM category_definitions");
+        supportJdbcTemplate.update("DELETE FROM audience_status_changes");
         supportJdbcTemplate.update("DELETE FROM audience_definitions");
     }
 

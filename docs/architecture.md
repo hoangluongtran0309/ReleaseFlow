@@ -43,7 +43,7 @@ Registration creates an `ADMIN`. Accepting an invitation creates a `MEMBER` in
 the invitation's Organization. `SecurityConfiguration` limits these to administrators
 by URL rule, for the pages and their REST counterparts alike:
 
-- members and invitations (`/members/**`, `/api/members`, `/api/invitations/**`);
+- members and invitations (`/members/**`, `/api/members`, `/api/members/**`, `/api/invitations/**`);
 - connecting a source, setting its token, and starting or resuming an import;
 - writing a Project's sensitive paths;
 - all of audiences (`/audiences/**`, `/api/audiences/**`, reads included);
@@ -51,8 +51,8 @@ by URL rule, for the pages and their REST counterparts alike:
 - writing the release note languages, the output language, and the slug;
 - all of automation (`/automation/**`, `/api/automation/**`).
 
-`InvitationService` checks the principal's role again. Every other authenticated path
-is open to members.
+`InvitationService` and `MemberService` check the principal's role again. Every other
+authenticated path is open to members.
 
 `InvitationService` issues a 32-byte base64url token, stores only its SHA-256
 hash, and returns the raw token once with `Cache-Control: no-store`. An
@@ -66,6 +66,40 @@ step shows the Organization and email, and the accept step locks the
 invitation row, creates the member account, and marks the invitation accepted.
 Every unusable token receives the same error. See
 [ADR-0006](adr/0006-organization-roles-and-invitations.md).
+
+### Role changes and removal
+
+[ADR-0043](adr/0043-member-roles-and-removal.md). An account is one membership: an
+`app_users` row has one Organization, and its email is unique among rows that are not
+removed (`app_users_email_unique`, a partial unique index since V38). A row is never
+deleted, because 21 composite foreign keys record who did what; 18 of them keep the
+person's name as it was, and the rest read it from the row.
+
+- **`MemberService.changeRole` and `remove`** each run in one `TransactionTemplate`
+  transaction that first locks the Organization row (`OrganizationRepository.lockById`,
+  `SELECT … FOR UPDATE`), then counts its active administrators and refuses with
+  `LastAdministratorException` (`409 member_last_administrator`) when none would remain.
+  Demoting an administrator and removing anyone revoke the pending invitations that
+  person made. Each change raises `app_users.session_version` and inserts a
+  `membership_changes` row with the changer's ID and name. Removal sets `removed_at` and
+  `removed_by` and clears `password_hash`; the row keeps its name and email.
+- **The constraint trigger `app_users_keep_an_administrator`** (deferred, on updates
+  that change `role` or `removed_at`) takes the same Organization lock at commit and
+  raises when no active administrator remains, so two writers that each demote the other
+  cannot both commit, through the service or not. `MemberService` maps that commit-time
+  failure to the same `409`.
+- **`MembershipSessionFilter`** sits in the main filter chain before `AuthorizationFilter`
+  and is built there, never as a bean, so it is not also a servlet filter. For a
+  `ReleaseFlowPrincipal` it reads `session_version` and `removed_at` by ID and Organization;
+  when the member is removed or the version differs from the one copied into the principal
+  at sign-in, it invalidates the session and clears the context. An `/api` request then
+  continues anonymous and meets the API entry point's `401 authentication_required`; a
+  page is redirected to `/login?ended`. Form sign-in is the only authentication, and the
+  other filter chains are stateless and authenticate no member, so this is every request a
+  member can make.
+- **Lookups by address** — sign-in, registration, and invitations — read rows that are not
+  removed, so a removed person can sign in nowhere, and their address can be invited again,
+  which creates a new row.
 
 ## Persistence and tenant boundary
 
@@ -115,8 +149,9 @@ integration_sources (github_integrations before V18)
   organization_id
   project_id (composite FK with organization_id -> projects; several per Project)
   source_type (GITHUB | GITLAB | LINEAR | JIRA) + external_project_key
-    (owner/repository, group/project, a Linear team, or a Jira project key,
-    unique per Organization and source type)
+    (owner/repository, group/project, a Linear team, or a Jira project key;
+    unique per Organization and source type among connected sources, and per
+    Project whether connected or not, V37)
   repository_owner + repository_name (GitHub only)
   api_base_url (GitLab: an allowlisted instance; Jira: an atlassian.net site)
   external_workspace_key (Linear only, the workspace the team belongs to)
@@ -125,13 +160,19 @@ integration_sources (github_integrations before V18)
   credential_identity (Jira only, the account email of its Basic credentials)
   webhook_auth_mode (GITHUB_HMAC | GITLAB_SIGNING_TOKEN | GITLAB_SECRET_TOKEN
     | LINEAR_HMAC | NONE), which must match the source type (NONE is Jira's)
-  webhook_id (globally unique; null exactly when the mode is NONE)
+  webhook_id (globally unique; while connected, null exactly when the mode is NONE)
   secret_nonce + secret_ciphertext (present exactly when webhook_id is)
+  secret_updated_at (V37: when the secret was last set; failures count from here)
   token_nonce + token_ciphertext + token_updated_at (the access token, V10)
-  poll_cursor_at + next_poll_at (Jira only: read up to here, read again then)
+  poll_cursor_at + next_poll_at (Jira only: read up to here, read again then;
+    a disconnected Jira source keeps its cursor and has no next poll)
   connection_status, last_sync_at, last_error_code
   created_at
   last_delivery_at (nullable, last accepted webhook delivery)
+  signature_failure_count + last_signature_failure_at (V37: deliveries whose
+    proof failed since secret_updated_at; written only by their own UPDATE)
+  disconnected_at + disconnected_by (V37, composite FK -> app_users; a
+    disconnected source has no webhook_id, secret, token, or next_poll_at)
 
 changes
   id (UUID PK)
@@ -203,6 +244,11 @@ audience_definitions
   communication_intent, template_body (Mustache, at most 10000 characters)
   footer_template_body (V34, Mustache over the release's values; blank adds nothing)
   preset, created_at, updated_at
+  retired_at, retired_by (composite FK -> app_users), retirer_name (V39; all three or none)
+
+audience_status_changes (V39, only ever inserted)
+  id (UUID PK); (audience_id, organization_id) FK -> audience_definitions
+  kind (RETIRED | RESTORED), changed_by (composite FK -> app_users), changer_name, changed_at
 
 audience_template_variants (V17)
   id (UUID PK); (audience_id, organization_id) FK -> audience_definitions, ON DELETE CASCADE
@@ -335,7 +381,8 @@ automation_action_runs (V22)
   id (UUID PK), run_id, organization_id, rule_action_id; run_id + position unique
   action_type, audience_id, audience_name_snapshot, language_snapshot
   note_content_snapshot, configuration_snapshot, secret_nonce_snapshot + secret_ciphertext_snapshot
-  status (as runs), external_reference, error_code (exactly when FAILED or UNKNOWN)
+  status (as runs, plus SKIPPED since V39), external_reference
+  error_code (exactly when FAILED, UNKNOWN, or SKIPPED)
   attempts, claimed_at, started_at, completed_at
 
 automation_publish_jobs (V22, the publication outbox)
@@ -360,14 +407,16 @@ database boundary. This decision is recorded in
 
 ## Source connection credentials
 
-A Project may have several create-only integration sources: GitHub repositories,
-GitLab projects, Linear teams, and Jira Cloud projects. Owners, repository names, and GitLab project paths are
+A Project may have several integration sources: GitHub repositories, GitLab projects,
+Linear teams, and Jira Cloud projects, each of which can be disconnected and reconnected
+but never deleted ([Source lifecycle and health](#source-lifecycle-and-health)). Owners, repository names, and GitLab project paths are
 trimmed, lowercased, and validated before persistence; which fields a request
 needs depends on its type, and `IntegrationSourceRequestValidator` reports the
 missing ones against those fields so REST and Thymeleaf both show them. The same
 canonical key may be connected by different Organizations, but only once inside
-one Organization and per source type
-(`integration_sources_external_unique`). V18 renamed `github_integrations` to
+one Organization and per source type among connected sources
+(`integration_sources_external_unique`, a partial unique index since V37), and is held
+at most once by each Project (`integration_sources_external_project_unique`). V18 renamed `github_integrations` to
 `integration_sources` in place, so every row kept its ID, webhook ID,
 repository, and ciphertexts; V19 made the repository columns GitHub's alone and
 added `api_base_url` and `webhook_auth_mode`. See
@@ -398,7 +447,8 @@ Additional authenticated data binds the Organization, Project, and source, plus
 the canonical repository for GitHub, or the source type and its external key (the
 GitLab project path, the Linear team, or the Jira project key) for the others, to
 prevent ciphertext relocation. GitHub's authenticated data has
-never changed, so no ciphertext was ever rewritten. Startup requires a
+never changed, so no ciphertext was ever rewritten. Every column the authenticated data
+names is mapped `updatable = false`, so no lifecycle step can rewrite one. Startup requires a
 Base64-encoded 32-byte key from `RELEASEFLOW_CREDENTIAL_MASTER_KEY`. Key and
 credential material are never logged. See
 [ADR-0002](adr/0002-per-integration-webhook-credentials.md).
@@ -419,8 +469,61 @@ secret plus a purpose line (`github-access-token`, `gitlab-access-token`,
 swapped. Project reads report only whether a token exists
 and when it was set. `SourceAccess` is the single way the `change` capability
 obtains a source's coordinates and decrypted token, always by Organization,
-Project, and source ID. Saving a token marks the source `ACTIVE` again. See
+Project, and source ID; it answers for connected sources only. Saving a token marks the
+source `ACTIVE` again, and a Jira token may come with a new `accountEmail`, confirmed by the
+same call and written to `credential_identity`, which no ciphertext is bound to. See
 [ADR-0008](adr/0008-durable-change-processing.md).
+
+## Source lifecycle and health
+
+[ADR-0042](adr/0042-source-lifecycle-and-health.md). A change is identified by
+`(source_id, external_id)`, and `changes_source_type_matches` points every change at its
+source, so a source row is never deleted and a reconnect reuses it.
+
+- **Disconnect.** `IntegrationSourceService.disconnect` nulls `webhook_id`, the secret,
+  the token, and `next_poll_at`, sets `disconnected_at` and `disconnected_by`, and publishes
+  `SourceDisconnected` inside the same transaction. `SourceDisconnectionListener` in the
+  `change` capability fails the source's `PENDING` or `RETRY_SCHEDULED` sync job as
+  `source_disconnected`; `SourceSyncWorker` reads the credentials again before every page,
+  so a running job stops at the next one. `IntegrationSource.recordPoll`,
+  `recordPollFailure`, and `recordSync` do nothing for a disconnected source, so a job
+  finishing late books nothing. With no `webhook_id`, a verifier finds no source and the
+  path answers like an unknown one. `SourceAccess.find`, `findByType`, `findSole`, and
+  `findDuePolls` skip disconnected sources, so a change still processing completes as
+  `NO_ACCESS_TOKEN`, linked context and issue reads see no tracker, and
+  `ReleaseLinkBuilder` and `NextStep` count connected code hosts and sources only.
+- **Reconnect.** `reconnect` reads the source in one short transaction, checks no other
+  Project connected the key since, asks the provider outside any transaction when there
+  is a token (Linear's `workspaceOf` must still answer the stored workspace), and writes
+  in a second: a new `webhook_id` and secret under the same authenticated data, or for
+  Jira a cursor of no earlier than 90 days ago and the next poll one interval later.
+  `create` refuses a key its Project holds disconnected with
+  `409 source_reconnect_required`.
+- **Rotation.** `generateSecret` (GitHub, GitLab) and `replaceSecret` (Linear, or a
+  `whsec_` token GitLab generated for a signed source) replace the ciphertext under the
+  same authenticated data, set `secret_updated_at`, and reset the failure count. No
+  provider is called, and the old secret stops at once.
+- **Signature failures.** Each verifier resolves the source first and, when the proof
+  fails, hands it to `SignatureFailureRecorder`, which writes the first failure on a
+  source at once and adds later ones within a second to an in-memory count, drained once
+  a second (and on shutdown) by one `UPDATE` per source. The `UPDATE` adds to the stored
+  count and applies only while `secret_updated_at` is the one the failures were refused
+  under. The entity maps the two columns as not insertable or updatable, so an ordinary
+  flush can never overwrite a concurrent increment.
+- **Health.** `SourceViews` builds every `IntegrationSourceView` with a `SourceHealth`.
+  One native query per list computes, for each connected delivered source, the gaps
+  between its `WEBHOOK` changes of the last 90 days and their 90th percentile
+  (`changes_source_delivered_idx`); with at least ten gaps, the usual gap is that
+  percentile or an hour, whichever is longer, and the source is quiet when its last
+  delivery, or its secret's last setting, is older. A connected Jira source is overdue
+  when its next poll is more than one interval past. Nothing is scheduled or stored for
+  it.
+- **Pages.** `SourcePageController` serves `/projects/{projectId}/sources/{sourceId}`, its
+  disconnect confirmation, the shown-once secret page, and the reconnect result. The
+  confirmation names the enabled rules `SourceTokenBorrowers` reports — the `project`
+  port that `AutomationRuleService` implements, so `project` never reaches into
+  `automation`. `fragments/source-health` draws the same health in the Change Inbox, the
+  overview, the Projects page, and the source page.
 
 ## Source intake
 
@@ -864,18 +967,21 @@ notes", "Changelog", and "Commits" sections, and marks it `dependency_update`; t
 description is untouched. `AiClassificationPrompt.system` adds `DEPENDENCY_RULE` (breaking,
 or a migration step, only when the change's own words say so) to the instructions only for
 such a change, after the first rule: when unsure whether a change is breaking, set
-`breaking_change` and `needs_human_review`. Both clients send the temperature that
-`AiClassifierConfiguration.temperature` reads from `RELEASEFLOW_AI_TEMPERATURE` at startup:
-`AiClassificationPrompt.TEMPERATURE` (`0`) when it is empty, a number within
-`AiProvider.maxTemperature()`, or none for `default`, which leaves the field out of the
-request for a model that accepts only its own (ADR-0038). Without a provider the value is
-not read; with one, a value that is not `default` or a number in the range stops startup.
-A 400 that refuses the temperature (`error.param` of `temperature` for the Chat Completions
-API, an `invalid_request_error` whose message names `temperature` for Anthropic) sends the
-same request once more without it and sets the client's `temperatureRefused` flag, so every
-later request of the process leaves it out; the first thread to set it logs one warning.
-The error body is read only to decide this. Any other failure, the second request's
-included, becomes the change's failure as before (ADR-0039).
+`breaking_change` and `needs_human_review`. `AiClassifierConfiguration.temperature` reads
+`RELEASEFLOW_AI_TEMPERATURE` at startup: `AiClassificationPrompt.TEMPERATURE` (`0`) when it
+is empty, a number within `AiProvider.maxTemperature()`, or none for `default`, which leaves
+the field out of the request for a model that accepts only its own (ADR-0038). Without a
+provider the value is not read; with one, a value that is not `default` or a number in the
+range stops startup. `OpenAiCompatibleClassifier` sends it. A 400 whose `error.param` is
+`temperature` sends the same request once more without it and sets the client's
+`temperatureRefused` flag, so every later request of the process leaves it out; the first
+thread to set it logs one warning. The error body is read only to decide this. Any other
+failure, the second request's included, becomes the change's failure as before (ADR-0039).
+`AnthropicChangeClassifier` takes no temperature: anthropic-java 3.x sends API version
+`2026-10-21`, which refuses `temperature`, `top_p`, and `top_k`, and the API key as
+`Authorization: Bearer`. ReleaseFlow sets no version of its own. The configuration only logs,
+once at startup, that a number other than `0` is ignored, and every Anthropic failure is the
+change's, with no second request (ADR-0045).
 
 ### Project context
 
@@ -1137,6 +1243,10 @@ publication.
   are empty. `SectionValue` lets `{{#status}} ({{status}}){{/status}}` print the value in
   Mustache standards mode. An acceptance names the status the person saw, and one that no
   longer matches the last read is `409 linked_issue_status_changed`.
+  `ReleaseView.openLinkedIssues` is the warning, the open issues nobody accepted, and
+  `acceptedLinkedIssues` the open ones whose current status matches the accepted one, which
+  the Review tab lists with `accepter_name` and `accepted_at` while the release is in review
+  or approved. Both come from the same `LinkedIssueStatusView`s the API returns.
 - **Folding suggestions.** `ReleaseService` computes them from stored data alone while the
   release is `IN_REVIEW`: a Jira or Linear change of the release whose key a GitHub or
   GitLab change of the release lists among its linked issues, or which
@@ -1183,6 +1293,37 @@ shipped templates lead with `**{{headline}}**`, label a migration step by its ki
 through the `migration<Kind>` sections, keeping the neutral label for
 `unspecified`, keep their detail lines inside `{{^brief}}`, and print a required
 step outside it; the end-user one prints a step only when it is required.
+
+### Retired audiences
+
+[ADR-0044](adr/0044-retire-an-audience.md) adds retirement beside deletion.
+`AudienceService.retire` runs in its own transaction: it locks every audience row of the
+Organization, refuses the last active one with `audience_last_active`, sets the three
+`retired_*` columns, and inserts an `audience_status_changes` row with the
+administrator's name at the time; `restore` clears the columns and records the return.
+The `audience_definitions_keep_an_active_audience` constraint trigger is the backstop: it
+fires deferred, at commit, on any update that changes `retired_at`, locks the
+Organization row, and raises when no active audience is left, so of two transactions
+retiring the last two, the second waits for the first and fails. `retire` maps that
+commit-time failure to the same `409`. Deleting the last active audience is refused with
+`audience_last`; a retired one can be deleted when nothing names it.
+
+`briefs` and `active` leave retired audiences out, so the AI request, note writing, and
+note previews never see one, and `retiredCodes` tells the writer which narratives not to
+translate. A narrative a retired audience already has is kept: the summary edit puts the
+request's active narratives over the stored ones, so leaving a retired code out no longer
+erases it. Re-rendering an approved release leaves out the retired audiences that have no
+note in it, so a release approved before a retirement keeps that note. With nothing
+retired, briefs, translation texts, and notes are byte for byte what they were.
+
+`MissingNarratives` lists, for a release in review or approved, the changes the AI
+classified that have no narrative for some active audience, with the rough token size of
+the request that would ask for them: the system prompt, the user message, and the
+response schema, over four, computed without sending anything. Asking sends that one
+request with the same evidence as the classification and only the missing audiences, and
+`Change.addMissingNarratives` adds only the codes asked for that are still absent, so
+nothing a person wrote and no other field changes. Each request is made only when a
+person asks.
 
 `AudienceTemplate` wraps JMustache in standards mode with strict sections,
 empty strings as false, and no escaping, because the output is Markdown. It
@@ -1353,7 +1494,8 @@ ADR-0015 writes a note per audience and **release note language**; see
   (`translation_disabled`) without a provider, and `PENDING` otherwise.
 - **Worker.** `TranslationWorker` runs every second. It claims one due job with
   `FOR UPDATE SKIP LOCKED`, looks its texts up in the cache, and sends only the
-  missing ones to `DeepLTranslator` outside any transaction: `POST
+  missing ones, each once and in the order of their keys, so every run sends the same
+  list, to `DeepLTranslator` outside any transaction: `POST
   /v2/translate` with `DeepL-Auth-Key`, the job's context as `context` when it has
   one, batches of at most 50 texts and 120 KiB,
   source as the primary language and English or Portuguese targets with a
@@ -1471,8 +1613,9 @@ write-only: responses and pages say only that one is configured.
 ### Enabling
 
 `AutomationRuleService.enable` checks, in order, the project's ownership,
-every audience's ownership and language, a single GitHub source for a GitHub Release
-action on a project-scoped rule, whether the deployment can carry the action out at
+every audience's ownership, language, and activity (`automation_audience_retired`), a
+single connected GitHub source for a GitHub
+Release action on a project-scoped rule, whether the deployment can carry the action out at
 all, and the action's own configuration and decrypted secret.
 
 ### Triggers
@@ -1535,14 +1678,17 @@ path and stops the old secret at once.
 
 It ticks every second and drains what it finds. A claim takes the next
 pending action of a run that is neither finished nor being cancelled, and only once
-every earlier action has succeeded, with `FOR UPDATE OF action_run SKIP LOCKED`. The
+every earlier action has succeeded or been skipped, with `FOR UPDATE OF action_run SKIP LOCKED`. The
 provider is called with no transaction open, and the result is written in a short
-transaction that first checks the claim is still this worker's.
+transaction that first checks the claim is still this worker's. An action whose audience
+is retired is skipped with `audience_retired` before any provider is called; no metric is
+recorded for it, since nothing was delivered.
 
 ### Outcomes
 
-`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`. The
-first action that fails or ends unknown stops the ones behind it. An action whose
+`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`, and, for an
+action, `SKIPPED`, which counts as done: a run whose actions all succeeded or were skipped
+succeeds. The first action that fails or ends unknown stops the ones behind it. An action whose
 worker stopped becomes `UNKNOWN` after five minutes and is never sent again on its own;
 a person repeating it confirms the duplicate. A retry resets only the first action that
 did not succeed. Cancelling lets the action already running record its result and stops
@@ -1557,6 +1703,12 @@ No outbound client follows a redirect, and a redirect is never a delivery.
 - **GitHub Release** borrows the project's own source token, publishes the note as the
   release of the version's tag, and marks the body with
   `<!-- releaseflow-action:{id} -->` so a repeat knows its own work from somebody else's.
+  `AutomationRunFactory` records the repository of the project's one connected GitHub
+  source, or of its one disconnected source when none is connected
+  (`SourceAccess.soleExternalKey`); when that source is disconnected at delivery the
+  action fails as `github_source_disconnected` before any call, and a retry after the
+  reconnect succeeds. A rule view carries `gitHubSourceMissing` while an enabled rule's
+  project has no connected GitHub source to lend.
 - **Slack** posts through an incoming webhook whose origin the deployment allows,
   checked again before every delivery, up to 39,000 characters. A redirect fails the
   action as `slack_rejected`, as does any 4xx, while a 5xx may have posted before
@@ -1657,7 +1809,9 @@ who have no account. See [ADR-0022](adr/0022-public-changelog.md).
 
 `OverviewService` in the `overview` capability owns no data: it asks `ProjectService`,
 `ChangeInboxService` and `ReleaseService` for counts and composes them
-([ADR-0028](adr/0028-parity-ui-and-browser-tests.md)). Both counts are aggregate queries
+([ADR-0028](adr/0028-parity-ui-and-browser-tests.md)). It also passes on the selected
+Project's sources with their health, which the page lists beside the figures; they are
+not a step and do not change which one is offered. Both counts are aggregate queries
 rather than lists counted in Java.
 
 `NextStep.of(...)` decides the one step a person is offered, in a fixed order: no project,
@@ -1786,7 +1940,10 @@ violation, at 360 px in the light theme and 1440 px in the dark one. The page sw
 in both interface languages and also checks horizontal overflow and disclosure target
 sizes; interaction cases cover navigation focus, Project switching, validation focus,
 clipboard fallback, polling timeout, confirmations, and the no-JavaScript form path.
-Three suites cover the release pipeline, invitations, and every page. There are no JavaScript
+Three suites cover the release pipeline, invitations, and every page. The only stand-in is
+for providers: `tests/e2e/compose.yaml` adds `tests/e2e/provider-stand-in.mjs`, a Jira that
+answers a project and an issue still open and a GitHub that accepts a token, so the suite
+reaches a release's linked-issue sections. There are no JavaScript
 unit tests, and deliberately so: what is left in `app.js` only means anything in a
 page.
 

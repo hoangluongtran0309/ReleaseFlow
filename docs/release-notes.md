@@ -210,6 +210,40 @@ which of these holds it. A preset can be reset to its shipped version in the cur
 output language, and so can an audience your team added under a shipped code (`operator`,
 `contributor`, `end_user`, or `support`), which becomes a preset from then on. See [ADR-0011](adr/0011-audience-release-notes.md).
 
+### Retiring an audience
+
+An audience nobody writes for any more can be **retired** instead of deleted, which works
+even while notes, rules, or runs name it. Open it on the **Audiences** page and choose
+**Retire audience**; the list then marks it **Retired** and says who retired it and when.
+From the next approval a retired audience gets no note, the AI is not asked for its
+narrative, and nothing is translated for it. Everything it already has stays: its
+templates, its footer, the narratives its changes carry, and every note written for it,
+which still opens and downloads. A release approved before the retirement keeps its note
+for the audience until it is approved again. The retirement confirmation lists the
+enabled automation rules that deliver the audience: their action for it is
+[skipped](automation.md#runs) rather than failed, and enabling a rule that delivers a
+retired audience is refused.
+
+**Bring back** makes it active again, and the page says who brought it back and when. A
+change the AI classified while the audience was retired has no narrative for it; its note
+still includes the change under the neutral headline (`whatChanged`), with no narrative,
+and never leaves it out. The release's **Review** tab lists those changes under
+**Changes with no narrative for an audience**, so a person writes the narrative with
+**Edit summary**, or asks the AI for only the missing narratives. The button shows the
+request's rough size in tokens, worked out from its text without sending anything; the
+answer adds those narratives and changes nothing else about the change. Through the API, a
+release in review or approved lists them as `missingNarratives` (`changeId`, `reference`,
+`title`, `audienceNames`, `estimatedTokens`), and any member asks the AI with
+`POST /api/projects/{projectId}/changes/{changeId}/missing-narratives`, which answers the
+change. A change the AI did not classify is refused with `409 change_not_eligible_for_ai`;
+without AI the answer is `503 ai_classification_unavailable`, and a failed request
+`502 ai_classification_failed`, which records nothing.
+
+An Organization always keeps at least one active audience: retiring the last one is
+refused, and so is deleting the last active one. Every retirement and return is recorded
+with the administrator's name at the time. See
+[ADR-0044](adr/0044-retire-an-audience.md).
+
 Every audience endpoint is for administrators only:
 
 ```text
@@ -219,6 +253,8 @@ GET    /api/audiences/{audienceId}
 PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
 PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody", "footerTemplateBody"}
 DELETE /api/audiences/{audienceId}
+POST   /api/audiences/{audienceId}/retire
+POST   /api/audiences/{audienceId}/restore
 POST   /api/audiences/{audienceId}/reset-to-preset
 POST   /api/audiences/preview                  {"templateBody", "footerTemplateBody"} -> {"markdown", "html"}
 ```
@@ -226,7 +262,8 @@ POST   /api/audiences/preview                  {"templateBody", "footerTemplateB
 An audience returns `footerTemplateBody` beside `templateBody`, and
 `footerTemplateVariants` beside `templateVariants`, each keyed by language. A request that
 leaves `footerTemplateBody` out keeps the footer the audience or language has, and a new
-audience then has none, so callers written before footers keep working.
+audience then has none, so callers written before footers keep working. An audience also
+returns `retiredAt` and `retirerName`, both `null` while it is active.
 
 | Situation | Response |
 | --- | --- |
@@ -236,7 +273,9 @@ audience then has none, so callers written before footers keep working.
 | A template naming `narratives.<code>` | `400 template_narratives_path` |
 | The code is already used | `409 audience_code_taken` |
 | The Organization already has 20 audiences | `409 audience_limit` |
-| Deleting the last audience | `409 audience_last` |
+| Deleting the last active audience | `409 audience_last` |
+| Retiring the last active audience | `409 audience_last_active` |
+| Retiring an audience that is retired, or bringing back one that is not | `409 audience_already_retired`, `409 audience_not_retired` |
 | Deleting an audience that has release notes, that an automation rule's action delivers to (enabled, disabled, or archived), or that a run's history names | `409 audience_in_use`; `detail` says which |
 | Resetting an audience whose code no shipped audience has | `409 audience_not_preset` |
 | A language template for a language that is not a release note language | `400 template_language_not_targeted` |
@@ -301,7 +340,7 @@ when every note is ready: otherwise publishing returns
 summary after approval translates the new text. See
 [ADR-0015](adr/0015-multilingual-release-notes.md).
 
-![Seconds after approval: the Vietnamese note is Translating and still shows the untranslated text](assets/release-notes/rn-3-translating.webp)
+![Seconds after approving v1.3.0: the Vietnamese Contributor note is Translating and still shows the untranslated summary, while the release details name v1.2.0 as the previous release and no upgrade guide](assets/release-notes/rn-3-translating.webp)
 
 ![The same note once its translations arrived: the release summary and every change are in Vietnamese, and the glossary was Sent with every translation](assets/release-notes/rn-4-translated.webp)
 
@@ -464,7 +503,7 @@ A release moves through four steps, shown at the top of its page:
    follows its template), then **Publish release**.
 4. **Published.** See [Publishing](#publishing).
 
-![Creating a release, adding every available change, and requesting review](assets/release-notes/rn-6-add-all.webp)
+![Creating v1.3.0 with a summary, no upgrade guide, and v1.2.0 as the previous release, adding every available change, and requesting review: 17 changes wait for a decision](assets/release-notes/rn-6-add-all.webp)
 
 Any member can take every step, so one person can prepare, review, approve, and publish
 the same release. ReleaseFlow records who reviewed each change, who approved, and who
@@ -484,10 +523,18 @@ or a Linear issue that is completed or canceled. An issue recorded before 1.2.0,
 from a tracker that did not say, counts as not finished. Under **Linked issues still
 open**, the Review tab lists each issue whose status is not finished while its change
 ships, with **Show this status**: a member who chooses it lets every note print that very
-status, and ReleaseFlow records who and when. A later read that returns another status asks
-again. The warning never holds up approval or publication. Notes are written at approval
+status, and ReleaseFlow records who and when. The issue then moves to **Open statuses the
+notes show**, which lists, while the release is in review or approved, each issue whose
+open status a person accepted: its key, the status the notes print, who accepted it under
+the name they had then, and when. A later read that returns another status takes it off
+that list and asks again. The release's `GET` carries the same on each of its
+`linkedIssues`: `key`, `status`, `open`, `accepted`, `accepterName`, and `acceptedAt`; the
+notes print `status` when `accepted` is `true`. The warning never holds up approval or
+publication. Notes are written at approval
 from the statuses read by then; a read that finishes later writes again the notes that
 still follow their template, until the release is published.
+
+![A release in review whose linked issues were read again: DBV-53, linked from #69, is still In Progress, with Show this status](assets/release-notes/rn-16-issues-at-review.webp)
 
 ### Folding a tracker change into its code change
 
@@ -509,6 +556,8 @@ A suggestion is evidence only, and nothing is folded on its own. A member choose
 - **Not the same work** dismisses the suggestion: both changes stay, and it is not
   offered again in this release.
 
+![Folding suggestions on a release's Review tab: six tracker changes, each to fold into the code change that names it or that a person confirmed as its duplicate; the one for OPS-17 says #67 would become security, and each offers Fold and reject, Not the same work, and Fold and exclude with a prefilled reason](assets/release-notes/rn-14-folding.webp)
+
 Either fold keeps the issue as linked context of the code change, adding it from the
 tracker change when the code change did not list it yet; an issue added that way is read
 from its tracker as of this review, like the others. Either fold also keeps the work's
@@ -519,6 +568,8 @@ which names the folded change. A code change still Unknown needs a category firs
 `400 invalid_fold_decision`. Each suggestion is decided once,
 with who decided and when; a release returned to draft keeps its decisions. A pair with
 nothing that ties them is not suggested: reject or exclude the tracker change by hand.
+
+![#67 after OPS-17 was folded into it: its decision is Edited by dbvault Lead, and it was marked security when OPS-17 was folded in](assets/release-notes/rn-15-folded-decision.webp)
 
 ```text
 POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance
@@ -566,7 +617,8 @@ the output language.
 During review and after approval, **Edit summary** on the Review tab lets a
 person write or correct a change's summary, including its migration kind and
 limitations, and each audience's relevance, headline, and narrative. This works whether
-or not the AI wrote one, and the AI never replaces what a person chose. Through the API,
+or not the AI wrote one, and the AI never replaces what a person chose. The form shows the
+active audiences only, and saving it keeps a retired audience's narrative as it was. Through the API,
 each audience's narrative is `{"relevance": "NONE" | "BRIEF" | "FULL", "headline", "body"}`
 or, as callers written before relevance existed send, a plain string, which is a full
 narrative without a headline. A full narrative with neither headline nor body is not
@@ -574,7 +626,8 @@ kept, since it says no more than having none; an unknown relevance returns
 `400 malformed_request`. A request that names no `migrationKind`, as callers written before it
 existed send, records `UNSPECIFIED` for a step and `NONE` without one; a kind that
 does not match the step (`NONE` with a step, any other without) returns
-`400 validation_failed`. The change records who wrote it, and the
+`400 validation_failed`. A narrative for a retired audience that the request leaves out is
+kept. The change records who wrote it, and the
 notes of an approved release that still follow their template are rendered
 again. Notes reflect the changes at approval: to pick up a classification
 corrected later in the Change Inbox, return the release to draft and approve it
@@ -666,7 +719,7 @@ and offers one tab per audience and language with the rendered note, its
 Markdown, a **Copy** button, and a **Download** link for GitHub Releases or a
 changelog. Downloaded files are named `<version>-<audience>-<language>.md`.
 
-![Publishing an approved release: it becomes Published, and a note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
+![Publishing approved v1.3.0: it becomes Published, an immutable snapshot whose glossary went with every translation, and the Contributor note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
 
 A published release cannot be edited, scheduled, reviewed, discarded,
 unpublished, or changed in content, and neither can its notes. Its changes can

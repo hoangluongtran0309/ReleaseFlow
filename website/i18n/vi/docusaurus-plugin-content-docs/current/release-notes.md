@@ -205,6 +205,38 @@ kèm, theo ngôn ngữ đầu ra hiện tại, và một audience nhóm của b�
 kèm (`operator`, `contributor`, `end_user` hoặc `support`) cũng vậy, và từ đó trở thành audience
 mẫu. Xem [ADR-0011](adr/0011-audience-release-notes.md).
 
+### Ngừng dùng một audience {#retiring-an-audience}
+
+Một audience không còn ai viết cho có thể được **ngừng dùng** thay vì xoá, kể cả khi release
+note, quy tắc hay lần chạy vẫn còn nhắc tới nó. Mở audience đó trên trang **Audience** và chọn
+**Ngừng dùng audience**; danh sách sau đó đánh dấu nó **Ngừng dùng** và cho biết ai đã ngừng dùng
+nó và lúc nào. Từ lần duyệt tới, một audience đã ngừng dùng không có release note, AI không được
+hỏi narrative của nó, và không có gì được dịch cho nó. Mọi thứ nó đã có vẫn giữ nguyên: template,
+phần cuối, các narrative mà thay đổi của nó mang, và mọi release note đã viết cho nó, vẫn mở và
+tải về được. Một release đã duyệt trước khi ngừng dùng giữ release note của audience đó cho tới
+khi được duyệt lại. Phần xác nhận ngừng dùng liệt kê các quy tắc automation đang bật gửi tới
+audience đó: Action của chúng cho audience này được [bỏ qua](automation.md#runs) thay vì thất
+bại, và việc bật một quy tắc gửi tới audience đã ngừng dùng bị từ chối.
+
+**Dùng lại** làm audience hoạt động trở lại, và trang cho biết ai đã dùng lại nó và lúc nào. Một
+thay đổi mà AI phân loại trong lúc audience đang ngừng dùng không có narrative cho nó; release
+note của audience đó vẫn có thay đổi này dưới dòng tiêu đề trung lập (`whatChanged`), không có
+narrative, và không bao giờ bỏ nó đi. Tab **Review** của release liệt kê các thay đổi đó dưới
+**Thay đổi không có narrative cho một audience**, để một người viết narrative bằng
+**Sửa tóm tắt**, hoặc chỉ hỏi AI các narrative còn thiếu. Nút này cho thấy kích thước ước chừng
+của request theo token, tính từ chính nội dung của nó mà không gửi gì; câu trả lời chỉ thêm các
+narrative đó và không thay đổi gì khác của thay đổi. Qua API, một release đang review hoặc đã
+duyệt liệt kê chúng trong `missingNarratives` (`changeId`, `reference`, `title`,
+`audienceNames`, `estimatedTokens`), và bất kỳ thành viên nào cũng hỏi AI bằng
+`POST /api/projects/{projectId}/changes/{changeId}/missing-narratives`, trả về thay đổi đó. Một
+thay đổi mà AI chưa phân loại bị từ chối với `409 change_not_eligible_for_ai`; khi không có AI,
+câu trả lời là `503 ai_classification_unavailable`, và một request thất bại là
+`502 ai_classification_failed`, không ghi lại gì.
+
+Một Organization luôn giữ ít nhất một audience đang dùng: ngừng dùng audience cuối cùng bị từ
+chối, và xoá audience đang dùng cuối cùng cũng vậy. Mỗi lần ngừng dùng và dùng lại được ghi lại
+cùng tên của quản trị viên lúc đó. Xem [ADR-0044](adr/0044-retire-an-audience.md).
+
 Mọi endpoint audience chỉ dành cho quản trị viên:
 
 ```text
@@ -214,6 +246,8 @@ GET    /api/audiences/{audienceId}
 PUT    /api/audiences/{audienceId}             {"displayName", "communicationIntent", "templateBody", "footerTemplateBody"}
 PUT    /api/audiences/{audienceId}/templates/{language}   {"templateBody", "footerTemplateBody"}
 DELETE /api/audiences/{audienceId}
+POST   /api/audiences/{audienceId}/retire
+POST   /api/audiences/{audienceId}/restore
 POST   /api/audiences/{audienceId}/reset-to-preset
 POST   /api/audiences/preview                  {"templateBody", "footerTemplateBody"} -> {"markdown", "html"}
 ```
@@ -221,7 +255,8 @@ POST   /api/audiences/preview                  {"templateBody", "footerTemplateB
 Một audience trả về `footerTemplateBody` cạnh `templateBody`, và `footerTemplateVariants` cạnh
 `templateVariants`, mỗi cái theo khoá ngôn ngữ. Request bỏ `footerTemplateBody` sẽ giữ phần cuối
 mà audience hay ngôn ngữ đó đang có, và audience mới khi đó không có phần cuối, nên các client viết
-trước khi có phần cuối vẫn chạy được.
+trước khi có phần cuối vẫn chạy được. Một audience cũng trả về `retiredAt` và `retirerName`, cả
+hai là `null` khi nó đang được dùng.
 
 | Tình huống | Phản hồi |
 | --- | --- |
@@ -231,7 +266,9 @@ trước khi có phần cuối vẫn chạy được.
 | Template gọi tới `narratives.<code>` | `400 template_narratives_path` |
 | Mã đã được dùng | `409 audience_code_taken` |
 | Organization đã có 20 audience | `409 audience_limit` |
-| Xoá audience cuối cùng | `409 audience_last` |
+| Xoá audience đang dùng cuối cùng | `409 audience_last` |
+| Ngừng dùng audience đang dùng cuối cùng | `409 audience_last_active` |
+| Ngừng dùng một audience đã ngừng dùng, hoặc dùng lại một audience chưa ngừng dùng | `409 audience_already_retired`, `409 audience_not_retired` |
 | Xoá một audience đã có release note, đang được hành động của một quy tắc automation giao tới (bật, tắt hay đã lưu trữ), hoặc có trong lịch sử chạy | `409 audience_in_use`; `detail` nói rõ lý do nào |
 | Đặt lại một audience mà không audience đi kèm nào có mã của nó | `409 audience_not_preset` |
 | Template cho một ngôn ngữ không nằm trong các ngôn ngữ release note | `400 template_language_not_targeted` |
@@ -291,7 +328,7 @@ Release chỉ được publish khi mọi release note đều sẵn sàng: nếu 
 `409 translations_not_ready`, và cơ sở dữ liệu cũng từ chối. Sửa một bản tóm tắt sau khi duyệt
 sẽ dịch văn bản mới. Xem [ADR-0015](adr/0015-multilingual-release-notes.md).
 
-![Vài giây sau khi duyệt: note tiếng Việt đang dịch và vẫn hiện văn bản chưa dịch](assets/release-notes/rn-3-translating.webp)
+![Vài giây sau khi duyệt v1.3.0: note Contributor tiếng Việt đang dịch và vẫn hiện tóm tắt chưa dịch, còn thông tin release ghi release trước là v1.2.0 và không có hướng dẫn nâng cấp](assets/release-notes/rn-3-translating.webp)
 
 ![Cùng note đó khi bản dịch đã về: tóm tắt release và mọi thay đổi đều bằng tiếng Việt, và bảng thuật ngữ Đã gửi kèm mọi bản dịch](assets/release-notes/rn-4-translated.webp)
 
@@ -439,7 +476,7 @@ Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
    theo template nữa), rồi chọn **Publish release này**.
 4. **Đã publish.** Xem [Publish](#publishing).
 
-![Một release đang review ngay sau khi thêm mọi thay đổi có sẵn](assets/release-notes/rn-6-add-all.webp)
+![Release v1.3.0 đang review với cả 10 thay đổi đã có quyết định; release trước là v1.2.0 và không có hướng dẫn nâng cấp](assets/release-notes/rn-6-add-all.webp)
 
 Mọi thành viên đều làm được mọi bước, nên một người có thể tự chuẩn bị, review, duyệt và
 publish cùng một release. ReleaseFlow ghi lại ai đã review từng thay đổi, ai đã duyệt và ai đã
@@ -458,10 +495,18 @@ hoặc là issue Linear đã hoàn thành hay đã huỷ. Issue được ghi nh�
 công cụ theo dõi không cho biết điều đó, được coi là chưa hoàn tất. Trong mục **Issue được liên
 kết vẫn chưa hoàn tất**, tab Review liệt kê từng issue có trạng thái chưa hoàn tất trong khi thay
 đổi của nó vẫn phát hành, kèm **Hiển thị trạng thái này**: thành viên chọn nút này cho phép mọi
-note in đúng trạng thái đó, và ReleaseFlow ghi lại ai chọn và lúc nào. Một lần đọc sau trả về
-trạng thái khác sẽ hỏi lại. Cảnh báo này không bao giờ chặn việc duyệt hay publish. Note được viết
+note in đúng trạng thái đó, và ReleaseFlow ghi lại ai chọn và lúc nào. Issue đó sau đó chuyển
+sang mục **Trạng thái chưa hoàn tất mà note hiển thị**, liệt kê, khi release đang review hoặc đã
+duyệt, từng issue có trạng thái chưa hoàn tất mà một người đã chấp nhận: mã issue, trạng thái note
+in ra, người đã chấp nhận với tên của họ lúc đó, và thời điểm. Một lần đọc sau trả về trạng thái
+khác sẽ đưa issue ra khỏi danh sách đó và hỏi lại. `GET` của release cũng mang đúng những thông
+tin này trên mỗi phần tử của `linkedIssues`: `key`, `status`, `open`, `accepted`, `accepterName`
+và `acceptedAt`; note in `status` khi `accepted` là `true`. Cảnh báo này không bao giờ chặn việc
+duyệt hay publish. Note được viết
 lúc duyệt từ các trạng thái đã đọc tới khi đó; một lần đọc xong muộn hơn sẽ viết lại các note vẫn
 theo template, cho tới khi release được publish.
+
+![Một release đang review có các issue liên kết vừa được đọc lại: DBV-53, liên kết từ #69, vẫn In Progress, kèm nút Hiển thị trạng thái này](assets/release-notes/rn-16-issues-at-review.webp)
 
 ### Gộp thay đổi tracker vào thay đổi mã {#folding-a-tracker-change-into-its-code-change}
 
@@ -482,6 +527,8 @@ Gợi ý chỉ là bằng chứng, và không có gì tự được gộp. Một
 - **Không phải cùng một việc** bỏ qua gợi ý: cả hai thay đổi được giữ, và gợi ý không được đưa
   ra lại trong release này.
 
+![Gợi ý gộp trên tab Review của một release: sáu thay đổi tracker, mỗi cái gộp vào thay đổi mã nêu nó hoặc được một người xác nhận là trùng; gợi ý cho OPS-17 nói #67 sẽ thành bảo mật, và mỗi gợi ý có Gộp rồi từ chối, Không phải cùng một việc, và Gộp rồi loại kèm lý do điền sẵn](assets/release-notes/rn-14-folding.webp)
+
 Cả hai cách gộp đều giữ issue làm ngữ cảnh liên kết của thay đổi mã, thêm nó từ thay đổi tracker
 khi thay đổi mã chưa liệt kê; issue được thêm như vậy được đọc từ công cụ theo dõi của nó tại thời
 điểm review này, như các issue khác. Cả hai cách gộp cũng giữ các cờ của phần việc: thay đổi mã
@@ -491,6 +538,8 @@ của thay đổi mã và thành quyết định cho nó trong release, có nêu
 còn Unknown cần được phân loại trước: `400 invalid_fold_decision`. Mỗi gợi ý được quyết định một lần, ghi lại ai quyết định và lúc
 nào; release đưa về nháp vẫn giữ các quyết định của nó. Một cặp không có gì ràng buộc thì không
 được gợi ý: hãy từ chối hoặc loại thay đổi tracker bằng tay.
+
+![#67 sau khi OPS-17 được gộp vào: quyết định của nó là Đã sửa bởi dbvault Lead, và nó được đánh dấu bảo mật khi gộp OPS-17 vào](assets/release-notes/rn-15-folded-decision.webp)
 
 ```text
 POST /api/projects/{projectId}/releases/{releaseId}/linked-issues/acceptance
@@ -535,14 +584,16 @@ tiếng Anh hoặc tiếng Việt, theo ngôn ngữ đầu ra.
 Trong lúc review và sau khi duyệt, **Sửa tóm tắt** trên tab Review cho phép một người viết hoặc
 sửa bản tóm tắt của một thay đổi, gồm cả loại bước chuyển đổi và giới hạn, và mức liên quan,
 dòng tiêu đề, narrative của từng audience. Việc này dùng được dù AI đã viết hay chưa, và AI không
-bao giờ thay thế điều một người đã chọn. Qua API, narrative của mỗi audience là
+bao giờ thay thế điều một người đã chọn. Biểu mẫu chỉ cho thấy các audience đang dùng, và lưu nó
+giữ nguyên narrative của một audience đã ngừng dùng. Qua API, narrative của mỗi audience là
 `{"relevance": "NONE" | "BRIEF" | "FULL", "headline", "body"}` hoặc, như bên gọi viết trước khi có
 mức liên quan gửi, một chuỗi trơn, tức narrative đầy đủ không có dòng tiêu đề. Narrative `FULL` mà
 không có cả dòng tiêu đề lẫn nội dung sẽ không được giữ, vì nó không nói gì hơn việc không có
 narrative; mức liên quan không xác định trả về `400 malformed_request`. Request không nêu `migrationKind`,
 như bên gọi viết trước khi có trường này gửi, sẽ ghi `UNSPECIFIED` khi có bước và `NONE` khi không
 có; loại không khớp với bước (`NONE` mà có bước, loại khác mà không có) trả về
-`400 validation_failed`. Thay đổi ghi lại người đã viết, và các release note của một release đã duyệt mà
+`400 validation_failed`. Narrative của một audience đã ngừng dùng mà request bỏ qua vẫn được giữ.
+Thay đổi ghi lại người đã viết, và các release note của một release đã duyệt mà
 vẫn theo template sẽ được dựng lại. Release note phản ánh các thay đổi tại thời điểm duyệt: để
 lấy một phân loại được sửa sau đó trong Hộp thay đổi, đưa release về nháp rồi duyệt lại. Xem
 [ADR-0010](adr/0010-release-review-lifecycle.md) và
@@ -628,7 +679,7 @@ hiển thị người đã duyệt và người đã publish release, và có m�
 với release note đã dựng, Markdown của nó, nút **Sao chép**, và liên kết **Tải về** để dùng cho
 GitHub Releases hoặc một changelog. Tệp tải về có tên `<version>-<audience>-<language>.md`.
 
-![Một release đã publish: chọn note Contributor · vi và tải nó về dưới dạng Markdown](assets/release-notes/rn-9-publish.webp)
+![Release v1.3.0 đã publish: note Contributor · vi đã dịch, bảng thuật ngữ được gửi kèm mọi bản dịch, cùng nút Sao chép và Tải về Markdown](assets/release-notes/rn-9-publish.webp)
 
 Một release đã publish không sửa, đặt lịch, review, huỷ bỏ, gỡ publish hay đổi nội dung được, và
 các release note của nó cũng vậy. Các thay đổi của nó vẫn sửa được trong Hộp thay đổi, nhưng

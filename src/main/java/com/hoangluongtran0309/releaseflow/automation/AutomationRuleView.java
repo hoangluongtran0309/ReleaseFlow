@@ -29,7 +29,9 @@ public record AutomationRuleView(
         boolean enabled,
         Instant createdAt,
         Instant updatedAt,
-        List<AutomationActionView> actions
+        List<AutomationActionView> actions,
+        boolean gitHubSourceMissing,
+        boolean deliversRetiredAudience
 ) {
 
     public AutomationRuleView {
@@ -55,7 +57,9 @@ public record AutomationRuleView(
                 enabled,
                 createdAt,
                 updatedAt,
-                actions
+                actions,
+                gitHubSourceMissing,
+                deliversRetiredAudience
         );
     }
 
