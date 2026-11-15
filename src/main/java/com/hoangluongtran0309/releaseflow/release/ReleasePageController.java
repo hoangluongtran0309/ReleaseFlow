@@ -4,12 +4,16 @@ import com.hoangluongtran0309.releaseflow.account.OutputLanguageService;
 import com.hoangluongtran0309.releaseflow.account.ReleaseFlowPrincipal;
 import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.category.CategoryService;
+import com.hoangluongtran0309.releaseflow.change.AiClassificationFailedException;
+import com.hoangluongtran0309.releaseflow.change.AiClassificationUnavailableException;
 import com.hoangluongtran0309.releaseflow.change.ChangeExcludedException;
+import com.hoangluongtran0309.releaseflow.change.ChangeNotEligibleForAiException;
 import com.hoangluongtran0309.releaseflow.change.ChangeProcessingException;
 import com.hoangluongtran0309.releaseflow.change.ChangeSummaryRequest;
-import com.hoangluongtran0309.releaseflow.change.MigrationKind;
-import com.hoangluongtran0309.releaseflow.change.Relevance;
 import com.hoangluongtran0309.releaseflow.change.InvalidChangeReviewException;
+import com.hoangluongtran0309.releaseflow.change.MigrationKind;
+import com.hoangluongtran0309.releaseflow.change.MissingNarratives;
+import com.hoangluongtran0309.releaseflow.change.Relevance;
 import com.hoangluongtran0309.releaseflow.overview.OverviewService;
 import com.hoangluongtran0309.releaseflow.overview.SelectedProject;
 import com.hoangluongtran0309.releaseflow.configuration.LocalizedException;
@@ -47,6 +51,7 @@ public class ReleasePageController {
     private final CategoryService categoryService;
     private final SelectedProject selectedProject;
     private final OverviewService overviewService;
+    private final MissingNarratives missingNarratives;
 
 
 
@@ -57,7 +62,8 @@ public class ReleasePageController {
             OutputLanguageService outputLanguageService,
             CategoryService categoryService,
             SelectedProject selectedProject,
-            OverviewService overviewService
+            OverviewService overviewService,
+            MissingNarratives missingNarratives
     ) {
         this.categoryService = categoryService;
         this.projectService = projectService;
@@ -66,6 +72,7 @@ public class ReleasePageController {
         this.outputLanguageService = outputLanguageService;
         this.selectedProject = selectedProject;
         this.overviewService = overviewService;
+        this.missingNarratives = missingNarratives;
     }
 
     // A URL that names no Project opens on the one this person was last looking at.
@@ -296,6 +303,20 @@ public class ReleasePageController {
                 () -> releaseService.decideFold(principal, projectId, releaseId, trackerChangeId, request));
     }
 
+    /** Asks the AI for one change's missing narratives, from the Review tab (ADR-0044). */
+    @PostMapping("/projects/{projectId}/releases/{releaseId}/changes/{changeId}/missing-narratives")
+    String requestMissingNarratives(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @PathVariable UUID changeId,
+            Model model,
+            HttpServletResponse response
+    ) {
+        return act(principal, projectId, releaseId, model, response, releasePath(projectId, releaseId) + "#missing-narratives",
+                () -> missingNarratives.request(principal.organizationId(), projectId, changeId));
+    }
+
     @PostMapping("/projects/{projectId}/releases/{releaseId}/approve")
     String approve(
             @AuthenticationPrincipal ReleaseFlowPrincipal principal,
@@ -459,8 +480,14 @@ public class ReleasePageController {
                  | ReleaseNotesMissingException
                  | TranslationsNotReadyException
                  | ReleaseNoteRenderException
-                 | LinkedIssueStatusChangedException exception) {
+                 | LinkedIssueStatusChangedException
+                 | ChangeNotEligibleForAiException exception) {
             return refuse(principal, projectId, releaseId, HttpStatus.CONFLICT, exception, form, fieldOf, model, response);
+        } catch (AiClassificationFailedException exception) {
+            return refuse(principal, projectId, releaseId, HttpStatus.BAD_GATEWAY, exception, form, fieldOf, model, response);
+        } catch (AiClassificationUnavailableException exception) {
+            return refuse(principal, projectId, releaseId, HttpStatus.SERVICE_UNAVAILABLE, exception, form, fieldOf, model,
+                    response);
         }
         return "redirect:" + successPath;
     }
@@ -552,7 +579,8 @@ public class ReleasePageController {
         model.addAttribute("categories", categoryService.active(principal.organizationId()).stream()
                 .filter(category -> !category.isUnknown())
                 .toList());
-        model.addAttribute("audiences", audienceService.list(principal.organizationId()));
+        // A person writes narratives for the audiences that get notes; a retired one's stay as they are.
+        model.addAttribute("audiences", audienceService.active(principal.organizationId()));
         model.addAttribute("migrationKinds", MigrationKind.values());
         model.addAttribute("relevances", Relevance.values());
         model.addAttribute("language", outputLanguageService.outputLanguage(principal.organizationId()).tag());

@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +29,19 @@ class ReleaseNoteWriterTest {
         assertThat(ReleaseNoteWriter.worse(Status.READY, Status.PENDING)).isEqualTo(Status.PENDING);
         assertThat(ReleaseNoteWriter.worse(Status.PENDING, Status.FAILED)).isEqualTo(Status.FAILED);
         assertThat(ReleaseNoteWriter.worse(Status.FAILED, Status.READY)).isEqualTo(Status.FAILED);
+    }
+
+    @Test
+    void aRetiredAudiencesNarrativeIsNotTranslatedAndNoneRetiredChangesNothing() {
+        ChangeView change = change(new NeutralSummary("Tables export as CSV.", "Users asked.", "", ""), Map.of(
+                "operator", new AudienceNarrative(Relevance.BRIEF, "Exports queue in the background.", "Watch the queue."),
+                "support", new AudienceNarrative(Relevance.FULL, "Exports are here.", "Point customers to the button.")));
+
+        // With nothing retired, the texts are exactly what they always were (ADR-0044).
+        assertThat(ReleaseNoteWriter.texts(change, Set.of())).isEqualTo(ReleaseNoteWriter.texts(change));
+        assertThat(ReleaseNoteWriter.texts(change, Set.of("support")))
+                .containsKeys("whatChanged", "narrative.operator", "headline.operator")
+                .doesNotContainKeys("narrative.support", "headline.support");
     }
 
     @Test

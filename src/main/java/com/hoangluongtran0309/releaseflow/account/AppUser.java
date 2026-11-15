@@ -20,10 +20,12 @@ public class AppUser {
     @Column(name = "organization_id", nullable = false)
     private UUID organizationId;
 
-    @Column(nullable = false, length = 254, unique = true)
+    // Unique among members who are not removed (ADR-0043).
+    @Column(nullable = false, length = 254)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    // Null exactly when the member was removed: nothing that could sign in is kept.
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
 
     @Column(name = "display_name", nullable = false, length = 120)
@@ -39,6 +41,16 @@ public class AppUser {
     /** The UI language this person chose. NULL means their browser decides. */
     @Column(name = "ui_locale", length = 16)
     private String uiLocale;
+
+    // Raised by every role change and by removal; a session made with another is refused.
+    @Column(name = "session_version", nullable = false)
+    private int sessionVersion;
+
+    @Column(name = "removed_at")
+    private Instant removedAt;
+
+    @Column(name = "removed_by")
+    private UUID removedBy;
 
     protected AppUser() {
     }
@@ -95,5 +107,44 @@ public class AppUser {
 
     void chooseUiLocale(String uiLocale) {
         this.uiLocale = uiLocale;
+    }
+
+    int getSessionVersion() {
+        return sessionVersion;
+    }
+
+    public Instant getRemovedAt() {
+        return removedAt;
+    }
+
+    UUID getRemovedBy() {
+        return removedBy;
+    }
+
+    boolean isRemoved() {
+        return removedAt != null;
+    }
+
+    /** A new role; every session made with the old one stops on its next request. */
+    void changeRole(AppUserRole role) {
+        if (isRemoved()) {
+            throw new IllegalStateException("A removed member has no role to change.");
+        }
+        this.role = role;
+        this.sessionVersion++;
+    }
+
+    /**
+     * Ends the membership and keeps the row, so every name and key in the history still
+     * resolves. Nothing that could sign in is left, and every session stops.
+     */
+    void remove(UUID administratorId, Instant at) {
+        if (isRemoved()) {
+            throw new IllegalStateException("The member was already removed.");
+        }
+        this.removedAt = at;
+        this.removedBy = administratorId;
+        this.passwordHash = null;
+        this.sessionVersion++;
     }
 }

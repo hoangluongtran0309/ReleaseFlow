@@ -13,8 +13,14 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Where a Project's changes come from: a GitHub repository, a GitLab project, or a Linear
- * team, with its webhook secret and an access token. A Project may have several sources.
+ * Where a Project's changes come from: a GitHub repository, a GitLab project, a Linear
+ * team, or a Jira project, with its webhook secret and an access token. A Project may have
+ * several sources.
+ *
+ * <p>Every column a ciphertext is bound to — Organization, Project, ID, type, external key,
+ * and GitHub's owner and name — is mapped as not updatable, so no lifecycle step can rewrite
+ * one (ADR-0042). A disconnected source keeps its row, and so its changes, but none of its
+ * credentials.
  */
 @Entity
 @Table(name = "integration_sources")
@@ -23,10 +29,10 @@ class IntegrationSource {
     @Id
     private UUID id;
 
-    @Column(name = "organization_id", nullable = false)
+    @Column(name = "organization_id", nullable = false, updatable = false)
     private UUID organizationId;
 
-    @Column(name = "project_id", nullable = false)
+    @Column(name = "project_id", nullable = false, updatable = false)
     private UUID projectId;
 
     @Enumerated(EnumType.STRING)
@@ -37,10 +43,10 @@ class IntegrationSource {
     private String externalProjectKey;
 
     // Only a GitHub source has these; its ciphertexts are bound to them.
-    @Column(name = "repository_owner", length = 39)
+    @Column(name = "repository_owner", length = 39, updatable = false)
     private String repositoryOwner;
 
-    @Column(name = "repository_name", length = 100)
+    @Column(name = "repository_name", length = 100, updatable = false)
     private String repositoryName;
 
     // Only a source whose instance the Organization chose has one, so far GitLab.
@@ -56,8 +62,9 @@ class IntegrationSource {
     @Column(name = "external_team_key", length = 100)
     private String externalTeamKey;
 
-    // Only a source whose credential names an account has one, so far Jira.
-    @Column(name = "credential_identity", length = 255, updatable = false)
+    // Only a source whose credential names an account has one, so far Jira. No ciphertext is
+    // bound to it, so a new token may come from another account.
+    @Column(name = "credential_identity", length = 255)
     private String credentialIdentity;
 
     // Only a polled source has a schedule; a delivered one is told instead of asking.
@@ -106,6 +113,21 @@ class IntegrationSource {
     @Column(name = "last_error_code", length = 100)
     private String lastErrorCode;
 
+    @Column(name = "secret_updated_at")
+    private Instant secretUpdatedAt;
+
+    @Column(name = "signature_failure_count", nullable = false, insertable = false, updatable = false)
+    private long signatureFailureCount;
+
+    @Column(name = "last_signature_failure_at", insertable = false, updatable = false)
+    private Instant lastSignatureFailureAt;
+
+    @Column(name = "disconnected_at")
+    private Instant disconnectedAt;
+
+    @Column(name = "disconnected_by")
+    private UUID disconnectedBy;
+
     protected IntegrationSource() {
     }
 
@@ -131,6 +153,7 @@ class IntegrationSource {
         this.secretNonce = secretNonce == null ? null : secretNonce.clone();
         this.secretCiphertext = secretCiphertext == null ? null : secretCiphertext.clone();
         this.createdAt = createdAt;
+        this.secretUpdatedAt = secretCiphertext == null ? null : createdAt;
         this.connectionStatus = ConnectionStatus.ACTIVE;
     }
 
@@ -197,6 +220,10 @@ class IntegrationSource {
 
     /** A poll that finished moves the cursor to the window it covered and books the next one. */
     void recordPoll(Instant cursorAt, Instant nextPollAt, Instant at) {
+        if (!isConnected()) {
+            // A poll that finished after its source was disconnected books nothing.
+            return;
+        }
         this.pollCursorAt = cursorAt;
         this.nextPollAt = nextPollAt;
         this.lastSyncAt = at;
@@ -206,6 +233,9 @@ class IntegrationSource {
 
     /** A poll that failed keeps its cursor, so nothing is skipped, and waits before asking again. */
     void recordPollFailure(String errorCode, Instant retryAt, Instant at) {
+        if (!isConnected()) {
+            return;
+        }
         this.lastSyncAt = at;
         this.lastErrorCode = errorCode;
         this.nextPollAt = retryAt;
@@ -362,6 +392,115 @@ class IntegrationSource {
         return lastErrorCode;
     }
 
+    boolean isConnected() {
+        return disconnectedAt == null;
+    }
+
+    Instant getDisconnectedAt() {
+        return disconnectedAt;
+    }
+
+    UUID getDisconnectedBy() {
+        return disconnectedBy;
+    }
+
+    Instant getSecretUpdatedAt() {
+        return secretUpdatedAt;
+    }
+
+    long getSignatureFailureCount() {
+        return signatureFailureCount;
+    }
+
+    Instant getLastSignatureFailureAt() {
+        return lastSignatureFailureAt;
+    }
+
+    /**
+     * Destroys what the source could be reached or proven with — its webhook identity, its
+     * secret, its token, and its schedule — and keeps everything that identifies it, so its
+     * changes keep their source. The poll cursor stays, for a reconnect to resume from.
+     */
+    void disconnect(UUID administratorId, Instant at) {
+        if (!isConnected()) {
+            throw new IllegalStateException("The source is already disconnected.");
+        }
+        this.webhookId = null;
+        this.secretNonce = null;
+        this.secretCiphertext = null;
+        this.tokenNonce = null;
+        this.tokenCiphertext = null;
+        this.tokenUpdatedAt = null;
+        this.nextPollAt = null;
+        this.disconnectedAt = at;
+        this.disconnectedBy = administratorId;
+    }
+
+    /**
+     * Brings a delivered source back with a new webhook identity and secret. Nothing that
+     * identifies the source changes, so the secret is encrypted under the same authenticated
+     * data it always was.
+     */
+    void reconnectDelivered(UUID newWebhookId, CredentialCipher.EncryptedSecret secret, Instant at) {
+        requireDisconnected();
+        if (webhookAuthMode == WebhookAuthMode.NONE) {
+            throw new IllegalStateException("A polled source has no webhook to reconnect.");
+        }
+        this.webhookId = newWebhookId;
+        reconnected();
+        replaceSecret(secret, at);
+    }
+
+    /**
+     * Brings a polled source back on its schedule. Its cursor stays where its last completed
+     * poll left it, but never further back than {@code earliestCursor}.
+     */
+    void reconnectPolled(Instant earliestCursor, Instant nextPollAt) {
+        requireDisconnected();
+        if (webhookAuthMode != WebhookAuthMode.NONE) {
+            throw new IllegalStateException("A delivered source is not polled.");
+        }
+        if (pollCursorAt == null || pollCursorAt.isBefore(earliestCursor)) {
+            this.pollCursorAt = earliestCursor;
+        }
+        this.nextPollAt = nextPollAt;
+        reconnected();
+    }
+
+    private void reconnected() {
+        this.disconnectedAt = null;
+        this.disconnectedBy = null;
+        this.connectionStatus = ConnectionStatus.ACTIVE;
+        this.lastErrorCode = null;
+    }
+
+    private void requireDisconnected() {
+        if (isConnected()) {
+            throw new IllegalStateException("The source is connected.");
+        }
+    }
+
+    /**
+     * A new webhook secret under the same authenticated data. The old one stops at once, and
+     * the failure count is read from here on as "refused since this secret".
+     */
+    void replaceSecret(CredentialCipher.EncryptedSecret secret, Instant at) {
+        if (!isConnected()) {
+            throw new IllegalStateException("A disconnected source has no secret.");
+        }
+        this.secretNonce = secret.nonce();
+        this.secretCiphertext = secret.ciphertext();
+        this.secretUpdatedAt = at;
+    }
+
+    /** The account a Jira token belongs to; no ciphertext is bound to it. */
+    void changeAccount(String accountEmail) {
+        if (sourceType != SourceType.JIRA) {
+            throw new IllegalStateException("Only a Jira source signs in as an account.");
+        }
+        this.credentialIdentity = accountEmail;
+    }
+
     // A token the provider accepted puts a source that failed to connect back in order.
     void replaceToken(CredentialCipher.EncryptedSecret token, Instant updatedAt) {
         this.tokenNonce = token.nonce();
@@ -373,6 +512,9 @@ class IntegrationSource {
 
     /** The outcome of reading the source's history; a refused credential marks the connection as failing. */
     void recordSync(Instant at, String errorCode, boolean credentialRejected) {
+        if (!isConnected()) {
+            return;
+        }
         this.lastSyncAt = at;
         this.lastErrorCode = errorCode;
         if (credentialRejected) {

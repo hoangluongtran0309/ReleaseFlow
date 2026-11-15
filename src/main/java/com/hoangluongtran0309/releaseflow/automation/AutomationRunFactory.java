@@ -105,19 +105,16 @@ class AutomationRunFactory {
         );
     }
 
-    // A GitHub Release Action needs to know which repository the release belongs in.
-    // Without exactly one GitHub source there is no answer, so the Action carries none
-    // and fails when it runs.
+    // A GitHub Release Action needs to know which repository the release belongs in: the
+    // Project's one connected GitHub source, or, when none is connected, its one disconnected
+    // source, so the Action fails as disconnected and can be retried once it is reconnected
+    // (ADR-0042). Without either there is no answer, so the Action carries none and fails
+    // when it runs.
     private Map<String, String> configuration(AutomationRuleAction action, ReleaseAccess.ReleaseSnapshot release) {
         Map<String, String> configuration = new LinkedHashMap<>(action.getConfiguration());
         if (action.getActionType() == ActionType.GITHUB_RELEASE) {
-            sourceAccess.findSole(action.getOrganizationId(), release.projectId(), SourceType.GITHUB)
-                    .ifPresent(source -> {
-                        configuration.put(
-                                GitHubReleaseActionExecutor.REPOSITORY,
-                                source.repositoryOwner() + "/" + source.repositoryName()
-                        );
-                    });
+            sourceAccess.soleExternalKey(action.getOrganizationId(), release.projectId(), SourceType.GITHUB)
+                    .ifPresent(repository -> configuration.put(GitHubReleaseActionExecutor.REPOSITORY, repository));
         }
         return configuration;
     }

@@ -44,6 +44,19 @@ public class AudienceConflictException extends LocalizedException {
         return new AudienceConflictException("audience_last");
     }
 
+    /** Retiring or deleting it would leave the Organization without an active audience. */
+    static AudienceConflictException lastActive() {
+        return new AudienceConflictException("audience_last_active");
+    }
+
+    static AudienceConflictException alreadyRetired() {
+        return new AudienceConflictException("audience_already_retired");
+    }
+
+    static AudienceConflictException notRetired() {
+        return new AudienceConflictException("audience_not_retired");
+    }
+
     static AudienceConflictException limit() {
         return new AudienceConflictException("audience_limit");
     }

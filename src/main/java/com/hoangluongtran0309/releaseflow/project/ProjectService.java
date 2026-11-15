@@ -16,15 +16,18 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final IntegrationSourceRepository sourceRepository;
+    private final SourceViews sourceViews;
     private final Clock clock;
 
     ProjectService(
             ProjectRepository projectRepository,
             IntegrationSourceRepository sourceRepository,
+            SourceViews sourceViews,
             Clock clock
     ) {
         this.projectRepository = projectRepository;
         this.sourceRepository = sourceRepository;
+        this.sourceViews = sourceViews;
         this.clock = clock;
     }
 
@@ -45,7 +48,10 @@ public class ProjectService {
         Project project = find(organizationId, projectId);
         return toView(
                 project,
-                sourceRepository.findAllByOrganizationIdAndProjectIdOrderByCreatedAtAscIdAsc(organizationId, projectId)
+                sourceViews.views(
+                        organizationId,
+                        sourceRepository.findAllByOrganizationIdAndProjectIdOrderByCreatedAtAscIdAsc(organizationId, projectId)
+                )
         );
     }
 
@@ -82,13 +88,17 @@ public class ProjectService {
             return List.of();
         }
 
-        Map<UUID, List<IntegrationSource>> sourcesByProject = sourceRepository
-                .findAllByOrganizationIdAndProjectIdInOrderByCreatedAtAscIdAsc(
-                        organizationId,
-                        projects.stream().map(Project::getId).toList()
-                )
-                .stream()
-                .collect(Collectors.groupingBy(IntegrationSource::getProjectId));
+        List<IntegrationSource> sources = sourceRepository.findAllByOrganizationIdAndProjectIdInOrderByCreatedAtAscIdAsc(
+                organizationId,
+                projects.stream().map(Project::getId).toList()
+        );
+        // One rhythm query for every source of every Project.
+        Map<UUID, IntegrationSourceView> views = sourceViews.byId(organizationId, sources);
+        Map<UUID, List<IntegrationSourceView>> sourcesByProject = sources.stream()
+                .collect(Collectors.groupingBy(
+                        IntegrationSource::getProjectId,
+                        Collectors.mapping(source -> views.get(source.getId()), Collectors.toList())
+                ));
 
         return projects.stream()
                 .map(project -> toView(project, sourcesByProject.getOrDefault(project.getId(), List.of())))
@@ -109,12 +119,12 @@ public class ProjectService {
         );
     }
 
-    private static ProjectView toView(Project project, List<IntegrationSource> sources) {
+    private static ProjectView toView(Project project, List<IntegrationSourceView> sources) {
         return new ProjectView(
                 project.getId(),
                 project.getName(),
                 project.getCreatedAt(),
-                sources.stream().map(IntegrationSourceService::view).toList()
+                sources
         );
     }
 }

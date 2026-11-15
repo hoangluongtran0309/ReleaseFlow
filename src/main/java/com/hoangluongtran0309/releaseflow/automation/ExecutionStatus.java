@@ -11,7 +11,9 @@ public enum ExecutionStatus {
     SUCCEEDED("Succeeded"),
     FAILED("Failed"),
     UNKNOWN("Outcome unknown"),
-    CANCELLED("Cancelled");
+    CANCELLED("Cancelled"),
+    // An action for a retired audience: nothing was attempted, and the run goes on (ADR-0044).
+    SKIPPED("Skipped");
 
     private final String label;
 
@@ -32,6 +34,6 @@ public enum ExecutionStatus {
     }
 
     public boolean isTerminal() {
-        return this == SUCCEEDED || this == FAILED || this == UNKNOWN || this == CANCELLED;
+        return this == SUCCEEDED || this == FAILED || this == UNKNOWN || this == CANCELLED || this == SKIPPED;
     }
 }

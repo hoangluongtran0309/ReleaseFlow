@@ -125,7 +125,14 @@ provider, key, and model itself, as CI's `.env` has none, so a `.env` that names
 provider cannot send the suite's changes to a paid service. For the same reason it never
 reuses an application that is already answering; stop that one first. Point it at an
 application already running with `RELEASEFLOW_E2E_BASE_URL`, whose settings are then its
-own: start it without a provider. A new or changed page keeps it green.
+own: start it without a provider, and with `tests/e2e/compose.yaml` as well. A new or
+changed page keeps it green.
+
+The suite's one stand-in is `tests/e2e/provider-stand-in.mjs`, which `tests/e2e/compose.yaml`
+runs beside the stack and points `RELEASEFLOW_JIRA_API_BASE_URL` and
+`RELEASEFLOW_GITHUB_API_BASE_URL` at. It answers a Jira project and an open issue, and
+accepts a GitHub token, so a change can link an issue that is still open; it never answers
+for anything else.
 
 ## Documentation
 

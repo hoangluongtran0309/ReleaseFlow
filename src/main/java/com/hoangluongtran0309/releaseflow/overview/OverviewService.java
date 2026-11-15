@@ -2,6 +2,7 @@ package com.hoangluongtran0309.releaseflow.overview;
 
 import com.hoangluongtran0309.releaseflow.change.ChangeCounts;
 import com.hoangluongtran0309.releaseflow.change.ChangeInboxService;
+import com.hoangluongtran0309.releaseflow.project.IntegrationSourceView;
 import com.hoangluongtran0309.releaseflow.project.ProjectService;
 import com.hoangluongtran0309.releaseflow.project.ProjectView;
 import com.hoangluongtran0309.releaseflow.release.ReleaseCounts;
@@ -43,13 +44,14 @@ public class OverviewService {
         List<ProjectView> projects = projectService.list(organizationId);
         Optional<ProjectView> selected = select(projects, requested);
         if (selected.isEmpty()) {
-            return new OverviewView(null, null, List.of(), 0, 0, 0, 0, false, NextStep.CREATE_PROJECT);
+            return new OverviewView(null, null, List.of(), 0, 0, 0, 0, false, List.of(), NextStep.CREATE_PROJECT);
         }
 
         ProjectView project = selected.get();
         ChangeCounts changes = changeInboxService.counts(organizationId, project.id());
         ReleaseCounts releases = releaseService.counts(organizationId, project.id());
-        boolean sourceConnected = !project.sources().isEmpty();
+        // A disconnected source delivers nothing, so it does not count as connected (ADR-0042).
+        boolean sourceConnected = project.sources().stream().anyMatch(IntegrationSourceView::connected);
 
         return new OverviewView(
                 project.id(),
@@ -66,6 +68,8 @@ public class OverviewService {
                 changes.breaking(),
                 releases.total(),
                 sourceConnected,
+                // Shown beside the figures: information, never a step, so the step stays as it was.
+                project.sources(),
                 NextStep.of(true, sourceConnected, changes, releases)
         );
     }

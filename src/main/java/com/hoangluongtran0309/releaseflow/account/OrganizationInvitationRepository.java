@@ -14,6 +14,12 @@ interface OrganizationInvitationRepository extends JpaRepository<OrganizationInv
 
     List<OrganizationInvitation> findAllByOrganizationIdOrderByCreatedAtDescIdDesc(UUID organizationId);
 
+    List<OrganizationInvitation> findAllByOrganizationIdAndCreatedByAndStatus(
+            UUID organizationId,
+            UUID createdBy,
+            InvitationStatus status
+    );
+
     Optional<OrganizationInvitation> findByOrganizationIdAndEmailAndStatus(
             UUID organizationId,
             String email,

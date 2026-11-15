@@ -125,7 +125,8 @@
     <div class="mt-6 grid gap-6 lg:grid-cols-2" th:if="${hasProjects}">
         <article class="surface-card flex min-w-0 flex-col p-6" th:each="project : ${projects}"
                  th:id="|project-${project.id}|"
-                 th:with="failing=${sourceProjectId == project.id}, sourceCount=${#lists.size(project.sources)}">
+                 th:with="failing=${sourceProjectId == project.id}, sourceCount=${#lists.size(project.sources)},
+                          connectedCount=${#lists.size(project.sources.?[connected])}">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
                     <h2 class="truncate text-xl font-bold" th:text="${project.name}">Project name</h2>
@@ -135,9 +136,9 @@
                     </p>
                 </div>
                 <span class="badge gap-1.5 font-semibold"
-                      th:classappend="${sourceCount > 0} ? 'badge-success badge-soft' : 'badge-ghost'">
+                      th:classappend="${connectedCount > 0} ? 'badge-success badge-soft' : 'badge-ghost'">
                     <span class="status-dot"></span>
-                    <span th:text="${sourceCount == 0} ? #{ui.projects.notConnected} : #{ui.projects.sourceCount(${sourceCount})}">Not connected</span>
+                    <span th:text="${connectedCount == 0} ? #{ui.projects.notConnected} : #{ui.projects.sourceCount(${connectedCount})}">Not connected</span>
                 </span>
             </div>
 
@@ -158,11 +159,17 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="badge badge-sm badge-ghost" th:text="${source.type.displayName()}">GitHub</span>
-                            <span class="badge badge-sm badge-error badge-soft" th:if="${source.connectionStatus.name() == 'ERROR'}"
+                            <span class="badge badge-sm badge-error badge-soft" th:if="${source.connected and source.connectionStatus.name() == 'ERROR'}"
                                   th:title="${source.lastErrorCode}" th:text="#{ui.projects.connectionFailing}">Connection failing</span>
                         </div>
                     </div>
-                    <dl class="grid gap-4 text-sm">
+                    <p class="flex flex-wrap items-center gap-2" th:id="|source-health-${source.id}|"
+                       th:if="${!source.connected or source.health.needsAttention()}">
+                        <th:block th:replace="~{fragments/source-health :: flags(${source})}"></th:block>
+                    </p>
+                    <a class="link text-sm" th:href="@{/projects/{projectId}/sources/{sourceId}(projectId=${project.id},sourceId=${source.id})}"
+                       th:text="${!source.connected and viewer.admin} ? #{ui.projects.reconnectSource} : #{ui.projects.manageSource}">Manage source</a>
+                    <dl class="grid gap-4 text-sm" th:if="${source.connected}">
                         <div x-data="copyText()" th:data-label-copy="#{ui.common.copy}" th:data-label-copied="#{ui.common.copied}"
                              th:data-label-copy-manual="#{ui.common.copyManual}" th:if="${source.webhookPath != null}">
                             <dt class="text-slate-500" th:text="#{ui.projects.webhookPath}">Webhook path</dt>
@@ -208,7 +215,7 @@
                         </div>
                     </dl>
 
-                    <form class="grid gap-3" th:if="${viewer.admin}"
+                    <form class="grid gap-3" th:if="${viewer.admin and source.connected}"
                           th:action="@{/projects/{projectId}/sources/{sourceId}/token(projectId=${project.id},sourceId=${source.id})}"
                           th:object="${sourceTokenRequest}" method="post" novalidate>
                         <div>
@@ -226,6 +233,16 @@
                                    th:classappend="${tokenFailing and #fields.hasErrors('token')} ? 'input-error'"
                                    th:attr="aria-invalid=${tokenFailing and #fields.hasErrors('token')} ? 'true' : null,aria-describedby=${tokenFailing and #fields.hasErrors('token')} ? |source-token-${source.id}-error| : null">
                             <span th:id="|source-token-${source.id}-error|" class="field-error" th:if="${tokenFailing and #fields.hasErrors('token')}" th:errors="*{token}"></span>
+                        </label>
+                        <!--/* A Jira token belongs to an account; a new one may come from another (ADR-0042). */-->
+                        <label class="form-control" th:if="${source.type.name() == 'JIRA'}">
+                            <span class="label-text font-medium" th:text="#{ui.projects.newAccountEmail}">Account email, if the token is another account's</span>
+                            <input th:id="|source-account-${source.id}|" type="email" name="accountEmail" maxlength="255" autocomplete="off"
+                                   class="input input-bordered w-full"
+                                   th:value="${tokenFailing} ? ${sourceTokenRequest.accountEmail} : ''"
+                                   th:classappend="${tokenFailing and #fields.hasErrors('accountEmail')} ? 'input-error'"
+                                   th:attr="aria-invalid=${tokenFailing and #fields.hasErrors('accountEmail')} ? 'true' : null,aria-describedby=${tokenFailing and #fields.hasErrors('accountEmail')} ? |source-account-${source.id}-error| : null">
+                            <span th:id="|source-account-${source.id}-error|" class="field-error" th:if="${tokenFailing and #fields.hasErrors('accountEmail')}" th:errors="*{accountEmail}"></span>
                         </label>
                         <button type="submit" class="btn btn-outline w-full" th:text="#{ui.projects.saveToken}">Save access token</button>
                     </form>

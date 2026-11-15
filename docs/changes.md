@@ -76,6 +76,8 @@ Each change keeps the rules that matched, its typed `reviewTriggers`, and its
 `changedFiles`, and the inbox shows them. A review settles a triggered change
 but keeps the trigger as a record.
 
+![A change whose labels bug and enhancement conflict and which touches sensitive files, after review: the AI chose Feature, a person reviewed it, and the card keeps the rules and triggers that applied](assets/changes/c-6-conflicting-labels.webp)
+
 ![A pull request titled feat whose changed files are all documentation: classified as Documentation, and the card says why](assets/changes/c-1-why.webp)
 
 ### Sensitive paths
@@ -118,7 +120,13 @@ code such as `feature` or `security`, in any case), `status`
 `404 project_not_found`. Each change returns its `category` code with its
 `categoryName` and `categoryGroup`, as recorded when it was classified.
 
-![The Change Inbox filtered to Fix: the sync state of each source, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
+The **Source sync** panel above the changes lists every source of the Project with its
+[health](sources.md#source-health) — the last delivery or read, deliveries refused for
+their signature since the secret was set, and a **Quiet**, **Overdue**, or
+**Disconnected** mark — beside the [history import](sources.md#history-import) of each
+source that has one. A disconnected source's changes stay in the inbox.
+
+![The Change Inbox with its filters, the sync state of its Jira, GitHub, and GitLab sources, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
 
 ![Filtering the Change Inbox to the changes whose context was judged insufficient](assets/changes/c-4-context-filter.webp)
 
@@ -202,9 +210,11 @@ provided" or "The version is not specified", is dropped, and so is one that only
 the change's scope, such as "This does not affect the CLI" or "It only affects the CI
 environment", since an audience's relevance already says who the change matters to. A
 limitation such as "Certificate validation is enforced only for MongoDB" is kept, and a
-missing limitations field is empty. Every request asks for the same temperature, `0` unless
-the deployment sets `RELEASEFLOW_AI_TEMPERATURE`, so the same change varies as little as the
-model allows (see [Configuration](configuration.md#ai)).
+missing limitations field is empty. With OpenAI or DeepSeek, every request asks for the same
+temperature, `0` unless the deployment sets `RELEASEFLOW_AI_TEMPERATURE`, so the same change
+varies as little as the model allows. Anthropic takes no temperature, so Claude samples with
+its default; on Claude 4.6 and earlier, answers vary more between runs (see
+[Configuration](configuration.md#ai)).
 
 The Change Inbox shows the summary and narratives under each change, each narrative
 with its relevance and headline, and the changes API returns them as `neutralSummary`,
@@ -307,7 +317,7 @@ overview no longer counts it among the changes that need review. **Include in re
 again** takes the decision back. The **Releases** filter of the Inbox shows only the
 excluded changes. See [ADR-0033](adr/0033-change-exclusion.md).
 
-![Excluding a change from releases with a reason; the change then carries the Excluded from releases badge](assets/changes/c-13-exclude.webp)
+![A change excluded from releases: the Excluded from releases badge, who excluded it and why, and Include in releases again](assets/changes/c-13-exclude.webp)
 
 A change that belongs to a release, of any status, is removed from it first: take it
 out of the draft, or reject it during review. A change still processing cannot be

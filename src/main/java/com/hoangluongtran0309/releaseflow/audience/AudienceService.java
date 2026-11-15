@@ -4,10 +4,13 @@ import com.hoangluongtran0309.releaseflow.account.InvalidOutputLanguageException
 import com.hoangluongtran0309.releaseflow.account.OrganizationRegistered;
 import com.hoangluongtran0309.releaseflow.account.OutputLanguage;
 import com.hoangluongtran0309.releaseflow.account.OutputLanguageService;
+import com.hoangluongtran0309.releaseflow.account.ReleaseFlowPrincipal;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -17,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -35,24 +39,31 @@ public class AudienceService {
     private static final String NOTES_CONSTRAINT = "release_audience_notes_audience_fk";
     private static final String RULE_CONSTRAINT = "automation_rule_actions_audience_fk";
     private static final String RUN_CONSTRAINT = "automation_action_runs_audience_fk";
+    private static final String KEEP_AN_ACTIVE_AUDIENCE = "audience_definitions_keep_an_active_audience";
 
     private final AudienceRepository audienceRepository;
     private final AudienceTemplateVariantRepository variantRepository;
+    private final AudienceStatusChangeRepository statusChangeRepository;
     private final TargetLanguages targetLanguages;
     private final OutputLanguageService outputLanguageService;
+    private final TransactionTemplate transactionTemplate;
     private final Clock clock;
 
     AudienceService(
             AudienceRepository audienceRepository,
             AudienceTemplateVariantRepository variantRepository,
+            AudienceStatusChangeRepository statusChangeRepository,
             TargetLanguages targetLanguages,
             OutputLanguageService outputLanguageService,
+            PlatformTransactionManager transactionManager,
             Clock clock
     ) {
         this.audienceRepository = audienceRepository;
         this.variantRepository = variantRepository;
+        this.statusChangeRepository = statusChangeRepository;
         this.targetLanguages = targetLanguages;
         this.outputLanguageService = outputLanguageService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.clock = clock;
     }
 
@@ -64,12 +75,104 @@ public class AudienceService {
                 .toList();
     }
 
-    /** The audiences the AI writes narratives for, ordered by code. */
+    /**
+     * The audiences the AI writes narratives for, ordered by code: the active ones. With none
+     * retired this is every audience, so the request is what it always was (ADR-0044).
+     */
     @Transactional(readOnly = true)
     public List<AudienceBrief> briefs(UUID organizationId) {
         return audienceRepository.findAllByOrganizationIdOrderByCodeAsc(organizationId).stream()
+                .filter(audience -> !audience.isRetired())
                 .map(audience -> new AudienceBrief(audience.getCode(), audience.getCommunicationIntent()))
                 .toList();
+    }
+
+    /** The audiences an approval writes notes for: the active ones, in the order {@link #list} gives. */
+    @Transactional(readOnly = true)
+    public List<AudienceView> active(UUID organizationId) {
+        return list(organizationId).stream().filter(audience -> !audience.retired()).toList();
+    }
+
+    /** Whether the audience is retired; an unknown one is not, and fails elsewhere as before. */
+    @Transactional(readOnly = true)
+    public boolean isRetired(UUID organizationId, UUID audienceId) {
+        return audienceRepository.findByIdAndOrganizationId(audienceId, organizationId)
+                .map(AudienceDefinition::isRetired)
+                .orElse(false);
+    }
+
+    /** The codes of retired audiences, whose narratives are kept but never translated or asked for. */
+    @Transactional(readOnly = true)
+    public Set<String> retiredCodes(UUID organizationId) {
+        return audienceRepository.findAllByOrganizationIdOrderByCodeAsc(organizationId).stream()
+                .filter(AudienceDefinition::isRetired)
+                .map(AudienceDefinition::getCode)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /** The most recent return of each audience brought back, for the page that lists them. */
+    @Transactional(readOnly = true)
+    public Map<UUID, AudienceStatusChangeView> lastRestorations(UUID organizationId) {
+        Map<UUID, AudienceStatusChangeView> latest = new HashMap<>();
+        statusChangeRepository.findAllByOrganizationIdOrderByChangedAtDescIdDesc(organizationId).stream()
+                .filter(change -> change.getKind() == AudienceStatusChange.Kind.RESTORED)
+                .forEach(change -> latest.putIfAbsent(change.getAudienceId(),
+                        new AudienceStatusChangeView(change.getChangerName(), change.getChangedAt())));
+        return latest;
+    }
+
+    /**
+     * Retires an audience: no narrative in the AI request, no note at the next approval, no
+     * translation. Its row, templates, narratives, and published notes stay. The audiences of
+     * the Organization are locked first, so two administrators who retire the last two at
+     * once run one after the other; the database's trigger refuses the same at commit.
+     */
+    public AudienceView retire(ReleaseFlowPrincipal administrator, UUID audienceId) {
+        return guarded(() -> {
+            UUID organizationId = administrator.organizationId();
+            List<AudienceDefinition> audiences = audienceRepository.lockAllByOrganizationId(organizationId);
+            AudienceDefinition audience = audiences.stream()
+                    .filter(candidate -> candidate.getId().equals(audienceId))
+                    .findFirst()
+                    .orElseThrow(AudienceNotFoundException::new);
+            if (audience.isRetired()) {
+                throw AudienceConflictException.alreadyRetired();
+            }
+            if (audiences.stream().filter(candidate -> !candidate.isRetired()).count() <= 1) {
+                throw AudienceConflictException.lastActive();
+            }
+            Instant now = clock.instant();
+            audience.retire(administrator.userId(), administrator.displayName(), now);
+            audienceRepository.flush();
+            statusChangeRepository.save(new AudienceStatusChange(organizationId, audienceId,
+                    AudienceStatusChange.Kind.RETIRED, administrator.userId(), administrator.displayName(), now));
+            return view(audience);
+        });
+    }
+
+    /** Brings a retired audience back: the next AI request and the next approval include it again. */
+    @Transactional
+    public AudienceView restore(ReleaseFlowPrincipal administrator, UUID audienceId) {
+        UUID organizationId = administrator.organizationId();
+        AudienceDefinition audience = find(organizationId, audienceId);
+        audience.restore();
+        Instant now = clock.instant();
+        audienceRepository.flush();
+        statusChangeRepository.save(new AudienceStatusChange(organizationId, audienceId,
+                AudienceStatusChange.Kind.RESTORED, administrator.userId(), administrator.displayName(), now));
+        return view(audience);
+    }
+
+    private <T> T guarded(Supplier<T> work) {
+        try {
+            return transactionTemplate.execute(status -> work.get());
+        } catch (RuntimeException exception) {
+            // The trigger fires at commit, whatever wrote the change.
+            if (!(exception instanceof AudienceConflictException) && causedBy(exception, KEEP_AN_ACTIVE_AUDIENCE)) {
+                throw AudienceConflictException.lastActive();
+            }
+            throw exception;
+        }
     }
 
     @Transactional(readOnly = true)
@@ -170,7 +273,9 @@ public class AudienceService {
                 .filter(candidate -> candidate.getId().equals(audienceId))
                 .findFirst()
                 .orElseThrow(AudienceNotFoundException::new);
-        if (audiences.size() <= 1) {
+        // An Organization keeps an active audience (ADR-0044): deleting the last active one is
+        // refused even when retired ones remain.
+        if (!audience.isRetired() && audiences.stream().filter(candidate -> !candidate.isRetired()).count() <= 1) {
             throw AudienceConflictException.last();
         }
         String use = audienceRepository.use(organizationId, audienceId);
@@ -336,6 +441,15 @@ public class AudienceService {
     private AudienceDefinition find(UUID organizationId, UUID audienceId) {
         return audienceRepository.findByIdAndOrganizationId(audienceId, organizationId)
                 .orElseThrow(AudienceNotFoundException::new);
+    }
+
+    private static boolean causedBy(Throwable exception, String constraint) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause.getMessage() != null && cause.getMessage().contains(constraint)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean violates(DataIntegrityViolationException exception, String constraint) {

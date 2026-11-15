@@ -40,11 +40,85 @@ interface IntegrationSourceRepository extends JpaRepository<IntegrationSource, U
     /** The polled sources whose schedule has come round. */
     List<IntegrationSource> findAllBySourceTypeAndNextPollAtLessThanEqual(SourceType sourceType, Instant now);
 
-    boolean existsByOrganizationIdAndSourceTypeAndExternalProjectKey(
+    /** Whether the key is connected anywhere in the Organization; a disconnected source holds it nowhere. */
+    boolean existsByOrganizationIdAndSourceTypeAndExternalProjectKeyAndDisconnectedAtIsNull(
             UUID organizationId,
             SourceType sourceType,
             String externalProjectKey
     );
+
+    /** The Project's own source for a key, connected or not; at most one exists. */
+    Optional<IntegrationSource> findByOrganizationIdAndProjectIdAndSourceTypeAndExternalProjectKey(
+            UUID organizationId,
+            UUID projectId,
+            SourceType sourceType,
+            String externalProjectKey
+    );
+
+    /** A new secret is refused from here on, so the count starts again. */
+    @Modifying(flushAutomatically = true)
+    @Query(value = """
+            UPDATE integration_sources
+            SET signature_failure_count = 0, last_signature_failure_at = NULL
+            WHERE id = :id AND organization_id = :organizationId
+            """, nativeQuery = true)
+    int resetSignatureFailures(@Param("id") UUID id, @Param("organizationId") UUID organizationId);
+
+    /**
+     * Adds refused deliveries to a connected source's count, only while the secret they were
+     * refused under is still the source's secret.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE integration_sources
+            SET signature_failure_count = signature_failure_count + :failures,
+                last_signature_failure_at = GREATEST(COALESCE(last_signature_failure_at, :failedAt), :failedAt)
+            WHERE id = :id
+              AND disconnected_at IS NULL
+              AND secret_updated_at IS NOT DISTINCT FROM CAST(:secretUpdatedAt AS TIMESTAMP WITH TIME ZONE)
+            """, nativeQuery = true)
+    int addSignatureFailures(
+            @Param("id") UUID id,
+            @Param("secretUpdatedAt") Instant secretUpdatedAt,
+            @Param("failures") long failures,
+            @Param("failedAt") Instant failedAt
+    );
+
+    /**
+     * The gaps between the changes each source was delivered by webhook since {@code since}:
+     * how many there are and their 90th percentile, in seconds. A source with fewer than two
+     * delivered changes has no row.
+     */
+    @Query(value = """
+            SELECT gaps.source_id AS sourceId,
+                   COUNT(*) AS gapCount,
+                   PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY gaps.gap_seconds) AS usualGapSeconds
+            FROM (
+                SELECT c.source_id,
+                       EXTRACT(EPOCH FROM c.received_at - LAG(c.received_at)
+                               OVER (PARTITION BY c.source_id ORDER BY c.received_at)) AS gap_seconds
+                FROM changes c
+                WHERE c.organization_id = :organizationId
+                  AND c.source_id IN (:sourceIds)
+                  AND c.origin = 'WEBHOOK'
+                  AND c.received_at >= :since
+            ) gaps
+            WHERE gaps.gap_seconds IS NOT NULL
+            GROUP BY gaps.source_id
+            """, nativeQuery = true)
+    List<DeliveryRhythm> deliveryRhythms(
+            @Param("organizationId") UUID organizationId,
+            @Param("sourceIds") Collection<UUID> sourceIds,
+            @Param("since") Instant since
+    );
+
+    interface DeliveryRhythm {
+        UUID getSourceId();
+
+        long getGapCount();
+
+        double getUsualGapSeconds();
+    }
 
     @Modifying
     @Query("""

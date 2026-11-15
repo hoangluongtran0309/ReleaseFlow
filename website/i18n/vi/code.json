@@ -1615,7 +1615,7 @@
     "message": "Change Inbox: trạng thái đồng bộ của một nguồn Jira, một nguồn GitHub và một nguồn GitLab, rồi một thay đổi cùng các badge category và review"
   },
   "homepage.showcase.release.alt": {
-    "message": "Một release đang review, đã quyết định hai trong năm thay đổi, cùng bản xem trước note cho contributor"
+    "message": "Một release đang review, đã quyết định năm trong mười một thay đổi, cùng release trước và bản xem trước note cho contributor"
   },
   "product.walkthrough.eyebrow": {
     "message": "Xem thử"

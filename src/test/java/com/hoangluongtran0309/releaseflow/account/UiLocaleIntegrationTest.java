@@ -77,7 +77,7 @@ class UiLocaleIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.uiLocale").value("vi"))
                 .andExpect(cookie().value(COOKIE, "vi"))
                 .andExpect(cookie().httpOnly(COOKIE, true));
-        assertThat(appUserRepository.findByEmail("owner@example.com").orElseThrow().getUiLocale()).isEqualTo("vi");
+        assertThat(appUserRepository.findByEmailAndRemovedAtIsNull("owner@example.com").orElseThrow().getUiLocale()).isEqualTo("vi");
 
         MockHttpSession freshSession = login("owner@example.com", "owner-password");
         mockMvc.perform(get("/").session(freshSession))
@@ -113,7 +113,7 @@ class UiLocaleIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("Workspace overview")))
                 .andExpect(cookie().value(COOKIE, "en"));
-        assertThat(appUserRepository.findByEmail("owner@example.com").orElseThrow().getUiLocale()).isEqualTo("vi");
+        assertThat(appUserRepository.findByEmailAndRemovedAtIsNull("owner@example.com").orElseThrow().getUiLocale()).isEqualTo("vi");
 
         // A language this deployment does not ship is ignored, and the cookie is left alone.
         mockMvc.perform(get("/").session(session).cookie(new Cookie(COOKIE, "en")).param("lang", "fr"))
@@ -141,7 +141,7 @@ class UiLocaleIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.uiLocale").doesNotExist())
                 .andExpect(cookie().maxAge(COOKIE, 0));
 
-        assertThat(appUserRepository.findByEmail("owner@example.com").orElseThrow().getUiLocale()).isNull();
+        assertThat(appUserRepository.findByEmailAndRemovedAtIsNull("owner@example.com").orElseThrow().getUiLocale()).isNull();
     }
 
     @Test
@@ -194,7 +194,7 @@ class UiLocaleIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("validation_failed"));
 
-        assertThat(appUserRepository.findByEmail("owner@example.com").orElseThrow().getUiLocale()).isNull();
+        assertThat(appUserRepository.findByEmailAndRemovedAtIsNull("owner@example.com").orElseThrow().getUiLocale()).isNull();
     }
 
     @Test
@@ -209,7 +209,7 @@ class UiLocaleIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("/projects"))
                 .andExpect(cookie().value(COOKIE, "vi"));
-        assertThat(appUserRepository.findByEmail("owner@example.com").orElseThrow().getUiLocale()).isEqualTo("vi");
+        assertThat(appUserRepository.findByEmailAndRemovedAtIsNull("owner@example.com").orElseThrow().getUiLocale()).isEqualTo("vi");
 
         // A Referer pointing somewhere else only ever sends the person back to the workspace.
         mockMvc.perform(post("/settings/ui-locale")

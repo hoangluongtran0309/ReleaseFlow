@@ -29,6 +29,8 @@
                 <div class="mt-6" th:if="${param.error}" th:insert="~{fragments/alert :: alert('error', #{ui.login.badCredentials})}"></div>
                 <div class="mt-6" th:if="${param.expired}" th:insert="~{fragments/alert :: alert('warning', #{ui.login.expired})}"></div>
                 <div class="mt-6" th:if="${param.logout}" th:insert="~{fragments/alert :: alert('success', #{ui.login.signedOut})}"></div>
+                <!--/* A session refused because the member's role changed or they were removed (ADR-0043). */-->
+                <div class="mt-6" th:if="${param.ended}" th:insert="~{fragments/alert :: alert('info', #{ui.login.sessionEnded})}"></div>
                 <div class="mt-6" th:if="${param.registered}" th:insert="~{fragments/alert :: alert('success', #{ui.login.registered})}"></div>
                 <div class="mt-6" th:if="${param.invited}" th:insert="~{fragments/alert :: alert('success', #{ui.login.invited})}"></div>
                 <form method="post" th:action="@{/login}" class="mt-7 flex flex-col gap-4" novalidate>
