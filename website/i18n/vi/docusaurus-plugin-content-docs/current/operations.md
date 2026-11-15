@@ -133,8 +133,9 @@ Từ 1.1.0, mọi request phân loại dùng cùng một temperature, là `0` tr
 `RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác
 ([ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md),
 [ADR-0038](adr/0038-configurable-ai-temperature.md)); 1.0 không gửi temperature. Model chỉ nhận
-temperature mặc định từ chối request có ghi temperature: các model suy luận của OpenAI và các
-model Claude ra mắt sau Opus 4.6 đều như vậy.
+temperature mặc định từ chối request có ghi temperature: các model suy luận của OpenAI đều như
+vậy, và các model Claude ra mắt sau Opus 4.6 cũng thế cho đến khi request tới Anthropic thôi gửi
+temperature (xem [Nâng cấp khi dùng Anthropic](#upgrading-with-anthropic)).
 
 **Không cần làm gì.** Khi nhà cung cấp từ chối temperature, ReleaseFlow gửi lại đúng request đó
 một lần nữa nhưng không có temperature, và không gửi temperature trong mọi request sau đó cho đến
@@ -154,6 +155,37 @@ Khi đó request không gửi temperature ngay từ request đầu tiên, như m
 Docker Compose, đặt biến này trong file `.env` cạnh file Compose, file này sẽ chuyển nó vào ứng
 dụng, và gửi `0` khi biến không được đặt. Bản triển khai có model nhận temperature thì gửi `0`
 và không gặp lần từ chối nào.
+
+### Nâng cấp khi dùng Anthropic {#upgrading-with-anthropic}
+
+Từ 1.3.0, ReleaseFlow gọi Claude với phiên bản API `2026-10-21` của Anthropic, vốn không nhận
+temperature ([ADR-0045](adr/0045-anthropic-api-version-2026-10-21.md)). Với bản triển khai có
+`RELEASEFLOW_AI_PROVIDER=anthropic`:
+
+- **Không cần đổi cấu hình nào.** Request không mang temperature, dù
+  `RELEASEFLOW_AI_TEMPERATURE` đặt gì. Một số khác `0` được ghi một cảnh báo khi khởi động và có
+  thể bỏ đi:
+
+  ```text
+  RELEASEFLOW_AI_TEMPERATURE is ignored for anthropic: Anthropic API version 2026-10-21 takes no temperature, so Claude samples with its default. Remove the setting to silence this warning.
+  ```
+
+- **Với Claude 4.7 trở về sau, việc phân loại vẫn như trước.** Request đầu tiên sau mỗi lần khởi
+  động không còn bị từ chối vì temperature, nên cảnh báo đi kèm cũng không còn.
+- **Với Claude 4.6 trở về trước** (như Sonnet 4.6, Opus 4.6 hoặc Haiku 4.5), việc phân loại chạy ở
+  temperature mặc định của model, `1.0`, thay vì `0`, nên các note dao động giữa các lần chạy
+  nhiều hơn ở 1.2: một thay đổi được phân loại lại có thể được viết khác đi, hoặc, khi bằng chứng
+  còn mỏng, nhận Category khác. Không cấu hình nào đưa `0` trở lại với Anthropic; OpenAI và
+  DeepSeek vẫn nhận giá trị này. Quy tắc, Review bắt buộc và một request cho mỗi thay đổi không
+  đổi.
+- **API key được gửi trong `Authorization: Bearer <key>`** thay vì `x-api-key`, kèm
+  `anthropic-version: 2026-10-21`. Proxy hoặc gateway ở `RELEASEFLOW_ANTHROPIC_BASE_URL` đọc hoặc
+  đặt `x-api-key`, hoặc kiểm tra `anthropic-version`, phải chấp nhận các header này trước khi nâng
+  cấp; gateway chuyển tiếp tới Amazon Bedrock chỉ nhận `2026-10-21` với Claude 4.7 trở về sau.
+  Bản thân Claude API nhận cả hai header.
+
+SDK của Anthropic trong JAR và image giờ theo Apache License 2.0 thay vì MIT. SDK không kèm file
+`NOTICE`, và các file giấy phép của nó vẫn nằm trong các jar của nó.
 
 ### Nâng cấp lên phiên bản có bảng thuật ngữ {#upgrading-to-the-glossary}
 

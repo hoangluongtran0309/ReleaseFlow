@@ -75,30 +75,38 @@ See [Changes and review](changes.md).
 ## AI
 
 AI is optional. Choose one provider and give it a key and a model. There is no default
-model; pick one that supports structured JSON output. Every classification request asks
-for the same temperature, `0` unless `RELEASEFLOW_AI_TEMPERATURE` says otherwise, which
-keeps one change's answer as stable as the model allows (see
+model; pick one that supports structured JSON output.
+
+With OpenAI or DeepSeek, every classification request asks for the same temperature, `0`
+unless `RELEASEFLOW_AI_TEMPERATURE` says otherwise, which keeps one change's answer as
+stable as the model allows (see
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) and
-[ADR-0038](adr/0038-configurable-ai-temperature.md)). A model that accepts only its default
-temperature refuses a request that names one: an OpenAI reasoning model, or a Claude model
-released after Opus 4.6, which Anthropic accepts only `1.0` from. Such a model works without
-any setting: the refused request is sent once more without the temperature, and later
-requests leave it out until ReleaseFlow restarts, with one warning in the log
-([ADR-0039](adr/0039-ai-temperature-fallback.md)). Only a 400 about the temperature does
-this: one whose `error.param` is `temperature` from OpenAI or DeepSeek, or an
-`invalid_request_error` whose message names `temperature` from Anthropic. A number set here
-falls back the same way. `RELEASEFLOW_AI_TEMPERATURE=default` leaves the temperature out from
-the first request, so the refusal never happens.
+[ADR-0038](adr/0038-configurable-ai-temperature.md)). An OpenAI reasoning model accepts
+only its default temperature and refuses a request that names one. It works without any
+setting: the refused request is sent once more without the temperature, and later requests
+leave it out until ReleaseFlow restarts, with one warning in the log
+([ADR-0039](adr/0039-ai-temperature-fallback.md)). Only a 400 whose `error.param` is
+`temperature` does this. A number set here falls back the same way.
+`RELEASEFLOW_AI_TEMPERATURE=default` leaves the temperature out from the first request, so
+the refusal never happens.
+
+With Anthropic, requests use API version `2026-10-21`, which takes no temperature, so none
+is sent whatever `RELEASEFLOW_AI_TEMPERATURE` says and Claude samples with its default
+([ADR-0045](adr/0045-anthropic-api-version-2026-10-21.md)). On Claude 4.7 and later that is
+all the model ever accepted. On Claude 4.6 and earlier, classification runs at the default
+temperature, `1.0`, rather than `0`, so a change's answer, and the notes written from it,
+vary more between runs. The value is still checked at startup, and a number other than `0`
+logs one warning that it is ignored. The API key is sent as `Authorization: Bearer`.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (empty: no AI) | `openai`, `anthropic`, or `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Bound on each AI request |
-| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature of every classification request: a number from `0` to `2` for `openai` and `deepseek`, or from `0` to `1` for `anthropic`; `default` sends none, so the model uses its own. Unset or blank means `0`. A model that refuses the temperature is sent none for the rest of the process |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature of every classification request to `openai` and `deepseek`: a number from `0` to `2`; `default` sends none, so the model uses its own. Unset or blank means `0`. A model that refuses the temperature is sent none for the rest of the process. For `anthropic` it must be a number from `0` to `1` or `default`, and is never sent |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (empty) | OpenAI key and model |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI API address |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (empty) | Anthropic key and model |
-| `RELEASEFLOW_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic API address |
+| `RELEASEFLOW_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic API address. A proxy or gateway here receives the key as `Authorization: Bearer` and `anthropic-version: 2026-10-21` |
 | `RELEASEFLOW_DEEPSEEK_API_KEY`, `RELEASEFLOW_DEEPSEEK_MODEL` | (empty) | DeepSeek key and model |
 | `RELEASEFLOW_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek API address |
 
