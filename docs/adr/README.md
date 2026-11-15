@@ -14,13 +14,13 @@ they describe.
 | [0002](0002-per-integration-webhook-credentials.md) | Per-integration webhook credentials | Accepted | 2026-09-10 | Amended by [0042](0042-source-lifecycle-and-health.md) (rotation and replacement) |
 | [0003](0003-frontend-toolchain.md) | Tailwind, DaisyUI, and Alpine for server-rendered pages | Accepted | 2026-09-10 | Amended by [0028](0028-parity-ui-and-browser-tests.md) (browser tests) |
 | [0004](0004-openai-classification-as-reviewed-suggestion.md) | OpenAI classification as a reviewed suggestion | Superseded | 2026-09-11 | Superseded by [0009](0009-automatic-ai-classification.md) |
-| [0005](0005-immutable-release-note-snapshots.md) | Immutable Release Note snapshots | Accepted | 2026-09-11 | |
+| [0005](0005-immutable-release-note-snapshots.md) | Immutable Release Note snapshots | Accepted | 2026-09-11 | Amended by [0046](0046-correcting-a-published-note.md) (a correction is a new revision) |
 | [0006](0006-organization-roles-and-invitations.md) | Organization roles and invitations | Accepted | 2026-09-14 | Amended by [0043](0043-member-roles-and-removal.md) (role changes and removal) |
 | [0007](0007-ci-and-container-supply-chain.md) | CI gates and container supply chain | Accepted | 2026-09-14 | Amended by [0026](0026-deployment-observability.md) (health check on the management port) |
 | [0008](0008-durable-change-processing.md) | Durable change processing and changed-file review triggers | Accepted | 2026-09-14 | |
 | [0009](0009-automatic-ai-classification.md) | Automatic AI classification and neutral summaries | Accepted | 2026-09-14 | Supersedes [0004](0004-openai-classification-as-reviewed-suggestion.md); amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (Project context, migration kind, limitations) |
 | [0010](0010-release-review-lifecycle.md) | Release review lifecycle | Accepted | 2026-09-14 | |
-| [0011](0011-audience-release-notes.md) | Audiences and a release note per audience | Accepted | 2026-09-15 | Amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (a selection and headline per audience), [0037](0037-security-changes-and-release-note-structure.md) (security and release-wide note structure), and [0044](0044-retire-an-audience.md) (retired audiences) |
+| [0011](0011-audience-release-notes.md) | Audiences and a release note per audience | Accepted | 2026-09-15 | Amended by [0035](0035-evidence-bound-notes-and-audience-relevance.md) (a selection and headline per audience), [0037](0037-security-changes-and-release-note-structure.md) (security and release-wide note structure), and [0044](0044-retire-an-audience.md) (retired audiences); amended by [0046](0046-correcting-a-published-note.md) (revisions of a published note) |
 | [0012](0012-category-catalog.md) | Category catalog per Organization | Accepted | 2026-09-15 | |
 | [0013](0013-context-sufficiency-and-duplicates.md) | Context sufficiency and possible duplicates | Accepted | 2026-09-15 | |
 | [0014](0014-project-sensitive-paths.md) | Sensitive paths per Project | Accepted | 2026-09-15 | |
@@ -29,12 +29,12 @@ they describe.
 | [0017](0017-gitlab-sources.md) | GitLab sources and provider seams | Accepted | 2026-09-16 | Amended by [0042](0042-source-lifecycle-and-health.md) (rotating a GitLab secret) |
 | [0018](0018-linear-sources.md) | Linear sources | Accepted | 2026-09-16 | Amended by [0042](0042-source-lifecycle-and-health.md) (rotating a Linear secret) |
 | [0019](0019-jira-sources-and-linked-context.md) | Jira sources and linked context | Accepted | 2026-09-17 | Amended by [0041](0041-linked-context-and-folding.md) (branch and Linear keys, status at review); amended by [0042](0042-source-lifecycle-and-health.md) (polls of a disconnected source, a Jira account change) |
-| [0020](0020-automation-rules-and-runs.md) | Automation rules and runs | Accepted | 2026-09-19 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers) |
+| [0020](0020-automation-rules-and-runs.md) | Automation rules and runs | Accepted | 2026-09-19 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers); amended by [0046](0046-correcting-a-published-note.md) (correction runs) |
 | [0021](0021-scheduled-and-signed-automation-triggers.md) | Scheduled and signed automation triggers | Accepted | 2026-09-20 | |
-| [0022](0022-public-changelog.md) | A public changelog | Accepted | 2026-09-20 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers) |
+| [0022](0022-public-changelog.md) | A public changelog | Accepted | 2026-09-20 | Amended by [0025](0025-teams-and-zendesk-actions.md) (Teams on scheduled triggers); amended by [0046](0046-correcting-a-published-note.md) (revisions of an entry) |
 | [0023](0023-scoped-csrf-exemptions.md) | CSRF exemptions are scoped, never switched off | Accepted | 2026-09-20 | |
-| [0024](0024-notion-and-confluence-actions.md) | Notion and Confluence actions | Accepted | 2026-09-21 | |
-| [0025](0025-teams-and-zendesk-actions.md) | Microsoft Teams and Zendesk actions | Accepted | 2026-09-21 | Amends [0020](0020-automation-rules-and-runs.md) and [0022](0022-public-changelog.md) |
+| [0024](0024-notion-and-confluence-actions.md) | Notion and Confluence actions | Accepted | 2026-09-21 | Amended by [0046](0046-correcting-a-published-note.md) (corrections edit the page in place) |
+| [0025](0025-teams-and-zendesk-actions.md) | Microsoft Teams and Zendesk actions | Accepted | 2026-09-21 | Amends [0020](0020-automation-rules-and-runs.md) and [0022](0022-public-changelog.md); amended by [0046](0046-correcting-a-published-note.md) (corrections to Teams and Zendesk) |
 | [0026](0026-deployment-observability.md) | Deployment observability | Accepted | 2026-09-21 | Amends [0007](0007-ci-and-container-supply-chain.md) |
 | [0027](0027-ui-localization.md) | UI localization | Accepted | 2026-09-22 | Amended by [0034](0034-account-language-per-request.md) (the account's language read on each request) |
 | [0028](0028-parity-ui-and-browser-tests.md) | A dashboard, error pages, and a browser test suite | Accepted | 2026-09-22 | Amends [0003](0003-frontend-toolchain.md) |
@@ -55,6 +55,7 @@ they describe.
 | [0043](0043-member-roles-and-removal.md) | Changing a member's role and removing a member | Accepted | 2026-11-12 | Amends [0006](0006-organization-roles-and-invitations.md); refers to [0034](0034-account-language-per-request.md) |
 | [0044](0044-retire-an-audience.md) | Retiring an audience without deleting it | Accepted | 2026-11-12 | Amends [0011](0011-audience-release-notes.md); refers to [0009](0009-automatic-ai-classification.md), [0015](0015-multilingual-release-notes.md), [0020](0020-automation-rules-and-runs.md), [0035](0035-evidence-bound-notes-and-audience-relevance.md), and [0036](0036-translation-glossary.md) |
 | [0045](0045-anthropic-api-version-2026-10-21.md) | Anthropic API version 2026-10-21, with no temperature | Accepted | 2026-11-15 | Amends [0038](0038-configurable-ai-temperature.md) and [0039](0039-ai-temperature-fallback.md); refers to [0009](0009-automatic-ai-classification.md) and [0035](0035-evidence-bound-notes-and-audience-relevance.md) |
+| [0046](0046-correcting-a-published-note.md) | Correcting a published note with a new revision | Accepted | 2026-11-15 | Amends [0005](0005-immutable-release-note-snapshots.md), [0011](0011-audience-release-notes.md), [0020](0020-automation-rules-and-runs.md), [0022](0022-public-changelog.md), [0024](0024-notion-and-confluence-actions.md), and [0025](0025-teams-and-zendesk-actions.md); refers to [0015](0015-multilingual-release-notes.md), [0036](0036-translation-glossary.md), [0040](0040-translation-placeholders.md), [0043](0043-member-roles-and-removal.md), and [0044](0044-retire-an-audience.md) |
 
 Dates are as each record states them; 0031 carries an earlier date than 0030, which it
 builds on. Records 0029 and 0030 mention a slice plan (`feature-parity-slice-plan.md`, slice `S24`)
