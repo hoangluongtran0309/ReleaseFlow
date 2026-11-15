@@ -507,12 +507,16 @@ where it first appears; ADRs are linked from the slice they record.
     about the input or only about the change's scope dropped by a deterministic filter;
   - an AI migration step that only says nothing needs doing dropped, so its kind is
     `none`;
-  - every classification request at the same temperature, `0` unless
+  - every OpenAI and DeepSeek classification request at the same temperature, `0` unless
     `RELEASEFLOW_AI_TEMPERATURE` names another in the provider's range or `default`, which
     sends none for a model that accepts only its own
     ([ADR-0038](adr/0038-configurable-ai-temperature.md)), and none for the rest of the
     process once a model refuses it, after sending the refused request once more without it
-    ([ADR-0039](adr/0039-ai-temperature-fallback.md)).
+    ([ADR-0039](adr/0039-ai-temperature-fallback.md));
+  - Anthropic through anthropic-java 3.x on API version `2026-10-21`, with the key as
+    `Authorization: Bearer` and no temperature, the setting still checked at startup and a
+    number other than `0` logged as ignored
+    ([ADR-0045](adr/0045-anthropic-api-version-2026-10-21.md)).
 
 ### A note per audience (V32)
 

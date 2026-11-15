@@ -60,6 +60,22 @@ section into the version's entry, and the GitHub release is written from it.
 
 ### Changed
 
+- **Behavior change for Anthropic:** ReleaseFlow calls Claude through anthropic-java 3.8.0,
+  with Anthropic API version `2026-10-21`, and sends no temperature: that version refuses
+  one on every model ([ADR-0045](docs/adr/0045-anthropic-api-version-2026-10-21.md)). No
+  setting needs to change.
+  - On Claude 4.6 and earlier (such as Sonnet 4.6, Opus 4.6, or Haiku 4.5), classification
+    runs at the default temperature, `1.0`, instead of `0`, so notes vary more between runs
+    than on 1.2. No setting brings `0` back on Anthropic; OpenAI and DeepSeek still take it.
+  - On Claude 4.7 and later, classification samples as before, and the first request after
+    each start is no longer refused for its temperature, so its warning goes away.
+  - `RELEASEFLOW_AI_TEMPERATURE` is still checked at startup with Anthropic but never sent;
+    a number other than `0` logs one warning that it is ignored.
+  - The API key is sent as `Authorization: Bearer` instead of `x-api-key`. A proxy or
+    gateway at `RELEASEFLOW_ANTHROPIC_BASE_URL` that reads `x-api-key` or checks
+    `anthropic-version` must accept the new headers before upgrading. See
+    [Upgrading with Anthropic](docs/operations.md#upgrading-with-anthropic).
+  - The Anthropic SDK is licensed under Apache-2.0 instead of MIT; it ships no `NOTICE`.
 - A GitHub Release action whose repository's source is disconnected fails as
   `github_source_disconnected` and succeeds when run again after the reconnect; the
   Automation page marks an enabled rule that has no GitHub source to borrow. A rule with a

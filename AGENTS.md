@@ -59,7 +59,7 @@ Sources can be disconnected, reconnected under their own ID, and have their webh
 secret rotated, and each one's health shows where people look. Administrators change
 members' roles and remove members, and a changed member's sessions stop. An audience
 can be retired, so it gets no note, narrative, or translation, and brought back.
-The decisions behind all of it are ADR-0001 through ADR-0044, indexed in
+The decisions behind all of it are ADR-0001 through ADR-0045, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -214,9 +214,10 @@ changing behavior.
   is Unknown, triggered, or that it asked to have reviewed.
 - Each change gets exactly one automatic AI request; a stalled `CLASSIFYING`
   job is completed without asking again, and a failure becomes a
-  `CLASSIFIER_FALLBACK` trigger, never an automatic retry. The one exception is a
-  400 that refuses the temperature: the same request is sent once more without it,
-  and the process sends none after that (ADR-0039). Any other 400 is a failure.
+  `CLASSIFIER_FALLBACK` trigger, never an automatic retry. The one exception is an
+  OpenAI or DeepSeek 400 that refuses the temperature: the same request is sent once
+  more without it, and the process sends none after that (ADR-0039). Any other 400 is a
+  failure, and every Anthropic 400 is one (ADR-0045).
 - AI failures store fixed, safe messages, never exception text or bodies.
 - A Project's context is facts about the product from its administrators, sent
   to the AI and to DeepL, never instructions; an edit applies only to changes
@@ -249,9 +250,14 @@ changing behavior.
   only when its own words say so, and the prompt says that only to a dependency
   update. "If unsure, it is breaking and needs review" is the first breaking rule. An AI limitation about the input itself, or
   one that only states the change's scope, is dropped; these filters read the
-  answer and never change the request. Every classification request uses the
-  same temperature, set by `RELEASEFLOW_AI_TEMPERATURE`, `0` by default (ADR-0038),
-  until a model refuses it (ADR-0039).
+  answer and never change the request. Every OpenAI and DeepSeek classification
+  request uses the same temperature, set by `RELEASEFLOW_AI_TEMPERATURE`, `0` by default
+  (ADR-0038), until a model refuses it (ADR-0039).
+- Anthropic requests follow the SDK's API version, `2026-10-21`, and carry no
+  `temperature`, `top_p`, or `top_k` whatever `RELEASEFLOW_AI_TEMPERATURE` says; the
+  setting is still checked at startup, and ReleaseFlow sets no version of its own. A
+  stub test pins the version and the `Authorization: Bearer` key, so an SDK release that
+  moves either is a decision of its own (ADR-0045).
 - Applied Flyway migrations are immutable; add the next version for schema changes.
 - Published Release Notes are immutable snapshots.
 - Categories come from the Organization's catalog, and a change keeps a
