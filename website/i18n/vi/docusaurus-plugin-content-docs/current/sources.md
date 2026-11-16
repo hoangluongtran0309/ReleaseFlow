@@ -173,10 +173,52 @@ curl -sS -X POST "http://localhost:8080$WEBHOOK_PATH" \
 
 ## Nhận webhook từ Linear {#receive-linear-webhooks}
 
-Linear tự tạo signing secret, nên tạo webhook bên Linear trước: trong
-**Settings → API → Webhooks**, đặt URL là địa chỉ ReleaseFlow của bạn nối thêm đường dẫn
-ReleaseFlow hiển thị cho nguồn, và bật sự kiện **Issues**. Sao chép secret Linear hiển thị
-rồi dán nó, cùng một API key, khi kết nối team trong ReleaseFlow.
+Linear tự tạo signing secret, và đường dẫn webhook của một nguồn chưa tồn tại cho tới khi
+nguồn được kết nối. Vì vậy webhook được tạo trước, ở một địa chỉ tạm, và được trỏ tới đường dẫn
+của nó sau cùng:
+
+1. Tạo webhook trong Linear cho team, với sự kiện **Issues**, ở trạng thái **tắt**, tại địa chỉ
+   ReleaseFlow của bạn nối với một đường dẫn ReleaseFlow không biết, ví dụ
+   `/webhooks/linear/pending-ops`. ReleaseFlow trả lời `401` cho đường dẫn như vậy và không ghi
+   gì, nên issue của team không bao giờ bị gửi cho ai khác. Linear chỉ cho phép một webhook cho
+   mỗi URL, nên mỗi team có một đường dẫn tạm riêng. Tạo webhook ở trạng thái tắt cần GraphQL
+   API của Linear, bằng API key của một quản trị viên workspace:
+
+   ```graphql
+   mutation {
+     webhookCreate(input: {
+       url: "https://releaseflow.example.com/webhooks/linear/pending-ops"
+       teamId: "<team-id>"
+       resourceTypes: ["Issue"]
+       enabled: false
+     }) {
+       success
+       webhook { id secret enabled }
+     }
+   }
+   ```
+
+   Webhook tạo trong **Settings → API → Webhooks** thì được bật ngay. Ở cùng địa chỉ tạm đó,
+   điều này cũng an toàn, vì ReleaseFlow từ chối mọi thứ gửi tới, nhưng Linear có thể tắt một
+   webhook liên tục bị từ chối.
+2. Kết nối team trong ReleaseFlow với signing secret của webhook, tức `secret` trong câu trả
+   lời ở trên và trên trang chi tiết của webhook, cùng một API key. ReleaseFlow sau đó hiện
+   đường dẫn của nguồn.
+3. Đổi URL của webhook thành địa chỉ ReleaseFlow của bạn nối với đường dẫn đó, và bật nó. Tài
+   liệu của Linear không nói trang của webhook có cho sửa URL hay không; `webhookUpdate` thì
+   có, và giữ nguyên secret cùng các sự kiện:
+
+   ```graphql
+   mutation {
+     webhookUpdate(id: "<webhook-id>", input: {
+       url: "https://releaseflow.example.com/webhooks/linear/<path-id>"
+       enabled: true
+     }) {
+       success
+       webhook { url enabled }
+     }
+   }
+   ```
 
 ![Trang sau khi kết nối một team Linear: webhook path để khai báo với Linear, còn signing secret do Linear tạo đã được dán vào](assets/sources/sr-4-linear-connected.webp)
 
@@ -207,6 +249,13 @@ không. Sửa một issue đã hoàn thành từ trước không thay đổi gì
 Linear không đặt cho lần gửi một định danh mà ReleaseFlow có thể ghi lại dưới dạng GUID, nên
 thay đổi từ Linear không có delivery ID. Mỗi issue vẫn chỉ được lưu một lần cho mỗi nguồn,
 theo UUID của nó, nên gửi lại cũng không sao.
+
+> **Vấn đề đã biết.** ReleaseFlow từ chối một lần gửi của Linear đến muộn hơn 60 giây so với
+> hành động mà nó báo, và mọi lần thử lại của lần gửi đó, nên issue như vậy chỉ được ghi nếu nó
+> được hoàn thành lại. `createdAt` là thời điểm issue thay đổi, không phải thời điểm gửi, và
+> Linear thử lại sau một phút, một giờ và sáu giờ, nên mọi lần thử lại đều đến với dấu thời
+> gian đã cũ; ReleaseFlow không import được lịch sử của Linear để bù vào. Xem
+> [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
 
 ## Đọc Jira theo lịch {#poll-jira}
 
@@ -421,7 +470,8 @@ Webhook secret của một nguồn có thể được thay mà không đổi đ�
 qua REST. **Secret cũ ngừng hoạt động ngay khi secret mới được lưu**: secret được đổi vì có thể
 người khác đã biết nó, và trong lúc cả hai secret cùng dùng được, người giữ secret cũ vẫn có thể
 đưa một pull request tuỳ ý vào Change Inbox. Vì vậy cập nhật phía nhà cung cấp ngay sau đó, và
-gửi lại những gì nó bị từ chối trong khoảng giữa.
+gửi lại những gì nó bị từ chối trong khoảng giữa; Linear, vốn tự sinh secret và không gửi lại gì
+mà ReleaseFlow chấp nhận, là ngoại lệ được mô tả bên dưới.
 
 ```text
 POST /api/projects/{projectId}/sources/{sourceId}/webhook-secret                    (administrator; 200, chỉ hiện một lần)
@@ -472,12 +522,29 @@ vì ReleaseFlow chỉ hiện nó một lần. Sau đó mở **Recent events** c�
 sự kiện bị từ chối kể từ lúc đó; GitLab giữ chúng trong hai ngày. GitLab tắt một hook thất bại bốn
 lần liên tiếp, nên nếu điều đó đã xảy ra, bật lại hook.
 
-**Linear.** Linear không mô tả cách nào để sinh lại signing secret của một webhook, nên tạo
-webhook mới: trong **Settings → API → Webhooks**, tạo webhook thứ hai với cùng URL và sự kiện
-**Issues**, chép signing secret của nó từ trang chi tiết, dán vào trang của nguồn, rồi xoá webhook
-cũ. Cho đến lúc đó cả hai webhook đều gửi mọi sự kiện; một bản được xác minh trước khi dán và bản
-kia sau khi dán, và mỗi issue chỉ được ghi một lần, nên không bỏ sót gì. Các bản thất bại được đếm
-là lỗi chữ ký, và Linear thử lại một lần gửi bị từ chối ba lần, lần cuối khoảng sáu giờ sau.
+**Linear.** Linear chỉ cho phép một webhook cho mỗi URL, và từ chối webhook thứ hai cho cùng
+địa chỉ với `url not unique`, nên webhook được giữ lại và secret của nó được đổi tại chỗ. Linear
+sinh secret mới, nên ở đây Linear đi trước:
+
+1. Đổi signing secret của webhook trong Linear. Tài liệu của Linear không mô tả nút nào cho việc
+   này trong **Settings → API → Webhooks**; nếu trang của webhook không có, gửi mutation
+   `webhookRotateSecret` tới GraphQL API của Linear, bằng API key của một quản trị viên
+   workspace. Yêu cầu đầu tìm ID của webhook, yêu cầu sau trả về secret mới:
+
+   ```graphql
+   query { webhooks { nodes { id url } } }
+
+   mutation { webhookRotateSecret(id: "<webhook-id>") { success secret } }
+   ```
+
+   Linear thay secret cũ ngay lập tức: nó không giữ khoá thứ hai.
+2. Dán secret mới vào trang của nguồn, hoặc gửi nó bằng `PUT` ở trên, ngay sau đó.
+
+Giữa hai bước, Linear ký bằng một secret mà ReleaseFlow chưa có, nên **một lần gửi bị từ chối
+trong khoảng đó không được ghi**. Nó được đếm là lỗi chữ ký, và các lần Linear thử lại nó cũng bị
+từ chối, vì `createdAt` đã cũ ([ở trên](#receive-linear-webhooks)). Khi đó issue chỉ được ghi nếu
+nó được hoàn thành lại. Vì vậy hãy đổi secret khi không ai đang thay đổi issue của team, và dán
+trong vòng một phút.
 
 ## Ngắt kết nối một nguồn {#disconnect-a-source}
 
@@ -525,7 +592,7 @@ workspace và Project đều giữ nguyên — nên nó chỉ nhận những gì
 | --- | --- | --- |
 | GitHub | `token` tuỳ chọn | Đường dẫn webhook và secret mới, **chỉ hiện một lần** |
 | GitLab | `token` tuỳ chọn; với header có chữ ký, tuỳ chọn một `webhookSecret` do GitLab sinh | Đường dẫn webhook mới, và secret chỉ hiện một lần nếu không dán vào |
-| Linear | `webhookSecret` từ một webhook Linear mới, và `token` | Đường dẫn webhook mới; team phải vẫn ở cùng workspace |
+| Linear | `webhookSecret`, signing secret của webhook Linear sẽ gửi tới nguồn (xem bên dưới), và `token` | Đường dẫn webhook mới; team phải vẫn ở cùng workspace |
 | Jira | `accountEmail` và `token` | Không có gì bí mật; lần đọc tiếp theo là một chu kỳ sau |
 
 Đường dẫn webhook mới nghĩa là một hook chưa ai cập nhật vẫn chết, nên trỏ hook của nhà cung
@@ -534,6 +601,22 @@ cấp tới đường dẫn mới với secret mới. Thiếu thông tin xác th
 `409 source_not_disconnected`. Nguồn Jira được kết nối lại sẽ đọc, ở lần đọc đầu tiên, những gì đã
 hoàn thành trong thời gian ngắt kết nối, tối đa 90 ngày trước; với GitHub và GitLab, chạy
 [import lịch sử](#history-import) để lấy những gì đã merge trong khoảng đó.
+
+**Linear.** Việc kết nối lại cần signing secret của webhook trước khi đường dẫn mới tồn tại,
+nên nó theo ba bước của [lần kết nối đầu](#receive-linear-webhooks), với một lựa chọn ở bước đầu:
+
+1. Hoặc tạo một webhook mới, ở trạng thái tắt, tại một địa chỉ tạm của chính ReleaseFlow, như
+   lần kết nối đầu; hoặc giữ webhook cũ của team, nếu Linear vẫn còn nó, và đổi secret của nó
+   trước bằng [`webhookRotateSecret`](#rotate-a-webhook-secret), vì một nguồn thường bị ngắt
+   kết nối chính vì secret của nó có thể đã lộ. Cả hai cách đều cần API của Linear, trừ khi
+   trang của webhook có chức năng tương tự.
+2. Kết nối lại nguồn với secret đó và một API key. ReleaseFlow hiện đường dẫn mới.
+3. Đổi URL của webhook thành địa chỉ ReleaseFlow của bạn nối với đường dẫn mới, và bật nó, bằng
+   `webhookUpdate` như lần kết nối đầu. Một webhook được giữ lại mà Linear đã tắt trong lúc
+   đường dẫn cũ từ chối nó cũng được bật lại bằng chính yêu cầu đó.
+
+Không có gì được ghi cho tới bước thứ ba, và một issue hoàn thành trước bước đó chỉ được ghi nếu
+nó được hoàn thành lại: ReleaseFlow không import được lịch sử của Linear.
 
 Kết nối lại cùng key trong cùng Project bằng form kết nối bị từ chối với
 `409 source_reconnect_required`, vì một nguồn thứ hai sẽ là một định danh thứ hai và lần import

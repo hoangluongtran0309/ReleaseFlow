@@ -102,6 +102,11 @@ section into the version's entry, and the GitHub release is written from it.
 - The release API lists a release's fold decisions in a fixed order, by when each was
   decided and then by the tracker change, rather than in whatever order the database read
   them.
+- The instructions for connecting a Linear team can now be followed. They said to create
+  Linear's webhook at the source's path before ReleaseFlow had given the source one; the
+  Projects page and the guide now say to create the webhook disabled at a holding address
+  of ReleaseFlow's own, connect the team with its signing secret, then point the webhook
+  at the source's path and enable it. Connecting itself is unchanged.
 
 ## [1.2.0] - 2026-11-08
 
