@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-11-11
+- Amended: 2026-11-16, for rotating and reconnecting a Linear source; see
+  [the amendment](#amendment-2026-11-16-linear-rotation-and-reconnect)
 - Amends: [ADR-0002](0002-per-integration-webhook-credentials.md), whose secret rotation and
   replacement were left to a later workflow; [ADR-0016](0016-integration-sources-and-history-import.md),
   for when a repository belongs to one Project and when an import may start;
@@ -72,7 +74,7 @@ after ReleaseFlow has already changed its side:
   in is not something to depend on.
 - Linear retries a refused delivery three times, the last about six hours later. Its
   documentation shows the signing secret on the webhook's detail page and says nothing of
-  regenerating it.
+  regenerating it. (Amended on 2026-11-16: those retries are refused too; see the end.)
 
 ## Decision
 
@@ -218,7 +220,8 @@ after ReleaseFlow has already changed its side:
     copy its signing secret from its detail page, paste it into ReleaseFlow, and then
     delete the old webhook. While both exist every event is sent twice, at least one copy
     verifies before and after the paste, and intake keeps one, so nothing is missed; the
-    copies that fail are counted, and Linear's own retries cover a slow paste.
+    copies that fail are counted, and Linear's own retries cover a slow paste. (Amended
+    on 2026-11-16: Linear refuses the second webhook, so this cannot be done; see the end.)
 - **The rotation itself calls no provider.** A generated secret is made locally, and a
   pasted one cannot be confirmed by anyone but the next delivery. ReleaseFlow never sends
   the hooks API request itself: it holds no token that may edit a hook.
@@ -354,7 +357,8 @@ after ReleaseFlow has already changed its side:
   brought back without duplicating any: the same ID is what keeps `ChangeIntake` honest.
 - A leaked webhook secret can be replaced in place, with the path unchanged. The price is
   a gap between ReleaseFlow's save and the provider's, which the page shows and each
-  provider's own resend, or the import, fills.
+  provider's own resend, or the import, fills. (Amended on 2026-11-16: for Linear
+  nothing fills it; see the end.)
 - A source that stops delivering is visible within about one of its usual gaps,
   wherever people look, and a hook pointed at ReleaseFlow with the wrong secret is
   visible at once. Neither is an alert: nothing is sent, and a source with no rhythm yet
@@ -366,3 +370,66 @@ after ReleaseFlow has already changed its side:
 - A flood of refused deliveries on a known path costs about one row update per source per
   second, and an exact count. Rotation reminders, alerts on
   a quiet source, and deleting a source with its changes remain deferred.
+
+## Amendment, 2026-11-16: Linear rotation and reconnect
+
+The decision above stands: a rotated secret keeps the path and stops the old one at
+once, a reconnect keeps the source's ID, and neither calls a provider. What changes is
+what the page and the guide tell an administrator to do in Linear, and what they promise
+about the gap. No code path, request, response, or stored value changes.
+
+**What was found.** The dbvault acceptance tried the Linear rotation as written, before
+any release carried it:
+
+- Linear refuses a second webhook for a URL that already has one: `webhookCreate`
+  answered `400 INPUT_ERROR`, "url not unique … A webhook for the URL … already exists on
+  the workspace", with an administrator's key. Its schema says the same of the mutation:
+  "The destination must not already be registered for the same team scope." So "create a
+  second webhook with the same URL" cannot be done, and with it goes the claim that two
+  webhooks cover the gap.
+- Linear's documentation still describes no way to rotate a signing secret in its
+  settings, but its GraphQL schema has `webhookRotateSecret(id)`, which "generates and
+  returns a new HMAC-SHA256 signing secret for the webhook … the previous key is replaced
+  rather than kept as a second active key", and `webhookUpdate`, whose input takes a
+  `url`.
+- Linear's retries do not recover a refused delivery. It retries after one minute, one
+  hour, and six hours, but ReleaseFlow has checked the body's `createdAt` within 60
+  seconds since [ADR-0018](0018-linear-sources.md), and Linear defines `createdAt` as
+  "the date and time that the action took place" and `webhookTimestamp` as the time the
+  webhook was sent. A retry therefore arrives stale and is refused whatever secret signs
+  it. This follows from the code and Linear's definitions; what Linear sends on a retry
+  has not been observed on the lab yet.
+- The reconnect row had the same fault in another form: its body needs the signing
+  secret before the new path exists, and a webhook cannot be made at a path that is not
+  known, nor at the old one while the old webhook still holds it.
+
+**What the instructions say now.**
+
+- **Rotating:** rotate the existing webhook's secret in Linear, on the webhook's page if
+  Linear offers it and otherwise with `webhookRotateSecret`, then paste the returned
+  secret into ReleaseFlow right away. Linear goes first, because it makes the secret. A
+  delivery refused between the two is counted and not recorded, Linear's retries of it
+  are refused too, and because ReleaseFlow cannot import Linear's history the issue is
+  recorded only if it is completed again. The advice is to rotate while nobody is
+  changing the team's issues and to paste within the minute.
+- **Reconnecting:** create a new webhook disabled, at ReleaseFlow's own address with a
+  path it does not know, which answers `401` and records nothing; or keep the team's old
+  webhook and rotate its secret first, since a source is often disconnected because its
+  secret may be known. Reconnect with that secret, then change the webhook's URL to the
+  new path and enable it. Linear's `WebhookCreateInput` and `WebhookUpdateInput` both
+  take `url` and `enabled`. A holding address anywhere else was rejected: Linear would
+  send the team's issues to whoever answers it.
+- **Connecting for the first time** had the reconnect's fault since ADR-0018, in text
+  that was released: it said to create the webhook at the source's path, which does not
+  exist until the team is connected. It now gives the same three steps, and the 1.3.0
+  entry of `CHANGELOG.md` says so.
+- The guide's Linear section carries a known-issue note for the stale `createdAt`,
+  linking [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
+- The statements above that Linear's retries cover a slow paste, and that each
+  provider's resend fills the gap, do not hold for Linear and are marked where they
+  stand.
+
+**What is left open.** Checking `webhookTimestamp` instead of `createdAt` would let
+Linear's retries be accepted after the paste. That changes which deliveries ReleaseFlow
+accepts, so it is a decision of its own, amending ADR-0018, and not part of this
+amendment; [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94) tracks it.

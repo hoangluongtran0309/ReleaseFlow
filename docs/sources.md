@@ -179,11 +179,52 @@ curl -sS -X POST "http://localhost:8080$WEBHOOK_PATH" \
 
 ## Receive Linear webhooks
 
-Linear mints the signing secret itself, so create the webhook there first: under
-**Settings → API → Webhooks**, set the URL to your ReleaseFlow address followed
-by the path ReleaseFlow shows for the source, and enable the **Issues** event.
-Copy the secret Linear displays and paste it, with an API key, when connecting
-the team in ReleaseFlow.
+Linear mints the signing secret itself, and a source's webhook path does not exist until
+the source is connected. So the webhook is made first, at a holding address, and pointed
+at its path last:
+
+1. Create the webhook in Linear for the team, with the **Issues** event, **disabled**, at
+   your ReleaseFlow address followed by a path ReleaseFlow does not know, such as
+   `/webhooks/linear/pending-ops`. ReleaseFlow answers such a path `401` and records
+   nothing, so the team's issues are never sent to anyone else. Linear allows one webhook
+   for a URL, so each team gets a holding path of its own. Creating a webhook disabled
+   takes Linear's GraphQL API, with an API key of a workspace administrator:
+
+   ```graphql
+   mutation {
+     webhookCreate(input: {
+       url: "https://releaseflow.example.com/webhooks/linear/pending-ops"
+       teamId: "<team-id>"
+       resourceTypes: ["Issue"]
+       enabled: false
+     }) {
+       success
+       webhook { id secret enabled }
+     }
+   }
+   ```
+
+   A webhook created under **Settings → API → Webhooks** starts enabled. At the same
+   holding address that is safe as well, because ReleaseFlow refuses whatever arrives, but
+   Linear may disable a webhook that keeps being refused.
+2. Connect the team in ReleaseFlow with the webhook's signing secret, which is `secret` in
+   the answer above and on the webhook's detail page, and an API key. ReleaseFlow then
+   shows the source's path.
+3. Change the webhook's URL to your ReleaseFlow address followed by that path, and enable
+   it. Linear's documentation does not say whether the webhook's page lets you edit the
+   URL; `webhookUpdate` does, and leaves the secret and the events as they are:
+
+   ```graphql
+   mutation {
+     webhookUpdate(id: "<webhook-id>", input: {
+       url: "https://releaseflow.example.com/webhooks/linear/<path-id>"
+       enabled: true
+     }) {
+       success
+       webhook { url enabled }
+     }
+   }
+   ```
 
 ![The page after connecting a Linear team: the webhook path to give Linear, whose own signing secret was pasted in](assets/sources/sr-4-linear-connected.webp)
 
@@ -215,6 +256,13 @@ completed changes nothing.
 Linear names no delivery ReleaseFlow can record as a GUID, so a Linear change
 carries no delivery ID. Each issue is still stored once per source, by its UUID,
 so redeliveries are harmless.
+
+> **Known issue.** ReleaseFlow refuses a Linear delivery that arrives more than 60 seconds
+> after the action it reports, and any retry of it, so such an issue is recorded only if it
+> is completed again. `createdAt` is the time of the issue's change, not of the sending,
+> and Linear retries after a minute, an hour, and six hours, so every retry arrives with a
+> stale stamp; ReleaseFlow cannot import Linear's history to fill the gap. See
+> [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
 
 ## Poll Jira
 
@@ -443,7 +491,8 @@ source** or through REST. **The old secret stops working the moment the new one 
 saved**: a secret is rotated because someone else may know it, and while two secrets
 worked, whoever held the old one could still put a pull request of their choosing in the
 Change Inbox. So update the provider straight after, and send again whatever it refused
-in between.
+in between; Linear, which makes its own secret and resends nothing ReleaseFlow accepts,
+is the exception described below.
 
 ```text
 POST /api/projects/{projectId}/sources/{sourceId}/webhook-secret                    (administrator; 200, shown once)
@@ -497,13 +546,30 @@ hook's **Recent events** and **Resend Request** each event refused since; GitLab
 them for two days. GitLab disables a hook that fails four times in a row, so if it did,
 enable it again.
 
-**Linear.** Linear documents no way to regenerate a webhook's signing secret, so make a
-new webhook instead: in **Settings → API → Webhooks**, create a second webhook with the
-same URL and the **Issues** event, copy its signing secret from its detail page, paste it
-on the source's page, and then delete the old webhook. Until then both webhooks send every
-event; one copy verifies before the paste and the other after, and each issue is recorded
-once, so nothing is missed. The copies that fail are counted as signature failures, and
-Linear retries a refused delivery three times, the last about six hours later.
+**Linear.** Linear allows one webhook for a URL, and refuses a
+second one for the same address as `url not unique`, so the webhook stays and its secret
+is rotated in place. Linear makes the new secret, so here Linear goes first:
+
+1. Rotate the webhook's signing secret in Linear. Its documentation describes no control
+   for this under **Settings → API → Webhooks**; if the webhook's page offers none, send
+   the `webhookRotateSecret` mutation to Linear's GraphQL API, with an API key of a
+   workspace administrator. The first request finds the webhook's ID, the second returns
+   the new secret:
+
+   ```graphql
+   query { webhooks { nodes { id url } } }
+
+   mutation { webhookRotateSecret(id: "<webhook-id>") { success secret } }
+   ```
+
+   Linear replaces the old secret at once: it keeps no second key.
+2. Paste the new secret on the source's page, or send it with the `PUT` above, right away.
+
+Between the two steps Linear signs with a secret ReleaseFlow does not have yet, so **a
+delivery refused in that gap is not recorded**. It is counted as a signature failure,
+and Linear's retries of it are refused too, for their stale `createdAt`
+([above](#receive-linear-webhooks)). The issue is then recorded only if it is completed
+again. So rotate while nobody is changing the team's issues, and paste within the minute.
 
 ## Disconnect a source
 
@@ -552,7 +618,7 @@ workspace, and Project stay — so it takes only what connecting that type takes
 | --- | --- | --- |
 | GitHub | an optional `token` | A new webhook path and secret, **shown once** |
 | GitLab | an optional `token`; for signed headers, optionally a `webhookSecret` GitLab generated | A new webhook path, and a secret shown once unless one was pasted |
-| Linear | `webhookSecret` from a new Linear webhook, and `token` | A new webhook path; the team must still be in the same workspace |
+| Linear | `webhookSecret`, the signing secret of the Linear webhook that will deliver to it (see below), and `token` | A new webhook path; the team must still be in the same workspace |
 | Jira | `accountEmail` and `token` | Nothing secret; the next read is one interval later |
 
 The new webhook path means a hook nobody updated stays dead, so point the provider's hook
@@ -561,6 +627,23 @@ at the new path with the new secret. A missing credential answers
 `409 source_not_disconnected`. A reconnected Jira source reads, at its first poll, what was
 completed while it was disconnected, at most 90 days back; for GitHub and GitLab, run a
 [history import](#history-import) to pick up what merged meanwhile.
+
+**Linear.** The reconnect asks for the webhook's signing secret before the new path
+exists, so it follows the three steps of a [first connection](#receive-linear-webhooks),
+with a choice at the first:
+
+1. Either create a new webhook, disabled, at a holding address of ReleaseFlow's own, as
+   for a first connection; or keep the team's old webhook, if Linear still has it, and
+   rotate its secret first with [`webhookRotateSecret`](#rotate-a-webhook-secret), because
+   a source is often disconnected for the very reason that its secret may be known. Both
+   take Linear's API, unless the webhook's page offers the same.
+2. Reconnect the source with that secret and an API key. ReleaseFlow shows the new path.
+3. Change the webhook's URL to your ReleaseFlow address followed by the new path, and
+   enable it, with `webhookUpdate` as for a first connection. A kept webhook that Linear
+   disabled while its old path refused it is enabled again by the same request.
+
+Nothing is recorded until the third step, and an issue completed before it is recorded
+only if it is completed again: ReleaseFlow cannot import Linear's history.
 
 Connecting the same key again in the same Project is refused with
 `409 source_reconnect_required`, because a second source would be a second identity and its

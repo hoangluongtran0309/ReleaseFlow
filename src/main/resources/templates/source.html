@@ -71,7 +71,7 @@
             <form class="grid gap-3" method="post" th:if="${pastes}" novalidate th:object="${webhookSecretRequest}"
                   th:action="@{/projects/{projectId}/sources/{sourceId}/webhook-secret(projectId=${project.id},sourceId=${source.id})}">
                 <p class="text-sm text-slate-600" th:if="${type == 'LINEAR'}" th:utext="#{ui.source.pasteLinearCopy}">
-                    Create a second webhook in Linear with the same URL, paste its signing secret here, then delete the old one.
+                    Rotate the secret of the webhook Linear already has, and paste the new one here within the minute.
                 </p>
                 <p class="text-sm text-slate-600" th:if="${signedGitLab}" th:utext="#{ui.source.pasteGitLabCopy}">
                     Or select Generate signing token on the hook in GitLab and paste it here.
