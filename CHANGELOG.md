@@ -107,6 +107,10 @@ section into the version's entry, and the GitHub release is written from it.
   Projects page and the guide now say to create the webhook disabled at a holding address
   of ReleaseFlow's own, connect the team with its signing secret, then point the webhook
   at the source's path and enable it. Connecting itself is unchanged.
+- An automation run names the audience of an action that had no note, instead of showing
+  its ID: an action skipped for a retired audience, or one that failed as
+  `release_note_missing`. A run recorded with the ID shows the audience's current name; the
+  stored row does not change.
 
 ## [1.2.0] - 2026-11-08
 
