@@ -93,6 +93,13 @@ public class AudienceService {
         return list(organizationId).stream().filter(audience -> !audience.retired()).toList();
     }
 
+    /** Every audience's display name by ID, retired ones included, as it is now. */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> displayNames(UUID organizationId) {
+        return audienceRepository.findAllByOrganizationIdOrderByCodeAsc(organizationId).stream()
+                .collect(Collectors.toUnmodifiableMap(AudienceDefinition::getId, AudienceDefinition::getDisplayName));
+    }
+
     /** Whether the audience is retired; an unknown one is not, and fails elsewhere as before. */
     @Transactional(readOnly = true)
     public boolean isRetired(UUID organizationId, UUID audienceId) {
