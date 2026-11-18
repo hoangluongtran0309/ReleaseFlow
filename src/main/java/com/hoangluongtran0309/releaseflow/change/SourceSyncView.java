@@ -16,6 +16,7 @@ public record SourceSyncView(
         UUID sourceId,
         SourceType type,
         String externalProjectKey,
+        String externalTeamKey,
         String deliveryMechanism,
         boolean supportsImport,
         boolean polled,
@@ -41,6 +42,11 @@ public record SourceSyncView(
 
     public boolean connected() {
         return health.connected();
+    }
+
+    /** What the panel calls the source; see {@code IntegrationSourceView.label()}. */
+    public String label() {
+        return externalTeamKey == null || externalTeamKey.isBlank() ? externalProjectKey : externalTeamKey;
     }
 
     /** Whether a job is queued or running, so another cannot start. */

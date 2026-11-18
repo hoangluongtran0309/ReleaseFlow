@@ -384,6 +384,11 @@ class IntegrationSource {
         return connectionStatus;
     }
 
+    /** The status a person or a caller reads: a disconnected source says so, whatever is stored. */
+    ConnectionStatus reportedConnectionStatus() {
+        return isConnected() ? connectionStatus : ConnectionStatus.DISCONNECTED;
+    }
+
     Instant getLastSyncAt() {
         return lastSyncAt;
     }

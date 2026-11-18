@@ -61,3 +61,5 @@ does not need, would give every change a second place to forget.
   weekly. An override is removed once Docusaurus requires a fixed version itself.
 - GitHub Pages must be switched to deploy from GitHub Actions once, by hand, before the
   first deployment.
+
+Note, 2026-11-18: `scripts/ci/audit-website.sh` is now `scripts/ci/audit-npm.sh`, which takes the package directory and audits the application's own npm dependencies by the same rule.

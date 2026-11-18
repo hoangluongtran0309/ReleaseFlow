@@ -36,6 +36,8 @@ là một ngôn ngữ Organization của bạn viết release note, project củ
 đúng một nguồn GitHub đang kết nối, hệ thống triển khai có khả năng thực hiện action đó, và cấu hình cùng
 secret đều dùng được. Một quy tắc bị từ chối sẽ cho biết điều nào trong số đó không đạt.
 
+![Bảng quy tắc với một quy tắc được đánh dấu là gửi tới một audience đã ngừng dùng; đường dẫn gọi của một quy tắc khác được che](assets/automation/a-12-rule-marked.webp)
+
 ## Action {#actions}
 
 Có tám loại action:
@@ -51,7 +53,7 @@ Có tám loại action:
 | Microsoft Teams | URL callback của Workflows, cũng là secret của action | Đăng release note dưới dạng văn bản thường vào chat hoặc channel mà flow nhắm tới, request tối đa 28 KiB |
 | Zendesk | Một subdomain, client ID và secret OAuth, ID số của section, và user segment không bắt buộc | Publish release note thành một bài viết Help Center bằng ngôn ngữ của action, tối đa 1.000.000 byte |
 
-![Một rule chạy khi release được publish, với chín action theo thứ tự; site Atlassian và trang Notion đã được che](assets/automation/a-2-rule-editor.webp)
+![Một quy tắc chạy khi release được publish, với chín action theo thứ tự; site Atlassian và trang Notion được che](assets/automation/a-2-rule-editor.webp)
 
 Một Slack webhook URL phải trỏ tới một origin mà hệ thống triển khai cho phép — `hooks.slack.com`
 hoặc `hooks.slack-gov.com`, trừ khi `RELEASEFLOW_SLACK_ALLOWED_HOSTS` quy định khác — và được
@@ -135,6 +137,8 @@ tới audience đã ngừng dùng. Bật một quy tắc như vậy bị từ ch
 `409 automation_audience_retired`; trước hết hãy trỏ action sang một audience đang dùng, hoặc
 dùng lại audience đó. Trạng thái của một action qua API là `PENDING`, `RUNNING`, `SUCCEEDED`,
 `FAILED`, `UNKNOWN`, `CANCELLED` hoặc `SKIPPED`.
+
+![Lần chạy của một quy tắc cho một release, Thành công: mười lần gửi theo thứ tự, lần thứ sáu là Email Đã bỏ qua với audience_retired và câu giải thích không gửi gì và các action sau vẫn chạy](assets/automation/a-11-skipped-action.webp)
 
 ![Một lần chạy có action GitHub Release thất bại với github_release_conflict: các action sau nó đang chờ, cùng nút chạy lại và huỷ](assets/automation/a-7-run-failed.webp)
 
@@ -262,7 +266,7 @@ ngôn ngữ khác: nó được cache dạng bất biến, nên một ngôn ng�
 Phần khung quanh một release note theo ngôn ngữ giao diện của người đọc, nên `<html lang>` là
 ngôn ngữ đó, còn bản thân release note mang ngôn ngữ của mục.
 
-![Public changelog đọc khi không đăng nhập: mỗi release một thẻ, kèm link cho từng ngôn ngữ](assets/automation/a-9-public-changelog.webp)
+![Changelog công khai bằng tiếng Việt, mới nhất trước: mỗi release một thẻ với liên kết English và Tiếng Việt](assets/automation/a-9-public-changelog.webp)
 
 Đặt `RELEASEFLOW_PUBLIC_BASE_URL` là địa chỉ dùng để truy cập hệ thống triển khai này (mặc định
 `http://localhost:8080`); mọi liên kết công khai — URL chuẩn, các mục RSS, địa chỉ mà một lần chạy

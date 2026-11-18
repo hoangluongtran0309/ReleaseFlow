@@ -1,6 +1,7 @@
 package com.hoangluongtran0309.releaseflow.automation;
 
 import com.hoangluongtran0309.releaseflow.account.ReleaseFlowPrincipal;
+import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.release.ReleaseAccess;
 import com.hoangluongtran0309.releaseflow.release.ReleaseStatus;
 import org.springframework.data.domain.PageRequest;
@@ -11,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +31,7 @@ public class AutomationRunService {
     private final AutomationRuleService ruleService;
     private final AutomationRunFactory runFactory;
     private final ReleaseAccess releaseAccess;
+    private final AudienceService audienceService;
     private final Clock clock;
 
     AutomationRunService(
@@ -37,6 +40,7 @@ public class AutomationRunService {
             AutomationRuleService ruleService,
             AutomationRunFactory runFactory,
             ReleaseAccess releaseAccess,
+            AudienceService audienceService,
             Clock clock
     ) {
         this.runRepository = runRepository;
@@ -44,6 +48,7 @@ public class AutomationRunService {
         this.ruleService = ruleService;
         this.runFactory = runFactory;
         this.releaseAccess = releaseAccess;
+        this.audienceService = audienceService;
         this.clock = clock;
     }
 
@@ -165,6 +170,8 @@ public class AutomationRunService {
                 .findAllByRunIdInOrderByRunIdAscPositionAsc(runs.stream().map(AutomationRun::getId).toList())
                 .stream()
                 .collect(Collectors.groupingBy(AutomationActionRun::getRunId));
+        // Looked up once per Organization, and only when a row needs it.
+        Map<UUID, Map<UUID, String>> audienceNames = new HashMap<>();
         return runs.stream()
                 .map(run -> new AutomationRunView(
                         run.getId(),
@@ -181,18 +188,29 @@ public class AutomationRunService {
                         run.getStartedAt(),
                         run.getCompletedAt(),
                         byRun.getOrDefault(run.getId(), List.of()).stream()
-                                .map(AutomationRunService::view)
+                                .map(action -> view(action, namedByItsId(action)
+                                        ? audienceNames.computeIfAbsent(action.getOrganizationId(), audienceService::displayNames)
+                                        : Map.of()))
                                 .toList()
                 ))
                 .toList();
     }
 
-    private static AutomationActionRunView view(AutomationActionRun action) {
+    // Before 1.3.0, an action whose release had no note for its audience stored the
+    // audience's ID as its name. The stored row stays as it is; the page shows the name.
+    private static boolean namedByItsId(AutomationActionRun action) {
+        return action.getAudienceNameSnapshot().equals(action.getAudienceId().toString());
+    }
+
+    private static AutomationActionRunView view(AutomationActionRun action, Map<UUID, String> audienceNames) {
+        String audienceName = namedByItsId(action)
+                ? audienceNames.getOrDefault(action.getAudienceId(), action.getAudienceNameSnapshot())
+                : action.getAudienceNameSnapshot();
         return new AutomationActionRunView(
                 action.getId(),
                 action.getPosition(),
                 action.getActionType(),
-                action.getAudienceNameSnapshot(),
+                audienceName,
                 action.getLanguageSnapshot(),
                 action.getStatus(),
                 action.getExternalReference(),
