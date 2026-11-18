@@ -130,6 +130,10 @@ class AudienceDefinition {
         return id;
     }
 
+    String getDisplayName() {
+        return displayName;
+    }
+
     String getCode() {
         return code;
     }

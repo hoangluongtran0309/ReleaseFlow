@@ -12,6 +12,8 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-18
+
 ### Added
 
 - Administrators change a member's role and remove a member, on the Members page or
@@ -100,6 +102,19 @@ section into the version's entry, and the GitHub release is written from it.
 - The release API lists a release's fold decisions in a fixed order, by when each was
   decided and then by the tracker change, rather than in whatever order the database read
   them.
+- The instructions for connecting a Linear team can now be followed. They said to create
+  Linear's webhook at the source's path before ReleaseFlow had given the source one; the
+  Projects page and the guide now say to create the webhook disabled at a holding address
+  of ReleaseFlow's own, connect the team with its signing secret, then point the webhook
+  at the source's path and enable it. Connecting itself is unchanged.
+- An automation run names the audience of an action that had no note, instead of showing
+  its ID: an action skipped for a retired audience, or one that failed as
+  `release_note_missing`. A run recorded with the ID shows the audience's current name; the
+  stored row does not change.
+- Every page names a Linear source by its team's key, such as `OPS`, instead of the team's
+  ID; before 1.3.0 the Projects page showed the ID too. The API's source views carry the key
+  as `externalTeamKey`, beside the team's ID in `externalProjectKey`. A team whose key was
+  never read is still named by its ID.
 
 ## [1.2.0] - 2026-11-08
 
@@ -311,7 +326,8 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.3.0
 [1.2.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.2.0
 [1.1.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.1.0
 [1.0.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.1

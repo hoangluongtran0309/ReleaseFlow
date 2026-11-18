@@ -39,11 +39,23 @@ jobs:
           persist-credentials: false
       - name: Set up Java
         if: matrix.language == 'java-kotlin'
-        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
+      # mvnw tries the jar's download once and fails on any error; a cached jar is still
+      # checked against wrapperSha256Sum before it runs.
+      - name: Read the Maven wrapper checksum
+        if: matrix.language == 'java-kotlin'
+        id: maven-wrapper
+        run: echo "sha256=$(sed -n 's/^wrapperSha256Sum=//p' .mvn/wrapper/maven-wrapper.properties)" >> "$GITHUB_OUTPUT"
+      - name: Cache the Maven wrapper jar
+        if: matrix.language == 'java-kotlin'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .mvn/wrapper/maven-wrapper.jar
+          key: maven-wrapper-jar-${{ steps.maven-wrapper.outputs.sha256 }}
       - name: Initialize CodeQL
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:

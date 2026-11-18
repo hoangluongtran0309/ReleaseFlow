@@ -17,7 +17,7 @@ trang **Audience** hoặc qua `/api/audiences`. Mỗi Organization bắt đầu 
 | `end_user` | ngôn ngữ dễ hiểu, những gì người dùng nhận thấy | dòng tiêu đề và narrative, cùng bước chuyển đổi chỉ khi nó bắt buộc | không có |
 | `support` | những gì khách hàng có thể hỏi, và nên trả lời họ thế nào | dòng tiêu đề kèm liên kết và narrative, bước chuyển đổi dưới nhãn theo loại của nó, và giới hạn | không có |
 
-![Trang Audiences: bốn preset và các audience do administrator thêm, một audience đang mở trong trình sửa](assets/release-notes/rn-1-audiences.webp)
+![Danh sách audience: bốn audience mặc định, audience Database administrators được thêm vào, và audience Support team được thêm vào gắn nhãn Ngừng dùng](assets/release-notes/rn-1-audiences.webp)
 
 Một audience có một **mã** (chữ thường, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái; cố định
 sau khi tạo), một **tên hiển thị**, một **ý định truyền đạt** mà AI làm theo khi viết narrative
@@ -218,6 +218,10 @@ khi được duyệt lại. Phần xác nhận ngừng dùng liệt kê các quy
 audience đó: Action của chúng cho audience này được [bỏ qua](automation.md#runs) thay vì thất
 bại, và việc bật một quy tắc gửi tới audience đã ngừng dùng bị từ chối.
 
+![Thẻ Quản lý audience với mục Ngừng dùng audience đang mở: tác dụng của việc ngừng dùng, quy tắc đang bật gửi tới nó, và nút Ngừng dùng audience này](assets/release-notes/rn-17-retire-audience.webp)
+
+![Thẻ của một audience đã ngừng dùng: ai ngừng dùng và khi nào, rằng nó không có release note, narrative hay bản dịch, cùng nút Dùng lại](assets/release-notes/rn-18-retired-audience.webp)
+
 **Dùng lại** làm audience hoạt động trở lại, và trang cho biết ai đã dùng lại nó và lúc nào. Một
 thay đổi mà AI phân loại trong lúc audience đang ngừng dùng không có narrative cho nó; release
 note của audience đó vẫn có thay đổi này dưới dòng tiêu đề trung lập (`whatChanged`), không có
@@ -232,6 +236,10 @@ duyệt liệt kê chúng trong `missingNarratives` (`changeId`, `reference`, `t
 thay đổi mà AI chưa phân loại bị từ chối với `409 change_not_eligible_for_ai`; khi không có AI,
 câu trả lời là `503 ai_classification_unavailable`, và một request thất bại là
 `502 ai_classification_failed`, không ghi lại gì.
+
+![Thay đổi không có narrative cho một audience trên tab Review: hai thay đổi chưa có narrative cho audience vừa dùng lại, mỗi thay đổi có nút Hỏi AI kèm ước tính token](assets/release-notes/rn-19-missing-narratives.webp)
+
+![Bản xem thử note của audience vừa dùng lại khi chưa có narrative: mỗi thay đổi hiện bằng tóm tắt trung lập, in đậm](assets/release-notes/rn-21-restored-note.webp)
 
 Một Organization luôn giữ ít nhất một audience đang dùng: ngừng dùng audience cuối cùng bị từ
 chối, và xoá audience đang dùng cuối cùng cũng vậy. Mỗi lần ngừng dùng và dùng lại được ghi lại
@@ -507,6 +515,8 @@ lúc duyệt từ các trạng thái đã đọc tới khi đó; một lần đ�
 theo template, cho tới khi release được publish.
 
 ![Một release đang review có các issue liên kết vừa được đọc lại: DBV-53, liên kết từ #69, vẫn In Progress, kèm nút Hiển thị trạng thái này](assets/release-notes/rn-16-issues-at-review.webp)
+
+![Trạng thái chưa hoàn tất mà note hiển thị: một issue vẫn In Progress, được một quản trị viên chấp nhận kèm thời điểm](assets/release-notes/rn-20-accepted-statuses.webp)
 
 ### Gộp thay đổi tracker vào thay đổi mã {#folding-a-tracker-change-into-its-code-change}
 
