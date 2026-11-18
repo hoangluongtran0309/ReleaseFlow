@@ -41,7 +41,7 @@ jobs:
       - name: Install the site's dependencies
         run: npm ci --prefix website
       - name: Audit the site's dependencies
-        run: ./scripts/ci/audit-website.sh
+        run: ./scripts/ci/audit-npm.sh website
       - name: Build every language, failing on any broken link
         run: npm run build --prefix website
       - name: Configure GitHub Pages

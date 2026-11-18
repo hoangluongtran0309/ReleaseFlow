@@ -181,6 +181,23 @@ class MessageBundleTest {
     }
 
     @Test
+    void oneRefusedDeliveryReadsInTheSingular() {
+        ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
+        messageSource.setBasename("messages/ui");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setFallbackToSystemLocale(false);
+        String key = "ui.sourceHealth.signatureFailures";
+
+        assertThat(messageSource.getMessage(key, new Object[]{1}, Locale.ENGLISH))
+                .isEqualTo("1 delivery refused for its signature since the secret was set");
+        assertThat(messageSource.getMessage(key, new Object[]{3}, Locale.ENGLISH))
+                .isEqualTo("3 deliveries refused for their signature since the secret was set");
+        // Vietnamese marks no plural, so one sentence reads right for every count.
+        assertThat(messageSource.getMessage(key, new Object[]{1}, Locale.forLanguageTag("vi")))
+                .isEqualTo("1 lần gửi bị từ chối vì chữ ký kể từ khi secret được đặt");
+    }
+
+    @Test
     void everyPatternWithPlaceholdersCanBeFilledIn() throws IOException {
         for (String bundle : List.of("messages/ui.properties", "messages/ui_vi.properties")) {
             Properties properties = load(bundle);

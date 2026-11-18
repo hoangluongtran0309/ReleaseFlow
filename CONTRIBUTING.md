@@ -259,12 +259,12 @@ Merges into `main` represent a reviewed release decision.
 
 | Workflow | Runs on | Checks |
 | --- | --- | --- |
-| `CI` | push to `develop` and `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | Conventional pull request title (pull requests only), actionlint, ShellCheck, a whole release run against a local remote, the quickstart under bash 3.2, `npm audit --audit-level=high`, the browser and accessibility suite, `./mvnw clean verify`, and a check that no version override has outlived its reason |
+| `CI` | push to `develop` and `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | Conventional pull request title (pull requests only), actionlint, ShellCheck, a whole release run against a local remote, the quickstart under bash 3.2, the application's npm dependency audit (`scripts/ci/audit-npm.sh .`), the browser and accessibility suite, `./mvnw clean verify`, and a check that no version override has outlived its reason |
 | `CodeQL` | push and pull request to `develop` and `main`, and weekly | Java and JavaScript analysis |
 | `Dependency Review` | pull requests only | Fails pull requests that add high or critical vulnerabilities |
 | `Secret Scan` | push and pull request, and weekly | Gitleaks over the complete Git history |
 | `Container` | push to `develop` and `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | Image build, Trivy high/critical scan, Compose smoke test, the management port proven private, all four metric families reaching Prometheus, the Grafana dashboard provisioned, and the quickstart bundle run against the image |
-| `Docs` | push to `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | The documentation site's dependency audit (`scripts/ci/audit-website.sh`), a build in both languages that fails on any broken link, and, from `main` only, publication to GitHub Pages |
+| `Docs` | push to `main`, and pull request to `develop`, `main`, `release/**`, and `hotfix/**` | The documentation site's dependency audit (`scripts/ci/audit-npm.sh website`), a build in both languages that fails on any broken link, and, from `main` only, publication to GitHub Pages |
 | `Release` | a `v<version>` tag | See [Releasing](#releasing) |
 
 Dependabot proposes weekly updates to `develop`, except a new major version of the Java
@@ -310,8 +310,11 @@ them weekly).
 The documentation site's npm dependencies are exact in `website/package.json` too. A
 transitive advisory that a release fixes is pinned to that release through `overrides`,
 removed once Docusaurus requires the fix itself. One that no release fixes is listed, with
-the reason it cannot reach a static site, in `scripts/ci/audit-website.sh` and in the
-Dependency Review workflow's `allow-ghsas`; the script fails once npm stops reporting it.
+the reason it cannot reach a static site, in `scripts/ci/audit-npm.sh` for `website` and in
+the Dependency Review workflow's `allow-ghsas`; the script fails once npm stops reporting it.
+The application's own npm dependencies, which build its CSS, are audited by the same script
+for `.`, with the same rule: an exception names its directory and the reason it never reaches
+the JAR or the image.
 
 ## Releasing
 

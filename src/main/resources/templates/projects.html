@@ -149,7 +149,7 @@
                      th:with="tokenFailing=${tokenSourceId == source.id}">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="min-w-0">
-                            <h3 class="font-semibold" th:text="${source.externalProjectKey}">owner/repository</h3>
+                            <h3 class="font-semibold" th:text="${source.label()}">owner/repository</h3>
                             <p class="text-xs text-slate-500" th:if="${source.type.name() == 'GITLAB'}"
                                th:text="${source.apiBaseUrl}">https://gitlab.com</p>
                             <p class="text-xs text-slate-500" th:if="${source.type.name() == 'LINEAR'}"
@@ -159,7 +159,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="badge badge-sm badge-ghost" th:text="${source.type.displayName()}">GitHub</span>
-                            <span class="badge badge-sm badge-error badge-soft" th:if="${source.connected and source.connectionStatus.name() == 'ERROR'}"
+                            <span class="badge badge-sm badge-error badge-soft" th:if="${source.connectionStatus.name() == 'ERROR'}"
                                   th:title="${source.lastErrorCode}" th:text="#{ui.projects.connectionFailing}">Connection failing</span>
                         </div>
                     </div>
