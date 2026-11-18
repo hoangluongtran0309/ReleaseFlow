@@ -117,6 +117,16 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
+      # mvnw tries the jar's download once and fails on any error; a cached jar is still
+      # checked against wrapperSha256Sum before it runs.
+      - name: Read the Maven wrapper checksum
+        id: maven-wrapper
+        run: echo "sha256=$(sed -n 's/^wrapperSha256Sum=//p' .mvn/wrapper/maven-wrapper.properties)" >> "$GITHUB_OUTPUT"
+      - name: Cache the Maven wrapper jar
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .mvn/wrapper/maven-wrapper.jar
+          key: maven-wrapper-jar-${{ steps.maven-wrapper.outputs.sha256 }}
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0

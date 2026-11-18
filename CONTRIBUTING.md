@@ -302,7 +302,9 @@ them weekly).
   to the SHA-256 of the new file, checked against the checksum Maven Central
   publishes beside it. (The script-only wrapper cannot do this: without `unzip`,
   as in the Docker build, it switches to the `.tar.gz`, which no single checksum
-  matches.)
+  matches.) `mvnw` tries the jar's download once, so the workflows that run it keep
+  the jar in an Actions cache keyed on `wrapperSha256Sum`; a restored jar is still
+  checked before it runs.
 
 `maven-enforcer-plugin` runs these rules at the start of every build, so
 `./mvnw verify` reports a violation before anything compiles.
