@@ -12,6 +12,7 @@ public final class IntegrationSourceCreated {
     private final UUID projectId;
     private final SourceType type;
     private final String externalProjectKey;
+    private final String externalTeamKey;
     private final String owner;
     private final String repository;
     private final String apiBaseUrl;
@@ -28,6 +29,7 @@ public final class IntegrationSourceCreated {
             UUID projectId,
             SourceType type,
             String externalProjectKey,
+            String externalTeamKey,
             String owner,
             String repository,
             String apiBaseUrl,
@@ -43,6 +45,7 @@ public final class IntegrationSourceCreated {
         this.projectId = projectId;
         this.type = type;
         this.externalProjectKey = externalProjectKey;
+        this.externalTeamKey = externalTeamKey;
         this.owner = owner;
         this.repository = repository;
         this.apiBaseUrl = apiBaseUrl;
@@ -69,6 +72,16 @@ public final class IntegrationSourceCreated {
 
     public String getExternalProjectKey() {
         return externalProjectKey;
+    }
+
+    /** A Linear team's key, such as OPS; {@code null} for every other source. */
+    public String getExternalTeamKey() {
+        return externalTeamKey;
+    }
+
+    /** What a page calls the source; see {@link IntegrationSourceView#label()}. */
+    public String label() {
+        return externalTeamKey == null || externalTeamKey.isBlank() ? externalProjectKey : externalTeamKey;
     }
 
     public String getOwner() {

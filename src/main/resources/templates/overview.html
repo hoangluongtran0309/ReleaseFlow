@@ -81,7 +81,7 @@
             <ul class="mt-3 grid gap-3">
                 <li class="flex flex-wrap items-center gap-2" th:each="source : ${overview.sources()}"
                     th:id="|overview-source-${source.id}|">
-                    <span class="font-semibold [overflow-wrap:anywhere]" th:text="${source.externalProjectKey}">owner/repository</span>
+                    <span class="font-semibold [overflow-wrap:anywhere]" th:text="${source.label()}">owner/repository</span>
                     <span class="badge badge-sm badge-ghost" th:text="${source.type.displayName()}">GitHub</span>
                     <th:block th:replace="~{fragments/source-health :: summary(${source})}"></th:block>
                     <span class="text-sm text-slate-600" th:if="${source.connected and source.type.isPolled()}">

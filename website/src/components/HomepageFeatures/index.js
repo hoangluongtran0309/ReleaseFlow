@@ -78,7 +78,7 @@ function ProductShowcase() {
             alt={translate({
               id: 'homepage.showcase.inbox.alt',
               message:
-                'The Change Inbox: the sync state of a Jira, a GitHub, and a GitLab source, then a change with its category and review badges',
+                'The Change Inbox: the sync state of a Jira, a GitHub, a GitLab and a Linear source, then a change with its category and review badges',
             })}
             title={<Translate id="homepage.showcase.inbox.title">Change Inbox</Translate>}
             description={
