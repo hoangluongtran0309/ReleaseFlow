@@ -121,7 +121,7 @@ chối vì chữ ký kể từ khi secret được đặt, và dấu **Im lặng
 nối** — bên cạnh [import lịch sử](sources.md#history-import) của mỗi nguồn có lịch sử. Các thay
 đổi của một nguồn đã ngắt kết nối vẫn nằm trong hộp.
 
-![Change Inbox với các bộ lọc, trạng thái đồng bộ của nguồn Jira, GitHub và GitLab, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
+![Hộp thay đổi với các bộ lọc, trạng thái đồng bộ của nguồn Jira, GitHub, GitLab và Linear, rồi một thay đổi với category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
 
 ![Lọc Change Inbox để chỉ còn các thay đổi bị đánh giá là thiếu context](assets/changes/c-4-context-filter.webp)
 
@@ -377,7 +377,7 @@ năng, Tài liệu, Bảo trì hoặc Khác. Release note được chia mục th
 `SECURITY` mới trong nhóm Sửa lỗi sẽ xuất hiện dưới mục **Bug Fixes** (trong release note tiếng
 Việt là **Sửa lỗi**). Phá vỡ tương thích vẫn là một cờ riêng.
 
-![Category catalog, có Security được thêm vào nhóm Fix](assets/changes/c-11-catalog.webp)
+![Danh mục category, với Security trong nhóm Sửa lỗi](assets/changes/c-11-catalog.webp)
 
 - **Quy tắc.** Mỗi quy tắc cố định chỉ định một nhóm và một mã ưu tiên, ví dụ `fix` chỉ định
   nhóm Sửa lỗi và mã `FIX`. Category ưu tiên được dùng nếu nó đang hoạt động; nếu không thì dùng

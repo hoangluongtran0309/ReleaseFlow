@@ -258,10 +258,12 @@ carries no delivery ID. Each issue is still stored once per source, by its UUID,
 so redeliveries are harmless.
 
 > **Known issue.** ReleaseFlow refuses a Linear delivery that arrives more than 60 seconds
-> after the action it reports, and any retry of it, so such an issue is recorded only if it
-> is completed again. `createdAt` is the time of the issue's change, not of the sending,
-> and Linear retries after a minute, an hour, and six hours, so every retry arrives with a
-> stale stamp; ReleaseFlow cannot import Linear's history to fill the gap. See
+> after the action it reports: it checks `createdAt`, the time of the issue's change, not
+> the time of sending. Do not count on Linear to send a refused delivery again. Its
+> documentation says it retries a failed delivery after a minute, an hour, and six hours,
+> but on the dbvault lab it sent no retry of a delivery ReleaseFlow refused with `401`, at
+> any of those marks. ReleaseFlow cannot import Linear's history either, so an issue whose
+> delivery was refused, for any reason, is recorded only if it is completed again. See
 > [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
 
 ## Poll Jira
@@ -420,7 +422,7 @@ An item already recorded, by webhook or by an earlier import, is skipped, so
 imports and webhooks never duplicate each other. Imported changes carry an
 **Imported** badge.
 
-![The Source sync panel of the Change Inbox: the Jira project is read on a schedule, and each GitHub and GitLab source offers Import last 90 days beside its last import's state and counts](assets/sources/sr-9-source-sync-panel.webp)
+![The Source sync panel of the Change Inbox: the Jira project read on a schedule, a GitHub source marked Quiet with three refused deliveries, a GitLab source with one delivery refused for its signature, and the Linear team OPS with two](assets/sources/sr-9-source-sync-panel.webp)
 
 A GitHub import stops at the first pull request updated before its window, and
 either import stops after 500 new changes as **Stopped at the limit** with its
@@ -457,6 +459,12 @@ Each source's health is shown where people look: in the Change Inbox's **Source 
 panel, on the overview beside its figures, on the Projects page, and on the source's own
 page, which **Manage source** opens. The REST view of a source carries it as `health`.
 
+![The Sources card of the Overview: each source with its last delivery or read, GitHub marked Quiet, the refused deliveries of GitHub, GitLab and the Linear team OPS, and Open source sync](assets/sources/sr-16-overview-sources.webp)
+
+![A GitHub source card on the Projects page marked Quiet: nothing has arrived for longer than the source usually goes, about 13 hours, with three refused deliveries](assets/sources/sr-17-projects-quiet.webp)
+
+![A GitHub source's page: its health with the last delivery, the covered webhook path, when the secret and the access token were set, and the Webhook secret and Disconnect sections](assets/sources/sr-10-source-page.webp)
+
 - **Last delivery** — the last delivery that proved itself and was accepted. A delivery
   refused for its repository, or one that could not be read, does not count.
 - **Refused for their signature** — how many deliveries to the source's path failed
@@ -476,6 +484,8 @@ page, which **Manage source** opens. The REST view of a source carries it as `he
   nothing arrives at all.
 - **Overdue** — a Jira source whose next read is more than one poll interval late. A
   poll that finds nothing is a success, so a Jira source is never quiet.
+
+![A GitHub source's health: last delivery, the Quiet mark, three deliveries refused for their signature since the secret was set with the time of the last, and the covered webhook path](assets/sources/sr-12-signature-failures.webp)
 
 Beside its health, the REST view of a source carries `connectionStatus`, one of three:
 
@@ -506,8 +516,8 @@ source** or through REST. **The old secret stops working the moment the new one 
 saved**: a secret is rotated because someone else may know it, and while two secrets
 worked, whoever held the old one could still put a pull request of their choosing in the
 Change Inbox. So update the provider straight after, and send again whatever it refused
-in between; Linear, which makes its own secret and resends nothing ReleaseFlow accepts,
-is the exception described below.
+in between; Linear, which makes its own secret and does not send a refused delivery
+again, is the exception described below.
 
 ```text
 POST /api/projects/{projectId}/sources/{sourceId}/webhook-secret                    (administrator; 200, shown once)
@@ -522,6 +532,8 @@ Base64 (`400 source_signing_token_invalid` otherwise) — and never echoes it. A
 whose secret ReleaseFlow makes answers a `PUT` with `409 source_secret_generated`, Linear
 answers a `POST` with `409 source_secret_pasted`, and Jira, which has no webhook, answers
 both with `409 source_has_no_webhook`. Rotating calls no provider.
+
+![The page shown once after generating a new webhook secret: the covered webhook path, the new secret covered, and the steps to paste it at the provider and redeliver refused deliveries](assets/sources/sr-11-rotate-secret.webp)
 
 **GitHub.** In the repository's **Settings → Webhooks**, edit the hook, paste the new
 secret into **Secret**, and select **Update webhook**; the payload URL does not change.
@@ -582,9 +594,11 @@ is rotated in place. Linear makes the new secret, so here Linear goes first:
 
 Between the two steps Linear signs with a secret ReleaseFlow does not have yet, so **a
 delivery refused in that gap is not recorded**. It is counted as a signature failure,
-and Linear's retries of it are refused too, for their stale `createdAt`
-([above](#receive-linear-webhooks)). The issue is then recorded only if it is completed
-again. So rotate while nobody is changing the team's issues, and paste within the minute.
+and nothing sends it again ([above](#receive-linear-webhooks)), so the issue is recorded
+only if it is completed again. So rotate while nobody is changing the team's issues, and
+paste within the minute.
+
+![A Linear source's health: last delivery, two deliveries refused for their signature since the secret was set with the time of the last, and the covered webhook path](assets/sources/sr-12-linear-refused.webp)
 
 ## Disconnect a source
 
@@ -594,6 +608,8 @@ which first says what will happen, or through REST:
 ```text
 POST /api/projects/{projectId}/sources/{sourceId}/disconnect   (administrator; 200)
 ```
+
+![The confirmation before disconnecting a GitHub source: what happens to its changes, secret, token and webhook path, what to do at the provider, and Disconnect and Keep it connected](assets/sources/sr-13-disconnect-confirm.webp)
 
 - **Every change it recorded stays**, with its reviews, releases, notes, and evidence,
   and the Change Inbox still lists it.
@@ -608,6 +624,8 @@ POST /api/projects/{projectId}/sources/{sourceId}/disconnect   (administrator; 2
   connected sources. The confirmation page names the enabled rules whose GitHub Release
   action would fail; they stay enabled, and their action fails as
   `github_source_disconnected` until the repository is reconnected.
+
+![A source card on the Projects page marked Disconnected with the date, and a Reconnect source link](assets/sources/sr-14-disconnected.webp)
 
 ReleaseFlow calls nothing at the provider. Delete the webhook there and revoke the token:
 older copies of the encrypted values stay in the database's history and backups until
@@ -626,6 +644,8 @@ an import after the reconnect records only what is new, and a redelivered pull r
 POST /api/projects/{projectId}/sources/{sourceId}/reconnect {"token"?, "webhookSecret"?, "accountEmail"?}   (administrator; 200)
 ```
 
+![A disconnected source's page: its health reads Disconnected, and the Reconnect form has an optional access token and a Reconnect button](assets/sources/sr-14-reconnect-form.webp)
+
 A reconnect never changes what the source is — its type, repository or project, instance,
 workspace, and Project stay — so it takes only what connecting that type takes besides:
 
@@ -636,12 +656,16 @@ workspace, and Project stay — so it takes only what connecting that type takes
 | Linear | `webhookSecret`, the signing secret of the Linear webhook that will deliver to it (see below), and `token` | A new webhook path; the team must still be in the same workspace |
 | Jira | `accountEmail` and `token` | Nothing secret; the next read is one interval later |
 
+![Reconnecting a disconnected GitHub source: an access token is typed as dots, Reconnect is pressed, and the page shows the new webhook path and secret, both covered, with the steps to update GitHub](assets/sources/sr-15-reconnect.webp)
+
 The new webhook path means a hook nobody updated stays dead, so point the provider's hook
 at the new path with the new secret. A missing credential answers
 `400 source_credential_required` with the `field`; a reconnect of a connected source answers
 `409 source_not_disconnected`. A reconnected Jira source reads, at its first poll, what was
 completed while it was disconnected, at most 90 days back; for GitHub and GitLab, run a
 [history import](#history-import) to pick up what merged meanwhile.
+
+![The Source sync panel after a history import of a reconnected source: Completed, 2 scanned, 0 imported, with Import last 90 days](assets/sources/sr-18-import-after-reconnect.webp)
 
 **Linear.** The reconnect asks for the webhook's signing secret before the new path
 exists, so it follows the three steps of a [first connection](#receive-linear-webhooks),
