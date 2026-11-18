@@ -2,7 +2,7 @@
 <html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
 <head>
-    <title th:text="#{ui.sourceDisconnect.title(${source.externalProjectKey})}">Disconnect owner/repository</title>
+    <title th:text="#{ui.sourceDisconnect.title(${source.label()})}">Disconnect owner/repository</title>
 </head>
 <body>
 <p layout:fragment="page-title" th:text="#{ui.nav.projects}">Projects</p>
@@ -12,7 +12,7 @@
         <div class="min-w-0">
             <p class="page-eyebrow" th:text="|${project.name} · ${source.type.displayName()}|">Checkout · GitHub</p>
             <h1 class="page-heading [overflow-wrap:anywhere]"
-                th:text="#{ui.sourceDisconnect.heading(${source.externalProjectKey})}">Disconnect owner/repository?</h1>
+                th:text="#{ui.sourceDisconnect.heading(${source.label()})}">Disconnect owner/repository?</h1>
         </div>
     </header>
 

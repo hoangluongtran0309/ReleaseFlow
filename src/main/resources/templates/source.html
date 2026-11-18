@@ -2,7 +2,7 @@
 <html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
 <head>
-    <title th:text="#{ui.source.title(${source.externalProjectKey})}">Source owner/repository</title>
+    <title th:text="#{ui.source.title(${source.label()})}">Source owner/repository</title>
 </head>
 <body>
 <p layout:fragment="page-title" th:text="#{ui.nav.projects}">Projects</p>
@@ -13,7 +13,7 @@
     <header class="page-header">
         <div class="min-w-0">
             <p class="page-eyebrow" th:text="|${project.name} · ${source.type.displayName()}|">Checkout · GitHub</p>
-            <h1 class="page-heading [overflow-wrap:anywhere]" th:text="${source.externalProjectKey}">owner/repository</h1>
+            <h1 class="page-heading [overflow-wrap:anywhere]" th:text="${source.label()}">owner/repository</h1>
             <p class="page-subtitle" th:if="${type == 'GITLAB'}" th:text="${source.apiBaseUrl}">https://gitlab.com</p>
             <p class="page-subtitle" th:if="${type == 'LINEAR'}"
                th:text="#{ui.projects.workspace(${source.externalWorkspaceKey})}">Workspace acme</p>
@@ -71,7 +71,7 @@
             <form class="grid gap-3" method="post" th:if="${pastes}" novalidate th:object="${webhookSecretRequest}"
                   th:action="@{/projects/{projectId}/sources/{sourceId}/webhook-secret(projectId=${project.id},sourceId=${source.id})}">
                 <p class="text-sm text-slate-600" th:if="${type == 'LINEAR'}" th:utext="#{ui.source.pasteLinearCopy}">
-                    Create a second webhook in Linear with the same URL, paste its signing secret here, then delete the old one.
+                    Rotate the secret of the webhook Linear already has, and paste the new one here within the minute.
                 </p>
                 <p class="text-sm text-slate-600" th:if="${signedGitLab}" th:utext="#{ui.source.pasteGitLabCopy}">
                     Or select Generate signing token on the hook in GitLab and paste it here.

@@ -18,7 +18,7 @@ Organization starts with four presets, named in its output language
 | `end_user` | plain language, what people notice | the headline and the narrative, and a migration step only when it is required | none |
 | `support` | what customers may ask about, and what to tell them | the headline with the link and narrative, the migration step under its kind, and limitations | none |
 
-![The Audiences page: the four presets and the audiences an administrator added, with one open in the editor](assets/release-notes/rn-1-audiences.webp)
+![The audience list: four presets, the added Database administrators audience, and the added Support team audience marked Retired](assets/release-notes/rn-1-audiences.webp)
 
 An audience has a **code** (lowercase letters, digits, and underscores,
 starting with a letter; fixed once created), a **display name**, a
@@ -224,6 +224,10 @@ enabled automation rules that deliver the audience: their action for it is
 [skipped](automation.md#runs) rather than failed, and enabling a rule that delivers a
 retired audience is refused.
 
+![An audience's Manage audience card with Retire audience open: what retiring does, the enabled rule that delivers it, and Retire this audience](assets/release-notes/rn-17-retire-audience.webp)
+
+![A retired audience's card: who retired it and when, that it gets no note, narrative or translation, and Bring back](assets/release-notes/rn-18-retired-audience.webp)
+
 **Bring back** makes it active again, and the page says who brought it back and when. A
 change the AI classified while the audience was retired has no narrative for it; its note
 still includes the change under the neutral headline (`whatChanged`), with no narrative,
@@ -238,6 +242,10 @@ release in review or approved lists them as `missingNarratives` (`changeId`, `re
 change. A change the AI did not classify is refused with `409 change_not_eligible_for_ai`;
 without AI the answer is `503 ai_classification_unavailable`, and a failed request
 `502 ai_classification_failed`, which records nothing.
+
+![Changes with no narrative for an audience on a release's Review tab: two changes with no narrative for the audience brought back, each with Ask the AI and its estimate in tokens](assets/release-notes/rn-19-missing-narratives.webp)
+
+![The preview of a brought-back audience's note before its narratives exist: each change under its neutral summary in bold](assets/release-notes/rn-21-restored-note.webp)
 
 An Organization always keeps at least one active audience: retiring the last one is
 refused, and so is deleting the last active one. Every retirement and return is recorded
@@ -535,6 +543,8 @@ from the statuses read by then; a read that finishes later writes again the note
 still follow their template, until the release is published.
 
 ![A release in review whose linked issues were read again: DBV-53, linked from #69, is still In Progress, with Show this status](assets/release-notes/rn-16-issues-at-review.webp)
+
+![Open statuses the notes show: an issue still In Progress, accepted by an administrator with the time](assets/release-notes/rn-20-accepted-statuses.webp)
 
 ### Folding a tracker change into its code change
 

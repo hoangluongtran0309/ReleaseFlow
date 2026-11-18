@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -103,6 +105,44 @@ class LinearSourceIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(content().string(not(containsString(TOKEN))));
         assertThat(LINEAR.requests()).hasSize(1);
         assertThat(LINEAR.requests().getFirst().authorization()).isEqualTo(TOKEN);
+    }
+
+    @Test
+    void everyPageCallsATeamByItsKeyAndTheApiCarriesBoth() throws Exception {
+        Owner owner = signIn("owner@example.com");
+        LINEAR.respondWithTeam(TEAM, WORKSPACE, "OPS");
+        String created = connect(owner, TEAM, SECRET, TOKEN)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.externalProjectKey").value(TEAM))
+                .andExpect(jsonPath("$.externalTeamKey").value("OPS"))
+                .andReturn().getResponse().getContentAsString();
+        UUID sourceId = UUID.fromString(JsonPath.read(created, "$.id"));
+        mockMvc.perform(get("/api/projects/{projectId}/sources", owner.projectId()).session(owner.session()))
+                .andExpect(jsonPath("$[0].externalProjectKey").value(TEAM))
+                .andExpect(jsonPath("$[0].externalTeamKey").value("OPS"));
+
+        // The Source sync panel, the overview, the Projects page, and the source's own page.
+        for (String page : List.of(
+                "/changes?project=" + owner.projectId(),
+                "/?project=" + owner.projectId(),
+                "/projects",
+                "/projects/" + owner.projectId() + "/sources/" + sourceId)) {
+            mockMvc.perform(get(page).session(owner.session()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString(">OPS<")))
+                    .andExpect(content().string(not(containsString(">" + TEAM + "<"))));
+        }
+    }
+
+    @Test
+    void aTeamWhoseKeyWasNeverReadIsCalledByItsId() throws Exception {
+        Owner owner = signIn("owner@example.com");
+        LINEAR.respondWithTeam(TEAM, WORKSPACE);
+        connect(owner, TEAM, SECRET, TOKEN).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.externalTeamKey").value(nullValue()));
+
+        mockMvc.perform(get("/projects").session(owner.session()))
+                .andExpect(content().string(containsString(">" + TEAM + "<")));
     }
 
     @Test
