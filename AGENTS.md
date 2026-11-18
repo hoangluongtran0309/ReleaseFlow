@@ -365,7 +365,8 @@ changing behavior.
 - The documentation site is published from `main` alone, so it describes the latest
   release, and only its deploy job may write to GitHub Pages. Its dependencies pass
   a high-severity audit; an advisory is excused only when no release fixes it, with
-  its reason in `scripts/ci/audit-website.sh`, which fails once it is fixed.
+  its reason in `scripts/ci/audit-npm.sh`, which fails once it is fixed. The
+  application's own npm dependencies pass the same audit by the same rule.
 - The quickstart reads its configuration only from the `.env` beside it. It never
   overwrites one, never prints a secret it wrote, and refuses to start against a
   database volume whose `.env` is gone. It installs nothing, asks for no privilege,
