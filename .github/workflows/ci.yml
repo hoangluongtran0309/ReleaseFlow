@@ -92,8 +92,9 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      # Fails on any high advisory, except one no release fixes yet, listed with its reason.
       - name: Audit all npm dependencies
-        run: npm audit --audit-level=high
+        run: ./scripts/ci/audit-npm.sh .
 
   # The browser suite drives the demo stack, which brings its own PostgreSQL. It is the
   # only gate that can see an accessibility violation or a page that needs JavaScript.

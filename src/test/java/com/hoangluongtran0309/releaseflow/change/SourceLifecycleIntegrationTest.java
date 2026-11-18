@@ -117,8 +117,15 @@ class SourceLifecycleIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.health.connected").value(false))
                 .andExpect(jsonPath("$.health.disconnectedAt").isNotEmpty())
+                .andExpect(jsonPath("$.connectionStatus").value("DISCONNECTED"))
                 .andExpect(jsonPath("$.webhookPath").value(nullValue()))
                 .andExpect(jsonPath("$.accessTokenConfigured").value(false));
+        mockMvc.perform(get("/api/projects/{projectId}/sources", admin.projectId()).session(admin.session()))
+                .andExpect(jsonPath("$[0].connectionStatus").value("DISCONNECTED"));
+        // Read from the disconnection, never stored: no migration, and the column keeps what it had.
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT connection_status FROM integration_sources WHERE id = ?", String.class, admin.sourceId()))
+                .isEqualTo("ACTIVE");
 
         String known = deliver(admin, admin.webhookPath(), admin.secret(), 2)
                 .andExpect(status().isUnauthorized())
@@ -195,6 +202,8 @@ class SourceLifecycleIntegrationTest extends PostgreSqlIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         String newPath = JsonPath.read(reconnected, "$.webhookPath");
         String newSecret = JsonPath.read(reconnected, "$.webhookSecret");
+        mockMvc.perform(get("/api/projects/{projectId}/sources", admin.projectId()).session(admin.session()))
+                .andExpect(jsonPath("$[0].connectionStatus").value("ACTIVE"));
         assertThat(newPath).isNotEqualTo(admin.webhookPath());
         assertThat(newSecret).isNotEqualTo(admin.secret());
         // The bound columns were never rewritten, so the new credentials decrypt under them.

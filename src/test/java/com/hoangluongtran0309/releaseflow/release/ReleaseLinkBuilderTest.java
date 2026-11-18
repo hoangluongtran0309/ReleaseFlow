@@ -133,7 +133,7 @@ class ReleaseLinkBuilderTest {
             SourceType type, String key, String owner, String repository, String baseUrl, boolean connected) {
         SourceHealth health = new SourceHealth(connected, connected ? null : Instant.EPOCH, null, 0, null, false, null,
                 null, false);
-        return new IntegrationSourceView(UUID.randomUUID(), type, "webhook", key, owner, repository, baseUrl, null, null,
+        return new IntegrationSourceView(UUID.randomUUID(), type, "webhook", key, null, owner, repository, baseUrl, null, null,
                 null, null, null, Instant.EPOCH, null, false, null, null, null, null, null, health);
     }
 }

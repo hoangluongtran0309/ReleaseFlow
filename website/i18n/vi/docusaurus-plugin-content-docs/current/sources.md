@@ -173,10 +173,52 @@ curl -sS -X POST "http://localhost:8080$WEBHOOK_PATH" \
 
 ## Nhận webhook từ Linear {#receive-linear-webhooks}
 
-Linear tự tạo signing secret, nên tạo webhook bên Linear trước: trong
-**Settings → API → Webhooks**, đặt URL là địa chỉ ReleaseFlow của bạn nối thêm đường dẫn
-ReleaseFlow hiển thị cho nguồn, và bật sự kiện **Issues**. Sao chép secret Linear hiển thị
-rồi dán nó, cùng một API key, khi kết nối team trong ReleaseFlow.
+Linear tự tạo signing secret, và đường dẫn webhook của một nguồn chưa tồn tại cho tới khi
+nguồn được kết nối. Vì vậy webhook được tạo trước, ở một địa chỉ tạm, và được trỏ tới đường dẫn
+của nó sau cùng:
+
+1. Tạo webhook trong Linear cho team, với sự kiện **Issues**, ở trạng thái **tắt**, tại địa chỉ
+   ReleaseFlow của bạn nối với một đường dẫn ReleaseFlow không biết, ví dụ
+   `/webhooks/linear/pending-ops`. ReleaseFlow trả lời `401` cho đường dẫn như vậy và không ghi
+   gì, nên issue của team không bao giờ bị gửi cho ai khác. Linear chỉ cho phép một webhook cho
+   mỗi URL, nên mỗi team có một đường dẫn tạm riêng. Tạo webhook ở trạng thái tắt cần GraphQL
+   API của Linear, bằng API key của một quản trị viên workspace:
+
+   ```graphql
+   mutation {
+     webhookCreate(input: {
+       url: "https://releaseflow.example.com/webhooks/linear/pending-ops"
+       teamId: "<team-id>"
+       resourceTypes: ["Issue"]
+       enabled: false
+     }) {
+       success
+       webhook { id secret enabled }
+     }
+   }
+   ```
+
+   Webhook tạo trong **Settings → API → Webhooks** thì được bật ngay. Ở cùng địa chỉ tạm đó,
+   điều này cũng an toàn, vì ReleaseFlow từ chối mọi thứ gửi tới, nhưng Linear có thể tắt một
+   webhook liên tục bị từ chối.
+2. Kết nối team trong ReleaseFlow với signing secret của webhook, tức `secret` trong câu trả
+   lời ở trên và trên trang chi tiết của webhook, cùng một API key. ReleaseFlow sau đó hiện
+   đường dẫn của nguồn.
+3. Đổi URL của webhook thành địa chỉ ReleaseFlow của bạn nối với đường dẫn đó, và bật nó. Tài
+   liệu của Linear không nói trang của webhook có cho sửa URL hay không; `webhookUpdate` thì
+   có, và giữ nguyên secret cùng các sự kiện:
+
+   ```graphql
+   mutation {
+     webhookUpdate(id: "<webhook-id>", input: {
+       url: "https://releaseflow.example.com/webhooks/linear/<path-id>"
+       enabled: true
+     }) {
+       success
+       webhook { url enabled }
+     }
+   }
+   ```
 
 ![Trang sau khi kết nối một team Linear: webhook path để khai báo với Linear, còn signing secret do Linear tạo đã được dán vào](assets/sources/sr-4-linear-connected.webp)
 
@@ -207,6 +249,14 @@ không. Sửa một issue đã hoàn thành từ trước không thay đổi gì
 Linear không đặt cho lần gửi một định danh mà ReleaseFlow có thể ghi lại dưới dạng GUID, nên
 thay đổi từ Linear không có delivery ID. Mỗi issue vẫn chỉ được lưu một lần cho mỗi nguồn,
 theo UUID của nó, nên gửi lại cũng không sao.
+
+> **Vấn đề đã biết.** ReleaseFlow từ chối một lần gửi của Linear đến muộn hơn 60 giây so với
+> hành động mà nó báo: nó kiểm tra `createdAt`, thời điểm issue thay đổi, không phải thời điểm
+> gửi. Đừng trông vào việc Linear gửi lại một lần gửi đã bị từ chối. Tài liệu của Linear nói nó
+> thử lại một lần gửi thất bại sau một phút, một giờ và sáu giờ, nhưng trên lab dbvault nó không
+> gửi lại lần nào sau khi ReleaseFlow từ chối với `401`, ở cả ba mốc đó. ReleaseFlow cũng không
+> import được lịch sử của Linear, nên một issue có lần gửi bị từ chối, vì bất kỳ lý do gì, chỉ
+> được ghi nếu nó được hoàn thành lại. Xem [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
 
 ## Đọc Jira theo lịch {#poll-jira}
 
@@ -322,7 +372,7 @@ mới. Không có gì nhắc việc đổi token. Nguồn đã ngắt kết nố
 `503 github_unavailable`, `503 gitlab_unavailable` hoặc `503 jira_unavailable` khi không kết nối
 được; `404 source_not_found`; và `403` với thành viên.
 
-![Đặt access token cho một nguồn GitHub chưa có token: token được gõ dưới dạng dấu chấm và không bao giờ hiện lại](assets/sources/sr-7-access-token.webp)
+![Thẻ nguồn GitHub bằng tiếng Việt với đường dẫn webhook được che và biểu mẫu Thay access token, token đã nhập hiện dạng chấm](assets/sources/sr-7-access-token.webp)
 
 ![Một nguồn có token không còn dùng được: Kết nối đang lỗi, và form thay access token](assets/sources/sr-8-connection-failing.webp)
 
@@ -353,7 +403,7 @@ và, khi đã cấu hình AI, thay đổi được phân loại một lần. M�
 webhook hay qua một lần import trước, sẽ được bỏ qua, nên import và webhook không bao giờ tạo
 bản trùng của nhau. Thay đổi được import mang nhãn **Đã import**.
 
-![Khung đồng bộ nguồn trong Change Inbox: project Jira được đọc theo lịch, còn mỗi nguồn GitHub và GitLab có nút Import 90 ngày gần nhất bên cạnh trạng thái và số liệu của lần import gần nhất](assets/sources/sr-9-source-sync-panel.webp)
+![Bảng Đồng bộ nguồn của Hộp thay đổi: project Jira đọc theo lịch, một nguồn GitHub gắn nhãn Im lặng với ba lần gửi bị từ chối, một nguồn GitLab với một lần gửi bị từ chối vì chữ ký, và team Linear OPS với hai lần](assets/sources/sr-9-source-sync-panel.webp)
 
 Import từ GitHub dừng ở pull request đầu tiên được cập nhật trước khoảng thời gian của nó, và cả
 hai loại import đều dừng sau 500 thay đổi mới với trạng thái **Dừng ở giới hạn**, vị trí được
@@ -388,6 +438,12 @@ Tình trạng của mỗi nguồn được hiện ở những nơi mọi ngườ
 Change Inbox, trang tổng quan bên cạnh các con số, trang Projects, và trang riêng của nguồn, mở
 bằng **Quản lý nguồn**. Trong REST, view của một nguồn mang nó trong trường `health`.
 
+![Thẻ Nguồn trên trang Tổng quan: từng nguồn với lần gửi hoặc đọc cuối, GitHub gắn nhãn Im lặng, số lần gửi bị từ chối của GitHub, GitLab và team Linear OPS, cùng nút Mở đồng bộ nguồn](assets/sources/sr-16-overview-sources.webp)
+
+![Thẻ nguồn GitHub trên trang Project gắn nhãn Im lặng: không có gì đến trong thời gian dài hơn mức thường lệ, khoảng 13 giờ, với ba lần gửi bị từ chối](assets/sources/sr-17-projects-quiet.webp)
+
+![Trang một nguồn GitHub: tình trạng với lần gửi cuối, đường dẫn webhook được che, thời điểm đặt secret và access token, cùng các mục Webhook secret và Ngắt kết nối](assets/sources/sr-10-source-page.webp)
+
 - **Lần gửi cuối** — lần gửi gần nhất đã tự chứng minh và được chấp nhận. Lần gửi bị từ chối vì
   repository, hoặc không đọc được, không được tính.
 - **Bị từ chối vì chữ ký** — số lần gửi tới đường dẫn của nguồn không qua được bước chứng minh kể
@@ -408,6 +464,23 @@ bằng **Quản lý nguồn**. Trong REST, view của một nguồn mang nó tro
 - **Quá hạn** — một nguồn Jira có lần đọc tiếp theo đã trễ hơn một chu kỳ đọc. Một lần đọc không
   tìm thấy gì vẫn là thành công, nên nguồn Jira không bao giờ bị coi là im lặng.
 
+![Tình trạng nguồn GitHub: lần gửi cuối, nhãn Im lặng, ba lần gửi bị từ chối vì chữ ký kể từ khi đặt secret kèm thời điểm lần cuối, và đường dẫn webhook được che](assets/sources/sr-12-signature-failures.webp)
+
+Bên cạnh tình trạng, view REST của một nguồn có `connectionStatus`, là một trong ba giá trị:
+
+| `connectionStatus` | Nghĩa là | Trên các trang |
+| --- | --- | --- |
+| `ACTIVE` | Nguồn đang kết nối, và thông tin xác thực của nó dùng được ở lần dùng gần nhất, hoặc chưa được dùng lần nào | Không đánh dấu gì |
+| `ERROR` | Nguồn đang kết nối, nhưng một lần [import lịch sử](#history-import) bị từ chối access token, hoặc một lần [đọc Jira](#poll-jira) thất bại; token mới, hoặc lần đọc Jira tiếp theo thành công, sẽ đưa nó về `ACTIVE` | **Kết nối đang lỗi** |
+| `DISCONNECTED` | Nguồn đã bị [ngắt kết nối](#disconnect-a-source); `health.disconnectedAt` cho biết lúc nào | **Đã ngắt kết nối** |
+
+`DISCONNECTED` được đọc từ chính việc ngắt kết nối, không bao giờ được lưu, nên sau khi
+[kết nối lại](#reconnect-a-source) nguồn lại hiện `ACTIVE`.
+
+Mọi trang gọi một nguồn bằng key của repository hoặc project, và gọi nguồn Linear bằng key của
+team, ví dụ `OPS`, được REST trả về trong `externalTeamKey` bên cạnh ID của team trong
+`externalProjectKey`. Team chưa được đọc key thì được gọi bằng ID.
+
 Tình trạng là bằng chứng trên một trang. Không có gì tính nó theo lịch, không có gì được gửi đi,
 và nó không bao giờ dừng một nguồn, một release hay một quy tắc. ReleaseFlow không giới hạn tần
 suất yêu cầu đến, nên việc đếm được giới hạn theo cách khác: lần gửi bị từ chối đầu tiên của một
@@ -421,7 +494,8 @@ Webhook secret của một nguồn có thể được thay mà không đổi đ�
 qua REST. **Secret cũ ngừng hoạt động ngay khi secret mới được lưu**: secret được đổi vì có thể
 người khác đã biết nó, và trong lúc cả hai secret cùng dùng được, người giữ secret cũ vẫn có thể
 đưa một pull request tuỳ ý vào Change Inbox. Vì vậy cập nhật phía nhà cung cấp ngay sau đó, và
-gửi lại những gì nó bị từ chối trong khoảng giữa.
+gửi lại những gì nó bị từ chối trong khoảng giữa; Linear, vốn tự sinh secret và không gửi lại
+một lần gửi đã bị từ chối, là ngoại lệ được mô tả bên dưới.
 
 ```text
 POST /api/projects/{projectId}/sources/{sourceId}/webhook-secret                    (administrator; 200, chỉ hiện một lần)
@@ -436,6 +510,8 @@ một nguồn có chữ ký, phải là `whsec_` theo sau là Base64 (nếu khô
 secret trả lời `PUT` bằng `409 source_secret_generated`, Linear trả lời `POST` bằng
 `409 source_secret_pasted`, và Jira, vốn không có webhook, trả lời cả hai bằng
 `409 source_has_no_webhook`. Việc đổi secret không gọi nhà cung cấp nào.
+
+![Trang hiện một lần sau khi tạo signing token mới cho GitLab: đường dẫn webhook được che, token mới được che, ví dụ request PUT và các bước cập nhật hook rồi gửi lại các lần bị từ chối](assets/sources/sr-11-rotate-secret.webp)
 
 **GitHub.** Trong **Settings → Webhooks** của repository, sửa hook, dán secret mới vào
 **Secret**, rồi chọn **Update webhook**; payload URL không đổi. GitHub không bao giờ tự gửi lại
@@ -472,12 +548,30 @@ vì ReleaseFlow chỉ hiện nó một lần. Sau đó mở **Recent events** c�
 sự kiện bị từ chối kể từ lúc đó; GitLab giữ chúng trong hai ngày. GitLab tắt một hook thất bại bốn
 lần liên tiếp, nên nếu điều đó đã xảy ra, bật lại hook.
 
-**Linear.** Linear không mô tả cách nào để sinh lại signing secret của một webhook, nên tạo
-webhook mới: trong **Settings → API → Webhooks**, tạo webhook thứ hai với cùng URL và sự kiện
-**Issues**, chép signing secret của nó từ trang chi tiết, dán vào trang của nguồn, rồi xoá webhook
-cũ. Cho đến lúc đó cả hai webhook đều gửi mọi sự kiện; một bản được xác minh trước khi dán và bản
-kia sau khi dán, và mỗi issue chỉ được ghi một lần, nên không bỏ sót gì. Các bản thất bại được đếm
-là lỗi chữ ký, và Linear thử lại một lần gửi bị từ chối ba lần, lần cuối khoảng sáu giờ sau.
+**Linear.** Linear chỉ cho phép một webhook cho mỗi URL, và từ chối webhook thứ hai cho cùng
+địa chỉ với `url not unique`, nên webhook được giữ lại và secret của nó được đổi tại chỗ. Linear
+sinh secret mới, nên ở đây Linear đi trước:
+
+1. Đổi signing secret của webhook trong Linear. Tài liệu của Linear không mô tả nút nào cho việc
+   này trong **Settings → API → Webhooks**; nếu trang của webhook không có, gửi mutation
+   `webhookRotateSecret` tới GraphQL API của Linear, bằng API key của một quản trị viên
+   workspace. Yêu cầu đầu tìm ID của webhook, yêu cầu sau trả về secret mới:
+
+   ```graphql
+   query { webhooks { nodes { id url } } }
+
+   mutation { webhookRotateSecret(id: "<webhook-id>") { success secret } }
+   ```
+
+   Linear thay secret cũ ngay lập tức: nó không giữ khoá thứ hai.
+2. Dán secret mới vào trang của nguồn, hoặc gửi nó bằng `PUT` ở trên, ngay sau đó.
+
+Giữa hai bước, Linear ký bằng một secret mà ReleaseFlow chưa có, nên **một lần gửi bị từ chối
+trong khoảng đó không được ghi**. Nó được đếm là lỗi chữ ký, và không có gì gửi lại nó
+([ở trên](#receive-linear-webhooks)), nên issue chỉ được ghi nếu nó được hoàn thành lại. Vì vậy
+hãy đổi secret khi không ai đang thay đổi issue của team, và dán trong vòng một phút.
+
+![Tình trạng nguồn Linear: lần gửi cuối, hai lần gửi bị từ chối vì chữ ký kể từ khi đặt secret kèm thời điểm lần cuối, và đường dẫn webhook được che](assets/sources/sr-12-linear-refused.webp)
 
 ## Ngắt kết nối một nguồn {#disconnect-a-source}
 
@@ -487,6 +581,8 @@ hết cho biết điều gì sẽ xảy ra, hoặc qua REST:
 ```text
 POST /api/projects/{projectId}/sources/{sourceId}/disconnect   (administrator; 200)
 ```
+
+![Trang xác nhận trước khi ngắt kết nối một nguồn GitHub: điều gì xảy ra với thay đổi, secret, token và đường dẫn webhook, việc cần làm ở phía nhà cung cấp, cùng nút Ngắt kết nối và Giữ kết nối](assets/sources/sr-13-disconnect-confirm.webp)
 
 - **Mọi thay đổi nguồn đã ghi được giữ nguyên**, cùng review, release, release note và bằng chứng
   của chúng, và Change Inbox vẫn liệt kê chúng.
@@ -501,6 +597,8 @@ POST /api/projects/{projectId}/sources/{sourceId}/disconnect   (administrator; 2
   nguồn đang kết nối. Trang xác nhận nêu tên các quy tắc đang bật mà action GitHub Release của
   chúng sẽ thất bại; các quy tắc vẫn được bật, và action của chúng thất bại với
   `github_source_disconnected` cho đến khi repository được kết nối lại.
+
+![Thẻ nguồn trên trang Project gắn nhãn Đã ngắt kết nối kèm ngày, với liên kết Kết nối lại nguồn](assets/sources/sr-14-disconnected.webp)
 
 ReleaseFlow không gọi gì ở phía nhà cung cấp. Xoá webhook và thu hồi token ở đó: các bản cũ
 của giá trị đã mã hoá vẫn nằm trong lịch sử và bản sao lưu của cơ sở dữ liệu cho đến khi chúng hết
@@ -518,6 +616,8 @@ lại chỉ ghi những gì mới, và một pull request được gửi lại l
 POST /api/projects/{projectId}/sources/{sourceId}/reconnect {"token"?, "webhookSecret"?, "accountEmail"?}   (administrator; 200)
 ```
 
+![Trang nguồn đã ngắt kết nối: tình trạng ghi Đã ngắt kết nối, biểu mẫu Kết nối lại có ô access token tuỳ chọn và nút Kết nối lại](assets/sources/sr-14-reconnect-form.webp)
+
 Kết nối lại không bao giờ thay đổi bản chất của nguồn — loại, repository hay project, instance,
 workspace và Project đều giữ nguyên — nên nó chỉ nhận những gì việc kết nối loại đó cần thêm:
 
@@ -525,8 +625,10 @@ workspace và Project đều giữ nguyên — nên nó chỉ nhận những gì
 | --- | --- | --- |
 | GitHub | `token` tuỳ chọn | Đường dẫn webhook và secret mới, **chỉ hiện một lần** |
 | GitLab | `token` tuỳ chọn; với header có chữ ký, tuỳ chọn một `webhookSecret` do GitLab sinh | Đường dẫn webhook mới, và secret chỉ hiện một lần nếu không dán vào |
-| Linear | `webhookSecret` từ một webhook Linear mới, và `token` | Đường dẫn webhook mới; team phải vẫn ở cùng workspace |
+| Linear | `webhookSecret`, signing secret của webhook Linear sẽ gửi tới nguồn (xem bên dưới), và `token` | Đường dẫn webhook mới; team phải vẫn ở cùng workspace |
 | Jira | `accountEmail` và `token` | Không có gì bí mật; lần đọc tiếp theo là một chu kỳ sau |
+
+![Kết nối lại một nguồn GitHub đã ngắt: nhập access token dạng chấm, bấm Kết nối lại, và trang hiện đường dẫn webhook và secret mới, đều được che, cùng các bước cập nhật trên GitHub](assets/sources/sr-15-reconnect.webp)
 
 Đường dẫn webhook mới nghĩa là một hook chưa ai cập nhật vẫn chết, nên trỏ hook của nhà cung
 cấp tới đường dẫn mới với secret mới. Thiếu thông tin xác thực trả lời
@@ -534,6 +636,24 @@ cấp tới đường dẫn mới với secret mới. Thiếu thông tin xác th
 `409 source_not_disconnected`. Nguồn Jira được kết nối lại sẽ đọc, ở lần đọc đầu tiên, những gì đã
 hoàn thành trong thời gian ngắt kết nối, tối đa 90 ngày trước; với GitHub và GitLab, chạy
 [import lịch sử](#history-import) để lấy những gì đã merge trong khoảng đó.
+
+![Bảng Đồng bộ nguồn sau lần import lịch sử của một nguồn vừa kết nối lại: Đã xong, quét 2, import 0, cùng nút Import 90 ngày gần nhất](assets/sources/sr-18-import-after-reconnect.webp)
+
+**Linear.** Việc kết nối lại cần signing secret của webhook trước khi đường dẫn mới tồn tại,
+nên nó theo ba bước của [lần kết nối đầu](#receive-linear-webhooks), với một lựa chọn ở bước đầu:
+
+1. Hoặc tạo một webhook mới, ở trạng thái tắt, tại một địa chỉ tạm của chính ReleaseFlow, như
+   lần kết nối đầu; hoặc giữ webhook cũ của team, nếu Linear vẫn còn nó, và đổi secret của nó
+   trước bằng [`webhookRotateSecret`](#rotate-a-webhook-secret), vì một nguồn thường bị ngắt
+   kết nối chính vì secret của nó có thể đã lộ. Cả hai cách đều cần API của Linear, trừ khi
+   trang của webhook có chức năng tương tự.
+2. Kết nối lại nguồn với secret đó và một API key. ReleaseFlow hiện đường dẫn mới.
+3. Đổi URL của webhook thành địa chỉ ReleaseFlow của bạn nối với đường dẫn mới, và bật nó, bằng
+   `webhookUpdate` như lần kết nối đầu. Một webhook được giữ lại mà Linear đã tắt trong lúc
+   đường dẫn cũ từ chối nó cũng được bật lại bằng chính yêu cầu đó.
+
+Không có gì được ghi cho tới bước thứ ba, và một issue hoàn thành trước bước đó chỉ được ghi nếu
+nó được hoàn thành lại: ReleaseFlow không import được lịch sử của Linear.
 
 Kết nối lại cùng key trong cùng Project bằng form kết nối bị từ chối với
 `409 source_reconnect_required`, vì một nguồn thứ hai sẽ là một định danh thứ hai và lần import

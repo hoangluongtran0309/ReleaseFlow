@@ -475,7 +475,7 @@ where it first appears; ADRs are linked from the slice they record.
   release and of the quickstart, and the Grafana dashboard. Links, anchors, Markdown file links, and images fail
   the build; a link to a file
   beside `docs/` points at it on `main`. A `Docs` workflow builds it on every pull request
-  and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
+  and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-npm.sh website` audits its
   dependencies at high severity, allowing only listed advisories that no release fixes.
 
 ### Notes bound to their evidence (V30–V31)

@@ -50,7 +50,8 @@ test('a source is rotated, disconnected, and reconnected without losing its chan
   expect((await deliver(request, webhookPath, 'not-the-secret', repository, 2)).status()).toBe(401);
   await page.goto(`/changes?project=${project.id}`);
   await expect(page.locator('#source-imports')).toContainText(`acme/${repository}`);
-  await expect(page.locator('#source-imports')).toContainText(/refused for their signature|bị từ chối vì chữ ký/i);
+  // One refused delivery, so the panel says it in the singular.
+  await expect(page.locator('#source-imports')).toContainText(/1 delivery refused for its signature|1 lần gửi bị từ chối vì chữ ký/i);
   await expectNoAccessibilityViolations(page, 'change inbox with source health');
   await page.goto('/');
   await expect(page.locator('#source-health')).toContainText(`acme/${repository}`);
