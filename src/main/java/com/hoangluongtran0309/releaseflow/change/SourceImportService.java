@@ -132,6 +132,7 @@ class SourceImportService {
                 source.id(),
                 source.type(),
                 source.externalProjectKey(),
+                source.externalTeamKey(),
                 source.deliveryMechanism(),
                 source.type().supportsHistoryImport(),
                 source.type().isPolled(),
