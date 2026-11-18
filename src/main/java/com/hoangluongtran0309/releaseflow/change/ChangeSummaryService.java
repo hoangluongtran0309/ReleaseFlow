@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -40,9 +43,19 @@ public class ChangeSummaryService {
         UUID organizationId = editor.organizationId();
         Change change = changeRepository.findByIdAndOrganizationIdAndProjectId(changeId, organizationId, projectId)
                 .orElseThrow(ChangeNotFoundException::new);
+        // A retired audience's narratives stay as they were: the edit replaces only those of
+        // active audiences (ADR-0044). With none retired, this is exactly the edit as before.
+        Map<String, AudienceNarrative> narratives = new LinkedHashMap<>();
+        Set<String> retired = audienceService.retiredCodes(organizationId);
+        change.getAudienceNarratives().forEach((code, narrative) -> {
+            if (retired.contains(code)) {
+                narratives.put(code, narrative);
+            }
+        });
+        narratives.putAll(request.narratives(audienceService.briefs(organizationId).stream().map(AudienceBrief::code).toList()));
         change.editSummary(
                 request.summary(),
-                request.narratives(audienceService.briefs(organizationId).stream().map(AudienceBrief::code).toList()),
+                narratives,
                 outputLanguageService.outputLanguage(organizationId).tag(),
                 editor.userId(),
                 editor.displayName(),

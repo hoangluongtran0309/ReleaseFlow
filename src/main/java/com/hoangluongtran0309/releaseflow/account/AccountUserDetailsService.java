@@ -18,7 +18,8 @@ public class AccountUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) {
-        return appUserRepository.findByEmail(EmailAddress.canonicalize(email))
+        // A removed member cannot sign in: their row has no password, and no lookup finds it.
+        return appUserRepository.findByEmailAndRemovedAtIsNull(EmailAddress.canonicalize(email))
                 .map(ReleaseFlowPrincipal::new)
                 .orElseThrow(() -> new UsernameNotFoundException("Account not found."));
     }

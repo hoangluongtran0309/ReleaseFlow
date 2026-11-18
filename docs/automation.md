@@ -34,9 +34,11 @@ says when an expression would next fire before any rule keeps it.
 Write the rule first; it starts disabled. Enabling it is the moment ReleaseFlow
 checks that the deliveries can be made: the project and every audience belong to
 your Organization, the language is one your Organization writes notes in, a
-GitHub Release action's project has exactly one GitHub source, the deployment can
+GitHub Release action's project has exactly one connected GitHub source, the deployment can
 carry the action out at all, and the configuration and secret are usable. A rule
 that is refused says which of those failed.
+
+![The rules table with one rule marked as delivering a retired audience; another rule's call path is covered](assets/automation/a-12-rule-marked.webp)
 
 ## Actions
 
@@ -44,7 +46,7 @@ Eight kinds of action exist:
 
 | Action | What it needs | What it does |
 | --- | --- | --- |
-| GitHub Release | The project's own GitHub source and its access token | Publishes the note as the release of the version's tag, marking the body so a repeat knows its own work |
+| GitHub Release | The project's own connected GitHub source and its access token | Publishes the note as the release of the version's tag, marking the body so a repeat knows its own work |
 | Slack | An incoming webhook URL, which is the action's secret | Posts the note to the channel in Slack's own mrkdwn, up to 39,000 characters |
 | Email | `RELEASEFLOW_AUTOMATION_EMAIL_FROM` and an SMTP server | Sends the note to between 1 and 100 addresses |
 | Public changelog | Nothing | Publishes the note on your own changelog page and RSS feed |
@@ -132,7 +134,29 @@ stopped for five minutes — is recorded as unknown and never sent again on its
 own; repeating it asks you to confirm the delivery may happen twice. **Cancel**
 lets the action already on its way record its result and stops the rest.
 
+An action for an audience that has been [retired](release-notes.md#retiring-an-audience)
+is **skipped** with `audience_retired` before it calls anything: nothing is sent for it,
+the actions behind it still run, and a run whose other actions succeed succeeds. The run
+history marks the action **Skipped** and says why, and the Automation page marks a rule
+that still delivers a retired audience. Enabling such a rule is refused with
+`409 automation_audience_retired`; point the action at an active audience, or bring the
+audience back, first. An action's status through the API is `PENDING`, `RUNNING`,
+`SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`, or `SKIPPED`.
+
+![A rule's run for a release, Succeeded: ten deliveries in order, the sixth an Email Skipped with audience_retired and the sentence that nothing was sent and the actions after it still ran](assets/automation/a-11-skipped-action.webp)
+
 ![A run whose GitHub Release action failed with github_release_conflict: the actions behind it are pending, with Run again and Cancel](assets/automation/a-7-run-failed.webp)
+
+A GitHub Release action borrows the project's GitHub source, so it depends on that
+source staying connected. A run records the repository of the project's one connected
+GitHub source, or, when none is connected, of its one
+[disconnected](sources.md#disconnect-a-source) one. When the recorded repository's
+source is disconnected, the action fails as `github_source_disconnected` before calling
+anything, and **Run again** succeeds once the same repository is reconnected. Without a
+single repository to record, it fails as `github_source_missing`. Disconnecting never
+disables a rule: the confirmation page lists the enabled rules it leaves without a token,
+and the Automation page marks each one **No GitHub source connected** until the project
+has one again.
 
 ![An action whose outcome is unknown: running it again may deliver twice](assets/automation/a-8-run-unknown.webp)
 
@@ -202,7 +226,7 @@ Refusals carry a stable code:
 | Status | Codes |
 | --- | --- |
 | `404` | `automation_rule_not_found`, `automation_run_not_found` — also for a rule or run of another Organization, never `403`, and for an archived rule: `GET`, `PUT`, enable, disable, and `DELETE` of one all answer `404 automation_rule_not_found` |
-| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required` |
+| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required`, `automation_audience_retired` |
 | `400`, rule | `automation_action_required`, `automation_project_not_found`, `automation_audience_not_found`, `automation_language_not_configured`, `automation_secret_not_allowed`, `automation_request_id_required`, `invalid_automation_run_page` |
 | `400`, schedule | `automation_cron_invalid`, `automation_cron_time_zone_invalid`, `automation_cron_no_occurrence`, `automation_cron_release_required`, `automation_reminder_days_invalid` |
 | `400`, Slack and email | `automation_slack_webhook_required`, `automation_slack_webhook_invalid`, `automation_email_recipients_required`, `automation_email_recipient_invalid` |

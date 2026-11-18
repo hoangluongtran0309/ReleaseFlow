@@ -1,5 +1,6 @@
 package com.hoangluongtran0309.releaseflow.automation;
 
+import com.hoangluongtran0309.releaseflow.audience.AudienceService;
 import com.hoangluongtran0309.releaseflow.project.SourceAccess;
 import com.hoangluongtran0309.releaseflow.release.AudienceNoteView;
 import com.hoangluongtran0309.releaseflow.release.ReleaseAccess;
@@ -23,7 +24,9 @@ import java.util.UUID;
  *
  * <p>An Action whose audience and language have no ready note is written all the same,
  * without one. It fails when the worker reaches it, which is the point: a Rule nobody
- * can carry out must not stop the release that triggered it.
+ * can carry out must not stop the release that triggered it. Its audience is then named
+ * as it is called when the run is created, since there is no note to take the name from: a
+ * retired audience never has one.
  */
 @Component
 class AutomationRunFactory {
@@ -32,6 +35,7 @@ class AutomationRunFactory {
     private final AutomationActionRunRepository actionRunRepository;
     private final AutomationRuleActionRepository ruleActionRepository;
     private final SourceAccess sourceAccess;
+    private final AudienceService audienceService;
     private final Clock clock;
 
     AutomationRunFactory(
@@ -39,12 +43,14 @@ class AutomationRunFactory {
             AutomationActionRunRepository actionRunRepository,
             AutomationRuleActionRepository ruleActionRepository,
             SourceAccess sourceAccess,
+            AudienceService audienceService,
             Clock clock
     ) {
         this.runRepository = runRepository;
         this.actionRunRepository = actionRunRepository;
         this.ruleActionRepository = ruleActionRepository;
         this.sourceAccess = sourceAccess;
+        this.audienceService = audienceService;
         this.clock = clock;
     }
 
@@ -72,8 +78,9 @@ class AutomationRunFactory {
                 now
         ));
         List<AutomationRuleAction> actions = ruleActionRepository.findAllByRuleIdOrderByPositionAsc(rule.getId());
+        Map<UUID, String> audienceNames = audienceService.displayNames(run.getOrganizationId());
         List<AutomationActionRun> actionRuns = actions.stream()
-                .map(action -> actionRun(run, action, release))
+                .map(action -> actionRun(run, action, release, audienceNames))
                 .toList();
         actionRunRepository.saveAllAndFlush(actionRuns);
         return run;
@@ -82,7 +89,8 @@ class AutomationRunFactory {
     private AutomationActionRun actionRun(
             AutomationRun run,
             AutomationRuleAction action,
-            ReleaseAccess.ReleaseSnapshot release
+            ReleaseAccess.ReleaseSnapshot release,
+            Map<UUID, String> audienceNames
     ) {
         Optional<AudienceNoteView> note = release.notes().stream()
                 .filter(candidate -> candidate.audienceId().equals(action.getAudienceId()))
@@ -97,7 +105,7 @@ class AutomationRunFactory {
                 action.getPosition(),
                 action.getActionType(),
                 action.getAudienceId(),
-                note.map(AudienceNoteView::audienceName).orElse(action.getAudienceId().toString()),
+                note.map(AudienceNoteView::audienceName).orElseGet(() -> audienceName(action, audienceNames)),
                 action.getTargetLanguage(),
                 note.map(AudienceNoteView::content).orElse(null),
                 configuration(action, release),
@@ -105,19 +113,21 @@ class AutomationRunFactory {
         );
     }
 
-    // A GitHub Release Action needs to know which repository the release belongs in.
-    // Without exactly one GitHub source there is no answer, so the Action carries none
-    // and fails when it runs.
+    // An audience a rule action names cannot be deleted, so its ID is only a last resort.
+    private static String audienceName(AutomationRuleAction action, Map<UUID, String> audienceNames) {
+        return audienceNames.getOrDefault(action.getAudienceId(), action.getAudienceId().toString());
+    }
+
+    // A GitHub Release Action needs to know which repository the release belongs in: the
+    // Project's one connected GitHub source, or, when none is connected, its one disconnected
+    // source, so the Action fails as disconnected and can be retried once it is reconnected
+    // (ADR-0042). Without either there is no answer, so the Action carries none and fails
+    // when it runs.
     private Map<String, String> configuration(AutomationRuleAction action, ReleaseAccess.ReleaseSnapshot release) {
         Map<String, String> configuration = new LinkedHashMap<>(action.getConfiguration());
         if (action.getActionType() == ActionType.GITHUB_RELEASE) {
-            sourceAccess.findSole(action.getOrganizationId(), release.projectId(), SourceType.GITHUB)
-                    .ifPresent(source -> {
-                        configuration.put(
-                                GitHubReleaseActionExecutor.REPOSITORY,
-                                source.repositoryOwner() + "/" + source.repositoryName()
-                        );
-                    });
+            sourceAccess.soleExternalKey(action.getOrganizationId(), release.projectId(), SourceType.GITHUB)
+                    .ifPresent(repository -> configuration.put(GitHubReleaseActionExecutor.REPOSITORY, repository));
         }
         return configuration;
     }

@@ -148,7 +148,10 @@ class AutomationWorkerIntegrationTest extends AutomationIntegrationTestBase {
         assertThat(SLACK.messages()).isEmpty();
         mockMvc.perform(get("/api/automation/runs").session(owner.session()))
                 .andExpect(jsonPath("$.items[0].status").value("FAILED"))
-                .andExpect(jsonPath("$.items[0].actions[0].errorCode").value("release_note_missing"));
+                .andExpect(jsonPath("$.items[0].actions[0].errorCode").value("release_note_missing"))
+                .andExpect(jsonPath("$.items[0].actions[0].audienceName").value("Partners"));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT audience_name_snapshot FROM automation_action_runs", String.class)).isEqualTo("Partners");
         mockMvc.perform(get("/api/projects/{projectId}/releases/{releaseId}", projectId, releaseId)
                         .session(owner.session()))
                 .andExpect(jsonPath("$.status").value("PUBLISHED"));

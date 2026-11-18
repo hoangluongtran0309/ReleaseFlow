@@ -115,7 +115,13 @@ trạng thái hợp lệ trả về `400 invalid_change_filter`, và Project c�
 `404 project_not_found`. Mỗi thay đổi trả về mã `category` cùng `categoryName` và
 `categoryGroup`, đúng như lúc nó được phân loại.
 
-![Change Inbox với các bộ lọc, trạng thái đồng bộ của nguồn Jira, GitHub và GitLab, rồi các thay đổi cùng category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
+Bảng **Đồng bộ nguồn** phía trên các thay đổi liệt kê mọi nguồn của Project cùng
+[tình trạng](sources.md#source-health) của chúng — lần gửi hoặc lần đọc cuối, các lần gửi bị từ
+chối vì chữ ký kể từ khi secret được đặt, và dấu **Im lặng**, **Quá hạn** hoặc **Đã ngắt kết
+nối** — bên cạnh [import lịch sử](sources.md#history-import) của mỗi nguồn có lịch sử. Các thay
+đổi của một nguồn đã ngắt kết nối vẫn nằm trong hộp.
+
+![Hộp thay đổi với các bộ lọc, trạng thái đồng bộ của nguồn Jira, GitHub, GitLab và Linear, rồi một thay đổi với category, trạng thái review và tóm tắt](assets/changes/c-3-change-inbox.webp)
 
 ![Lọc Change Inbox để chỉ còn các thay đổi bị đánh giá là thiếu context](assets/changes/c-4-context-filter.webp)
 
@@ -191,9 +197,11 @@ vào đó để nói về dữ liệu đầu vào, như "Rollback steps are not 
 specified", sẽ bị bỏ, và câu chỉ nói phạm vi của thay đổi, như "This does not affect the CLI"
 hay "It only affects the CI environment", cũng vậy, vì mức liên quan của từng đối tượng đọc đã
 cho biết thay đổi quan trọng với ai. Giới hạn như "Certificate validation is enforced only for
-MongoDB" được giữ, và trường giới hạn bị thiếu thì coi là trống. Mọi request đều dùng
-cùng một temperature, là `0` trừ khi bản triển khai đặt `RELEASEFLOW_AI_TEMPERATURE`, để cùng
-một thay đổi dao động ít nhất trong khả năng của model (xem [Cấu hình](configuration.md#ai)).
+MongoDB" được giữ, và trường giới hạn bị thiếu thì coi là trống. Với OpenAI hoặc DeepSeek,
+mọi request đều dùng cùng một temperature, là `0` trừ khi bản triển khai đặt
+`RELEASEFLOW_AI_TEMPERATURE`, để cùng một thay đổi dao động ít nhất trong khả năng của model.
+Anthropic không nhận temperature, nên Claude dùng giá trị mặc định của nó; với Claude 4.6 trở về
+trước, câu trả lời dao động nhiều hơn giữa các lần chạy (xem [Cấu hình](configuration.md#ai)).
 
 Hộp thay đổi hiển thị bản tóm tắt và các narrative dưới mỗi thay đổi, mỗi narrative kèm mức liên
 quan và dòng tiêu đề, và API thay đổi trả về chúng dưới dạng `neutralSummary`,
@@ -369,7 +377,7 @@ năng, Tài liệu, Bảo trì hoặc Khác. Release note được chia mục th
 `SECURITY` mới trong nhóm Sửa lỗi sẽ xuất hiện dưới mục **Bug Fixes** (trong release note tiếng
 Việt là **Sửa lỗi**). Phá vỡ tương thích vẫn là một cờ riêng.
 
-![Category catalog, có Security được thêm vào nhóm Fix](assets/changes/c-11-catalog.webp)
+![Danh mục category, với Security trong nhóm Sửa lỗi](assets/changes/c-11-catalog.webp)
 
 - **Quy tắc.** Mỗi quy tắc cố định chỉ định một nhóm và một mã ưu tiên, ví dụ `fix` chỉ định
   nhóm Sửa lỗi và mã `FIX`. Category ưu tiên được dùng nếu nó đang hoạt động; nếu không thì dùng

@@ -18,7 +18,6 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.HexFormat;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Verifies a Linear delivery with the connected source's own secret: a hex HMAC-SHA256 of
@@ -36,6 +35,7 @@ public class LinearWebhookVerifier {
 
     private final IntegrationSourceRepository sourceRepository;
     private final CredentialCipher credentialCipher;
+    private final SignatureFailureRecorder failures;
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final Duration clockSkew;
@@ -43,26 +43,31 @@ public class LinearWebhookVerifier {
     LinearWebhookVerifier(
             IntegrationSourceRepository sourceRepository,
             CredentialCipher credentialCipher,
+            SignatureFailureRecorder failures,
             ObjectMapper objectMapper,
             Clock clock,
             @Value("${releaseflow.linear.webhook-clock-skew}") Duration clockSkew
     ) {
         this.sourceRepository = sourceRepository;
         this.credentialCipher = credentialCipher;
+        this.failures = failures;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.clockSkew = clockSkew;
     }
 
     public Optional<VerifiedWebhook> verify(String webhookId, String signature, String deliveryId, byte[] body) {
-        Optional<UUID> parsedWebhookId = WebhookSources.parseWebhookId(webhookId);
-        if (parsedWebhookId.isEmpty() || signature == null || deliveryId == null) {
+        Optional<IntegrationSource> source = WebhookSources.parseWebhookId(webhookId)
+                .flatMap(sourceRepository::findByWebhookId)
+                .filter(candidate -> candidate.getSourceType() == SourceType.LINEAR);
+        if (source.isEmpty()) {
             return Optional.empty();
         }
-        return sourceRepository.findByWebhookId(parsedWebhookId.get())
-                .filter(source -> source.getSourceType() == SourceType.LINEAR)
-                .filter(source -> proves(source, signature, body))
-                .map(WebhookSources::verified);
+        if (signature == null || deliveryId == null || !proves(source.get(), signature, body)) {
+            failures.record(source.get());
+            return Optional.empty();
+        }
+        return source.map(WebhookSources::verified);
     }
 
     @Transactional

@@ -475,7 +475,7 @@ where it first appears; ADRs are linked from the slice they record.
   release and of the quickstart, and the Grafana dashboard. Links, anchors, Markdown file links, and images fail
   the build; a link to a file
   beside `docs/` points at it on `main`. A `Docs` workflow builds it on every pull request
-  and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-website.sh` audits its
+  and publishes it to GitHub Pages from `main`, and `scripts/ci/audit-npm.sh website` audits its
   dependencies at high severity, allowing only listed advisories that no release fixes.
 
 ### Notes bound to their evidence (V30–V31)
@@ -507,12 +507,16 @@ where it first appears; ADRs are linked from the slice they record.
     about the input or only about the change's scope dropped by a deterministic filter;
   - an AI migration step that only says nothing needs doing dropped, so its kind is
     `none`;
-  - every classification request at the same temperature, `0` unless
+  - every OpenAI and DeepSeek classification request at the same temperature, `0` unless
     `RELEASEFLOW_AI_TEMPERATURE` names another in the provider's range or `default`, which
     sends none for a model that accepts only its own
     ([ADR-0038](adr/0038-configurable-ai-temperature.md)), and none for the rest of the
     process once a model refuses it, after sending the refused request once more without it
-    ([ADR-0039](adr/0039-ai-temperature-fallback.md)).
+    ([ADR-0039](adr/0039-ai-temperature-fallback.md));
+  - Anthropic through anthropic-java 3.x on API version `2026-10-21`, with the key as
+    `Authorization: Bearer` and no temperature, the setting still checked at startup and a
+    number other than `0` logged as ignored
+    ([ADR-0045](adr/0045-anthropic-api-version-2026-10-21.md)).
 
 ### A note per audience (V32)
 
@@ -602,6 +606,76 @@ where it first appears; ADRs are linked from the slice they record.
     security flags into the code change as a recorded review that names the folded change,
     and reads the issue it added as of review.
 
+### Source lifecycle and health (V37)
+
+- [ADR-0042](adr/0042-source-lifecycle-and-health.md) (#21), with Flyway `V37`:
+  - disconnecting a source from its page, after a confirmation that says what happens and
+    names the enabled rules whose GitHub Release action it leaves without a token, or via
+    `POST .../disconnect`: its row and every change it recorded stay; its webhook identity,
+    secret, token, and schedule are destroyed in one transaction; its path answers like an
+    unknown one; a queued import or poll ends as `source_disconnected`, a running one at
+    its next page; nothing else borrows it;
+  - reconnecting under the same ID, with a new webhook path and secret (or, for Jira, a
+    cursor no earlier than 90 days back), so a later import adds no duplicates;
+    connecting a key the Project holds disconnected answers `409 source_reconnect_required`,
+    and another Project may connect it once it is disconnected;
+  - rotating a webhook secret with the path kept and the old secret stopped at once:
+    generated for GitHub and GitLab, pasted for Linear and for a signing token GitLab
+    generated, with each provider's steps on the page; a Jira token may change account;
+  - a GitHub Release action that fails as `github_source_disconnected`, and succeeds on
+    retry after the reconnect, and an Automation page mark on rules with nothing to borrow;
+  - source health in the Change Inbox's Source sync panel (now every source), on the
+    overview, on the Projects page, and on the source's page: last delivery, deliveries
+    refused for their signature since the secret was set, counted exactly with about one
+    write per source per second, a quiet flag against each source's own rhythm, and an
+    overdue flag for Jira.
+
+### Member roles and removal (V38)
+
+- [ADR-0043](adr/0043-member-roles-and-removal.md) (#20), with Flyway `V38`:
+  - administrators change a member's role and remove a member on the Members page or
+    through `PUT /api/members/{id}/role` and `DELETE /api/members/{id}`; the last
+    administrator is refused with `409 member_last_administrator`, serialised by a lock on
+    the Organization row and backed by a deferred constraint trigger;
+  - a removed member's row stays, with its name and email, and no password; their address is
+    free again, and a person invited back is a new member while their old records stay with
+    the removed one;
+  - the pending invitations of a removed member, or of a demoted administrator, are revoked;
+  - every session of a changed member is refused on its next request by
+    `MembershipSessionFilter`, through a `session_version` copied at sign-in;
+  - who changed a role or removed a member, and when, in `membership_changes`, shown on the
+    Members page and by `GET /api/members/changes`.
+
+### Retiring an audience (V39)
+
+- [ADR-0044](adr/0044-retire-an-audience.md) (#72), with Flyway `V39`:
+  - administrators retire an audience and bring it back on the Audiences page or through
+    `POST /api/audiences/{id}/retire` and `/restore`, even while notes, rules, or runs
+    name it; who did it and when is recorded in `audience_status_changes` and shown;
+  - a retired audience gets no AI narrative, no note, no preview, and no translation from
+    the next approval, and keeps its templates, narratives, and published notes; with
+    nothing retired, notes and translation requests are unchanged;
+  - the last active audience is refused with `409 audience_last_active`, serialised by a
+    lock on the Organization's audience rows and backed by a deferred constraint trigger,
+    and deleting the last active one with `409 audience_last`;
+  - the summary edit keeps a retired audience's narrative instead of erasing it;
+  - an automation action for a retired audience is `SKIPPED` with `audience_retired` and
+    the run goes on; enabling such a rule is refused with
+    `409 automation_audience_retired`, and the Automation page marks it;
+  - a brought-back audience's note includes every change, under its neutral headline when
+    it has no narrative; the Review tab lists those changes, and a person asks the AI for
+    only the missing narratives, with the request's rough token size shown first.
+
+### Accepted statuses on the Review tab
+
+- #73, under [ADR-0041](adr/0041-linked-context-and-folding.md), with no migration:
+  - the Review tab lists each linked issue whose open status a person accepted, with its
+    key, the status the notes print, who accepted it under their name then, and when, while
+    the release is in review or approved, in both interface languages;
+  - the release API already carried the same on each linked issue;
+  - the browser suite reaches it through `tests/e2e/provider-stand-in.mjs`, a Jira and
+    GitHub stand-in that only the suite runs.
+
 ## In progress
 
 - Nothing; the next slice starts from the planned work below.
@@ -613,7 +687,8 @@ deliberately deferred list below, one reviewed slice at a time.
 
 ## Deliberately deferred
 
-- Role changes and member removal.
+- An account that belongs to several Organizations, transferring what a removed person
+  made to someone else, and erasing a person's name from the history.
 - Source providers other than GitHub, GitLab, Linear, and Jira Cloud (Jira
   Server or Data Center), Jira webhooks, and automatic AI retries.
 - GitLab group-level webhooks, Linear projects and cycles, linked context from
@@ -622,9 +697,9 @@ deliberately deferred list below, one reviewed slice at a time.
   nothing ties together, and queues or retries for work other than
   enrichment, imports, polls, translation, glossary syncs, reads at review, and the
   automation outbox and actions.
-- Validating a repository with GitHub when it is connected, disconnecting or
-  replacing a source, rotating a Linear signing secret without reconnecting, and
-  secret or token rotation reminders.
+- Validating a repository with GitHub when it is connected, recognising a renamed or
+  moved repository as the source it was, deleting a source with its changes, secret or
+  token rotation reminders, and alerts on a quiet source.
 - Interface languages other than English and Vietnamese, a language picker for
   anonymous pages (they follow `Accept-Language`), an RSS feed whose channel
   title and description follow the reader rather than staying English, localized
@@ -654,3 +729,5 @@ deliberately deferred list below, one reviewed slice at a time.
 - Review history, comments, reviewer roles, and bulk review.
 - Item reordering.
 - Unpublishing or correcting published release notes.
+- Deleting an audience together with its notes, archiving its published notes, and asking
+  the AI for a returning audience's missing narratives without a person asking.

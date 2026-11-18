@@ -12,6 +12,110 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-18
+
+### Added
+
+- Administrators change a member's role and remove a member, on the Members page or
+  through the API. The last administrator can't be demoted or removed, even when two
+  administrators try at once ([ADR-0043](docs/adr/0043-member-roles-and-removal.md)).
+- A member whose role changes, or who is removed, is signed out of every session on its
+  next request, through the pages and the API. A removed member can't sign in, and the
+  invitations they made that are still pending are revoked, as are a demoted
+  administrator's.
+- Everything a removed member recorded keeps the name they had. Their address is free
+  again, and a person invited back joins as a new member. The Members page lists removed
+  members and who changed whose role, and when.
+- A source can be disconnected from its own page, which first says what will happen. Its
+  changes stay, with their reviews and releases; its webhook secret and access token are
+  destroyed, its webhook path answers like one that never existed, and its imports and
+  polls stop ([ADR-0042](docs/adr/0042-source-lifecycle-and-health.md)).
+- A disconnected source is reconnected under its own ID, with a new webhook path and
+  secret, so a history import afterwards adds no change twice. Connecting the same
+  repository, project, or team again in the same Project points to the reconnect instead;
+  another Project may connect it once it is disconnected.
+- A webhook secret can be rotated without changing its path: generated for GitHub and
+  GitLab, pasted for Linear and for a signing token GitLab generated. The old secret stops
+  at once, and the page says where the new one goes and how to send again what the
+  provider refused in between. A new Jira token may belong to another account.
+- Each source's health shows in the Change Inbox's Source sync panel, which now lists
+  every source, on the overview, and on the Projects page: its last delivery, how many
+  deliveries were refused for their signature since the secret was set and when the last
+  one was, a **Quiet** mark when it has been silent for longer than it usually goes, and
+  an **Overdue** mark for a Jira source whose read is late. Nothing about a refused
+  delivery is kept beyond its count and time.
+- An administrator can retire an audience instead of deleting it, even while notes,
+  rules, or runs name it, and bring it back later. From the next approval a retired
+  audience gets no note, no AI narrative, and no translation. Its templates, narratives,
+  and published notes stay, and who retired it or brought it back is shown
+  ([ADR-0044](docs/adr/0044-retire-an-audience.md)). The last active audience can't be
+  retired, even when two administrators try at once.
+- When an audience comes back, its notes include every change, under its neutral headline
+  when it has no narrative. The release's Review tab lists those changes, and a person can
+  ask the AI for only the missing narratives, with the request's rough size in tokens
+  shown before anything is sent.
+
+- The Review tab lists the linked issues whose open status a person accepted showing, under
+  **Open statuses the notes show**: each with its key, the status the notes print, who
+  accepted it, and when, while the release is in review or approved. Before, an issue left
+  the page once its status was accepted, and only the API said who had chosen it.
+
+### Changed
+
+- **Behavior change for Anthropic:** ReleaseFlow calls Claude through anthropic-java 3.8.0,
+  with Anthropic API version `2026-10-21`, and sends no temperature: that version refuses
+  one on every model ([ADR-0045](docs/adr/0045-anthropic-api-version-2026-10-21.md)). No
+  setting needs to change.
+  - On Claude 4.6 and earlier (such as Sonnet 4.6, Opus 4.6, or Haiku 4.5), classification
+    runs at the default temperature, `1.0`, instead of `0`, so notes vary more between runs
+    than on 1.2. No setting brings `0` back on Anthropic; OpenAI and DeepSeek still take it.
+  - On Claude 4.7 and later, classification samples as before, and the first request after
+    each start is no longer refused for its temperature, so its warning goes away.
+  - `RELEASEFLOW_AI_TEMPERATURE` is still checked at startup with Anthropic but never sent;
+    a number other than `0` logs one warning that it is ignored.
+  - The API key is sent as `Authorization: Bearer` instead of `x-api-key`. A proxy or
+    gateway at `RELEASEFLOW_ANTHROPIC_BASE_URL` that reads `x-api-key` or checks
+    `anthropic-version` must accept the new headers before upgrading. See
+    [Upgrading with Anthropic](docs/operations.md#upgrading-with-anthropic).
+  - The Anthropic SDK is licensed under Apache-2.0 instead of MIT; it ships no `NOTICE`.
+- A GitHub Release action whose repository's source is disconnected fails as
+  `github_source_disconnected` and succeeds when run again after the reconnect; the
+  Automation page marks an enabled rule that has no GitHub source to borrow. A rule with a
+  GitHub Release action can be enabled only while its project has one connected GitHub
+  source.
+- **Behavior change:** editing a change's summary now keeps the narratives of retired
+  audiences. Before, saving the summary kept only the narratives the request listed, so a
+  narrative for an audience it left out was erased; now each narrative it does not
+  replace is kept.
+- An automation action for a retired audience is skipped, with `audience_retired`, instead
+  of being attempted: nothing is sent for it, the actions behind it still run, and the run
+  page marks it **Skipped**. Action runs gain the `SKIPPED` status. A rule that delivers a
+  retired audience can't be enabled (`409 automation_audience_retired`).
+- Deleting the last *active* audience is refused with `409 audience_last`; a retired
+  audience nothing names can still be deleted.
+
+### Fixed
+
+- A DeepL request lists a job's texts in the order of their keys, so the same texts go in
+  the same order on every run. Before, the order changed from one run to the next. DeepL
+  translates each text on its own, so no translation or note changes.
+- The release API lists a release's fold decisions in a fixed order, by when each was
+  decided and then by the tracker change, rather than in whatever order the database read
+  them.
+- The instructions for connecting a Linear team can now be followed. They said to create
+  Linear's webhook at the source's path before ReleaseFlow had given the source one; the
+  Projects page and the guide now say to create the webhook disabled at a holding address
+  of ReleaseFlow's own, connect the team with its signing secret, then point the webhook
+  at the source's path and enable it. Connecting itself is unchanged.
+- An automation run names the audience of an action that had no note, instead of showing
+  its ID: an action skipped for a retired audience, or one that failed as
+  `release_note_missing`. A run recorded with the ID shows the audience's current name; the
+  stored row does not change.
+- Every page names a Linear source by its team's key, such as `OPS`, instead of the team's
+  ID; before 1.3.0 the Projects page showed the ID too. The API's source views carry the key
+  as `externalTeamKey`, beside the team's ID in `externalProjectKey`. A team whose key was
+  never read is still named by its ID.
+
 ## [1.2.0] - 2026-11-08
 
 ### Added
@@ -222,7 +326,8 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.3.0
 [1.2.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.2.0
 [1.1.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.1.0
 [1.0.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.0.1

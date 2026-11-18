@@ -45,23 +45,79 @@ classification, decide possible duplicates, and prepare, approve, and publish re
 They can read a Project's sources, imports, and sensitive paths, the category catalog,
 and the release note languages, but not the Members, Audiences, or Automation pages.
 
-![The Members page: the members with their roles, and the invitations with their state](assets/workspace/w-4-members.webp)
+![The Members page: two members with their roles, Change role and Remove, the invitations with their state, Removed members, and Membership changes](assets/workspace/w-4-members.webp)
 
 An invitation link has the form `/accept-invite#token=…` and is shown once.
 ReleaseFlow stores only a hash of it. The link expires after seven days (set
 `RELEASEFLOW_INVITATION_TTL`, for example `P3D`, to change this), works once,
 and can be reissued or revoked from the Members page. The invitee confirms the
-organization, chooses a name and a password, and signs in as a member. Roles
-cannot be changed and members cannot be removed yet.
+organization, chooses a name and a password, and signs in as a member.
+
+### Change a role or remove a member
+
+An administrator changes a member's role, or removes a member, from the member's row on
+the **Members** page: **Change role** with the role beside it, or **Remove**, which asks
+first. An administrator may change or remove themselves too, as long as another
+administrator remains: **an Organization always keeps an administrator**, and the last
+one is refused with `409 member_last_administrator`, even when two administrators try at
+the same moment.
+
+![An administrator sets a member's role to Member and presses Change role; a notice says the role changed and the sessions ended, and the history lists the change with one pending invitation revoked](assets/workspace/w-8-change-role.webp)
+
+![The Members table with the removal confirmation open in a member's row: their sessions end, pending invitations are revoked, what they recorded keeps their name, and Remove member](assets/workspace/w-9-remove-member.webp)
+
+- **Their sessions stop on their next request**, in every browser and through the API.
+  A demoted or promoted member signs in again and gets the new role; a removed member
+  cannot sign in at all. A page they open then explains that their access changed.
+- **Their pending invitations are revoked** when they are removed, and when an
+  administrator is demoted, because only administrators invite. The history says how
+  many.
+- **What they recorded keeps their name**: reviews, approvals, publications, note edits,
+  exclusions, accepted statuses at review, fold decisions, and the rest show the name they
+  had when they did it.
+- **A removed person invited back is a new member.** Their address is free again, so an
+  administrator can invite it, or the person can join or register another Organization.
+  Accepting creates a new member with a new name; everything they did before stays with
+  the removed member, under the name recorded then.
+- **Who changed what, and when**, is listed under **Membership changes**, and removed
+  people under **Removed members**, each with who removed them.
+
+![Removed members, with who was removed, when and by whom, above Membership changes: a removal, a demotion with one pending invitation revoked, and an earlier promotion](assets/workspace/w-10-removed-members.webp)
+
+![The sign-in page with the notice that the session ended because access to the Organization changed](assets/workspace/w-11-access-changed.webp)
+
+#### When someone leaves
+
+**Removing a member, or demoting an administrator, revokes nothing they saw.** It ends
+their sessions and their pending invitations, but a secret is not the person's: it proves a
+source or a rule, and keeps working for whoever still holds it. For an administrator who
+leaves, rotate:
+
+- **each source's webhook secret** they handled: generate or paste a new one, and give it
+  to the provider ([Rotate a webhook secret](sources.md#rotate-a-webhook-secret));
+- **each source's access token** they set: save a new one under the source, which the
+  provider confirms first ([Access tokens](sources.md#access-tokens));
+- **each automation rule's call secret** they saw: **Rotate secret** on the Automation page,
+  which keeps the rule's path and stops the old secret at once
+  ([A rule another system calls](automation.md#a-rule-another-system-calls));
+- **any provider token they made**, such as a GitHub, GitLab, Linear, or Jira token or a
+  Slack, Notion, or Teams credential behind an action: revoke it at the provider, because
+  ReleaseFlow cannot.
+
+ReleaseFlow shows a secret once and keeps no record of who looked, so it cannot say which
+of these a person saw.
 
 ![Inviting a teammate by email; the one-time link shown afterwards is covered](assets/workspace/w-2-invite.webp)
 
-![The invitation page: the Organization and the invited email, with fields for a name and a password](assets/workspace/w-3-accept.webp)
+![The invitation page: the invited email, with fields for a name and a password typed as dots](assets/workspace/w-3-accept.webp)
 
 REST clients use the same rules:
 
 ```text
 GET    /api/members                         (administrator)
+PUT    /api/members/{id}/role {"role"}      (administrator; ADMIN or MEMBER)
+DELETE /api/members/{id}                    (administrator; 204)
+GET    /api/members/changes                 (administrator; newest first)
 GET    /api/invitations                     (administrator)
 POST   /api/invitations {"email"}           (administrator; 201, returns acceptancePath once)
 POST   /api/invitations/{id}/reissue        (administrator)
@@ -73,8 +129,12 @@ POST   /api/public/invitations/accept  {"token", "displayName", "password"}
 The public endpoints need a CSRF token from `GET /api/csrf`. Every unusable
 token returns `400 invitation_invalid`. Other errors are `409
 invitation_already_pending`, `409 invitation_email_unavailable` (the email
-already has an account), `404 invitation_not_found`, and `403 access_denied`
-for members calling administrator endpoints.
+already belongs to a member who is not removed), `404 invitation_not_found`,
+`404 member_not_found` (an unknown, removed, or other Organization's member),
+`409 member_last_administrator`, and `403 access_denied` for members calling
+administrator endpoints. A session refused because its member changed answers
+`401 authentication_required`, like any request without a session. See
+[ADR-0043](adr/0043-member-roles-and-removal.md).
 
 ## Workspace overview
 
@@ -85,7 +145,12 @@ unfinished, in a fixed order: create a project, connect a source, wait for the
 first change, collect changes into a release, finish a review, publish an approved
 release, continue a draft, or nothing waiting. A workspace with an open draft and
 no changes at all is still waiting for its first change, because there is nothing
-to put in the draft.
+to put in the draft. A disconnected source does not count as connected.
+
+Beside the figures, the overview lists the Project's sources with their
+[health](sources.md#source-health): each one's last delivery or last read, deliveries
+refused for their signature, and whether it is quiet, overdue, or disconnected. It is
+information, never a step, so it changes nothing about which step is offered.
 
 ![The overview of a new Project: every counter at zero, and the next step is to connect a source](assets/workspace/w-5a-connect-a-source.webp)
 

@@ -1,5 +1,8 @@
 package com.hoangluongtran0309.releaseflow.change;
 
+import com.hoangluongtran0309.releaseflow.project.SourceHealth;
+import com.hoangluongtran0309.releaseflow.source.SourceType;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -11,7 +14,9 @@ import java.util.UUID;
  */
 public record SourceSyncView(
         UUID sourceId,
+        SourceType type,
         String externalProjectKey,
+        String externalTeamKey,
         String deliveryMechanism,
         boolean supportsImport,
         boolean polled,
@@ -30,8 +35,19 @@ public record SourceSyncView(
         String lastError,
         Instant lastSyncAt,
         String lastErrorCode,
-        boolean canResumeImport
+        boolean canResumeImport,
+        Instant lastDeliveryAt,
+        SourceHealth health
 ) {
+
+    public boolean connected() {
+        return health.connected();
+    }
+
+    /** What the panel calls the source; see {@code IntegrationSourceView.label()}. */
+    public String label() {
+        return externalTeamKey == null || externalTeamKey.isBlank() ? externalProjectKey : externalTeamKey;
+    }
 
     /** Whether a job is queued or running, so another cannot start. */
     public boolean inProgress() {

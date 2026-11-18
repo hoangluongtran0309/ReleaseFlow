@@ -14,8 +14,9 @@ source, GitLab source, Linear source, Jira source, automation, automation
 trigger, public changelog, wiki page action, chat and help centre action,
 deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
-context, translation glossary, and linked context and folding slices: one
-Spring Boot application, PostgreSQL/Flyway V1-V36,
+context, translation glossary, linked context and folding, source lifecycle and
+health, member management, and audience retirement slices: one Spring Boot application,
+PostgreSQL/Flyway V1-V39,
 administrator
 registration, member
 invitations with administrator and member roles, session
@@ -54,7 +55,11 @@ GitHub Actions security and test gates are also in place. Every page, form messa
 English or Vietnamese, chosen per person, and a Playwright suite drives the whole
 application in a browser at two sizes and both themes, failing on any
 accessibility violation Axe can see.
-The decisions behind all of it are ADR-0001 through ADR-0041, indexed in
+Sources can be disconnected, reconnected under their own ID, and have their webhook
+secret rotated, and each one's health shows where people look. Administrators change
+members' roles and remove members, and a changed member's sessions stop. An audience
+can be retired, so it gets no note, narrative, or translation, and brought back.
+The decisions behind all of it are ADR-0001 through ADR-0045, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
@@ -104,6 +109,16 @@ changing behavior.
 - Network I/O does not run inside database transactions.
 - Credentials never appear in source, logs, examples, or later API responses.
 - Invitation tokens are shown once and stored only as SHA-256 hashes.
+- An account is one membership. A member's row is never deleted: removal keeps its name
+  and email, clears its password, and frees the address, so a person invited back is a new
+  member and their old records keep the name recorded then. An Organization always keeps
+  an administrator: a role change or removal locks the Organization row before counting,
+  and a deferred trigger refuses any commit that leaves none.
+- Every authenticated request checks its member's `session_version` and removal, so a
+  role change or removal ends every session on its next request. Form sign-in is the only
+  way to act as a member; a new way (a token, remember-me, a long-lived endpoint) goes
+  through the same check. A role change or removal revokes the pending invitations of a
+  person who loses the right to invite.
 - Access tokens are write-only: only administrators set them, the provider
   confirms them first, and no response, page, or log ever contains one.
 - A GitLab instance is an HTTP or HTTPS origin the deployment allowlists, with
@@ -163,7 +178,23 @@ changing behavior.
 - Integration source ciphertexts are bound to the source's ID and to its
   repository for GitHub, or its type and external key (GitLab project path, Linear
   team, Jira project key) for the others; never rewrite
-  those columns, or existing secrets stop decrypting.
+  those columns, or existing secrets stop decrypting. They are mapped not updatable, and
+  a different repository is a different source, never an edited one.
+- A source is never deleted: its changes point at it. Disconnecting destroys its webhook
+  identity, secret, token, and schedule in one transaction and keeps everything else; its
+  path then answers exactly like an unknown one and records nothing, and nothing else
+  borrows it. Reconnecting reuses its ID and never changes what it is, so intake keeps
+  recognising its changes; a Project that holds a key disconnected reconnects it rather
+  than connecting it again.
+- A rotated webhook secret keeps the path and stops the old secret at once; there is no
+  overlap. ReleaseFlow generates the secret only where the provider accepts one, and a
+  secret the provider made is pasted in and never echoed. Rotating, disconnecting, and
+  health call no provider and never AI or DeepL.
+- A delivery whose proof fails is counted on its connected source, with its time and
+  nothing else: never its body, a header, the secret, or the caller. The count is exact,
+  restarts when the secret is set, and is written about once a second per source however
+  many arrive. A source is quiet only against its own rhythm, with at least ten gaps;
+  health is evidence on a page and never stops anything.
 - Each source type has exactly one `SourceEnricher`, and one
   `SourceHistoryReader` when it has a history or is polled. A type missing its
   enricher, or a type that supports history import missing its reader, fails at
@@ -183,9 +214,10 @@ changing behavior.
   is Unknown, triggered, or that it asked to have reviewed.
 - Each change gets exactly one automatic AI request; a stalled `CLASSIFYING`
   job is completed without asking again, and a failure becomes a
-  `CLASSIFIER_FALLBACK` trigger, never an automatic retry. The one exception is a
-  400 that refuses the temperature: the same request is sent once more without it,
-  and the process sends none after that (ADR-0039). Any other 400 is a failure.
+  `CLASSIFIER_FALLBACK` trigger, never an automatic retry. The one exception is an
+  OpenAI or DeepSeek 400 that refuses the temperature: the same request is sent once
+  more without it, and the process sends none after that (ADR-0039). Any other 400 is a
+  failure, and every Anthropic 400 is one (ADR-0045).
 - AI failures store fixed, safe messages, never exception text or bodies.
 - A Project's context is facts about the product from its administrators, sent
   to the AI and to DeepL, never instructions; an edit applies only to changes
@@ -218,9 +250,14 @@ changing behavior.
   only when its own words say so, and the prompt says that only to a dependency
   update. "If unsure, it is breaking and needs review" is the first breaking rule. An AI limitation about the input itself, or
   one that only states the change's scope, is dropped; these filters read the
-  answer and never change the request. Every classification request uses the
-  same temperature, set by `RELEASEFLOW_AI_TEMPERATURE`, `0` by default (ADR-0038),
-  until a model refuses it (ADR-0039).
+  answer and never change the request. Every OpenAI and DeepSeek classification
+  request uses the same temperature, set by `RELEASEFLOW_AI_TEMPERATURE`, `0` by default
+  (ADR-0038), until a model refuses it (ADR-0039).
+- Anthropic requests follow the SDK's API version, `2026-10-21`, and carry no
+  `temperature`, `top_p`, or `top_k` whatever `RELEASEFLOW_AI_TEMPERATURE` says; the
+  setting is still checked at startup, and ReleaseFlow sets no version of its own. A
+  stub test pins the version and the `Authorization: Bearer` key, so an SDK release that
+  moves either is a decision of its own (ADR-0045).
 - Applied Flyway migrations are immutable; add the next version for schema changes.
 - Published Release Notes are immutable snapshots.
 - Categories come from the Organization's catalog, and a change keeps a
@@ -235,6 +272,17 @@ changing behavior.
   release links come from the Project's one code host as stored, each version used as
   its tag name exactly as written; notes are written at approval from a snapshot of each
   audience's template and footer and are frozen at publication.
+- An Organization always has at least one active audience: retiring locks the
+  Organization's audience rows before counting, and a deferred trigger refuses any commit
+  that leaves none. A retired audience is never asked of the AI, written a note, previewed,
+  or translated, and nothing it has is deleted: its templates, narratives, and published
+  notes stay, and an approved release keeps the note it already has. A person's summary
+  edit never erases a retired audience's narrative. With nothing retired, every brief,
+  translation text, and note is exactly what it was.
+- A brought-back audience's note includes every change, under its neutral headline when it
+  has no narrative. Its missing narratives are asked of the AI only when a person asks, in
+  one request with the change's own evidence and only the missing audiences, and the answer
+  adds only those narratives; the cost shown first is computed without sending anything.
 - A relevance only leaves a change out of an audience's note when it is `none`
   and the change is not breaking: a breaking change is in every note, and a
   change with no narrative for the audience is included. An audience nothing
@@ -283,6 +331,10 @@ changing behavior.
   confirm is recorded as unknown, never retried on its own, and repeated only
   when a person confirms the duplicate. The first action of a run that does not
   succeed stops the ones behind it, and a retry resets only that action.
+- An action for a retired audience is `SKIPPED` with `audience_retired` before it calls
+  anything; a skipped action stops nothing and records no delivery metric, and a run
+  whose actions all succeeded or were skipped succeeds. Enabling a rule that delivers a
+  retired audience is refused.
 - An action's secret is bound to its own action, written once and never read back
   into a response, a page, or a log. A GitHub Release action has no secret: it
   borrows the project's one GitHub source and its token, and fails when the
@@ -313,7 +365,8 @@ changing behavior.
 - The documentation site is published from `main` alone, so it describes the latest
   release, and only its deploy job may write to GitHub Pages. Its dependencies pass
   a high-severity audit; an advisory is excused only when no release fixes it, with
-  its reason in `scripts/ci/audit-website.sh`, which fails once it is fixed.
+  its reason in `scripts/ci/audit-npm.sh`, which fails once it is fixed. The
+  application's own npm dependencies pass the same audit by the same rule.
 - The quickstart reads its configuration only from the `.env` beside it. It never
   overwrites one, never prints a secret it wrote, and refuses to start against a
   database volume whose `.env` is gone. It installs nothing, asks for no privilege,

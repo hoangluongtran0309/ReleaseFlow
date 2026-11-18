@@ -1,6 +1,7 @@
 package com.hoangluongtran0309.releaseflow.release;
 
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
+import com.hoangluongtran0309.releaseflow.change.MissingNarrative;
 import com.hoangluongtran0309.releaseflow.translation.GlossaryUse;
 import com.hoangluongtran0309.releaseflow.translation.TranslationState;
 
@@ -51,7 +52,8 @@ public record ReleaseView(
         List<LinkedIssueStatusView> linkedIssues,
         String linkedIssueRead,
         List<FoldingSuggestion> foldingSuggestions,
-        List<FoldDecisionView> foldDecisions
+        List<FoldDecisionView> foldDecisions,
+        List<MissingNarrative> missingNarratives
 ) {
 
     public ReleaseView {
@@ -63,11 +65,20 @@ public record ReleaseView(
         linkedIssues = List.copyOf(linkedIssues);
         foldingSuggestions = List.copyOf(foldingSuggestions);
         foldDecisions = List.copyOf(foldDecisions);
+        missingNarratives = List.copyOf(missingNarratives);
     }
 
     /** The linked issues still open while their change ships, whose status nobody accepted (ADR-0041). */
     public List<LinkedIssueStatusView> openLinkedIssues() {
         return linkedIssues.stream().filter(LinkedIssueStatusView::warning).toList();
+    }
+
+    /**
+     * The linked issues still open while their change ships, whose status a person accepted
+     * showing, so the notes print it (ADR-0041).
+     */
+    public List<LinkedIssueStatusView> acceptedLinkedIssues() {
+        return linkedIssues.stream().filter(issue -> issue.open() && issue.accepted()).toList();
     }
 
     /** The folding suggestions for one tracker change of this release. */

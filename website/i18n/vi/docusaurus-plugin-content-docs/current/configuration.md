@@ -44,12 +44,15 @@ Không bao giờ commit hay chia sẻ các giá trị này.
 | `RELEASEFLOW_LINEAR_TIMEOUT` | `PT5S` | Thời gian chờ kết nối và đọc với Linear |
 | `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` | `PT60S` | Một lần gửi có chữ ký từ Linear được phép cũ tới mức nào |
 | `RELEASEFLOW_JIRA_TIMEOUT` | `PT10S` | Thời gian chờ kết nối và đọc với Jira |
-| `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | Bao lâu đọc mỗi project Jira một lần |
+| `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | Bao lâu đọc mỗi project Jira một lần; nguồn có lần đọc tiếp theo trễ hơn một chu kỳ được hiển thị là [quá hạn](sources.md#source-health) |
 | `RELEASEFLOW_JIRA_POLL_OVERLAP` | `PT10M` | Mỗi lượt đọc lùi lại bao xa so với lượt đọc trước |
 | `RELEASEFLOW_JIRA_DESCRIPTION_MAX_CHARACTERS` | `8000` | Độ dài tối đa của mô tả Jira được giữ làm bằng chứng |
 | `RELEASEFLOW_JIRA_API_BASE_URL` | (trống) | Chỉ để thử nghiệm cục bộ: gửi mọi lời gọi Jira tới đây thay vì site của chính nguồn |
 
-Xem [Nguồn](sources.md).
+Xem [Nguồn](sources.md). [Tình trạng](sources.md#source-health) của một nguồn không có thiết
+lập riêng: nguồn im lặng được đo trong 90 ngày theo phân vị thứ 90 của các khoảng cách, không
+bao giờ dưới một giờ và chỉ khi đã có mười khoảng cách, và các lần gửi bị từ chối được ghi khoảng
+mỗi giây một lần ([ADR-0042](adr/0042-source-lifecycle-and-health.md)).
 
 ## Phân loại {#classification}
 
@@ -72,30 +75,39 @@ Xem [Thay đổi và review](changes.md).
 ## AI {#ai}
 
 AI không bắt buộc. Chọn một nhà cung cấp và cung cấp key cùng model. Không có model mặc định;
-chọn một model hỗ trợ đầu ra JSON có cấu trúc. Mọi request phân loại đều dùng cùng một
-temperature, là `0` trừ khi `RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác, giúp câu trả lời cho
-cùng một thay đổi ổn định nhất trong khả năng của model (xem
+chọn một model hỗ trợ đầu ra JSON có cấu trúc.
+
+Với OpenAI hoặc DeepSeek, mọi request phân loại đều dùng cùng một temperature, là `0` trừ khi
+`RELEASEFLOW_AI_TEMPERATURE` đặt giá trị khác, giúp câu trả lời cho cùng một thay đổi ổn định
+nhất trong khả năng của model (xem
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md) và
-[ADR-0038](adr/0038-configurable-ai-temperature.md)). Model chỉ nhận temperature mặc định từ
-chối request có ghi temperature: model suy luận của OpenAI, hoặc model Claude ra mắt sau
-Opus 4.6, mà Anthropic chỉ nhận giá trị `1.0`. Model như vậy vẫn hoạt động mà không cần đặt gì:
-request bị từ chối được gửi lại một lần nữa không có temperature, và các request sau không gửi
-temperature cho đến khi ReleaseFlow khởi động lại, kèm một cảnh báo trong log
-([ADR-0039](adr/0039-ai-temperature-fallback.md)). Chỉ lỗi 400 về temperature mới dẫn đến việc
-này: lỗi có `error.param` là `temperature` từ OpenAI hoặc DeepSeek, hoặc
-`invalid_request_error` có thông báo nêu tên `temperature` từ Anthropic. Một số được đặt ở đây
-cũng được xử lý như vậy. `RELEASEFLOW_AI_TEMPERATURE=default` không gửi temperature ngay từ
-request đầu tiên, nên không có lần từ chối nào.
+[ADR-0038](adr/0038-configurable-ai-temperature.md)). Model suy luận của OpenAI chỉ nhận
+temperature mặc định và từ chối request có ghi temperature. Model như vậy vẫn hoạt động mà
+không cần đặt gì: request bị từ chối được gửi lại một lần nữa không có temperature, và các
+request sau không gửi temperature cho đến khi ReleaseFlow khởi động lại, kèm một cảnh báo trong
+log ([ADR-0039](adr/0039-ai-temperature-fallback.md)). Chỉ lỗi 400 có `error.param` là
+`temperature` mới dẫn đến việc này. Một số được đặt ở đây cũng được xử lý như vậy.
+`RELEASEFLOW_AI_TEMPERATURE=default` không gửi temperature ngay từ request đầu tiên, nên không
+có lần từ chối nào.
+
+Với Anthropic, request dùng phiên bản API `2026-10-21`, vốn không nhận temperature, nên
+ReleaseFlow không gửi temperature dù `RELEASEFLOW_AI_TEMPERATURE` đặt gì, và Claude dùng giá trị
+mặc định của nó ([ADR-0045](adr/0045-anthropic-api-version-2026-10-21.md)). Với Claude 4.7 trở
+về sau, đó vốn là giá trị duy nhất model nhận. Với Claude 4.6 trở về trước, việc phân loại chạy ở
+temperature mặc định `1.0` thay vì `0`, nên câu trả lời cho một thay đổi, và các note viết từ đó,
+dao động nhiều hơn giữa các lần chạy. Giá trị vẫn được kiểm tra khi khởi động, và một số khác `0`
+được ghi một cảnh báo trong log rằng nó bị bỏ qua. API key được gửi trong
+`Authorization: Bearer`.
 
 | Biến | Mặc định | Tác dụng |
 | --- | --- | --- |
 | `RELEASEFLOW_AI_PROVIDER` | (trống: không dùng AI) | `openai`, `anthropic` hoặc `deepseek` |
 | `RELEASEFLOW_AI_TIMEOUT` | `PT60S` | Thời gian tối đa cho mỗi request tới AI |
-| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature của mọi request phân loại: một số từ `0` đến `2` với `openai` và `deepseek`, hoặc từ `0` đến `1` với `anthropic`; `default` không gửi temperature, để model dùng giá trị của chính nó. Không đặt hoặc để trống nghĩa là `0`. Model từ chối temperature sẽ không được gửi temperature cho đến hết tiến trình |
+| `RELEASEFLOW_AI_TEMPERATURE` | `0` | Temperature của mọi request phân loại tới `openai` và `deepseek`: một số từ `0` đến `2`; `default` không gửi temperature, để model dùng giá trị của chính nó. Không đặt hoặc để trống nghĩa là `0`. Model từ chối temperature sẽ không được gửi temperature cho đến hết tiến trình. Với `anthropic`, giá trị phải là một số từ `0` đến `1` hoặc `default`, và không bao giờ được gửi |
 | `RELEASEFLOW_OPENAI_API_KEY`, `RELEASEFLOW_OPENAI_MODEL` | (trống) | Key và model của OpenAI |
 | `RELEASEFLOW_OPENAI_BASE_URL` | `https://api.openai.com/v1` | Địa chỉ API của OpenAI |
 | `RELEASEFLOW_ANTHROPIC_API_KEY`, `RELEASEFLOW_ANTHROPIC_MODEL` | (trống) | Key và model của Anthropic |
-| `RELEASEFLOW_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Địa chỉ API của Anthropic |
+| `RELEASEFLOW_ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Địa chỉ API của Anthropic. Proxy hoặc gateway ở địa chỉ này nhận key trong `Authorization: Bearer` và `anthropic-version: 2026-10-21` |
 | `RELEASEFLOW_DEEPSEEK_API_KEY`, `RELEASEFLOW_DEEPSEEK_MODEL` | (trống) | Key và model của DeepSeek |
 | `RELEASEFLOW_DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | Địa chỉ API của DeepSeek |
 

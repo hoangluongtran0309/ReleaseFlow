@@ -15,9 +15,12 @@ import java.util.Base64;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -114,6 +117,191 @@ class AutomationActionIntegrationTest extends AutomationIntegrationTestBase {
                 .andExpect(jsonPath("$.status").value("FAILED"))
                 .andExpect(jsonPath("$.actions[0].errorCode").value("github_source_missing"));
         assertThat(GITHUB.releaseBody("1.4.0")).isNull();
+    }
+
+    @Test
+    void failsAGitHubReleaseWhoseSourceWasDisconnectedAndSucceedsOnRetryOnceItIsBack() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID sourceId = connectGitHubSource(owner, projectId, "releaseflow");
+        UUID runId = gitHubRun(owner, projectId, "1.4.0");
+        disconnect(owner, projectId, sourceId);
+
+        work();
+
+        // Nothing was called, so the failure is certain, and it names why.
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.actions[0].errorCode").value("github_source_disconnected"));
+        assertThat(GITHUB.releaseRequests()).isEmpty();
+        // The rule stays enabled, and its page says it has nothing to borrow.
+        mockMvc.perform(get("/api/automation/rules").session(owner.session()))
+                .andExpect(jsonPath("$[0].enabled").value(true))
+                .andExpect(jsonPath("$[0].gitHubSourceMissing").value(true));
+        mockMvc.perform(get("/automation").session(owner.session()))
+                .andExpect(content().string(containsString("No GitHub source connected")));
+
+        mockMvc.perform(post("/api/projects/{projectId}/sources/{sourceId}/reconnect", projectId, sourceId)
+                        .session(owner.session())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"%s\"}".formatted(GITHUB_TOKEN)))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/automation/runs/{runId}/retry", runId).session(owner.session()).with(csrf()))
+                .andExpect(status().isOk());
+        work();
+
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"));
+        mockMvc.perform(get("/api/automation/rules").session(owner.session()))
+                .andExpect(jsonPath("$[0].gitHubSourceMissing").value(false));
+    }
+
+    @Test
+    void aRunCreatedWhileTheOnlyGitHubSourceIsDisconnectedStillNamesItsRepository() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID sourceId = connectGitHubSource(owner, projectId, "releaseflow");
+        UUID endUser = audienceId(owner, "end_user");
+        UUID ruleId = createdRuleId(createRule(owner, """
+                {"name":"Publish","triggerType":"MANUAL","projectId":"%s","actions":[
+                  {"actionType":"GITHUB_RELEASE","audienceId":"%s","language":"en"}]}
+                """.formatted(projectId, endUser)).andExpect(status().isCreated()));
+        enable(owner, ruleId).andExpect(status().isOk());
+        disconnect(owner, projectId, sourceId);
+
+        // A disconnected source lends nothing, so a new rule could not be enabled now.
+        UUID another = createdRuleId(createRule(owner, """
+                {"name":"Publish again","triggerType":"MANUAL","projectId":"%s","actions":[
+                  {"actionType":"GITHUB_RELEASE","audienceId":"%s","language":"en"}]}
+                """.formatted(projectId, endUser)).andExpect(status().isCreated()));
+        enable(owner, another)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("automation_github_source_missing"));
+
+        UUID runId = run(owner, ruleId, publishedRelease(owner, projectId, "1.4.0"));
+        work();
+
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.actions[0].errorCode").value("github_source_disconnected"));
+    }
+
+    @Test
+    void anActionWithNoNoteNamesItsAudienceRatherThanItsId() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID endUser = audienceId(owner, "end_user");
+        UUID operator = audienceId(owner, "operator");
+        UUID ruleId = createdRuleId(createRule(owner, """
+                {"name":"Announce","triggerType":"MANUAL","projectId":"%s","actions":[
+                  {"actionType":"SLACK","audienceId":"%s","language":"en","secret":"%s"},
+                  {"actionType":"SLACK","audienceId":"%s","language":"en","secret":"%s"}]}
+                """.formatted(projectId, endUser, slackWebhook(), operator, slackWebhook())).andExpect(status().isCreated()));
+        enable(owner, ruleId).andExpect(status().isOk());
+
+        // Retired before the release is approved, so the release has no note for it: the
+        // name can only come from the audience itself.
+        mockMvc.perform(post("/api/audiences/{id}/retire", endUser).session(owner.session()).with(csrf()))
+                .andExpect(status().isOk());
+        UUID runId = run(owner, ruleId, publishedRelease(owner, projectId, "1.4.0"));
+        work();
+
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.actions[0].status").value("SKIPPED"))
+                .andExpect(jsonPath("$.actions[0].errorCode").value("audience_retired"))
+                .andExpect(jsonPath("$.actions[0].audienceName").value("End user"))
+                .andExpect(jsonPath("$.actions[1].audienceName").value("Operator"));
+        assertThat(storedAudienceName(runId, 0)).isEqualTo("End user");
+        mockMvc.perform(get("/automation").session(owner.session()))
+                .andExpect(content().string(containsString("1. Slack — End user (en)")))
+                .andExpect(content().string(not(containsString("1. Slack — " + endUser))));
+    }
+
+    @Test
+    void aRunStoredWithItsAudienceIdAsTheNameShowsTheAudienceAsItIsNowAndKeepsTheRow() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID endUser = audienceId(owner, "end_user");
+        UUID ruleId = createdRuleId(createRule(owner, slackRule("Announce", "MANUAL", projectId, endUser, "en"))
+                .andExpect(status().isCreated()));
+        enable(owner, ruleId).andExpect(status().isOk());
+        UUID runId = run(owner, ruleId, publishedRelease(owner, projectId, "1.4.0"));
+        work();
+
+        // What a run written before 1.3.0 holds when its release had no note for the audience,
+        // and an audience renamed since.
+        jdbcTemplate.update("UPDATE automation_action_runs SET audience_name_snapshot = audience_id::text WHERE run_id = ?",
+                runId);
+        jdbcTemplate.update("UPDATE audience_definitions SET display_name = 'Customers' WHERE id = ?", endUser);
+
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.actions[0].audienceName").value("Customers"));
+        mockMvc.perform(get("/api/automation/runs").session(owner.session()))
+                .andExpect(jsonPath("$.items[0].actions[0].audienceName").value("Customers"));
+        mockMvc.perform(get("/automation").session(owner.session()))
+                .andExpect(content().string(containsString("1. Slack — Customers (en)")))
+                .andExpect(content().string(not(containsString("1. Slack — " + endUser))));
+        assertThat(storedAudienceName(runId, 0)).isEqualTo(endUser.toString());
+
+        // A name that was stored as a name is kept as it was, whatever the audience is called now.
+        jdbcTemplate.update("UPDATE automation_action_runs SET audience_name_snapshot = 'End user' WHERE run_id = ?", runId);
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.actions[0].audienceName").value("End user"));
+    }
+
+    private String storedAudienceName(UUID runId, int position) {
+        return jdbcTemplate.queryForObject(
+                "SELECT audience_name_snapshot FROM automation_action_runs WHERE run_id = ? AND position = ?",
+                String.class, runId, position);
+    }
+
+    private void disconnect(Owner owner, UUID projectId, UUID sourceId) throws Exception {
+        mockMvc.perform(post("/api/projects/{projectId}/sources/{sourceId}/disconnect", projectId, sourceId)
+                        .session(owner.session())
+                        .with(csrf()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void anActionForARetiredAudienceIsSkippedAndTheRestOfTheRunStillDelivers() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID endUser = audienceId(owner, "end_user");
+        UUID operator = audienceId(owner, "operator");
+        UUID ruleId = createdRuleId(createRule(owner, """
+                {"name":"Announce","triggerType":"MANUAL","projectId":"%s","actions":[
+                  {"actionType":"SLACK","audienceId":"%s","language":"en","secret":"%s"},
+                  {"actionType":"SLACK","audienceId":"%s","language":"en","secret":"%s"}]}
+                """.formatted(projectId, endUser, slackWebhook(), operator, slackWebhook())).andExpect(status().isCreated()));
+        enable(owner, ruleId).andExpect(status().isOk());
+        UUID releaseId = publishedRelease(owner, projectId, "1.4.0");
+
+        // Retired after the rule was enabled, and after its note for this release was published.
+        mockMvc.perform(post("/api/audiences/{id}/retire", endUser).session(owner.session()).with(csrf()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/automation/rules/{ruleId}", ruleId).session(owner.session()))
+                .andExpect(jsonPath("$.deliversRetiredAudience").value(true));
+        UUID runId = run(owner, ruleId, releaseId);
+        work();
+
+        mockMvc.perform(get("/api/automation/runs/{runId}", runId).session(owner.session()))
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.actions[0].status").value("SKIPPED"))
+                .andExpect(jsonPath("$.actions[0].errorCode").value("audience_retired"))
+                .andExpect(jsonPath("$.actions[1].status").value("SUCCEEDED"));
+        assertThat(SLACK.messages()).hasSize(1);
+        mockMvc.perform(get("/automation").session(owner.session()))
+                .andExpect(content().string(containsString("Skipped")))
+                .andExpect(content().string(containsString("Its audience is retired")))
+                .andExpect(content().string(containsString("Delivers a retired audience")));
+
+        // A rule is still written freely, but enabling one for a retired audience is refused.
+        UUID another = createdRuleId(createRule(owner, slackRule("Tell users", "MANUAL", projectId, endUser, "en"))
+                .andExpect(status().isCreated()));
+        enable(owner, another)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("automation_audience_retired"));
     }
 
     @Test

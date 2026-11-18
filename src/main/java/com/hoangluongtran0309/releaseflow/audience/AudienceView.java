@@ -21,8 +21,15 @@ public record AudienceView(
         Instant createdAt,
         Instant updatedAt,
         Map<String, String> templateVariants,
-        Map<String, String> footerTemplateVariants
+        Map<String, String> footerTemplateVariants,
+        Instant retiredAt,
+        String retirerName
 ) {
+
+    /** A retired audience gets no narrative, no note, and no translation (ADR-0044). */
+    public boolean retired() {
+        return retiredAt != null;
+    }
 
     public AudienceView {
         footerTemplateBody = footerTemplateBody == null ? "" : footerTemplateBody;

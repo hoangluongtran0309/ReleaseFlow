@@ -20,6 +20,9 @@ public final class ReleaseFlowPrincipal implements UserDetails {
     private final String email;
     private final String passwordHash;
     private final AppUserRole role;
+    // The account's session version at sign-in; a session whose version is no longer the
+    // account's is refused (ADR-0043).
+    private final int sessionVersion;
 
     ReleaseFlowPrincipal(AppUser user) {
         this.userId = user.getId();
@@ -28,6 +31,11 @@ public final class ReleaseFlowPrincipal implements UserDetails {
         this.email = user.getEmail();
         this.passwordHash = user.passwordHash();
         this.role = user.getRole();
+        this.sessionVersion = user.getSessionVersion();
+    }
+
+    int sessionVersion() {
+        return sessionVersion;
     }
 
     public UUID userId() {

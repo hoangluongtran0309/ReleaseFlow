@@ -120,7 +120,13 @@ code such as `feature` or `security`, in any case), `status`
 `404 project_not_found`. Each change returns its `category` code with its
 `categoryName` and `categoryGroup`, as recorded when it was classified.
 
-![The Change Inbox with its filters, the sync state of its Jira, GitHub, and GitLab sources, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
+The **Source sync** panel above the changes lists every source of the Project with its
+[health](sources.md#source-health) — the last delivery or read, deliveries refused for
+their signature since the secret was set, and a **Quiet**, **Overdue**, or
+**Disconnected** mark — beside the [history import](sources.md#history-import) of each
+source that has one. A disconnected source's changes stay in the inbox.
+
+![The Change Inbox with its filters, the sync state of its Jira, GitHub, GitLab and Linear sources, then a change with its category, review state, and summary](assets/changes/c-3-change-inbox.webp)
 
 ![Filtering the Change Inbox to the changes whose context was judged insufficient](assets/changes/c-4-context-filter.webp)
 
@@ -204,9 +210,11 @@ provided" or "The version is not specified", is dropped, and so is one that only
 the change's scope, such as "This does not affect the CLI" or "It only affects the CI
 environment", since an audience's relevance already says who the change matters to. A
 limitation such as "Certificate validation is enforced only for MongoDB" is kept, and a
-missing limitations field is empty. Every request asks for the same temperature, `0` unless
-the deployment sets `RELEASEFLOW_AI_TEMPERATURE`, so the same change varies as little as the
-model allows (see [Configuration](configuration.md#ai)).
+missing limitations field is empty. With OpenAI or DeepSeek, every request asks for the same
+temperature, `0` unless the deployment sets `RELEASEFLOW_AI_TEMPERATURE`, so the same change
+varies as little as the model allows. Anthropic takes no temperature, so Claude samples with
+its default; on Claude 4.6 and earlier, answers vary more between runs (see
+[Configuration](configuration.md#ai)).
 
 The Change Inbox shows the summary and narratives under each change, each narrative
 with its relevance and headline, and the changes API returns them as `neutralSummary`,

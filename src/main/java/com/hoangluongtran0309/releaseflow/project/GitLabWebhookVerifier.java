@@ -11,7 +11,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Verifies a GitLab delivery with the connected source's own secret, in whichever way that
@@ -25,30 +24,36 @@ public class GitLabWebhookVerifier {
 
     private final IntegrationSourceRepository sourceRepository;
     private final CredentialCipher credentialCipher;
+    private final SignatureFailureRecorder failures;
     private final Clock clock;
     private final Duration clockSkew;
 
     GitLabWebhookVerifier(
             IntegrationSourceRepository sourceRepository,
             CredentialCipher credentialCipher,
+            SignatureFailureRecorder failures,
             Clock clock,
             @Value("${releaseflow.gitlab.webhook-clock-skew}") Duration clockSkew
     ) {
         this.sourceRepository = sourceRepository;
         this.credentialCipher = credentialCipher;
+        this.failures = failures;
         this.clock = clock;
         this.clockSkew = clockSkew;
     }
 
     public Optional<VerifiedWebhook> verify(String webhookId, GitLabDeliveryHeaders headers, byte[] body) {
-        Optional<UUID> parsedWebhookId = WebhookSources.parseWebhookId(webhookId);
-        if (parsedWebhookId.isEmpty()) {
+        Optional<IntegrationSource> source = WebhookSources.parseWebhookId(webhookId)
+                .flatMap(sourceRepository::findByWebhookId)
+                .filter(candidate -> candidate.getSourceType() == SourceType.GITLAB);
+        if (source.isEmpty()) {
             return Optional.empty();
         }
-        return sourceRepository.findByWebhookId(parsedWebhookId.get())
-                .filter(source -> source.getSourceType() == SourceType.GITLAB)
-                .filter(source -> proves(source, headers, body))
-                .map(WebhookSources::verified);
+        if (!proves(source.get(), headers, body)) {
+            failures.record(source.get());
+            return Optional.empty();
+        }
+        return source.map(WebhookSources::verified);
     }
 
     @Transactional

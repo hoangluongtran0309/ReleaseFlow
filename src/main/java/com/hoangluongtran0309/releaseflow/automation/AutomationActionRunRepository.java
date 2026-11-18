@@ -31,7 +31,7 @@ interface AutomationActionRunRepository extends JpaRepository<AutomationActionRu
                   SELECT 1 FROM automation_action_runs previous
                   WHERE previous.run_id = action_run.run_id
                     AND previous.position < action_run.position
-                    AND previous.status <> 'SUCCEEDED'
+                    AND previous.status NOT IN ('SUCCEEDED', 'SKIPPED')
               )
             ORDER BY run.created_at, action_run.position
             LIMIT 1
