@@ -38,6 +38,8 @@ GitHub Release action's project has exactly one connected GitHub source, the dep
 carry the action out at all, and the configuration and secret are usable. A rule
 that is refused says which of those failed.
 
+![The rules table with one rule marked as delivering a retired audience; another rule's call path is covered](assets/automation/a-12-rule-marked.webp)
+
 ## Actions
 
 Eight kinds of action exist:
@@ -140,6 +142,8 @@ that still delivers a retired audience. Enabling such a rule is refused with
 `409 automation_audience_retired`; point the action at an active audience, or bring the
 audience back, first. An action's status through the API is `PENDING`, `RUNNING`,
 `SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`, or `SKIPPED`.
+
+![A rule's run for a release, Succeeded: ten deliveries in order, the sixth an Email Skipped with audience_retired and the sentence that nothing was sent and the actions after it still ran](assets/automation/a-11-skipped-action.webp)
 
 ![A run whose GitHub Release action failed with github_release_conflict: the actions behind it are pending, with Run again and Cancel](assets/automation/a-7-run-failed.webp)
 

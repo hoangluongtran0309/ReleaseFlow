@@ -44,7 +44,7 @@ viên đọc được nguồn, các lần import và sensitive path của một 
 và các ngôn ngữ release note, nhưng không vào được trang Thành viên, Audience và
 Automation.
 
-![Trang Members: các thành viên cùng vai trò, và các lời mời cùng trạng thái của chúng](assets/workspace/w-4-members.webp)
+![Trang Thành viên: hai thành viên với vai trò, Đổi vai trò và Xoá, danh sách lời mời với trạng thái, Thành viên đã xoá và Thay đổi thành viên](assets/workspace/w-4-members.webp)
 
 Liên kết mời có dạng `/accept-invite#token=…` và chỉ hiện một lần. ReleaseFlow chỉ lưu bản
 băm của nó. Liên kết hết hạn sau bảy ngày (đặt `RELEASEFLOW_INVITATION_TTL`, ví dụ `P3D`,
@@ -61,6 +61,10 @@ một quản trị viên khác: **một Organization luôn giữ một quản tr
 xoá quản trị viên cuối cùng bị từ chối với `409 member_last_administrator`, kể cả khi hai
 quản trị viên cùng làm một lúc.
 
+![Quản trị viên đặt vai trò của một thành viên thành Thành viên và bấm Đổi vai trò; thông báo cho biết vai trò đã đổi và phiên đã kết thúc, lịch sử ghi thay đổi kèm một lời mời đang chờ bị thu hồi](assets/workspace/w-8-change-role.webp)
+
+![Bảng Thành viên với hộp xác nhận xoá mở trong hàng của một thành viên: phiên kết thúc, lời mời đang chờ bị thu hồi, những gì họ ghi giữ tên họ, và nút Xoá thành viên](assets/workspace/w-9-remove-member.webp)
+
 - **Các phiên của họ dừng ở request tiếp theo**, trên mọi trình duyệt và qua API. Thành
   viên bị đổi vai trò đăng nhập lại và nhận vai trò mới; thành viên bị xoá không đăng nhập
   được nữa. Trang họ mở sau đó giải thích rằng quyền truy cập của họ đã thay đổi.
@@ -75,6 +79,10 @@ quản trị viên cùng làm một lúc.
   trước đây vẫn thuộc về thành viên đã bị xoá, dưới tên được ghi lúc đó.
 - **Ai đã đổi gì, và khi nào**, được liệt kê ở mục **Thay đổi thành viên**, còn người đã bị
   xoá ở mục **Thành viên đã xoá**, kèm người đã xoá họ.
+
+![Thành viên đã xoá, với người bị xoá, thời điểm và người xoá, phía trên Thay đổi thành viên: một lần xoá, một lần hạ quyền kèm một lời mời bị thu hồi, và một lần nâng quyền trước đó](assets/workspace/w-10-removed-members.webp)
+
+![Trang đăng nhập với thông báo phiên đã kết thúc vì quyền truy cập vào Organization đã thay đổi](assets/workspace/w-11-access-changed.webp)
 
 #### Khi có người rời đi {#when-someone-leaves}
 

@@ -74,7 +74,8 @@ after ReleaseFlow has already changed its side:
   in is not something to depend on.
 - Linear retries a refused delivery three times, the last about six hours later. Its
   documentation shows the signing secret on the webhook's detail page and says nothing of
-  regenerating it. (Amended on 2026-11-16: those retries are refused too; see the end.)
+  regenerating it. (Amended on 2026-11-16, corrected on 2026-11-18: the lab saw no retry of
+  a delivery ReleaseFlow refused; see the end.)
 
 ## Decision
 
@@ -392,13 +393,18 @@ any release carried it:
   returns a new HMAC-SHA256 signing secret for the webhook … the previous key is replaced
   rather than kept as a second active key", and `webhookUpdate`, whose input takes a
   `url`.
-- Linear's retries do not recover a refused delivery. It retries after one minute, one
-  hour, and six hours, but ReleaseFlow has checked the body's `createdAt` within 60
-  seconds since [ADR-0018](0018-linear-sources.md), and Linear defines `createdAt` as
-  "the date and time that the action took place" and `webhookTimestamp` as the time the
-  webhook was sent. A retry therefore arrives stale and is refused whatever secret signs
-  it. This follows from the code and Linear's definitions; what Linear sends on a retry
-  has not been observed on the lab yet.
+- Nothing recovers a refused Linear delivery. Linear's documentation says it retries a
+  failed delivery after one minute, one hour, and six hours, but on the dbvault lab it
+  sent no retry of a delivery ReleaseFlow refused with `401`: after two refusals on
+  2026-11-16, at 14:43:24Z and 14:53:15Z, nothing more arrived at the 1-minute, 1-hour,
+  or 6-hour mark, the source's signature-failure count stayed at 2, and Linear's own
+  error log for the webhook lists only those two refusals (readings on
+  [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94)). A retry would not
+  help in any case: ReleaseFlow has checked the body's `createdAt` within 60 seconds since
+  [ADR-0018](0018-linear-sources.md), and Linear defines `createdAt` as "the date and time
+  that the action took place" and `webhookTimestamp` as the time the webhook was sent.
+  (Corrected on 2026-11-18: this bullet said Linear's retries arrive and are refused; the
+  lab saw none arrive.)
 - The reconnect row had the same fault in another form: its body needs the signing
   secret before the new path exists, and a webhook cannot be made at a path that is not
   known, nor at the old one while the old webhook still holds it.
@@ -408,9 +414,9 @@ any release carried it:
 - **Rotating:** rotate the existing webhook's secret in Linear, on the webhook's page if
   Linear offers it and otherwise with `webhookRotateSecret`, then paste the returned
   secret into ReleaseFlow right away. Linear goes first, because it makes the secret. A
-  delivery refused between the two is counted and not recorded, Linear's retries of it
-  are refused too, and because ReleaseFlow cannot import Linear's history the issue is
-  recorded only if it is completed again. The advice is to rotate while nobody is
+  delivery refused between the two is counted and not recorded, nothing sends it again,
+  and because ReleaseFlow cannot import Linear's history the issue is recorded only if it
+  is completed again. The advice is to rotate while nobody is
   changing the team's issues and to paste within the minute.
 - **Reconnecting:** create a new webhook disabled, at ReleaseFlow's own address with a
   path it does not know, which answers `401` and records nothing; or keep the team's old
@@ -429,7 +435,8 @@ any release carried it:
   provider's resend fills the gap, do not hold for Linear and are marked where they
   stand.
 
-**What is left open.** Checking `webhookTimestamp` instead of `createdAt` would let
-Linear's retries be accepted after the paste. That changes which deliveries ReleaseFlow
-accepts, so it is a decision of its own, amending ADR-0018, and not part of this
+**What is left open.** Checking `webhookTimestamp` instead of `createdAt` would accept a
+first delivery that arrives late, the loss the lab observed; it would not bring back a
+delivery refused for its signature, since no retry came. That changes which deliveries
+ReleaseFlow accepts, so it is a decision of its own, amending ADR-0018, and not part of this
 amendment; [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94) tracks it.

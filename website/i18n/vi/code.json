@@ -1612,7 +1612,7 @@
     "message": "Được giữ"
   },
   "homepage.showcase.inbox.alt": {
-    "message": "Change Inbox: trạng thái đồng bộ của một nguồn Jira, một nguồn GitHub và một nguồn GitLab, rồi một thay đổi cùng các badge category và review"
+    "message": "Hộp thay đổi: trạng thái đồng bộ của một nguồn Jira, GitHub, GitLab và Linear, rồi một thay đổi với category và nhãn review"
   },
   "homepage.showcase.release.alt": {
     "message": "Một release đang review, đã quyết định năm trong mười một thay đổi, cùng release trước và bản xem trước note cho contributor"

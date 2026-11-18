@@ -45,7 +45,7 @@ classification, decide possible duplicates, and prepare, approve, and publish re
 They can read a Project's sources, imports, and sensitive paths, the category catalog,
 and the release note languages, but not the Members, Audiences, or Automation pages.
 
-![The Members page: the members with their roles, and the invitations with their state](assets/workspace/w-4-members.webp)
+![The Members page: two members with their roles, Change role and Remove, the invitations with their state, Removed members, and Membership changes](assets/workspace/w-4-members.webp)
 
 An invitation link has the form `/accept-invite#token=…` and is shown once.
 ReleaseFlow stores only a hash of it. The link expires after seven days (set
@@ -62,6 +62,10 @@ administrator remains: **an Organization always keeps an administrator**, and th
 one is refused with `409 member_last_administrator`, even when two administrators try at
 the same moment.
 
+![An administrator sets a member's role to Member and presses Change role; a notice says the role changed and the sessions ended, and the history lists the change with one pending invitation revoked](assets/workspace/w-8-change-role.webp)
+
+![The Members table with the removal confirmation open in a member's row: their sessions end, pending invitations are revoked, what they recorded keeps their name, and Remove member](assets/workspace/w-9-remove-member.webp)
+
 - **Their sessions stop on their next request**, in every browser and through the API.
   A demoted or promoted member signs in again and gets the new role; a removed member
   cannot sign in at all. A page they open then explains that their access changed.
@@ -77,6 +81,10 @@ the same moment.
   the removed member, under the name recorded then.
 - **Who changed what, and when**, is listed under **Membership changes**, and removed
   people under **Removed members**, each with who removed them.
+
+![Removed members, with who was removed, when and by whom, above Membership changes: a removal, a demotion with one pending invitation revoked, and an earlier promotion](assets/workspace/w-10-removed-members.webp)
+
+![The sign-in page with the notice that the session ended because access to the Organization changed](assets/workspace/w-11-access-changed.webp)
 
 #### When someone leaves
 
@@ -101,7 +109,7 @@ of these a person saw.
 
 ![Inviting a teammate by email; the one-time link shown afterwards is covered](assets/workspace/w-2-invite.webp)
 
-![The invitation page: the Organization and the invited email, with fields for a name and a password](assets/workspace/w-3-accept.webp)
+![The invitation page: the invited email, with fields for a name and a password typed as dots](assets/workspace/w-3-accept.webp)
 
 REST clients use the same rules:
 

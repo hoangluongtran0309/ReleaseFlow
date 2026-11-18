@@ -126,7 +126,7 @@ their signature since the secret was set, and a **Quiet**, **Overdue**, or
 **Disconnected** mark — beside the [history import](sources.md#history-import) of each
 source that has one. A disconnected source's changes stay in the inbox.
 
-![The Change Inbox with its filters, the sync state of its Jira, GitHub, and GitLab sources, then the changes with their category, review state, and summary](assets/changes/c-3-change-inbox.webp)
+![The Change Inbox with its filters, the sync state of its Jira, GitHub, GitLab and Linear sources, then a change with its category, review state, and summary](assets/changes/c-3-change-inbox.webp)
 
 ![Filtering the Change Inbox to the changes whose context was judged insufficient](assets/changes/c-4-context-filter.webp)
 
