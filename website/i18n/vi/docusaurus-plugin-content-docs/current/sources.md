@@ -457,6 +457,21 @@ bằng **Quản lý nguồn**. Trong REST, view của một nguồn mang nó tro
 - **Quá hạn** — một nguồn Jira có lần đọc tiếp theo đã trễ hơn một chu kỳ đọc. Một lần đọc không
   tìm thấy gì vẫn là thành công, nên nguồn Jira không bao giờ bị coi là im lặng.
 
+Bên cạnh tình trạng, view REST của một nguồn có `connectionStatus`, là một trong ba giá trị:
+
+| `connectionStatus` | Nghĩa là | Trên các trang |
+| --- | --- | --- |
+| `ACTIVE` | Nguồn đang kết nối, và thông tin xác thực của nó dùng được ở lần dùng gần nhất, hoặc chưa được dùng lần nào | Không đánh dấu gì |
+| `ERROR` | Nguồn đang kết nối, nhưng một lần [import lịch sử](#history-import) bị từ chối access token, hoặc một lần [đọc Jira](#poll-jira) thất bại; token mới, hoặc lần đọc Jira tiếp theo thành công, sẽ đưa nó về `ACTIVE` | **Kết nối đang lỗi** |
+| `DISCONNECTED` | Nguồn đã bị [ngắt kết nối](#disconnect-a-source); `health.disconnectedAt` cho biết lúc nào | **Đã ngắt kết nối** |
+
+`DISCONNECTED` được đọc từ chính việc ngắt kết nối, không bao giờ được lưu, nên sau khi
+[kết nối lại](#reconnect-a-source) nguồn lại hiện `ACTIVE`.
+
+Mọi trang gọi một nguồn bằng key của repository hoặc project, và gọi nguồn Linear bằng key của
+team, ví dụ `OPS`, được REST trả về trong `externalTeamKey` bên cạnh ID của team trong
+`externalProjectKey`. Team chưa được đọc key thì được gọi bằng ID.
+
 Tình trạng là bằng chứng trên một trang. Không có gì tính nó theo lịch, không có gì được gửi đi,
 và nó không bao giờ dừng một nguồn, một release hay một quy tắc. ReleaseFlow không giới hạn tần
 suất yêu cầu đến, nên việc đếm được giới hạn theo cách khác: lần gửi bị từ chối đầu tiên của một

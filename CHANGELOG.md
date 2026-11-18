@@ -111,6 +111,10 @@ section into the version's entry, and the GitHub release is written from it.
   its ID: an action skipped for a retired audience, or one that failed as
   `release_note_missing`. A run recorded with the ID shows the audience's current name; the
   stored row does not change.
+- Every page names a Linear source by its team's key, such as `OPS`, instead of the team's
+  ID; before 1.3.0 the Projects page showed the ID too. The API's source views carry the key
+  as `externalTeamKey`, beside the team's ID in `externalProjectKey`. A team whose key was
+  never read is still named by its ID.
 
 ## [1.2.0] - 2026-11-08
 

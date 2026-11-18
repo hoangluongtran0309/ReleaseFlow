@@ -477,6 +477,21 @@ page, which **Manage source** opens. The REST view of a source carries it as `he
 - **Overdue** — a Jira source whose next read is more than one poll interval late. A
   poll that finds nothing is a success, so a Jira source is never quiet.
 
+Beside its health, the REST view of a source carries `connectionStatus`, one of three:
+
+| `connectionStatus` | Means | On the pages |
+| --- | --- | --- |
+| `ACTIVE` | The source is connected, and its credentials worked the last time they were used, or have not been used yet | Nothing is marked |
+| `ERROR` | The source is connected, but a [history import](#history-import) was refused its access token, or a [Jira read](#poll-jira) failed; a new token, or the next Jira read that succeeds, puts it back to `ACTIVE` | **Connection failing** |
+| `DISCONNECTED` | The source was [disconnected](#disconnect-a-source); `health.disconnectedAt` says when | **Disconnected** |
+
+`DISCONNECTED` is read from the disconnection itself, never stored, so a
+[reconnect](#reconnect-a-source) shows `ACTIVE` again.
+
+Every page calls a source by its repository or project key, and a Linear source by its
+team's key, such as `OPS`, which REST carries as `externalTeamKey` beside the team's ID in
+`externalProjectKey`. A team whose key has not been read yet is called by its ID.
+
 Health is evidence on a page. Nothing computes it on a schedule, nothing is sent
 anywhere, and it never stops a source, a release, or a rule. ReleaseFlow has no inbound
 rate limit, so counting is bounded instead: the first refused delivery on a source is
