@@ -50,6 +50,9 @@ export async function createProject(page, name = unique('Checkout')) {
  * or a screen reader can check without knowing what the page means.
  */
 export async function expectNoAccessibilityViolations(page, context) {
+  // A click that navigates waits only for the new document to commit, and Axe measures
+  // sizes and colours, so it must not run before the stylesheet applies (#118).
+  await page.waitForLoadState('load');
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze();
