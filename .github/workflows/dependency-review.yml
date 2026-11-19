@@ -26,5 +26,3 @@ jobs:
         with:
           fail-on-severity: high
           fail-on-scopes: runtime, development, unknown
-          # The advisories scripts/ci/audit-npm.sh lists, with their reasons there; removed with them.
-          allow-ghsas: GHSA-fc5q-39xc-vjpf
