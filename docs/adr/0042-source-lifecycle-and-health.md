@@ -3,7 +3,9 @@
 - Status: Accepted
 - Date: 2026-11-11
 - Amended: 2026-11-16, for rotating and reconnecting a Linear source; see
-  [the amendment](#amendment-2026-11-16-linear-rotation-and-reconnect)
+  [the amendment](#amendment-2026-11-16-linear-rotation-and-reconnect). The question it
+  left open was settled on 2026-11-19 by
+  [ADR-0018's amendment](0018-linear-sources.md#amendment-2026-11-19-when-a-linear-delivery-is-fresh)
 - Amends: [ADR-0002](0002-per-integration-webhook-credentials.md), whose secret rotation and
   replacement were left to a later workflow; [ADR-0016](0016-integration-sources-and-history-import.md),
   for when a repository belongs to one Project and when an import may start;
@@ -430,7 +432,8 @@ any release carried it:
   exist until the team is connected. It now gives the same three steps, and the 1.3.0
   entry of `CHANGELOG.md` says so.
 - The guide's Linear section carries a known-issue note for the stale `createdAt`,
-  linking [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
+  linking [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94). (Removed on
+  2026-11-19, with the fix.)
 - The statements above that Linear's retries cover a slow paste, and that each
   provider's resend fills the gap, do not hold for Linear and are marked where they
   stand.
@@ -440,3 +443,10 @@ first delivery that arrives late, the loss the lab observed; it would not bring 
 delivery refused for its signature, since no retry came. That changes which deliveries
 ReleaseFlow accepts, so it is a decision of its own, amending ADR-0018, and not part of this
 amendment; [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94) tracks it.
+
+**Settled on 2026-11-19** by
+[ADR-0018's amendment](0018-linear-sources.md#amendment-2026-11-19-when-a-linear-delivery-is-fresh):
+a delivery is fresh by its `webhookTimestamp`, so a first delivery Linear sends late is
+accepted. A delivery refused for any other reason, in a rotation gap included, is still
+lost, and the advice above to rotate while nobody is changing the team's issues and to
+paste within the minute stands.

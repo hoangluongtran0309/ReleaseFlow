@@ -42,7 +42,7 @@ Không bao giờ commit hay chia sẻ các giá trị này.
 | `RELEASEFLOW_GITLAB_WEBHOOK_CLOCK_SKEW` | `PT5M` | Một lần gửi có chữ ký từ GitLab được phép cũ tới mức nào |
 | `RELEASEFLOW_LINEAR_API_BASE_URL` | `https://api.linear.app` | Địa chỉ gọi GraphQL API của Linear |
 | `RELEASEFLOW_LINEAR_TIMEOUT` | `PT5S` | Thời gian chờ kết nối và đọc với Linear |
-| `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` | `PT60S` | Một lần gửi có chữ ký từ Linear được phép cũ tới mức nào |
+| `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` | `PT60S` | `webhookTimestamp` của một lần gửi từ Linear, thời điểm Linear gửi đi, được phép lệch khỏi đồng hồ tới mức nào |
 | `RELEASEFLOW_JIRA_TIMEOUT` | `PT10S` | Thời gian chờ kết nối và đọc với Jira |
 | `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | Bao lâu đọc mỗi project Jira một lần; nguồn có lần đọc tiếp theo trễ hơn một chu kỳ được hiển thị là [quá hạn](sources.md#source-health) |
 | `RELEASEFLOW_JIRA_POLL_OVERLAP` | `PT10M` | Mỗi lượt đọc lùi lại bao xa so với lượt đọc trước |

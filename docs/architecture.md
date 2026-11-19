@@ -604,16 +604,25 @@ demands `X-GitHub-Delivery`.
 
 `POST /webhooks/linear/{webhookId}` is the third provider path on the same filter chain.
 `LinearWebhookVerifier` resolves the source by the untrusted webhook ID, requires
-it to be a Linear source, decrypts its secret, and then requires all four of: a
-`Linear-Delivery` header; a `createdAt` within
+it to be a Linear source, decrypts its secret, and then requires all four of, in this
+order: a `Linear-Delivery` header (and a `Linear-Signature` one); a hex HMAC-SHA256 of
+the raw bytes equal to `Linear-Signature`, compared in constant time; a
+`webhookTimestamp`, the time Linear sent the delivery, within
 `releaseflow.linear.webhook-clock-skew` (60 seconds) of the clock, read as
-ISO-8601 or as epoch seconds, or as milliseconds when the number exceeds 1e10; an
-`organizationId` equal to the workspace recorded when the team was connected; and
-a hex HMAC-SHA256 of the raw bytes equal to `Linear-Signature`, compared in
-constant time. Unlike the other two verifiers this one parses the body, because
-Linear puts the timestamp and the workspace inside it rather than in headers; an
-unreadable body is one more way to fail, and every failure answers the same
-`401 webhook_signature_invalid`.
+milliseconds when the number exceeds 1e10, as epoch seconds below that, or as
+ISO-8601; and an `organizationId` equal to the workspace recorded when the team was
+connected. `createdAt`, the time of the issue's change, is not a proof
+([ADR-0018](adr/0018-linear-sources.md), amended 2026-11-19). Unlike the other two
+verifiers this one parses the body, because Linear puts the timestamp and the workspace
+inside it rather than in headers; an unreadable body is one more way to fail, and every
+failure answers the same `401 webhook_signature_invalid`. A refusal on a known path is
+logged by `LinearRefusalLog` with the source's ID and the proof that failed, a stale
+stamp with its offset in seconds, and never the body, a header's value, the secret, or
+the caller. It writes at most one line per source and reason a minute: refusals in
+between are counted in a `ConcurrentHashMap` keyed by source and reason, the next line
+says how many were left out, and a sweep every ten seconds writes a count whose minute
+is over and forgets entries with nothing left to say, so the map holds only what was
+refused in the last two minutes.
 
 `LinearWebhookService` then decides whether the delivery is a change at all.
 `CompletedIssue.isCompletion` requires `type` `Issue`, `action` `update`, an

@@ -196,8 +196,9 @@ where it first appears; ADRs are linked from the slice they record.
   - a Linear team connected with the signing secret Linear minted and an API key,
     both write-only, confirmed with GraphQL `team(id)` before anything is stored,
     which is also how the workspace every delivery is checked against is learned;
-  - `POST /webhooks/linear/{webhookId}`, proven by a delivery header, a stamp
-    within 60 seconds, the workspace, and a hex HMAC of the raw body;
+  - `POST /webhooks/linear/{webhookId}`, proven by a delivery header, a hex HMAC of
+    the raw body, a `webhookTimestamp` (the time Linear sent it) within 60 seconds, and
+    the workspace, with the proof that failed named in the log (amended 2026-11-19);
   - only an issue that really moves into a completed state recorded, by its UUID,
     with the number a person sees kept for release notes;
   - `ChangedFileStatus.NOT_SUPPORTED` and a `SENSITIVE_KEYWORD` trigger from the

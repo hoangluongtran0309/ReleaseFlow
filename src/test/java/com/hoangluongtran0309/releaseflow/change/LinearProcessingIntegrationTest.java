@@ -168,11 +168,12 @@ class LinearProcessingIntegrationTest extends PostgreSqlIntegrationTest {
 
     private void deliver(Connected source, int number, String title, String description) throws Exception {
         String body = """
-                {"type":"Issue","action":"update","createdAt":"%s","organizationId":"%s",\
+                {"type":"Issue","action":"update","createdAt":"%s","webhookTimestamp":%d,"organizationId":"%s",\
                 "updatedFrom":{"stateType":"started"},\
                 "data":{"id":"%s","number":%d,"title":"%s","description":"%s","stateType":"completed",\
                 "teamId":"%s","creator":{"name":"Mai Tran"},"url":"https://linear.app/acme/issue/ENG-%d"}}"""
-                .formatted(Instant.now(), WORKSPACE, issueId(number), number, title, description, TEAM, number);
+                .formatted(Instant.now(), Instant.now().toEpochMilli(), WORKSPACE, issueId(number), number, title,
+                        description, TEAM, number);
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         String signature = HexFormat.of().formatHex(mac.doFinal(body.getBytes(StandardCharsets.UTF_8)));
