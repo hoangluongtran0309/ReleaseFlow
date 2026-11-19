@@ -10,6 +10,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,6 +19,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -25,10 +28,18 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,6 +77,10 @@ class LinkedIssuesAtReviewIntegrationTest extends PostgreSqlIntegrationTest {
 
     @Autowired
     private LinkedIssueReadWorker readWorker;
+
+    // Real in every test; the race tests hold one thread inside a call to it (#119).
+    @MockitoSpyBean
+    private ReleaseLinkedIssueRepository linkedIssueRows;
 
     @DynamicPropertySource
     static void providers(DynamicPropertyRegistry registry) {
@@ -477,6 +492,228 @@ class LinkedIssuesAtReviewIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(get(release.substring("/api".length())).session(workspace.admin()))
                 .andExpect(content().string(not(containsString("id=\"folding-suggestions\""))));
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM release_fold_decisions", Integer.class)).isEqualTo(1);
+    }
+
+    // #119: the review-time read and an acceptance meet inside their transactions. Each test
+    // holds one of them just after it loaded the release's linked issues, lets the other one
+    // run, and checks that the other waits for the release's lock rather than racing it.
+
+    @Test
+    void anAcceptanceMadeWhileTheReadIsBeingRecordedWaitsForItAndBothAreKept() throws Exception {
+        Workspace workspace = workspace();
+        String release = inReviewWithOpenIssue(workspace);
+        // The worker loads the rows once to choose what to read and again to record it.
+        Pause pause = holdRowsLoaded(2);
+
+        CompletableFuture<Boolean> read = pause.start(() -> readWorker.processOne());
+        pause.awaitHeld();
+        CompletableFuture<Integer> acceptance = alongside(() -> accept(workspace.member(), release, "In Progress"));
+        boolean waited = stillRunning(acceptance);
+        pause.release();
+
+        assertThat(read.get(15, TimeUnit.SECONDS)).isTrue();
+        assertThat(acceptance.get(15, TimeUnit.SECONDS)).isEqualTo(200);
+        assertThat(row()).containsEntry("status", "In Progress")
+                .containsEntry("accepted_status", "In Progress")
+                .containsEntry("accepter_name", "Member");
+        assertThat(row().get("read_at")).isNotNull();
+        assertThat(waited).as("the other side waited for the release's lock").isTrue();
+    }
+
+    @Test
+    void aReadRecordedWhileAnAcceptanceIsBeingMadeWaitsForItAndBothAreKept() throws Exception {
+        Workspace workspace = workspace();
+        String release = inReviewWithOpenIssue(workspace);
+        Pause pause = holdRowLookedUp(1);
+
+        CompletableFuture<Integer> acceptance = pause.start(() -> accept(workspace.member(), release, "In Progress"));
+        pause.awaitHeld();
+        CompletableFuture<Boolean> read = alongside(() -> readWorker.processOne());
+        boolean waited = stillRunning(read);
+        pause.release();
+
+        assertThat(acceptance.get(15, TimeUnit.SECONDS)).isEqualTo(200);
+        assertThat(read.get(15, TimeUnit.SECONDS)).isTrue();
+        assertThat(row()).containsEntry("status", "In Progress")
+                .containsEntry("accepted_status", "In Progress")
+                .containsEntry("accepter_name", "Member");
+        assertThat(row().get("read_at")).isNotNull();
+        assertThat(waited).as("the other side waited for the release's lock").isTrue();
+    }
+
+    @Test
+    void aReadRecordedOverAnExistingRowNeverWritesBackTheAcceptanceItLoaded() throws Exception {
+        Workspace workspace = workspace();
+        String release = inReviewWithOpenIssue(workspace);
+        drainReads();
+        assertThat(accept(workspace.member(), release, "In Progress")).isEqualTo(200);
+        // A second review keeps the row and its acceptance, and reads the issue again.
+        send(workspace.admin(), post(release + "/return-to-draft"), null).andExpect(status().isOk());
+        send(workspace.admin(), post(release + "/request-review"), null).andExpect(status().isOk());
+        dueNow();
+        Pause pause = holdRowsLoaded(2);
+
+        CompletableFuture<Boolean> read = pause.start(() -> readWorker.processOne());
+        pause.awaitHeld();
+        // The worker holds the row as it was, accepted by Member; the owner accepts it again.
+        CompletableFuture<Integer> acceptance = alongside(() -> accept(workspace.admin(), release, "In Progress"));
+        boolean waited = stillRunning(acceptance);
+        pause.release();
+
+        assertThat(read.get(15, TimeUnit.SECONDS)).isTrue();
+        assertThat(acceptance.get(15, TimeUnit.SECONDS)).isEqualTo(200);
+        assertThat(row()).containsEntry("status", "In Progress").containsEntry("accepter_name", "Owner");
+        assertThat(waited).as("the other side waited for the release's lock").isTrue();
+    }
+
+    @Test
+    void reviewRequestedAgainWhileAReadIsBeingRecordedNeitherLosesTheAcceptanceNorKeepsTheOldRead() throws Exception {
+        Workspace workspace = workspace();
+        String release = inReviewWithOpenIssue(workspace);
+        drainReads();
+        assertThat(accept(workspace.member(), release, "In Progress")).isEqualTo(200);
+        send(workspace.admin(), post(release + "/return-to-draft"), null).andExpect(status().isOk());
+        send(workspace.admin(), post(release + "/request-review"), null).andExpect(status().isOk());
+        dueNow();
+        Pause pause = holdRowsLoaded(2);
+
+        // The read of the second review is held while it records; the release goes back to
+        // draft and is sent for review a third time meanwhile.
+        CompletableFuture<Boolean> read = pause.start(() -> readWorker.processOne());
+        pause.awaitHeld();
+        CompletableFuture<Integer> again = alongside(() -> {
+            send(workspace.admin(), post(release + "/return-to-draft"), null).andExpect(status().isOk());
+            return send(workspace.admin(), post(release + "/request-review"), null).andReturn().getResponse().getStatus();
+        });
+        boolean waited = stillRunning(again);
+        pause.release();
+
+        assertThat(read.get(15, TimeUnit.SECONDS)).isTrue();
+        assertThat(again.get(15, TimeUnit.SECONDS)).isEqualTo(200);
+        // The third review starts from nothing read, keeps the acceptance, and is read again.
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM linked_issue_reads", String.class)).isEqualTo("PENDING");
+        assertThat(row()).containsEntry("status", null).containsEntry("accepter_name", "Member");
+        JIRA.respondWithIssue("APP-53", "Retention preview", "Story", "In Review", "");
+        drainReads();
+        assertThat(row()).containsEntry("status", "In Review").containsEntry("accepter_name", "Member");
+        assertThat(waited).as("the other side waited for the release's lock").isTrue();
+    }
+
+    private String inReviewWithOpenIssue(Workspace workspace) throws Exception {
+        UUID change = code(workspace, 1, "feat: preview a retention policy", """
+                [{"key":"APP-53","title":"Retention preview","type":"Story","status":"In Progress","url":"https://acme.atlassian.net/browse/APP-53","tracker":"JIRA","statusCategory":"open"}]""");
+        String release = draft(workspace, "1.0.0", change);
+        send(workspace.admin(), post(release + "/request-review"), null).andExpect(status().isOk());
+        JIRA.respondWithIssue("APP-53", "Retention preview", "Story", "In Progress", "");
+        dueNow();
+        return release;
+    }
+
+    private int accept(MockHttpSession session, String release, String shownStatus) {
+        try {
+            return send(session, post(release + "/linked-issues/acceptance"),
+                    Map.of("tracker", "JIRA", "key", "APP-53", "status", shownStatus))
+                    .andReturn().getResponse().getStatus();
+        } catch (Exception exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    private Map<String, Object> row() {
+        return jdbcTemplate.queryForMap("SELECT status, read_at, accepted_status, accepter_name FROM release_linked_issues");
+    }
+
+    private void dueNow() {
+        jdbcTemplate.update("UPDATE linked_issue_reads SET next_attempt_at = now() - interval '1 second' WHERE status = 'PENDING'");
+    }
+
+    // Whether the other side is still running half a second later: waiting for the release's
+    // lock. Checked last, so that without the lock a test reports what the race did first.
+    private static boolean stillRunning(CompletableFuture<?> other) throws InterruptedException {
+        Thread.sleep(500);
+        return !other.isDone();
+    }
+
+    private final ExecutorService threads = Executors.newCachedThreadPool();
+
+    @AfterEach
+    void stopThreads() {
+        threads.shutdownNow();
+    }
+
+    private <T> CompletableFuture<T> alongside(ThrowingSupplier<T> work) {
+        return CompletableFuture.supplyAsync(work.unchecked(), threads);
+    }
+
+    // Holds the thread a Pause started inside its n-th load of a release's linked issues.
+    @SuppressWarnings("unchecked")
+    private Pause holdRowsLoaded(int onCall) {
+        Pause pause = new Pause(onCall);
+        Answer<Object> real = (Answer<Object>) Mockito.mockingDetails(linkedIssueRows).getMockCreationSettings().getDefaultAnswer();
+        Mockito.doAnswer(invocation -> pause.after(real.answer(invocation)))
+                .when(linkedIssueRows).findAllByReleaseIdAndOrganizationId(any(), any());
+        return pause;
+    }
+
+    // Holds the thread a Pause started inside its n-th lookup of one linked issue.
+    @SuppressWarnings("unchecked")
+    private Pause holdRowLookedUp(int onCall) {
+        Pause pause = new Pause(onCall);
+        Answer<Object> real = (Answer<Object>) Mockito.mockingDetails(linkedIssueRows).getMockCreationSettings().getDefaultAnswer();
+        Mockito.doAnswer(invocation -> pause.after(real.answer(invocation))).when(linkedIssueRows).findById(any());
+        return pause;
+    }
+
+    @FunctionalInterface
+    private interface ThrowingSupplier<T> {
+        T get() throws Exception;
+
+        default Supplier<T> unchecked() {
+            return () -> {
+                try {
+                    return get();
+                } catch (Exception exception) {
+                    throw new IllegalStateException(exception);
+                }
+            };
+        }
+    }
+
+    /** One thread, held after its n-th call returned, until the test lets it go. */
+    private final class Pause {
+
+        private final int onCall;
+        private final AtomicInteger calls = new AtomicInteger();
+        private final CountDownLatch held = new CountDownLatch(1);
+        private final CountDownLatch released = new CountDownLatch(1);
+        private volatile Thread thread;
+
+        private Pause(int onCall) {
+            this.onCall = onCall;
+        }
+
+        <T> CompletableFuture<T> start(ThrowingSupplier<T> work) {
+            return CompletableFuture.supplyAsync(() -> {
+                thread = Thread.currentThread();
+                return work.unchecked().get();
+            }, threads);
+        }
+
+        Object after(Object result) throws InterruptedException {
+            if (Thread.currentThread() == thread && calls.incrementAndGet() == onCall) {
+                held.countDown();
+                assertThat(released.await(15, TimeUnit.SECONDS)).as("released by the test").isTrue();
+            }
+            return result;
+        }
+
+        void awaitHeld() throws InterruptedException {
+            assertThat(held.await(15, TimeUnit.SECONDS)).as("reached the call it is held in").isTrue();
+        }
+
+        void release() {
+            released.countDown();
+        }
     }
 
     private void confirmDuplicate(Workspace workspace, UUID change, UUID duplicateOf) {

@@ -1246,6 +1246,16 @@ publication.
   finishes `FAILED` and the unread issues keep their recorded status. Each result publishes
   `LinkedIssuesRead`, which renders again an `APPROVED` release's notes that still follow
   their template.
+- **One release, one writer at a time.** Every transaction that writes a release or what
+  belongs to it locks the release's row first, before any other row
+  (`ReleaseRepository.lockByIdAndOrganizationIdAndProjectId`, `FOR NO KEY UPDATE`). That
+  covers each writing method of `ReleaseService` and the worker's transaction that records
+  a read. An acceptance, a new review, and a read's result therefore run one after the
+  other, each loading the rows the one before it committed, so none writes back a column
+  it loaded stale and none inserts a row the other already inserted. With one lock taken
+  first everywhere, none of them can deadlock another. The worker's claim and the read
+  itself take no release lock, and `FOR NO KEY UPDATE` lets other tables still insert rows
+  that refer to the release (#119).
 - **What a note gets.** `IssueStatuses` turns the rows into the `status`,
   `recordedStatus`, and `statusAtReview` of each `NoteIssue`: a status is given only when
   its category is `done`, or when a person accepted that very status; otherwise all three

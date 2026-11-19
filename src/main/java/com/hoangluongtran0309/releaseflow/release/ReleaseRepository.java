@@ -1,6 +1,8 @@
 package com.hoangluongtran0309.releaseflow.release;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,6 +30,28 @@ interface ReleaseRepository extends JpaRepository<Release, UUID> {
     );
 
     Optional<Release> findByIdAndOrganizationIdAndProjectId(UUID id, UUID organizationId, UUID projectId);
+
+    /**
+     * Locks a release's row for the rest of the transaction (#119). Every transaction that
+     * writes a release or what belongs to it takes this lock first, before any other row, so
+     * they run one after the other and in one order: none reads the release's linked issues,
+     * notes, or read job while another is changing them, and none can deadlock another.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select release from Release release
+            where release.id = :id and release.organizationId = :organizationId and release.projectId = :projectId
+            """)
+    Optional<Release> lockByIdAndOrganizationIdAndProjectId(
+            @Param("id") UUID id,
+            @Param("organizationId") UUID organizationId,
+            @Param("projectId") UUID projectId
+    );
+
+    /** The same lock, for a worker that knows the release but not its Project. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select release from Release release where release.id = :id and release.organizationId = :organizationId")
+    Optional<Release> lockByIdAndOrganizationId(@Param("id") UUID id, @Param("organizationId") UUID organizationId);
 
     boolean existsByOrganizationIdAndProjectIdAndStatus(UUID organizationId, UUID projectId, ReleaseStatus status);
 
