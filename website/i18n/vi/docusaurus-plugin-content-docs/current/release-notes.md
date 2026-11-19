@@ -416,6 +416,19 @@ lại, dù lấy từ DeepL hay từ cache, nên bản dịch đã cache trướ
 không gửi yêu cầu nào, và không gì được gửi đi thay đổi. Placeholder mà DeepL làm mất thì để
 nguyên là mất và được ghi vào log. Xem [ADR-0040](adr/0040-translation-placeholders.md).
 
+DeepL còn dịch cả chữ bên trong một **code span**: `under 1 s` trở thành `dưới 1 giây`. Code
+span báo cho người đọc gõ hoặc tìm đúng chuỗi đó, nên bản dịch cũng giữ các span của bản gốc. Một
+span có nội dung mà bản gốc có viết thì được giữ nguyên; các span mà DeepL đã dịch được trả lại
+nội dung của bản gốc, theo thứ tự, khi số của chúng bằng số span của bản gốc mà bản dịch làm mất.
+Nếu không thì chúng được để nguyên như DeepL viết và số lượng được ghi vào log. Văn bản có code
+block dạng fence hoặc span hai backtick giữ nguyên các span như đã viết. Nếu DeepL vừa đổi chỗ vừa
+dịch hai span thì mỗi span nhận nội dung của span kia; đó là giới hạn đã biết của việc ghép theo
+thứ tự.
+
+Vì vậy, hãy viết một tên mà người đọc phải tìm đúng như vậy, như một trường, một tham số hay một
+chuỗi giao diện in ra bằng tiếng Anh, trong **code span**: `limit`, không phải 'limit'. Chữ trong
+dấu nháy được dịch như mọi chữ khác, vì dấu nháy chứa từ thông thường cũng nhiều như chứa tên.
+
 ```text
 GET    /api/glossary
 GET    /api/glossary/suggestions

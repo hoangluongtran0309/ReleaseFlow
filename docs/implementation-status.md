@@ -564,7 +564,9 @@ where it first appears; ADRs are linked from the slice they record.
     never blocking approval or publication;
   - [ADR-0040](adr/0040-translation-placeholders.md): placeholders and lowercase
     hyphenated identifiers keep their source's letter case in every recorded translation,
-    fresh or cached, without changing any request.
+    fresh or cached, without changing any request;
+  - code spans DeepL translated get their source text back, paired in order when the
+    counts agree and logged by counts when they do not (#107, amending ADR-0040).
 
 ### Security changes and note structure (V34)
 

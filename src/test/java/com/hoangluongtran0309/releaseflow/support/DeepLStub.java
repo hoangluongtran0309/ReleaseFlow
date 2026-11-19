@@ -57,6 +57,7 @@ public final class DeepLStub implements AutoCloseable {
     private volatile boolean untranslated;
     private volatile boolean upperPlaceholdersWithGlossary;
     private volatile boolean dropPlaceholdersWithGlossary;
+    private volatile Map<String, String> codeSpanWords = Map.of();
     private volatile int maxGlossaries = 1;
     private volatile Set<String> glossaryLanguages = Set.of("en", "vi", "de", "fr", "ja");
     private volatile Map<List<String>, String> recorded;
@@ -115,6 +116,14 @@ public final class DeepLStub implements AutoCloseable {
      */
     public void upperPlaceholdersWithGlossary() {
         upperPlaceholdersWithGlossary = true;
+    }
+
+    /**
+     * Translates the words inside code spans too, as DeepL was measured to do: each span whose
+     * text is a key, such as {@code `under 1 s`}, comes back holding its value.
+     */
+    public void translateInsideCodeSpans(Map<String, String> words) {
+        codeSpanWords = Map.copyOf(words);
     }
 
     /** Leaves every placeholder out of a translation sent with a glossary. */
@@ -178,6 +187,7 @@ public final class DeepLStub implements AutoCloseable {
         untranslated = false;
         upperPlaceholdersWithGlossary = false;
         dropPlaceholdersWithGlossary = false;
+        codeSpanWords = Map.of();
         maxGlossaries = 1;
         glossaryLanguages = Set.of("en", "vi", "de", "fr", "ja");
         glossaries.clear();
@@ -288,6 +298,9 @@ public final class DeepLStub implements AutoCloseable {
                 }
                 String upper = target.toUpperCase(Locale.ROOT);
                 translated = "[" + upper + "] " + (upper.startsWith("VI") ? VIETNAMESE_MARKER : "") + translated;
+                for (Map.Entry<String, String> word : codeSpanWords.entrySet()) {
+                    translated = translated.replace("`" + word.getKey() + "`", "`" + word.getValue() + "`");
+                }
             }
             if (glossaryId != null && dropPlaceholdersWithGlossary) {
                 translated = PLACEHOLDER.matcher(translated).replaceAll("");
