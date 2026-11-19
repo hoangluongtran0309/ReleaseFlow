@@ -30,6 +30,11 @@ section into the version's entry, and the GitHub release is written from it.
   delivered as written
   ([ADR-0035](docs/adr/0035-evidence-bound-notes-and-audience-relevance.md),
   [ADR-0044](docs/adr/0044-retire-an-audience.md), [#108](https://github.com/hoangluongtran0309/ReleaseFlow/issues/108)).
+- Accepting a linked issue's status while its review-time read was being recorded could fail
+  with an error, or silently undo either the acceptance or the read. A new review requested
+  meanwhile could keep the old read and never read the issue again. Every change to a
+  release and what belongs to it now locks the release first, so these run one after the
+  other ([#119](https://github.com/hoangluongtran0309/ReleaseFlow/issues/119)).
 
 ## [1.3.0] - 2026-11-18
 

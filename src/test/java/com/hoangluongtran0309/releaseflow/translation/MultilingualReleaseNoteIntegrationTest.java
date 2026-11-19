@@ -114,8 +114,13 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(content().string(containsString("disabled=\"disabled\">Publish 1.4.0</button>")))
                 .andExpect(content().string(containsString("data-poll-url=\"" + releaseApi(projectId, releaseId) + "/notes\"")));
 
+        // Finishing the translation renders the approved release's notes again without writing
+        // the release's row: that listener runs in the job's transaction and never locks the
+        // release, so it must never write it either (#119).
+        String releaseRow = releaseRowVersion(releaseId);
         assertThat(worker.processOne()).isTrue();
         assertThat(worker.processOne()).isFalse();
+        assertThat(releaseRowVersion(releaseId)).as("the release's row is not written").isEqualTo(releaseRow);
 
         assertThat(DEEPL.requests()).singleElement().satisfies(request -> {
             assertThat(request.sourceLanguage()).isEqualTo("EN");
@@ -512,5 +517,10 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     private record Owner(UUID organizationId, UUID userId, MockHttpSession session) {
+    }
+
+    // PostgreSQL's xmin changes with every UPDATE of a row, and with nothing else.
+    private String releaseRowVersion(UUID releaseId) {
+        return jdbcTemplate.queryForObject("SELECT xmin::text FROM releases WHERE id = ?", String.class, releaseId);
     }
 }
