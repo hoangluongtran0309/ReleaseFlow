@@ -214,6 +214,10 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `GET /api/automation/runs`, `GET /api/automation/runs/{runId}` | quản trị viên |
 | `POST /api/automation/runs/{runId}/retry`, `POST /api/automation/runs/{runId}/cancel` | quản trị viên |
 
+Một action của lần chạy bị bỏ qua có trạng thái `SKIPPED`, và `errorCode` của nó nói lý do:
+`audience_retired` hoặc `nothing_for_audience`. Bỏ qua không phải là lỗi và không có Problem
+Details; xem [Lần chạy](automation.md#runs).
+
 ### Webhook có chữ ký {#signed-webhooks}
 
 Các endpoint này không cần phiên đăng nhập hay CSRF token; mỗi endpoint tự chứng minh bằng secret

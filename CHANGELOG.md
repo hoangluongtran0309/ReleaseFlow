@@ -23,6 +23,13 @@ section into the version's entry, and the GitHub release is written from it.
 - Reconnecting a Linear source says it needs a Linear API key besides the signing secret,
   and labels that field API key, as connecting does
   ([#106](https://github.com/hoangluongtran0309/ReleaseFlow/issues/106)).
+- An automation action whose note has nothing for its audience is skipped with
+  `nothing_for_audience` instead of delivered, so a rule no longer writes a permanent
+  public changelog entry, page, article, or message that only says nothing in the release
+  concerns its reader; the actions behind it still run. A note a person edited is
+  delivered as written
+  ([ADR-0035](docs/adr/0035-evidence-bound-notes-and-audience-relevance.md),
+  [ADR-0044](docs/adr/0044-retire-an-audience.md), [#108](https://github.com/hoangluongtran0309/ReleaseFlow/issues/108)).
 
 ## [1.3.0] - 2026-11-18
 

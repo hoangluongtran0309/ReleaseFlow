@@ -95,7 +95,9 @@ nó cũng phá vỡ tương thích. Xem
 Các con số và cảnh báo phá vỡ tương thích mô tả đúng những gì note hiển thị, và mỗi thay đổi chỉ
 được đếm một lần, trong mục mà nó được liệt kê. Audience không liên quan tới bất cứ thay đổi nào trong release vẫn có note của mình: tiêu đề,
 tóm tắt release, và một dòng nói rằng release này không có gì liên quan tới họ. Việc duyệt vẫn viết
-một note cho mỗi audience và ngôn ngữ, và một hành động automation giao note đó như mọi note khác.
+một note cho mỗi audience và ngôn ngữ, và việc publish vẫn cần mọi note. Một hành động automation
+không giao note như vậy: nó được [bỏ qua](automation.md#runs) với `nothing_for_audience`, trừ khi
+một người đã sửa note, khi đó note được gửi đúng như đã viết.
 Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 ![Template và phần cuối của một audience trong trình sửa, cùng bản xem trước: một thay đổi mẫu rồi tới phần cuối](assets/release-notes/rn-2-template.webp)

@@ -97,8 +97,10 @@ change, unless it is also breaking. See
 The counts and the breaking-change warning describe what the note shows, and every
 change counts once, in the section it is listed in. An audience that nothing in the release concerns still gets its note: the title,
 the release summary, and one line saying that nothing in the release concerns it.
-Approval still writes one note per audience and language, and an automation action
-delivers that note like any other. See
+Approval still writes one note per audience and language, and publication still needs
+every note. An automation action does not deliver such a note: it is
+[skipped](automation.md#runs) with `nothing_for_audience`, unless a person edited the note,
+which is then delivered as written. See
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
 ![An audience's template and footer in the editor, and its preview: a sample change followed by the footer](assets/release-notes/rn-2-template.webp)

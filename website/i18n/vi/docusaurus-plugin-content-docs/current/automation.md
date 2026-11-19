@@ -138,6 +138,28 @@ tới audience đã ngừng dùng. Bật một quy tắc như vậy bị từ ch
 dùng lại audience đó. Trạng thái của một action qua API là `PENDING`, `RUNNING`, `SUCCEEDED`,
 `FAILED`, `UNKNOWN`, `CANCELLED` hoặc `SKIPPED`.
 
+Một action mà note của nó không có gì cho audience của nó cũng được **bỏ qua**, với
+`nothing_for_audience`: không thay đổi nào trong release liên quan tới audience đó, nên note của
+nó chỉ có tiêu đề, tóm tắt release, và dòng nói rằng release này không có gì liên quan tới họ.
+Không có gì được gửi, nên không có mục changelog công khai, trang, bài viết hay tin nhắn nào chỉ
+nói điều đó, và phần còn lại của lần chạy tiếp tục như với một audience đã ngừng dùng. Việc này
+được quyết định khi action chạy, với mọi trigger, từ các thay đổi của release theo đúng quy tắc
+chọn thay đổi cho một note (xem
+[Release Note](release-notes.md#what-each-audience-reads)), không bao giờ từ nội dung của note.
+Các bước kiểm tra theo thứ tự này: audience đã ngừng dùng được bỏ qua với `audience_retired`; action
+không có note sẵn sàng thất bại với `release_note_missing`; note do một người sửa được gửi đúng như
+đã viết, dù các thay đổi của nó nói gì; và chỉ sau đó note không có gì cho audience của nó mới bị
+bỏ qua. Muốn gửi một note như vậy có chủ ý, hãy sửa nó trước khi publish. Bật một quy tắc không
+bao giờ bị từ chối vì lý do này, vì một quy tắc tồn tại lâu hơn mọi release.
+
+Các thay đổi được đọc theo trạng thái lúc action chạy, nên một note đã publish và việc bỏ qua nó
+có thể không khớp nhau. Nếu sau khi publish, một lần review bỏ cờ phá vỡ tương thích của một thay
+đổi, hoặc AI được nhờ viết một narrative còn thiếu, thì một thay đổi mà note liệt kê có thể không
+còn liên quan tới audience, và chạy lại quy tắc sẽ bỏ qua một note vốn có nội dung. Ngược lại, một
+note nói rằng không có gì liên quan tới audience của nó sẽ được gửi khi một thay đổi của nó trở nên
+liên quan. Xem
+[amendment của ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md#amendment-2026-11-19-an-action-whose-note-has-nothing-for-its-audience).
+
 ![Lần chạy của một quy tắc cho một release, Thành công: mười lần gửi theo thứ tự, lần thứ sáu là Email Đã bỏ qua với audience_retired và câu giải thích không gửi gì và các action sau vẫn chạy](assets/automation/a-11-skipped-action.webp)
 
 ![Một lần chạy có action GitHub Release thất bại với github_release_conflict: các action sau nó đang chờ, cùng nút chạy lại và huỷ](assets/automation/a-7-run-failed.webp)
@@ -214,6 +236,9 @@ Lời từ chối của action changelog công khai là `public_changelog_confli
 chứ không trả về cho ai; xem [Changelog công khai](#public-changelog). Tương tự, một action mà
 release của nó không có release note sẵn sàng cho audience và ngôn ngữ của action sẽ thất bại với
 `release_note_missing` khi worker tới lượt nó; release vẫn được publish dù thế nào.
+Một action bị bỏ qua có trạng thái `SKIPPED`, với lý do trong `errorCode` là `audience_retired`
+hoặc `nothing_for_audience` ([Lần chạy](#runs)); bỏ qua không phải là lời từ chối và không có
+Problem Details.
 
 Các lời từ chối mang mã cố định:
 

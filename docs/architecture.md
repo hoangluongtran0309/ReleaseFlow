@@ -1691,7 +1691,13 @@ every earlier action has succeeded or been skipped, with `FOR UPDATE OF action_r
 provider is called with no transaction open, and the result is written in a short
 transaction that first checks the claim is still this worker's. An action whose audience
 is retired is skipped with `audience_retired` before any provider is called; no metric is
-recorded for it, since nothing was delivered.
+recorded for it, since nothing was delivered. After that, and after an action with no
+ready note fails with `release_note_missing`, an action whose release note still follows
+its template is skipped with `nothing_for_audience` when no change the release includes
+concerns its audience. `ReleaseAccess.hasNothingFor` decides it in one read-only
+transaction, from the release's changes as they are then and `ReleaseNoteDigest.concerns`,
+the rule that chose the note's changes; the note's text is never read, and a note a person
+edited is always delivered (ADR-0035 and ADR-0044, amended 2026-11-19).
 
 ### Outcomes
 
