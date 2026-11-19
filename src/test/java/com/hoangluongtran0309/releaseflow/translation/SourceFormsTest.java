@@ -97,4 +97,107 @@ class SourceFormsTest {
     void aPlaceholderIsALetterThenLettersDigitsHyphensOrUnderscores(String token, boolean placeholder) {
         assertThat(SourceForms.PLACEHOLDER.matcher(token).matches()).isEqualTo(placeholder);
     }
+
+    // ADR-0040, amended 2026-11-19: code spans. The answers are the lab's v1.4.0 notes
+    // (`under 1 s`, `0 s`) and the golden package's (`bigserial`).
+
+    @Test
+    void aSpanTheTranslationKeepsStaysAsItIs() {
+        String answer = "Bảng điều khiển hiển thị `under 1 s` cho bản sao lưu nhanh.";
+        assertThat(SourceForms.restore("The console shows `under 1 s` for a fast backup.", answer)).isSameAs(answer);
+        assertThat(SourceForms.unpairedSpans("The console shows `under 1 s` for a fast backup.", answer)).isEmpty();
+    }
+
+    @Test
+    void aTranslatedSpanGetsItsSourceTextBack() {
+        assertThat(SourceForms.restore(
+                "The console shows `under 1 s` for a fast backup.",
+                "Bảng điều khiển hiển thị `dưới 1 giây` cho bản sao lưu nhanh."))
+                .isEqualTo("Bảng điều khiển hiển thị `under 1 s` cho bản sao lưu nhanh.");
+    }
+
+    @Test
+    void twoTranslatedSpansInOneTextAreBothRestoredInOrder() {
+        assertThat(SourceForms.restore(
+                "A fast backup shows `under 1 s`, and an empty one shows `0 s`.",
+                "Bản sao lưu nhanh hiển thị `dưới 1 giây`, còn bản rỗng hiển thị `0 giây`."))
+                .isEqualTo("Bản sao lưu nhanh hiển thị `under 1 s`, còn bản rỗng hiển thị `0 s`.");
+    }
+
+    @Test
+    void aKeptSpanAndATranslatedOneInOneTextAreToldApart() {
+        assertThat(SourceForms.restore(
+                "A fast backup shows `under 1 s`, and an empty one shows `0 s`.",
+                "Bản sao lưu nhanh hiển thị `under 1 s`, còn bản rỗng hiển thị `0 giây`."))
+                .isEqualTo("Bản sao lưu nhanh hiển thị `under 1 s`, còn bản rỗng hiển thị `0 s`.");
+        // The same span twice: one occurrence kept, the other translated.
+        assertThat(SourceForms.restore(
+                "It shows `under 1 s`, then `under 1 s` again.",
+                "Nó hiển thị `dưới 1 giây`, rồi `under 1 s` lần nữa."))
+                .isEqualTo("Nó hiển thị `under 1 s`, rồi `under 1 s` lần nữa.");
+    }
+
+    // The known limit: pairing is by position, so two spans DeepL both reordered and
+    // translated get each other's text. If this test changes, the amendment must too.
+    @Test
+    void twoSpansDeepLBothReorderedAndTranslatedGetEachOthersText() {
+        assertThat(SourceForms.restore(
+                "A fast backup shows `under 1 s`, and an empty one shows `0 s`.",
+                "Bản rỗng hiển thị `0 giây`, còn bản sao lưu nhanh hiển thị `dưới 1 giây`."))
+                .isEqualTo("Bản rỗng hiển thị `under 1 s`, còn bản sao lưu nhanh hiển thị `0 s`.");
+    }
+
+    @Test
+    void aSpanDeepLAddedAroundAWordTheSourceWritesBareIsKept() {
+        String answer = "Khóa chính dùng `bigserial` thay vì serial, với `0 s` khi trống.";
+        assertThat(SourceForms.restore("Primary keys use bigserial instead of serial, with `0 s` when empty.", answer))
+                .isSameAs(answer);
+        assertThat(SourceForms.unpairedSpans("Primary keys use bigserial instead of serial, with `0 s` when empty.", answer))
+                .isEmpty();
+    }
+
+    @Test
+    void unequalCountsLeaveTheSpansAsWrittenAndSaySo() {
+        // DeepL translated one span and dropped the backticks of the other.
+        String source = "A fast backup shows `under 1 s`, and an empty one shows `0 s`.";
+        String answer = "Bản sao lưu nhanh hiển thị `dưới 1 giây`, còn bản rỗng hiển thị 0 s.";
+        assertThat(SourceForms.restore(source, answer)).isSameAs(answer);
+        assertThat(SourceForms.unpairedSpans(source, answer)).contains(new SourceForms.UnpairedSpans(1, 2));
+    }
+
+    @Test
+    void aPlaceholderInsideATranslatedSpanComesBackWithItsSpan() {
+        assertThat(SourceForms.restore(
+                "Run `verify <backup-id> now` after each backup.",
+                "Chạy `xác minh <BACKUP-id> ngay` sau mỗi bản sao lưu."))
+                .isEqualTo("Chạy `verify <backup-id> now` sau mỗi bản sao lưu.");
+    }
+
+    @Test
+    void aTextWithoutSpansToRestoreKeepsItsTranslationByteForByte() {
+        String answer = "Bảng điều khiển nhanh hơn, và `dbvault backups` vẫn như cũ.";
+        assertThat(SourceForms.restore("The console is faster, and `dbvault backups` is unchanged.", answer))
+                .isSameAs(answer);
+    }
+
+    // A fenced block's three backticks would pair with the wrong ones, so a text holding one
+    // keeps its spans as DeepL wrote them: never broken, and not reported as unpaired.
+    @Test
+    void aTextWithAFencedCodeBlockKeepsItsSpansAsWritten() {
+        String source = "Shows `under 1 s`:\n\n```\ndbvault backups --since 1d\n```\n";
+        String answer = "Hiển thị `dưới 1 giây`:\n\n```\ndbvault backups --since 1d\n```\n";
+        assertThat(SourceForms.restore(source, answer)).isSameAs(answer);
+        assertThat(SourceForms.unpairedSpans(source, answer)).isEmpty();
+    }
+
+    // A double-backtick span, which may hold a backtick, is not read as two spans either.
+    @Test
+    void aTextWithADoubleBacktickSpanKeepsItsSpansAsWritten() {
+        String source = "Quote with ``a `b` c`` and show `under 1 s`.";
+        String answer = "Trích dẫn bằng ``a `b` c`` và hiển thị `dưới 1 giây`.";
+        assertThat(SourceForms.restore(source, answer)).isSameAs(answer);
+        assertThat(SourceForms.unpairedSpans(source, answer)).isEmpty();
+        // Its placeholders are still restored.
+        assertThat(SourceForms.restore("Use ``<id>`` here.", "Dùng ``<ID>`` ở đây.")).isEqualTo("Dùng ``<id>`` ở đây.");
+    }
 }

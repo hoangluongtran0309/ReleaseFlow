@@ -543,6 +543,46 @@ class GlossaryIntegrationTest extends PostgreSqlIntegrationTest {
                 .as("the cache keeps DeepL's answer").contains(raw);
     }
 
+    // ADR-0040, amended 2026-11-19: DeepL translates the words inside code spans. The note
+    // shows each span as the change wrote it, the request and its input hash are the ones sent
+    // before, the cache keeps DeepL's answer, and a text whose spans cannot be paired is kept
+    // as DeepL wrote it and logged by counts alone.
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void codeSpansComeBackAsWrittenAndTheRequestsDoNotChange(CapturedOutput output) throws Exception {
+        Owner owner = register("owner@example.com", "en", "vi");
+        UUID projectId = createProject(owner);
+        String source = "A fast backup shows `under 1 s`, and an empty one shows `0 s`.";
+        summarizedChange(owner, projectId, 1, source);
+        String split = "A slow backup shows `over 1 min`.";
+        UUID splitChange = summarizedChange(owner, projectId, 2, split);
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0", null);
+        approve(owner, projectId, releaseId);
+        List<String> hashes = jdbcTemplate.queryForList("SELECT input_hash FROM translation_jobs ORDER BY input_hash",
+                String.class);
+
+        // The second span comes back split in two: two translated spans for one lost.
+        DEEPL.translateInsideCodeSpans(Map.of("under 1 s", "dưới 1 giây", "0 s", "0 giây", "over 1 min", "trên` `1 phút"));
+        syncAndTranslate();
+
+        assertThat(DEEPL.translations()).isNotEmpty().allSatisfy(request -> assertThat(request.body()).doesNotContain("giây"));
+        assertThat(DEEPL.translations()).as("sent as written").anySatisfy(request -> assertThat(request.texts()).contains(source));
+        assertThat(DEEPL.translations()).anySatisfy(request -> assertThat(request.texts()).contains(split));
+        assertThat(jdbcTemplate.queryForList("SELECT input_hash FROM translation_jobs ORDER BY input_hash", String.class))
+                .as("the input hashes do not change").isEqualTo(hashes);
+        mockMvc.perform(get(releaseApi(projectId, releaseId)).session(owner.session()))
+                .andExpect(jsonPath("$.notes[*].translationStatus").value(everyItem(is("READY"))))
+                .andExpect(jsonPath("$.notes[?(@.language == 'vi')].content")
+                        .value(everyItem(containsString(markdown("[VI] " + DeepLStub.VIETNAMESE_MARKER + source)))))
+                .andExpect(jsonPath("$.notes[?(@.language == 'vi')].content")
+                        .value(everyItem(containsString("A slow backup shows `trên` `1 phút`."))));
+        assertThat(jdbcTemplate.queryForList("SELECT translated_text FROM translation_cache", String.class))
+                .as("the cache keeps DeepL's answer").anyMatch(text -> text.contains("shows `dưới 1 giây`, and"));
+        assertThat(output).contains("The vi translation of change " + splitChange,
+                "has 2 translated code span(s) for 1 lost; its spans are kept as DeepL wrote them.");
+        assertThat(output).doesNotContain("over 1 min`; ").doesNotContain("translated code span(s) for 2 lost");
+    }
+
     // ADR-0040: an answer cached before the fix is repaired when an approval uses it, without a request.
     @Test
     void aCachedAnswerIsRepairedAtApprovalWithNoNewRequest() throws Exception {

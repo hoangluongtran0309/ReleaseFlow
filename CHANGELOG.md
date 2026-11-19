@@ -35,6 +35,11 @@ section into the version's entry, and the GitHub release is written from it.
   meanwhile could keep the old read and never read the issue again. Every change to a
   release and what belongs to it now locks the release first, so these run one after the
   other ([#119](https://github.com/hoangluongtran0309/ReleaseFlow/issues/119)).
+- A translated note keeps the text of each code span as the change wrote it: DeepL
+  translated the words inside spans, so a Vietnamese note could not quote what an English
+  interface prints (`under 1 s` came back as `dưới 1 giây`). Requests, the cache, and their
+  keys are unchanged; a cached answer is repaired at the next approval
+  ([ADR-0040](docs/adr/0040-translation-placeholders.md), [#107](https://github.com/hoangluongtran0309/ReleaseFlow/issues/107)).
 
 ## [1.3.0] - 2026-11-18
 

@@ -1573,8 +1573,13 @@ ADR-0015 writes a note per audience and **release note language**; see
   `untranslated` and is never cached. `TranslationJob.succeed` then passes each text of
   its output, from DeepL or the cache, through `SourceForms.restore` (ADR-0040): a
   placeholder or lowercase hyphenated identifier of the source that the translation has in
-  another letter case alone, and matches unambiguously, gets the source's form back; the
-  cache keeps DeepL's answer, and a lost placeholder is only logged. `ReleaseNoteWriter` combines the jobs' outcomes per
+  another letter case alone, and matches unambiguously, gets the source's form back. Code
+  spans are restored first: a span of the answer whose text the source writes is kept, the
+  source's spans are matched to kept spans occurrence by occurrence, and the answer's other
+  spans get the unmatched source spans' text in order when the counts agree;
+  `SourceForms.unpairedSpans` reports when they do not, and a text with a fence, a
+  double-backtick span, or an odd number of backticks is left alone. The
+  cache keeps DeepL's answer, and a lost placeholder or unpaired spans are only logged. `ReleaseNoteWriter` combines the jobs' outcomes per
   language (`NOT_APPLIED` over `PENDING` over `APPLIED` over `NONE`) into
   `release_audience_notes.glossary_status`, and `ReleaseView.glossaries` reports it per
   language. `retryTranslations` also restarts a failed sync and re-translates jobs that went

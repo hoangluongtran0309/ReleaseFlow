@@ -434,6 +434,19 @@ so a translation cached earlier is corrected at the next approval without a requ
 nothing that is sent changes. A placeholder DeepL drops is left out and logged. See
 [ADR-0040](adr/0040-translation-placeholders.md).
 
+DeepL also translates the words inside a **code span**: `under 1 s` came back as
+`dưới 1 giây`. A code span tells the reader to type or look for exactly that text, so a
+translation keeps the source's spans too. A span whose text the source writes stays as it
+is; the spans DeepL translated get the source's text back, in order, when there are as many
+of them as source spans the translation lost. Otherwise they are left as DeepL wrote them
+and the count is logged. A text holding a fenced code block or a double-backtick span keeps
+its spans as written. If DeepL both reorders two spans and translates them, each gets the
+other's text; that is the known limit of pairing in order.
+
+So write a name the reader must find as written, such as a field, a parameter, or a string
+the interface prints in English, in a **code span**: `limit`, not 'limit'. Text in quotes is
+translated like any other text, because quotes hold ordinary words as often as names.
+
 ```text
 GET    /api/glossary
 GET    /api/glossary/suggestions
