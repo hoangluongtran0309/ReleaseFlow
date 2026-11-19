@@ -663,6 +663,12 @@ where it first appears; ADRs are linked from the slice they record.
   - an automation action for a retired audience is `SKIPPED` with `audience_retired` and
     the run goes on; enabling such a rule is refused with
     `409 automation_audience_retired`, and the Automation page marks it;
+  - an automation action whose note has nothing for its audience is `SKIPPED` with
+    `nothing_for_audience`, decided when it runs from the release's changes by the rule
+    the digest uses, after the retired-audience and missing-note checks; a note a person
+    edited is delivered as written, every trigger skips the same way, the run page shows
+    the reason in both interface languages, and no migration was needed (#108, amending
+    ADR-0035 and ADR-0044);
   - a brought-back audience's note includes every change, under its neutral headline when
     it has no narrative; the Review tab lists those changes, and a person asks the AI for
     only the missing narratives, with the request's rough token size shown first.

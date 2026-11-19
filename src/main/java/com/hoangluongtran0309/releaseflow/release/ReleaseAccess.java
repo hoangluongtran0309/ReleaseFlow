@@ -1,5 +1,7 @@
 package com.hoangluongtran0309.releaseflow.release;
 
+import com.hoangluongtran0309.releaseflow.change.ChangeInboxService;
+import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +19,19 @@ public class ReleaseAccess {
 
     private final ReleaseRepository releaseRepository;
     private final AudienceReleaseNoteRepository noteRepository;
+    private final ReleaseChangeRepository releaseChangeRepository;
+    private final ChangeInboxService changeService;
 
-    ReleaseAccess(ReleaseRepository releaseRepository, AudienceReleaseNoteRepository noteRepository) {
+    ReleaseAccess(
+            ReleaseRepository releaseRepository,
+            AudienceReleaseNoteRepository noteRepository,
+            ReleaseChangeRepository releaseChangeRepository,
+            ChangeInboxService changeService
+    ) {
         this.releaseRepository = releaseRepository;
         this.noteRepository = noteRepository;
+        this.releaseChangeRepository = releaseChangeRepository;
+        this.changeService = changeService;
     }
 
     @Transactional(readOnly = true)
@@ -42,6 +53,38 @@ public class ReleaseAccess {
                                 .map(AudienceReleaseNote::view)
                                 .toList()
                 ));
+    }
+
+    /**
+     * Whether the release's note for this audience and language has nothing to deliver: it
+     * still follows its template, and no change the release includes concerns its audience,
+     * by the same rule the digest uses to choose a note's changes (ADR-0035, amended
+     * 2026-11-19). The changes are read as they are now, never the note's text. A note a
+     * person wrote, or no note at all, is never one with nothing.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasNothingFor(UUID organizationId, UUID releaseId, UUID audienceId, String language) {
+        Optional<Release> release = releaseRepository.findById(releaseId)
+                .filter(candidate -> candidate.getOrganizationId().equals(organizationId));
+        if (release.isEmpty()) {
+            return false;
+        }
+        Optional<AudienceNoteView> note = noteRepository
+                .findAllByReleaseIdAndOrganizationIdOrderByAudienceNameAscAudienceCodeAscLanguageAsc(releaseId, organizationId)
+                .stream()
+                .map(AudienceReleaseNote::view)
+                .filter(candidate -> candidate.audienceId().equals(audienceId) && candidate.language().equals(language))
+                .findFirst();
+        if (note.isEmpty() || !note.get().autoRerender()) {
+            return false;
+        }
+        List<UUID> ids = releaseChangeRepository.findAllByReleaseIdAndOrganizationId(releaseId, organizationId)
+                .stream()
+                .map(ReleaseChange::getChangeId)
+                .toList();
+        List<ChangeView> changes = changeService.changes(organizationId, release.get().getProjectId(), ids);
+        String audienceCode = note.get().audienceCode();
+        return changes.stream().noneMatch(change -> ReleaseNoteDigest.concerns(change, audienceCode));
     }
 
     /** The Organization's published releases, newest first, for choosing one to deliver. */

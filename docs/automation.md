@@ -143,6 +143,28 @@ that still delivers a retired audience. Enabling such a rule is refused with
 audience back, first. An action's status through the API is `PENDING`, `RUNNING`,
 `SUCCEEDED`, `FAILED`, `UNKNOWN`, `CANCELLED`, or `SKIPPED`.
 
+An action whose note has nothing for its audience is **skipped** too, with
+`nothing_for_audience`: no change the release includes concerns that audience, so its note
+holds only the title, the release summary, and the line saying nothing in the release
+concerns it. Nothing is sent, so no public changelog entry, page, article, or message says
+only that, and the rest of the run goes on as for a retired audience. It is decided when
+the action runs, for every trigger, from the release's changes by the same rule that
+chooses a note's changes (see
+[Release Notes](release-notes.md#what-each-audience-reads)), never from the note's text.
+The checks come in this order: a retired audience is skipped with `audience_retired`; an
+action with no ready note fails with `release_note_missing`; a note a person edited is
+delivered as written, whatever its changes say; and only then is a note with nothing for
+its audience skipped. To deliver such a note on purpose, edit it before publishing.
+Enabling a rule is never refused for it, because a rule outlives every release.
+
+The changes are read as they are when the action runs, so a published note and its skip
+can disagree. If a review clears a change's breaking flag after publication, or the AI is
+asked for a narrative it lacked, a change the note lists may no longer concern the
+audience, and running the rule again skips a note that has something to say. The other
+way round, a note that says nothing concerns its audience is delivered once one of its
+changes does. See
+[ADR-0035's amendment](adr/0035-evidence-bound-notes-and-audience-relevance.md#amendment-2026-11-19-an-action-whose-note-has-nothing-for-its-audience).
+
 ![A rule's run for a release, Succeeded: ten deliveries in order, the sixth an Email Skipped with audience_retired and the sentence that nothing was sent and the actions after it still ran](assets/automation/a-11-skipped-action.webp)
 
 ![A run whose GitHub Release action failed with github_release_conflict: the actions behind it are pending, with Run again and Cancel](assets/automation/a-7-run-failed.webp)
@@ -220,6 +242,9 @@ A public changelog action's refusal is `public_changelog_conflict`, recorded on 
 action rather than returned to anybody; see [Public changelog](#public-changelog).
 Likewise, an action whose release has no ready note for its audience and language fails
 as `release_note_missing` when the worker reaches it; the release is published either way.
+A skipped action is `SKIPPED` with its reason in `errorCode`, `audience_retired` or
+`nothing_for_audience` ([Runs](#runs)); a skip is not a refusal and has no Problem
+Details.
 
 Refusals carry a stable code:
 

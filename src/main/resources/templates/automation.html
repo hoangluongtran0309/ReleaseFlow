@@ -398,8 +398,12 @@
                             <li th:each="action : ${run.actions}" th:id="|action-run-${action.id}|">
                                 <span th:text="#{ui.automation.runActionLine(${action.position + 1},#{${action.actionType.labelKey}},#{${action.status.labelKey}})}">1. Slack — Succeeded</span>
                                 <code class="text-xs" th:if="${action.errorCode != null}" th:text="${action.errorCode}">slack_rejected</code>
-                                <!--/* Skipped, not failed: the actions behind it still ran (ADR-0044). */-->
-                                <span class="text-xs text-slate-600" th:if="${action.status.name() == 'SKIPPED'}"
+                                <!--/* Skipped, not failed: the actions behind it still ran (ADR-0044, amended 2026-11-19). */-->
+                                <span class="text-xs text-slate-600"
+                                      th:if="${action.status.name() == 'SKIPPED' && action.errorCode == 'nothing_for_audience'}"
+                                      th:text="#{ui.automation.skippedNothingForAudience}">Nothing in this release concerns its audience, so nothing was sent.</span>
+                                <span class="text-xs text-slate-600"
+                                      th:if="${action.status.name() == 'SKIPPED' && action.errorCode != 'nothing_for_audience'}"
                                       th:text="#{ui.automation.skippedRetired}">Its audience is retired, so nothing was sent.</span>
                                 <a class="link" th:if="${action.externalReference != null}" th:href="${action.externalReference}"
                                    rel="noreferrer noopener" target="_blank" th:text="#{ui.automation.open}">Open</a>
