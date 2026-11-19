@@ -107,3 +107,86 @@ test('a source is rotated, disconnected, and reconnected without losing its chan
   await page.getByRole('link', { name: /xem lại và ngắt kết nối/i }).click();
   await expectNoAccessibilityViolations(page, 'disconnect confirmation (vi)');
 });
+
+// The stand-in's workspace (provider-stand-in.mjs): a delivery must name it to be proven.
+const LINEAR_WORKSPACE = '22222222-2222-4222-8222-222222222222';
+
+async function deliverLinear(request, webhookPath, secret, teamId, number, createdAt) {
+  const payload = JSON.stringify({
+    type: 'Issue',
+    action: 'update',
+    createdAt,
+    webhookTimestamp: Date.now(),
+    organizationId: LINEAR_WORKSPACE,
+    updatedFrom: { stateType: 'started' },
+    data: {
+      id: randomUUID(),
+      number,
+      title: `Complete issue ${number}`,
+      description: 'An issue delivered by the lifecycle test.',
+      stateType: 'completed',
+      teamId,
+      creator: { name: 'Mai Tran' },
+      url: `https://linear.app/acme/issue/OPS-${number}`,
+    },
+  });
+  return request.post(webhookPath, {
+    data: payload,
+    headers: {
+      'Content-Type': 'application/json',
+      'Linear-Delivery': randomUUID(),
+      'Linear-Signature': createHmac('sha256', secret).update(payload).digest('hex'),
+    },
+  });
+}
+
+test('a Linear team is reconnected with its signing secret and an API key', async ({ page, request, context, baseURL }) => {
+  await registerAndSignIn(page);
+  await createProject(page);
+  const teamId = randomUUID();
+
+  await page.goto('/projects');
+  await page.getByRole('combobox', { name: /^source type$|^loại nguồn$/i }).selectOption('LINEAR');
+  await page.getByLabel(/^team id/i).fill(teamId);
+  await page.getByLabel(/webhook signing secret|secret ký webhook/i).fill('lin_wh_first-secret');
+  await page.getByLabel(/^api key/i).fill('lin_api_e2e-key');
+  await page.getByRole('button', { name: /connect the team|kết nối team/i }).click();
+  await expect(page.getByRole('textbox', { name: /webhook path|đường dẫn webhook/i })).toBeVisible();
+
+  await page.goto('/projects');
+  await page.getByRole('link', { name: /manage source|quản lý nguồn/i }).click();
+  await page.getByRole('link', { name: /review and disconnect|xem lại và ngắt kết nối/i }).click();
+  await page.getByRole('button', { name: /^disconnect$|^ngắt kết nối$/i }).click();
+  await expect(page.locator('#source-health')).toContainText(/disconnected|đã ngắt kết nối/i);
+
+  // The form says it needs an API key besides the secret, and calls the field that (#106).
+  const reconnect = page.locator('#reconnect');
+  await expect(reconnect).toContainText(/a linear api key that can read this team/i);
+  await expect(reconnect.getByRole('textbox', { name: /^api key$/i })).toBeVisible();
+  await expectNoAccessibilityViolations(page, 'Linear reconnect form');
+
+  await reconnect.getByRole('textbox', { name: /signing secret from linear/i }).fill('lin_wh_second-secret');
+  await reconnect.getByRole('textbox', { name: /^api key$/i }).fill('lin_api_e2e-key');
+  await reconnect.getByRole('button', { name: /^reconnect$/i }).click();
+  await expect(page.locator('.page-eyebrow')).toContainText(/reconnected/i);
+  const webhookPath = await page.getByRole('textbox', { name: /webhook path/i }).inputValue();
+
+  // A completion Linear sent now about a change ten minutes old is recorded (#94).
+  const late = await deliverLinear(request, webhookPath, 'lin_wh_second-secret', teamId, 1,
+    new Date(Date.now() - 600_000).toISOString());
+  expect(late.status()).toBe(200);
+  expect((await late.json()).outcome).toBe('recorded');
+  expect((await deliverLinear(request, webhookPath, 'lin_wh_first-secret', teamId, 2,
+    new Date().toISOString())).status()).toBe(401);
+
+  // The same form, read in Vietnamese: disconnect again to show it.
+  await page.goto('/projects');
+  await page.getByRole('link', { name: /manage source/i }).click();
+  await page.getByRole('link', { name: /review and disconnect/i }).click();
+  await page.getByRole('button', { name: /^disconnect$/i }).click();
+  await context.addCookies([{ name: 'releaseflow_lang', value: 'vi', url: baseURL }]);
+  await page.reload();
+  await expect(page.locator('#reconnect')).toContainText(/một api key linear đọc được team này/i);
+  await expect(page.locator('#reconnect').getByRole('textbox', { name: /^api key$/i })).toBeVisible();
+  await expectNoAccessibilityViolations(page, 'Linear reconnect form (vi)');
+});

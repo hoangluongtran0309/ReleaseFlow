@@ -1,6 +1,6 @@
 # The browser suite's additions to docker-compose.demo.yml, and only the suite's: a stand-in
-# for Jira and GitHub, so a change can link an issue that is still open, and the application
-# pointed at it. Every other provider stays unconfigured, as playwright.config.js leaves them.
+# for Jira, GitHub, and Linear, so a change can link an issue that is still open and a Linear
+# team can be connected, and the application pointed at it. Every other provider stays unconfigured, as playwright.config.js leaves them.
 # Paths are relative to the first Compose file, the demo one at the repository root.
 services:
   providers:
@@ -22,6 +22,7 @@ services:
     environment:
       RELEASEFLOW_GITHUB_API_BASE_URL: http://providers:8080/github
       RELEASEFLOW_JIRA_API_BASE_URL: http://providers:8080/jira
+      RELEASEFLOW_LINEAR_API_BASE_URL: http://providers:8080/linear
     depends_on:
       providers:
         condition: service_healthy

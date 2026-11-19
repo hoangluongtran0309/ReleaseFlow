@@ -12,6 +12,18 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+### Fixed
+
+- A Linear delivery is checked against `webhookTimestamp`, the time Linear sent it, not
+  `createdAt`, the time the issue changed, so a completion Linear sends more than a
+  minute late is recorded instead of lost. The server log names the proof a refused
+  delivery failed, without its body or the secret, at most once a minute per source and
+  reason, with a count of those it left out
+  ([ADR-0018](docs/adr/0018-linear-sources.md), [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94)).
+- Reconnecting a Linear source says it needs a Linear API key besides the signing secret,
+  and labels that field API key, as connecting does
+  ([#106](https://github.com/hoangluongtran0309/ReleaseFlow/issues/106)).
+
 ## [1.3.0] - 2026-11-18
 
 ### Added
