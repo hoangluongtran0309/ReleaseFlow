@@ -7,10 +7,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -119,6 +124,107 @@ public class TranslationService {
             Map<String, String> texts
     ) {
         return retry(new Subject(organizationId, projectId, null, releaseId), sourceLanguage, targetLanguage, texts);
+    }
+
+    /**
+     * A change's texts as a published note of its release was written in the target language
+     * (ADR-0046, amended 2026-11-20). The job read is the change's latest that succeeded into
+     * the language by {@code publishedAt}; each text is looked up by itself in the cache, under
+     * that job's context and glossary version, then under none, and repaired. Nothing is
+     * written and no provider is called.
+     */
+    @Transactional(readOnly = true)
+    public PublishedTranslation published(
+            UUID organizationId,
+            UUID changeId,
+            String sourceLanguage,
+            String targetLanguage,
+            Map<String, String> texts,
+            Instant publishedAt
+    ) {
+        return published(organizationId, sourceLanguage, targetLanguage, texts, () -> jobRepository
+                .findFirstByOrganizationIdAndChangeIdAndTargetLanguageAndStatusAndCompletedAtLessThanEqualOrderByCompletedAtDesc(
+                        organizationId, changeId, targetLanguage, TranslationJob.Status.SUCCEEDED, publishedAt));
+    }
+
+    /** {@link #published} for a release's own texts, its summary. */
+    @Transactional(readOnly = true)
+    public PublishedTranslation publishedForRelease(
+            UUID organizationId,
+            UUID releaseId,
+            String sourceLanguage,
+            String targetLanguage,
+            Map<String, String> texts,
+            Instant publishedAt
+    ) {
+        return published(organizationId, sourceLanguage, targetLanguage, texts, () -> jobRepository
+                .findFirstByOrganizationIdAndReleaseIdAndTargetLanguageAndStatusAndCompletedAtLessThanEqualOrderByCompletedAtDesc(
+                        organizationId, releaseId, targetLanguage, TranslationJob.Status.SUCCEEDED, publishedAt));
+    }
+
+    private PublishedTranslation published(
+            UUID organizationId,
+            String sourceLanguage,
+            String targetLanguage,
+            Map<String, String> texts,
+            Supplier<Optional<TranslationJob>> jobOf
+    ) {
+        Map<String, String> input = TranslationTexts.nonBlank(texts);
+        if (input.isEmpty() || TranslationTexts.sameLanguage(sourceLanguage, targetLanguage)) {
+            return new PublishedTranslation(texts, Set.of(), 0, GlossaryUse.NONE);
+        }
+        Optional<TranslationJob> job = jobOf.get();
+        Map<String, String> answers = job.map(found -> cachedAnswers(organizationId, sourceLanguage, targetLanguage,
+                input.values(), found.getContext(), found.getGlossaryVersion())).orElse(Map.of());
+        Map<String, String> merged = new LinkedHashMap<>(texts);
+        Set<String> missing = new LinkedHashSet<>();
+        int missingCharacters = 0;
+        for (Map.Entry<String, String> text : input.entrySet()) {
+            String answer = answers.get(text.getValue());
+            if (answer == null) {
+                missing.add(text.getKey());
+                missingCharacters += text.getValue().codePointCount(0, text.getValue().length());
+            } else {
+                merged.put(text.getKey(), SourceForms.restore(text.getValue(), answer));
+            }
+        }
+        GlossaryUse glossary = job.filter(found -> !answers.isEmpty()).map(TranslationJob::glossaryUse)
+                .orElse(GlossaryUse.NONE);
+        return new PublishedTranslation(merged, missing, missingCharacters, glossary);
+    }
+
+    // Text -> DeepL's answer, as cached under the job's glossary version or, for a text it
+    // translated without the glossary, under none.
+    private Map<String, String> cachedAnswers(
+            UUID organizationId,
+            String sourceLanguage,
+            String targetLanguage,
+            Collection<String> sources,
+            String context,
+            String version
+    ) {
+        Map<String, String> withGlossary = new LinkedHashMap<>();
+        Map<String, String> withoutGlossary = new LinkedHashMap<>();
+        for (String text : sources) {
+            withGlossary.put(TranslationTexts.textHash(text, context, version), text);
+            withoutGlossary.put(TranslationTexts.textHash(text, context, ""), text);
+        }
+        Set<String> hashes = new HashSet<>(withGlossary.keySet());
+        hashes.addAll(withoutGlossary.keySet());
+        Map<String, String> found = new LinkedHashMap<>();
+        Map<String, String> fallback = new LinkedHashMap<>();
+        cacheRepository.findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
+                        organizationId, sourceLanguage, targetLanguage, hashes)
+                .forEach(entry -> {
+                    if (withGlossary.containsKey(entry.getTextHash())) {
+                        found.put(withGlossary.get(entry.getTextHash()), entry.getTranslatedText());
+                    }
+                    if (withoutGlossary.containsKey(entry.getTextHash())) {
+                        fallback.put(withoutGlossary.get(entry.getTextHash()), entry.getTranslatedText());
+                    }
+                });
+        fallback.forEach(found::putIfAbsent);
+        return found;
     }
 
     private TranslationState ensure(Subject subject, String sourceLanguage, String targetLanguage, Map<String, String> texts) {

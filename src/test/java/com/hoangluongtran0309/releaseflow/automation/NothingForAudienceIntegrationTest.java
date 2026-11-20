@@ -281,6 +281,74 @@ class NothingForAudienceIntegrationTest extends AutomationIntegrationTestBase {
      * An approved release of one change, with the narratives given, or none when null. A
      * breaking change needs review, which approving the release records.
      */
+    @Test
+    void deliversARevisionAPersonWroteAndSkipsOneRenderedFromChangesThatConcernNobody() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID endUser = audienceId(owner, "end_user");
+        UUID ruleId = createdRuleId(createRule(owner, slackRule("Tell users", "MANUAL", projectId, endUser, "en"))
+                .andExpect(status().isCreated()));
+        enable(owner, ruleId).andExpect(status().isOk());
+
+        // ADR-0046, amended 2026-11-20: a revision written by hand is a note a person wrote.
+        UUID handReleaseId = publish(owner, projectId,
+                approvedReleaseWith(owner, projectId, "1.4.1", false, NOTHING_FOR_END_USERS));
+        UUID handNote = endUserNote(owner, projectId, handReleaseId);
+        mockMvc.perform(post("/api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions",
+                        projectId, handReleaseId, handNote)
+                        .session(owner.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"corrects\":1,\"content\":\"# Release 1.4.1\\n\\nExports are quicker for you.\\n\","
+                                + "\"reason\":\"Say what users notice.\"}"))
+                .andExpect(status().isCreated());
+        UUID handRun = run(owner, ruleId, handReleaseId);
+
+        // A revision rendered again from changes that now concern nobody says so, and is skipped.
+        UUID renderedReleaseId = publish(owner, projectId,
+                approvedReleaseWith(owner, projectId, "2.0.0", true, NOTHING_FOR_ANYBODY));
+        UUID changeId = jdbcTemplate.queryForObject(
+                "SELECT change_id FROM release_changes WHERE release_id = ?", UUID.class, renderedReleaseId);
+        mockMvc.perform(post("/api/projects/{projectId}/changes/{changeId}/review", projectId, changeId)
+                        .session(owner.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"feature\",\"breaking\":false}"))
+                .andExpect(status().isOk());
+        UUID renderedNote = endUserNote(owner, projectId, renderedReleaseId);
+        String preview = mockMvc.perform(get("/api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/correction-preview",
+                        projectId, renderedReleaseId, renderedNote)
+                        .session(owner.session()).param("origin", "RENDERED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.changed").value(true))
+                .andReturn().getResponse().getContentAsString();
+        mockMvc.perform(post("/api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions",
+                        projectId, renderedReleaseId, renderedNote)
+                        .session(owner.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"RENDERED\",\"corrects\":1,\"previewHash\":\"%s\",\"reason\":\"Not breaking.\"}"
+                                .formatted(JsonPath.<String>read(preview, "$.previewHash"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.origin").value("RENDERED"));
+        UUID renderedRun = run(owner, ruleId, renderedReleaseId);
+        deliverEverything();
+
+        mockMvc.perform(get("/api/automation/runs/{runId}", handRun).session(owner.session()))
+                .andExpect(jsonPath("$.actions[0].status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.actions[0].noteRevision").value(2));
+        mockMvc.perform(get("/api/automation/runs/{runId}", renderedRun).session(owner.session()))
+                .andExpect(jsonPath("$.actions[0].status").value("SKIPPED"))
+                .andExpect(jsonPath("$.actions[0].errorCode").value("nothing_for_audience"));
+        assertThat(SLACK.messages()).hasSize(1);
+        assertThat(SLACK.messages().getFirst()).contains("Exports are quicker for you.");
+    }
+
+    private UUID endUserNote(Owner owner, UUID projectId, UUID releaseId) throws Exception {
+        String notes = mockMvc.perform(get("/api/projects/{projectId}/releases/{releaseId}/notes", projectId, releaseId)
+                        .session(owner.session()))
+                .andReturn().getResponse().getContentAsString();
+        List<String> ids = JsonPath.read(notes, "$[?(@.audienceCode == 'end_user')].id");
+        return UUID.fromString(ids.getFirst());
+    }
+
     private UUID approvedReleaseWith(Owner owner, UUID projectId, String version, boolean breaking, String narratives)
             throws Exception {
         UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, changeNumber++,

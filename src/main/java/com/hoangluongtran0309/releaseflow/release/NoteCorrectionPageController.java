@@ -73,15 +73,28 @@ class NoteCorrectionPageController {
             BindingResult bindingResult,
             @RequestParam(defaultValue = "preview") String intent,
             @RequestParam(required = false) String previewed,
+            @RequestParam(required = false) String rendered,
+            @RequestParam(required = false) String renderedForm,
             Model model,
             HttpServletResponse response,
             RedirectAttributes redirect
     ) {
         ReleaseNoteCorrectionService.Draft draft =
                 correctionService.draft(principal.organizationId(), projectId, releaseId, noteId);
+        if ("render".equals(intent)) {
+            return renderAgain(principal, projectId, releaseId, noteId, draft, request, model, response);
+        }
         if (bindingResult.hasErrors()) {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
             return render(projectId, releaseId, draft, null, model);
+        }
+        // The text rendering gave, saved as it was shown, is a rendered revision; anything a
+        // person changed in it is theirs, written by hand.
+        if (rendered != null && renderedForm != null && renderedForm.equals(hash(request.getContent()))) {
+            request.setOrigin(ReleaseNoteRevisionView.Origin.RENDERED);
+            request.setPreviewHash(rendered);
+            model.addAttribute("rendered", rendered);
+            model.addAttribute("renderedForm", renderedForm);
         }
         if (!"save".equals(intent)) {
             return preview(projectId, releaseId, draft, request, model);
@@ -93,7 +106,7 @@ class NoteCorrectionPageController {
         }
         ReleaseNoteRevisionView saved;
         try {
-            saved = correctionService.correctByHand(principal, projectId, releaseId, noteId, request);
+            saved = correctionService.correct(principal, projectId, releaseId, noteId, request);
         } catch (ReleaseNoteRevisionStaleException exception) {
             // Someone corrected it meanwhile: the person's text is kept and compared with theirs.
             response.setStatus(HttpStatus.CONFLICT.value());
@@ -101,13 +114,50 @@ class NoteCorrectionPageController {
                     correctionService.draft(principal.organizationId(), projectId, releaseId, noteId);
             request.setCorrects(latest.note().revision());
             return refuse(projectId, releaseId, latest, request, exception, model);
-        } catch (ReleaseNoteCorrectionUnchangedException exception) {
+        } catch (ReleaseNoteCorrectionUnchangedException
+                 | ReleaseNoteRenderIncompleteException
+                 | ReleaseNoteManualException
+                 | NoteAudienceRetiredException exception) {
             response.setStatus(HttpStatus.CONFLICT.value());
             return refuse(projectId, releaseId, draft, request, exception, model);
+        } catch (ReleaseNotePreviewChangedException exception) {
+            // Rendering gives another text now: that one is shown, to be read before saving.
+            response.setStatus(HttpStatus.CONFLICT.value());
+            model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error(exception));
+            return renderAgain(principal, projectId, releaseId, noteId, draft, request, model, response);
         }
         UiNotice.flash(redirect, UiNotice.success("ui.noteCorrection.saved", saved.revision(),
                 draft.note().audienceName(), draft.note().language()));
         return "redirect:" + releasePath(projectId, releaseId);
+    }
+
+    // Fills the form with the text rendering gives now, and shows its difference.
+    private String renderAgain(
+            ReleaseFlowPrincipal principal,
+            UUID projectId,
+            UUID releaseId,
+            UUID noteId,
+            ReleaseNoteCorrectionService.Draft draft,
+            NoteCorrectionRequest request,
+            Model model,
+            HttpServletResponse response
+    ) {
+        ReleaseNoteCorrectionService.CorrectionPreview rendered;
+        try {
+            rendered = correctionService.previewRendered(principal.organizationId(), projectId, releaseId, noteId);
+        } catch (ReleaseNoteManualException | NoteAudienceRetiredException exception) {
+            response.setStatus(HttpStatus.CONFLICT.value());
+            model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error(exception));
+            return render(projectId, releaseId, draft, null, model);
+        }
+        request.setCorrects(rendered.corrects());
+        request.setContent(rendered.content());
+        // The preview's own hash is what saving sends back; the form's text is the same text
+        // as the form holds it, so a person's edit can be told from it.
+        model.addAttribute("rendered", rendered.previewHash());
+        model.addAttribute("renderedForm", hash(request.getContent()));
+        model.addAttribute("missingTexts", rendered.missingTexts());
+        return preview(projectId, releaseId, draft, request, model);
     }
 
     private String refuse(
@@ -146,6 +196,7 @@ class NoteCorrectionPageController {
         model.addAttribute("releasePath", releasePath(projectId, releaseId));
         model.addAttribute("version", draft.version());
         model.addAttribute("note", draft.note());
+        model.addAttribute("renderRefusal", draft.renderRefusal());
         model.addAttribute("difference", difference);
         model.addAttribute("changed", difference != null && LineDiff.changes(difference));
         return "note-correction";

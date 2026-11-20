@@ -222,6 +222,89 @@ class NoteCorrectionPageIntegrationTest extends AutomationIntegrationTestBase {
                 .andExpect(content().string(containsString("&lt;script&gt;alert(1)&lt;/script&gt;")));
     }
 
+    @Test
+    void rendersANoteAgainOnThePageAndRecordsAnyEditAsWrittenByHand() throws Exception {
+        Owner owner = registerAndLogin("owner@example.com", "Mai Tran");
+        UUID projectId = createProject(owner);
+        UUID releaseId = publishedRelease(owner, projectId, "1.4.0");
+        UUID noteId = noteId(owner, projectId, releaseId, "operator");
+        String correctPath = "/projects/" + projectId + "/releases/" + releaseId + "/notes/" + noteId + "/correct";
+        UUID changeId = jdbcTemplate.queryForObject(
+                "SELECT change_id FROM release_changes WHERE release_id = ?", UUID.class, releaseId);
+        mockMvc.perform(post("/api/projects/{projectId}/changes/{changeId}/review", projectId, changeId)
+                        .session(owner.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"fix\",\"breaking\":false}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(correctPath).session(owner.session()))
+                .andExpect(content().string(containsString("Render again")));
+        MvcResult rendered = mockMvc.perform(post(correctPath).session(owner.session()).with(csrf())
+                        .param("corrects", "1").param("content", "").param("reason", "")
+                        .param("intent", "render"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("rendered again by today")))
+                .andExpect(content().string(containsString("Difference from revision 1")))
+                .andExpect(content().string(containsString("Save as revision 2")))
+                .andReturn();
+        String page = rendered.getResponse().getContentAsString();
+        String renderedHash = hidden(page, "rendered");
+        String renderedForm = hidden(page, "renderedForm");
+        String text = textarea(page);
+
+        // Saved as rendering gave it, it is a rendered revision.
+        mockMvc.perform(post(correctPath).session(owner.session()).with(csrf())
+                        .param("corrects", "1").param("content", text).param("reason", "Fixes are fixes.")
+                        .param("intent", "save").param("previewed", previewed(rendered))
+                        .param("rendered", renderedHash).param("renderedForm", renderedForm))
+                .andExpect(status().is3xxRedirection());
+        assertThat(jdbcTemplate.queryForObject("SELECT origin FROM release_note_revisions WHERE revision = 2",
+                String.class)).isEqualTo("RENDERED");
+
+        // Edited after rendering, the same text is a person's: it is recorded as written by hand.
+        mockMvc.perform(post("/api/projects/{projectId}/changes/{changeId}/review", projectId, changeId)
+                        .session(owner.session()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"category\":\"documentation\",\"breaking\":false}"))
+                .andExpect(status().isOk());
+        MvcResult again = mockMvc.perform(post(correctPath).session(owner.session()).with(csrf())
+                        .param("corrects", "2").param("content", "").param("reason", "").param("intent", "render"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String edited = textarea(again.getResponse().getContentAsString()) + "\nOne line of my own.\n";
+        MvcResult editedPreview = mockMvc.perform(post(correctPath).session(owner.session()).with(csrf())
+                        .param("corrects", "2").param("content", edited).param("reason", "Mine.")
+                        .param("intent", "preview")
+                        .param("rendered", hidden(again.getResponse().getContentAsString(), "rendered"))
+                        .param("renderedForm", hidden(again.getResponse().getContentAsString(), "renderedForm")))
+                .andReturn();
+        mockMvc.perform(post(correctPath).session(owner.session()).with(csrf())
+                        .param("corrects", "2").param("content", edited).param("reason", "Mine.")
+                        .param("intent", "save").param("previewed", previewed(editedPreview))
+                        .param("rendered", hidden(again.getResponse().getContentAsString(), "rendered"))
+                        .param("renderedForm", hidden(again.getResponse().getContentAsString(), "renderedForm")))
+                .andExpect(status().is3xxRedirection());
+        assertThat(jdbcTemplate.queryForObject("SELECT origin FROM release_note_revisions WHERE revision = 3",
+                String.class)).isEqualTo("MANUAL");
+
+        // Now a person wrote it: the page offers no rendering, and says why.
+        mockMvc.perform(get(correctPath).session(owner.session()))
+                .andExpect(content().string(not(containsString(">Render again<"))))
+                .andExpect(content().string(containsString("A person wrote this note, so it is corrected by hand only.")));
+    }
+
+    private static String hidden(String page, String name) {
+        Matcher matcher = Pattern.compile("name=\"" + name + "\" value=\"([^\"]*)\"").matcher(page);
+        assertThat(matcher.find()).as("hidden " + name).isTrue();
+        return matcher.group(1);
+    }
+
+    private static String textarea(String page) {
+        Matcher matcher = Pattern.compile("(?s)<textarea[^>]*name=\"content\"[^>]*>(.*?)</textarea>").matcher(page);
+        assertThat(matcher.find()).as("the content field").isTrue();
+        return org.springframework.web.util.HtmlUtils.htmlUnescape(matcher.group(1));
+    }
+
     private static String previewed(MvcResult result) throws Exception {
         Matcher matcher = PREVIEWED.matcher(result.getResponse().getContentAsString());
         assertThat(matcher.find()).isTrue();

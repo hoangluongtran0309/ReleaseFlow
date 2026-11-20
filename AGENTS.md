@@ -259,7 +259,13 @@ changing behavior.
   stub test pins the version and the `Authorization: Bearer` key, so an SDK release that
   moves either is a decision of its own (ADR-0045).
 - Applied Flyway migrations are immutable; add the next version for schema changes.
-- Published Release Notes are immutable snapshots.
+- Published Release Notes are immutable snapshots. A correction is a new revision, only ever
+  inserted, with a reason, written by an administrator (ADR-0046); revision 1 is the note as
+  published. Rendering a note again calls no provider: each translated text is read from the
+  cache under the job the release was published with and repaired, a note a person wrote or a
+  retired audience's note is corrected by hand only, and a rendered revision is saved only
+  with the hash of the preview a person read. A note whose latest revision a person wrote is
+  delivered as written.
 - Categories come from the Organization's catalog, and a change keeps a
   snapshot of its category. A category the AI proposes is never added to the
   catalog without an administrator's decision, and a change that takes it still

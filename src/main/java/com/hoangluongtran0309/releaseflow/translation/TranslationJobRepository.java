@@ -17,6 +17,24 @@ interface TranslationJobRepository extends JpaRepository<TranslationJob, UUID> {
 
     Optional<TranslationJob> findByReleaseIdAndTargetLanguageAndInputHash(UUID releaseId, String targetLanguage, String inputHash);
 
+    /** A change's latest job into a language that succeeded by a moment (ADR-0046). */
+    Optional<TranslationJob> findFirstByOrganizationIdAndChangeIdAndTargetLanguageAndStatusAndCompletedAtLessThanEqualOrderByCompletedAtDesc(
+            UUID organizationId,
+            UUID changeId,
+            String targetLanguage,
+            TranslationJob.Status status,
+            Instant completedBy
+    );
+
+    /** A release summary's latest job into a language that succeeded by a moment (ADR-0046). */
+    Optional<TranslationJob> findFirstByOrganizationIdAndReleaseIdAndTargetLanguageAndStatusAndCompletedAtLessThanEqualOrderByCompletedAtDesc(
+            UUID organizationId,
+            UUID releaseId,
+            String targetLanguage,
+            TranslationJob.Status status,
+            Instant completedBy
+    );
+
     List<TranslationJob> findAllByOrganizationIdAndChangeIdInAndStatus(
             UUID organizationId,
             Collection<UUID> changeIds,

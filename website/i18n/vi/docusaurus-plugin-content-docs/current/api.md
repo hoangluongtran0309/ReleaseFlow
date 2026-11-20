@@ -190,6 +190,7 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/download` | thành viên |
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions` | thành viên |
 | `POST /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions` | quản trị viên |
+| `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/correction-preview` | thành viên |
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions/{revision}` | thành viên |
 | `GET /api/projects/{projectId}/release-assignments` | thành viên |
 | `GET /api/audiences`, `POST /api/audiences` | quản trị viên |
@@ -213,7 +214,9 @@ bản tải về và nội dung một run automation mới mang theo, bản sử
 note, và `revision` của note cho biết đó là bản nào: `1` cho tới khi note được sửa. Note của
 một release chưa publish không có bản sửa đổi (`409 release_status_conflict`), và một số mà
 note không có là `404 release_note_not_found`. Quản trị viên sửa một note bằng `POST …/revisions`
-với `{"corrects", "content", "reason"}`, và bản tải về nhận `?revision={n}`; xem
+với `{"corrects", "content", "reason"}`, hoặc dựng lại nó từ
+`GET …/correction-preview?origin=RENDERED` rồi lưu `{"origin": "RENDERED", "corrects",
+"previewHash", "reason"}`, và bản tải về nhận `?revision={n}`; xem
 [Sửa một release note đã publish](release-notes.md#correcting-a-published-note).
 
 ### Automation — [Automation](automation.md) {#automation--automation}
@@ -279,7 +282,7 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 | Audience | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_last_active`, `audience_already_retired`, `audience_not_retired`, `audience_in_use`, `audience_not_preset` |
 | Bảng thuật ngữ | `404` | `glossary_term_not_found` |
 | Bảng thuật ngữ | `409` | `glossary_term_taken`, `glossary_limit` |
-| Release | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision`, `release_note_revision_invalid` |
+| Release | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision`, `release_note_revision_invalid`, `release_note_correction_origin_invalid` |
 | Release | `404` | `release_not_found`, `release_note_not_found`, `folding_suggestion_not_found`, `linked_issue_not_found` |
-| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed`, `release_note_revision_stale`, `release_note_correction_unchanged` |
+| Release | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed`, `release_note_revision_stale`, `release_note_correction_unchanged`, `release_note_manual`, `audience_retired`, `release_note_preview_changed`, `release_note_render_incomplete` |
 | Automation | `400`, `404`, `409` | Xem [Automation](automation.md#rest) |

@@ -24,6 +24,12 @@ section into the version's entry, and the GitHub release is written from it.
   reason. The release page lists each note's revisions with their differences and
   downloads (`?revision=n`), and which revision each destination last received. Saving
   delivers nothing ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+- **Render again** corrects a published note with today's writer, its own template, and the
+  translations it was published with, repaired as ADR-0040 repairs them, without asking DeepL
+  or the AI; the person reads the difference and saves it as a rendered revision, or edits it
+  into one by hand. A note a person wrote, and a retired audience's note, are corrected by
+  hand only, and a note whose latest revision was written by hand is delivered as written
+  ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
 
 ## [1.3.1] - 2026-11-20
 

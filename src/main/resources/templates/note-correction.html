@@ -30,13 +30,24 @@
             <th:block th:replace="~{fragments/form :: errorSummary(true)}"></th:block>
             <input type="hidden" th:field="*{corrects}">
             <input type="hidden" name="previewed" th:if="${previewed != null}" th:value="${previewed}">
+            <th:block th:if="${rendered != null}">
+                <input type="hidden" name="rendered" th:value="${rendered}">
+                <input type="hidden" name="renderedForm" th:value="${renderedForm}">
+            </th:block>
+            <!--/* ADR-0046: rendering again uses today's writer and the answers the note was
+                   published with, and calls no provider. A person's edit of it is theirs. */-->
+            <div class="col-span-full" th:if="${rendered != null}"
+                 th:insert="~{fragments/alert :: alert('info', #{ui.noteCorrection.renderedCopy})}"></div>
+            <div class="col-span-full" th:if="${missingTexts != null and missingTexts > 0}"
+                 th:insert="~{fragments/alert :: alert('warning', #{ui.noteCorrection.missingTexts(${missingTexts})})}"></div>
             <label class="form-control">
                 <span class="label-text font-medium" th:text="#{ui.noteCorrection.markdown}">Corrected Markdown</span>
                 <textarea th:field="*{content}" rows="18" required spellcheck="false"
                           class="textarea textarea-bordered w-full font-mono text-xs" th:errorclass="textarea-error"
                           th:lang="${note.language}"
-                          th:attr="aria-invalid=${#fields.hasErrors('content')} ? 'true' : null,aria-describedby=${#fields.hasErrors('content')} ? 'content-error' : null"></textarea>
+                          th:attr="aria-invalid=${#fields.hasErrors('content') or #fields.hasErrors('contentWritten')} ? 'true' : null,aria-describedby=${#fields.hasErrors('content')} ? 'content-error' : (${#fields.hasErrors('contentWritten')} ? 'content-written-error' : null)"></textarea>
                 <span th:replace="~{fragments/form :: fieldError('content', 'content-error')}"></span>
+                <span th:replace="~{fragments/form :: fieldError('contentWritten', 'content-written-error')}"></span>
             </label>
             <label class="form-control">
                 <span class="label-text font-medium" th:text="#{ui.noteCorrection.reason}">Reason</span>
@@ -60,6 +71,8 @@
             </section>
 
             <div class="flex flex-wrap gap-2">
+                <button type="submit" name="intent" value="render" class="btn btn-outline" th:if="${renderRefusal == null}"
+                        formnovalidate th:text="#{ui.noteCorrection.renderAgain}">Render again</button>
                 <button type="submit" name="intent" value="preview" class="btn"
                         th:classappend="${difference == null or !changed} ? 'btn-primary'"
                         th:text="#{ui.noteCorrection.preview}">Show the difference</button>
@@ -67,6 +80,9 @@
                         th:text="#{ui.noteCorrection.save(${note.revision + 1})}">Save as revision 3</button>
                 <a class="btn btn-ghost" th:href="@{${releasePath}}" th:text="#{ui.common.cancel}">Cancel</a>
             </div>
+            <p class="text-xs text-slate-600" th:if="${renderRefusal != null}" th:text="#{${renderRefusal}}">
+                A note a person wrote is corrected by hand only.
+            </p>
         </form>
     </section>
 </div>

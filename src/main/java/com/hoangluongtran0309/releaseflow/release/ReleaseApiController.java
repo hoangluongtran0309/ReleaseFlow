@@ -262,7 +262,22 @@ public class ReleaseApiController {
         return releaseService.noteRevision(principal.organizationId(), projectId, releaseId, noteId, revision);
     }
 
-    // ADR-0046: an administrator corrects a published note by hand, as its next revision.
+    // ADR-0046: what rendering the note again gives now. Translating again is #88's.
+    @GetMapping("/releases/{releaseId}/notes/{noteId}/correction-preview")
+    ReleaseNoteCorrectionService.CorrectionPreview correctionPreview(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @PathVariable UUID noteId,
+            @RequestParam String origin
+    ) {
+        if (!ReleaseNoteRevisionView.Origin.RENDERED.name().equals(origin)) {
+            throw new InvalidCorrectionOriginException();
+        }
+        return correctionService.previewRendered(principal.organizationId(), projectId, releaseId, noteId);
+    }
+
+    // ADR-0046: an administrator corrects a published note, by hand or rendered again.
     @PostMapping("/releases/{releaseId}/notes/{noteId}/revisions")
     ResponseEntity<ReleaseNoteRevisionView> correctNote(
             @AuthenticationPrincipal ReleaseFlowPrincipal principal,
@@ -272,7 +287,7 @@ public class ReleaseApiController {
             @Valid @RequestBody NoteCorrectionRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(correctionService.correctByHand(principal, projectId, releaseId, noteId, request));
+                .body(correctionService.correct(principal, projectId, releaseId, noteId, request));
     }
 
     // Also linked from the release pages, so a signed-in browser downloads the file directly.

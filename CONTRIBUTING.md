@@ -102,7 +102,10 @@ compares every note, English and Vietnamese, byte for byte with the note Release
 wrote. When it fails, a pull request has changed what a note says or how it is laid out,
 and the failure shows the difference by release, audience, and language; or it has changed
 what ReleaseFlow sends DeepL, and the failure lists the texts DeepL never answered. Either
-is a regression unless the pull request means it. **The inputs, recorded answers, and
+is a regression unless the pull request means it. Beside it, `GoldenRevisionsIntegrationTest`
+renders dbvault v1.2.0's six Vietnamese notes again, as 1.1.0-rc.2 published them, and
+compares each with the revision 2 the workspace expects (ADR-0046), from
+`src/test/resources/golden/dbvault/1.4.0-revisions/`; it must ask DeepL nothing. **The inputs, recorded answers, and
 snapshots come from the dbvault workspace and are refreshed only from there:** never edit
 them by hand, and never update a snapshot to make the test pass. A note that changes on
 purpose is rendered again in the workspace, which generates a new package to replace the

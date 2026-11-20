@@ -446,6 +446,11 @@ summary, and nothing links a note to the job it was written from. So:
   it as part 2 says.
 - **A subject with no such job**, or a text found under neither version, is missing in the
   same way. A note in the release's source language reads no job.
+- **A revision with a missing text is not saved as rendered again.** Saving a `RENDERED`
+  revision is refused with `409 release_note_render_incomplete` while any text the note uses
+  has no answer it was published with: the result would mix the source language into the
+  note under the name "rendered again". The person can save the text by hand, or translate
+  the note again once #88 is in.
 
 The golden case seeds the cache with the package's answers under the context and the
 glossary version of the jobs it writes; the package itself has neither, since set `v2`

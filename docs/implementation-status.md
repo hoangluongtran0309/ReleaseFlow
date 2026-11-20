@@ -688,7 +688,7 @@ where it first appears; ADRs are linked from the slice they record.
 ## In progress
 
 - #87, Slice A of [ADR-0046](adr/0046-correcting-a-published-note.md), in five pull
-  requests. The first two are in place. The first, with Flyway `V40`:
+  requests. The first three are in place. The first, with Flyway `V40`:
   - `release_note_revisions` and `public_changelog_entry_revisions`, only ever inserted,
     each number the next, and the revision an automation action run carried; `CORRECTION`
     is allowed as a run trigger and never as a rule's;
@@ -709,9 +709,18 @@ where it first appears; ADRs are linked from the slice they record.
     downloads (`?revision=n`, `400 release_note_revision_invalid` for anything but a positive
     whole number), and each destination with the revision it last received, marked when
     it is behind;
-  - a note a person corrected by hand still counts as following its template for
-    `nothing_for_audience` until the third pull request decides it, with ADR-0035's other
-    questions.
+- The third, with no migration, under ADR-0046's amendment of 2026-11-20:
+  - rendering a published note again, on the correction page's **Render again** or through
+    `GET …/correction-preview?origin=RENDERED`, and saving it as a `RENDERED` revision with the
+    preview's hash; a note a person wrote is `409 release_note_manual`, a retired audience
+    `409 audience_retired`, a preview that no longer renders `409 release_note_preview_changed`,
+    and untranslated texts `409 release_note_render_incomplete`;
+  - each translated text read from the cache under the job the release was published with,
+    and repaired as ADR-0040 repairs it, with no provider call;
+  - a note whose latest revision a person wrote is delivered as written, and a rendered one
+    is skipped or delivered by the changes it was rendered from;
+  - `GoldenRevisionsIntegrationTest` renders dbvault v1.2.0's six Vietnamese notes again
+    against the workspace's second package.
 
 ## Planned
 

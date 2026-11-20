@@ -1,0 +1,385 @@
+{
+ "version": "v1.2.0",
+ "summary": "A retention preview, times in your own time zone, and a limit on failed sign-ins. The old restore-verification API path is gone: upgrade dbvault-cli together with the server.",
+ "createdAt": "2026-11-02T02:12:27.869945Z",
+ "approvedAt": "2026-11-02T02:28:34.381710Z",
+ "publishedAt": "2026-11-02T02:50:37.915015Z",
+ "changes": [
+  {
+   "source": "GITHUB",
+   "reference": "#55",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!10",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#52",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#56",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "LINEAR",
+   "reference": "OPS-15",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#57",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#58",
+   "category": "FEATURE",
+   "breaking": true,
+   "security": false
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!11",
+   "category": "FIX",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#59",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!12",
+   "category": "FIX",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#60",
+   "category": "FIX",
+   "breaking": false,
+   "security": true
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#61",
+   "category": "FEATURE",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#62",
+   "category": "FIX",
+   "breaking": false,
+   "security": false
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#63",
+   "category": "FIX",
+   "breaking": false,
+   "security": false
+  }
+ ],
+ "decisions": [
+  {
+   "source": "GITHUB",
+   "reference": "#55",
+   "action": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:50.763474Z"
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!10",
+   "action": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:51.103352Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#52",
+   "action": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:51.484176Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#56",
+   "action": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:51.875175Z"
+  },
+  {
+   "source": "LINEAR",
+   "reference": "OPS-15",
+   "action": "APPROVE",
+   "category": "MAINTENANCE",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:52.248764Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#57",
+   "action": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:52.680875Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#58",
+   "action": "APPROVE",
+   "category": "FEATURE",
+   "breaking": true,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:53.094321Z"
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!11",
+   "action": "APPROVE",
+   "category": "FIX",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:53.453779Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#59",
+   "action": "APPROVE",
+   "category": "DOCUMENTATION",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:53.805475Z"
+  },
+  {
+   "source": "GITLAB",
+   "reference": "!12",
+   "action": "APPROVE",
+   "category": "FIX",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:54.145517Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#60",
+   "action": "APPROVE",
+   "category": "FIX",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:54.564124Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#61",
+   "action": "APPROVE",
+   "category": "FEATURE",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:54.928886Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#62",
+   "action": "APPROVE",
+   "category": "FIX",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:55.282979Z"
+  },
+  {
+   "source": "GITHUB",
+   "reference": "#63",
+   "action": "APPROVE",
+   "category": "FIX",
+   "breaking": false,
+   "note": "Reviewed the summary and every audience narrative.",
+   "reviewerName": "dbvault Lead",
+   "decidedAt": "2026-11-02T02:27:55.633867Z"
+  }
+ ],
+ "upgradeGuideUrl": "https://github.com/hoangtulangtoc/dbvault/blob/v1.2.0/docs/upgrading-to-1.2.md",
+ "previousVersion": "v1.1.0",
+ "glossaries": [
+  {
+   "language": "vi",
+   "status": "APPLIED",
+   "reason": null
+  }
+ ],
+ "builtBy": {
+  "image": "ghcr.io/hoangluongtran0309/releaseflow:1.1.0-rc.2@sha256:7d609c0f1f6f2a4d127dd1d02158b7cf62f7706f107c80485c96470863f0a66e",
+  "commit": "24ba8314b6018465711baad12c58c071fbd7d99e"
+ },
+ "notes": [
+  {
+   "audience": "contributor",
+   "language": "en",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "1e568dadc3f53a326ce170c2c8af2ad8bf3977258d6ad38437e3184f291389cc"
+  },
+  {
+   "audience": "contributor",
+   "language": "vi",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "e546ccc5513c720c4810b795e9b982e7a33efb53b0e378f4cfbed1a1c46149ca"
+  },
+  {
+   "audience": "dba",
+   "language": "en",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "a9a4908c80b48c30a4354ddfa30107a7d6cbe528c391e6607a29c1f0d496fa47"
+  },
+  {
+   "audience": "dba",
+   "language": "vi",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "7a46c3dc513d4ec43f31b3c960c3cb7410d2abbcb76e4c2d2d011938e52a949c"
+  },
+  {
+   "audience": "end_user",
+   "language": "en",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "892b4c0aa916656cfabc4459648dc5cb01004853b6b4ddefdcc95b5e096aa16a"
+  },
+  {
+   "audience": "end_user",
+   "language": "vi",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "b928e4b99a1c09a9980c53348567a7e918cb3a2ae1d0aad5309d73bb0c0d3ccc"
+  },
+  {
+   "audience": "operator",
+   "language": "en",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "c911f036c55dc022185df3b503c3f85db9c214049149964db94b8dee0dd254f8"
+  },
+  {
+   "audience": "operator",
+   "language": "vi",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "b3053b65731a8cfdf466b691936d50d32e3e11f9e141489513b4e9706be22e7a"
+  },
+  {
+   "audience": "support",
+   "language": "en",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "59a393aca8441ba7646a51c24ad44ff49221854a322716062cac5a21b9ea10ca"
+  },
+  {
+   "audience": "support",
+   "language": "vi",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "cfb7d019316d41cf082fce96bbcd1883ecce5f01afb6c8fc478547185b1f0e6b"
+  },
+  {
+   "audience": "aut_r4_probe",
+   "language": "en",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "11cd740ed731ff2ecfa551c27f9e08ca2328c6930652c010fb91b1df3d221047"
+  },
+  {
+   "audience": "aut_r4_probe",
+   "language": "vi",
+   "translationStatus": "READY",
+   "editedByHand": false,
+   "sha256": "cfd9c82c4220c00317ce862edc36548a7c02721855b9acc8e1f93ec5b2a841c5"
+  }
+ ],
+ "replayOnlyEdits": [
+  {
+   "reference": "OPS-15",
+   "rules": {
+    "category": "UNKNOWN",
+    "breaking": false
+   },
+   "captured": {
+    "category": "MAINTENANCE",
+    "breaking": false
+   }
+  },
+  {
+   "reference": "#60",
+   "rules": {
+    "category": "FIX",
+    "breaking": false,
+    "security": false
+   },
+   "captured": {
+    "category": "FIX",
+    "breaking": false,
+    "security": true
+   }
+  },
+  {
+   "reference": "#62",
+   "rules": {
+    "category": "UNKNOWN",
+    "breaking": false
+   },
+   "captured": {
+    "category": "FIX",
+    "breaking": false
+   }
+  }
+ ]
+}

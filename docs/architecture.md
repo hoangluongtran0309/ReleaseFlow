@@ -1479,6 +1479,20 @@ whose difference it showed. The published release page reads each note's revisio
 `NoteDeliveries` (automation) gives each rule action's latest successful delivery of the
 release with the revision it carried, so the page marks a destination that is behind.
 
+Rendering again (`ReleaseService.renderAgain`) reads and writes nothing it was not given: it
+refuses a retired audience's note (`409 audience_retired`) and a note a person wrote, edited
+before publication or whose latest revision is `MANUAL` (`409 release_note_manual`), then
+renders the note's own template and footer snapshots from the release's changes as they
+read now and its stored links and statuses. `ReleaseNoteWriter.localizePublished` asks
+`TranslationService.published` for each text the note uses: the latest `SUCCEEDED` job of
+the change, or of the release for its summary, into the note's language that completed by
+publication gives the context and glossary version, the cache is read under that version and
+then under none, and each answer is repaired with `SourceForms`. No job is created and no
+provider is called; a text with no answer is counted. A rendered revision is saved only with
+the hash of the preview a person read, rendered again inside the release's lock.
+`ReleaseAccess.hasNothingFor` treats a note whose latest revision is `MANUAL` as a person's,
+so it is delivered as written.
+
 ## Security changes and release-wide note structure
 
 ADR-0037 adds a security flag beside breaking and a footer per audience; see

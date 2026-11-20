@@ -152,9 +152,9 @@ the action runs, for every trigger, from the release's changes by the same rule 
 chooses a note's changes (see
 [Release Notes](release-notes.md#what-each-audience-reads)), never from the note's text.
 The checks come in this order: a retired audience is skipped with `audience_retired`; an
-action with no ready note fails with `release_note_missing`; a note a person edited is
-delivered as written, whatever its changes say; and only then is a note with nothing for
-its audience skipped. To deliver such a note on purpose, edit it before publishing.
+action with no ready note fails with `release_note_missing`; a note a person edited, or
+one whose latest revision a person wrote by hand, is delivered as written, whatever its
+changes say; and only then is a note with nothing for its audience skipped. To deliver such a note on purpose, edit it before publishing.
 Enabling a rule is never refused for it, because a rule outlives every release.
 
 The changes are read as they are when the action runs, so a published note and its skip
@@ -162,7 +162,9 @@ can disagree. If a review clears a change's breaking flag after publication, or 
 asked for a narrative it lacked, a change the note lists may no longer concern the
 audience, and running the rule again skips a note that has something to say. The other
 way round, a note that says nothing concerns its audience is delivered once one of its
-changes does. See
+changes does. Rendering the note again
+([Correcting a published note](release-notes.md#correcting-a-published-note)) brings its
+text back in line with its changes, so the skip and the note agree again. See
 [ADR-0035's amendment](adr/0035-evidence-bound-notes-and-audience-relevance.md#amendment-2026-11-19-an-action-whose-note-has-nothing-for-its-audience).
 
 ![A rule's run for a release, Succeeded: ten deliveries in order, the sixth an Email Skipped with audience_retired and the sentence that nothing was sent and the actions after it still ran](assets/automation/a-11-skipped-action.webp)
