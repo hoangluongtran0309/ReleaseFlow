@@ -13,6 +13,9 @@
   [ADR-0040](0040-translation-placeholders.md) (translation, its cache, and the repair of
   an answer), [ADR-0043](0043-member-roles-and-removal.md) (removed members), and
   [ADR-0044](0044-retire-an-audience.md) (retired audiences and `SKIPPED`)
+- Amended: 2026-11-20, for which job rendering again reads, three corrections to the
+  Context, and how a corrected note meets ADR-0035's skip; see
+  [the amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip)
 
 This record decides issue #22 and writes no code. Nothing it describes exists yet.
 
@@ -35,6 +38,11 @@ captured notes (fixture set `v2`):
 | `aut_r4_probe` / vi | 0 | 1 |
 | the other nine | 0 | 0 |
 
+(Amended on 2026-11-20: rendering again also restores `dbvault-CLI` to `dbvault-cli` in
+all six Vietnamese notes, so it changes four of the notes counted here as clean, and
+"Điểm endpoint", a second half-translation of "Endpoint", is in three of them; see the
+[amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip).)
+
 - **The placeholders** are the lab's FINDINGS #23. 1.1.0-rc.3 repairs DeepL's answer when
   a translation job succeeds (ADR-0040), so only notes written after it are right.
   ADR-0040 says so itself: "Published notes are not changed."
@@ -48,7 +56,9 @@ Confluence (`dba`/en), and Zendesk (`end_user`/vi), as the lab's plan defines R1
 those is one of the three damaged notes. So the lab's real errors sit on the release page
 and in its downloads, and no copy outside ReleaseFlow carries them. A correction to an
 English note, or to `end_user`/vi, would reach every one of those places, which is why the
-destinations are decided here too.
+destinations are decided here too. (Amended on 2026-11-20: `end_user`/vi carries
+`dbvault-CLI`, which R1 copied to the public changelog and Zendesk; see the
+[amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip).)
 
 Six facts of the code as it stands decide most of what follows:
 
@@ -385,3 +395,123 @@ What each destination does:
   languages.
 - Updating a Zendesk article in place.
 - Letting a member propose a correction for an administrator to accept.
+
+## Amendment, 2026-11-20: rendering again, what it changes in dbvault, and the skip
+
+- Status: Accepted
+- Tracked by: [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)
+- Answers: the three questions [ADR-0035's amendment](0035-evidence-bound-notes-and-audience-relevance.md#amendment-2026-11-19-an-action-whose-note-has-nothing-for-its-audience)
+  left to #87
+
+The decision above stands. This amendment decides one thing it left open, corrects three
+statements of its Context, and decides how a corrected note meets ADR-0035's skip.
+
+**What was found.** The dbvault workspace built the second golden package that part 7
+proposes, `1.4.0-revisions`. It renders v1.2.0 again on ReleaseFlow develop at `0de37f7`,
+from set `v2`'s recorded DeepL answers alone: 174 texts, 0 characters sent. The six English
+notes come back byte for byte as rc.2 published them. Each of the six Vietnamese notes
+changes, only in the letter case of whole tokens, 29 of them:
+
+| Note | Placeholders | `dbvault-CLI` → `dbvault-cli` |
+| --- | --- | --- |
+| `contributor` / vi | 7 | 3 |
+| `operator` / vi | 3 | 4 |
+| `aut_r4_probe` / vi | 0 | 5 |
+| `dba` / vi | 0 | 3 |
+| `end_user` / vi | 0 | 2 |
+| `support` / vi | 0 | 2 |
+
+ADR-0040 restores a lowercase hyphenated identifier as well as a placeholder, and every
+Vietnamese note of v1.2.0 has `dbvault-CLI` for the source's `dbvault-cli`. The Context
+counted placeholders and "Điểm cuối" only, so it missed these.
+
+### Which job rendering again reads
+
+Part 2 reads each text "under the context and glossary version of the job that translated
+it for this release". A translation job belongs to one change, or to the release for its
+summary, and nothing links a note to the job it was written from. So:
+
+- **The job** is the latest `SUCCEEDED` job of the same subject (the change, or the
+  release) into the note's language that completed no later than the release's
+  publication. Publication requires every note to be ready, and nothing writes a note
+  after it, so that job's answers are the ones the note was published with; a job that
+  finished later was never part of the note.
+- **Each text is looked up by itself** in the cache, under that job's context and its
+  glossary version, and then under the empty version: a text the job translated without
+  its glossary, on its last attempt or after an answer that came back untranslated, is
+  cached there (ADR-0036). The answer found is repaired as ADR-0040 repairs any answer.
+- **The job's stored output is not read.** It is keyed by field, so a field whose source
+  text changed since publication would get an answer to a different text. The cache is
+  keyed by the text itself, so such a text finds nothing, and the preview marks and counts
+  it as part 2 says.
+- **A subject with no such job**, or a text found under neither version, is missing in the
+  same way. A note in the release's source language reads no job.
+
+The golden case seeds the cache with the package's answers under the context and the
+glossary version of the jobs it writes; the package itself has neither, since set `v2`
+holds no Project context and no glossary.
+
+### Three corrections to the Context
+
+- **Rendering again changes six notes, not two.** "The other nine: 0" is wrong for three
+  of them: `dba`/vi, `end_user`/vi, and `support`/vi each have `dbvault-CLI`, and so does
+  `aut_r4_probe`/vi. Rendering v1.2.0 again changes four notes besides `operator`/vi and
+  `contributor`/vi. The golden case of part 7 therefore renders all six and compares each
+  with the package's revision 2. "Điểm cuối" is unchanged by it, as part 2 says: it needs
+  translating again, or a hand.
+- **"Endpoint" has a second half-translation.** "Điểm endpoint" is in `aut_r4_probe`/vi,
+  `end_user`/vi, and `support`/vi, and the Context counts only "Điểm cuối". Rendering again
+  does not fix it either: it is DeepL's answer, not a token ADR-0040 restores, so like
+  "Điểm cuối" it needs translating again, or a hand.
+- **An error is outside ReleaseFlow.** `end_user`/vi carries `dbvault-CLI` twice, and rule
+  R1 copied it to the public changelog and to Zendesk. So "no copy outside ReleaseFlow
+  carries them" is wrong. It also carries "Điểm endpoint". Slice A corrects the public
+  changelog's entry: rendering `end_user`/vi again, correcting it by hand, then a
+  correction run. Zendesk keeps the old text (`correction_not_supported`), and the article
+  is corrected there by hand.
+
+`aut_r4_probe` is active in set `v2`, so its revision 2 in the package is a real render. On
+an Organization where it is retired, rendering again is refused with `409 audience_retired`
+(part 6), and the same text can be saved by hand as a `MANUAL` revision.
+
+### A corrected note and the skip for nothing to say
+
+ADR-0035's amendment skips an action whose note has nothing for its audience, unless a
+person wrote the note, and left three questions to #87.
+
+- **A revision written by hand is a note a person wrote.** A note whose latest revision is
+  `MANUAL` is delivered as written, whatever the changes say, as a note edited before
+  publication is. That is also part 2's rule that such a note never follows its template
+  again. A `RENDERED` or `TRANSLATED` revision is not a person's text: the skip asks the
+  changes for it as for a note that follows its template.
+- **A revision rendered again agrees with the skip as of when it was rendered.** It is
+  written from the release's changes as they read then, by the digest whose
+  `ReleaseNoteDigest.concerns` the skip also asks. So rendering again closes the known
+  limit of ADR-0035's amendment for that note: if nothing concerns the audience, the
+  revision says so and the action is skipped; if something does, the revision lists it and
+  the action delivers it. The limit opens again only if a change of the release is reviewed
+  again or given a narrative after that revision, and a person can render the note again.
+- **A correction run does not skip for nothing to say, and offers nothing that was never
+  delivered.** A correction replaces what a destination already holds. Skipping it because
+  the latest revision now has nothing for its audience would leave that destination with
+  text the note no longer says, and only a hand could fix it. So in a `CORRECTION` run,
+  `nothing_for_audience` is not checked; `audience_retired` still is, first, as ADR-0044's
+  order of checks says. An action whose runs for the release were all `SKIPPED`, for either
+  reason, has no `SUCCEEDED` run, so part 5 does not offer it: nothing was delivered there
+  to correct. The form names such an action and says why. Running the rule again, by hand,
+  is a first delivery of the latest revision, and is skipped or delivered by ADR-0035's rule
+  like any other run.
+
+**Consequences.**
+
+- `ReleaseAccess.hasNothingFor` reads the note's latest revision: a `MANUAL` latest is
+  delivered as written. With no correction, every run is what it is today.
+- The correction run of Slice A skips only a retired audience's action, and the form lists
+  a skipped-before action as not offered, with its reason.
+- The golden case of part 7 renders the six Vietnamese notes of the second package and
+  compares each byte for byte; the first package and its test are unchanged.
+- `end_user`/vi's entry on the lab's public changelog is the correction the lab's 1.4.0
+  acceptance checks for Slice A, and it takes two revisions: revision 2 rendered again,
+  for `dbvault-CLI`, then revision 3 by hand, for "Điểm endpoint". The correction run then
+  delivers revision 3, the latest, to the public changelog. Its Zendesk article is corrected
+  there by hand.

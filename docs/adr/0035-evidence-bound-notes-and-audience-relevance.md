@@ -384,6 +384,11 @@ skip holds for a corrected note, and this amendment does not decide it for it. A
 - whether a correction run skips with `nothing_for_audience`, and what it offers for an
   action that was skipped before: ADR-0046 offers only an action with a `SUCCEEDED` run.
 
+(Decided on 2026-11-20 by [ADR-0046's amendment](0046-correcting-a-published-note.md#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip):
+a `MANUAL` revision is a note a person wrote; a rendered revision is skipped by the changes
+it was rendered from; a correction run never skips for nothing to say, and offers no action
+that was only ever skipped.)
+
 **Consequences.**
 
 - A rule like R1 no longer adds a permanent public changelog entry, a page, an article,
