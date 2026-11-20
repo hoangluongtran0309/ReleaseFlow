@@ -13,7 +13,18 @@ WORKDIR /app
 # reuse this layer.
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw -B --no-transfer-progress dependency:go-offline
+# mvnw downloads maven-wrapper.jar, then Maven, from Maven Central and tries each once, so
+# its first start is retried (#128). The jar never comes from the build context
+# (.dockerignore), so whatever a failed attempt left is a bad download and goes.
+RUN chmod +x mvnw \
+ && for attempt in 1 2 3; do \
+      ./mvnw -B --no-transfer-progress --version >/dev/null && break; \
+      rm -f .mvn/wrapper/maven-wrapper.jar; \
+      [ "$attempt" -lt 3 ] || exit 1; \
+      echo "The Maven wrapper did not start (attempt $attempt of 3); trying again in 10 s." >&2; \
+      sleep 10; \
+    done \
+ && ./mvnw -B --no-transfer-progress dependency:go-offline
 
 # frontend-maven-plugin runs the Tailwind build during `package`. The licence and
 # notice are copied into the JAR's META-INF, so the build needs them here too.
