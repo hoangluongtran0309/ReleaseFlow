@@ -162,6 +162,8 @@ liên quan. Xem
 
 ![Lần chạy của một quy tắc cho một release, Thành công: mười lần gửi theo thứ tự, lần thứ sáu là Email Đã bỏ qua với audience_retired và câu giải thích không gửi gì và các action sau vẫn chạy](assets/automation/a-11-skipped-action.webp)
 
+![Lần chạy của một quy tắc cho một release, Thành công: chín lần gửi theo thứ tự; Slack, Email, Confluence và Microsoft Teams Đã bỏ qua với nothing_for_audience và câu rằng release không có thay đổi nào liên quan tới audience của chúng, nên không gửi gì và các Action sau vẫn chạy; GitHub Release, changelog công khai, Notion và Zendesk Thành công](assets/automation/a-13-skipped-nothing-for-audience.webp)
+
 ![Một lần chạy có action GitHub Release thất bại với github_release_conflict: các action sau nó đang chờ, cùng nút chạy lại và huỷ](assets/automation/a-7-run-failed.webp)
 
 Action GitHub Release mượn nguồn GitHub của project, nên nó phụ thuộc vào việc nguồn đó còn kết

@@ -167,6 +167,8 @@ changes does. See
 
 ![A rule's run for a release, Succeeded: ten deliveries in order, the sixth an Email Skipped with audience_retired and the sentence that nothing was sent and the actions after it still ran](assets/automation/a-11-skipped-action.webp)
 
+![A rule's run for a release, Succeeded: nine deliveries in order; Slack, Email, Confluence and Microsoft Teams Skipped with nothing_for_audience and the sentence that nothing in the release concerns their audience, so nothing was sent and the actions after it still ran; GitHub Release, the public changelog, Notion and Zendesk Succeeded](assets/automation/a-13-skipped-nothing-for-audience.webp)
+
 ![A run whose GitHub Release action failed with github_release_conflict: the actions behind it are pending, with Run again and Cancel](assets/automation/a-7-run-failed.webp)
 
 A GitHub Release action borrows the project's GitHub source, so it depends on that

@@ -12,6 +12,8 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-20
+
 ### Fixed
 
 - A Linear delivery is checked against `webhookTimestamp`, the time Linear sent it, not
@@ -355,7 +357,8 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.3.1
 [1.3.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.3.0
 [1.2.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.2.0
 [1.1.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.1.0
