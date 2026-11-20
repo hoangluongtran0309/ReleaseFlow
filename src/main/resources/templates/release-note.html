@@ -48,7 +48,19 @@
             <th:block th:each="note, state : ${release.notes}">
                 <input type="radio" name="note-tabs" class="tab"
                        th:aria-label="|${note.audienceName} · ${note.language}|" th:checked="${state.first}">
-                <div class="tab-content pt-4" th:id="|note-${note.audienceCode}-${note.language}|">
+                <div class="tab-content pt-4" th:id="|note-${note.audienceCode}-${note.language}|"
+                     th:with="history=${histories.get(note.id)}">
+                    <!--/* ADR-0046: the latest revision is the note; each earlier one stays readable. */-->
+                    <div class="mb-4 flex flex-wrap items-center gap-2">
+                        <span class="badge badge-sm badge-ghost" th:text="#{ui.releaseNote.revision(${note.revision})}">Revision 1</span>
+                        <span class="badge badge-sm badge-info" th:if="${note.revision > 1}" th:text="#{ui.releaseNote.corrected}">Corrected</span>
+                        <span class="text-xs text-slate-600" th:if="${note.revision > 1}"
+                              th:text="#{ui.releaseNote.correctedOn(${#temporals.format(note.updatedAt, 'd MMM yyyy', 'UTC')}, ${history.revisions[0].revision.reason})}">Corrected on 20 Nov 2026: placeholders restored</span>
+                        <span class="grow"></span>
+                        <a class="btn btn-outline btn-xs" th:if="${viewer.admin}"
+                           th:href="@{/projects/{projectId}/releases/{releaseId}/notes/{noteId}/correct(projectId=${projectId},releaseId=${release.id},noteId=${note.id})}"
+                           th:text="#{ui.releaseNote.correct}">Correct this note</a>
+                    </div>
                     <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
                         <article class="release-note-body" th:lang="${note.language}" th:utext="${note.html()}"></article>
                         <div class="content-start" x-data="copyText()" th:data-label-copy="#{ui.common.copy}" th:data-label-copied="#{ui.common.copied}"
@@ -68,6 +80,59 @@
                                       th:text="${note.content}"># Release 1.4.0</textarea>
                         </div>
                     </div>
+
+                    <section class="mt-6" th:aria-labelledby="|revisions-${note.id}-heading|">
+                        <h3 class="section-heading" th:id="|revisions-${note.id}-heading|" th:text="#{ui.releaseNote.revisionsHeading}">Revisions</h3>
+                        <ol class="note-revisions mt-2 grid gap-2">
+                            <li th:each="entry : ${history.revisions}" class="note-revision rounded-box border border-base-300 p-3">
+                                <div class="flex flex-wrap items-center gap-2 text-sm">
+                                    <span class="font-semibold" th:text="#{ui.releaseNote.revision(${entry.revision.revision})}">Revision 2</span>
+                                    <span class="badge badge-sm badge-ghost" th:text="#{|ui.enum.noteRevisionOrigin.${entry.revision.origin}|}">By hand</span>
+                                    <time class="text-xs text-slate-600" th:datetime="${entry.revision.createdAt}"
+                                          th:text="|${#temporals.format(entry.revision.createdAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">20 Nov 2026, 10:02 UTC</time>
+                                    <span class="text-xs text-slate-600" th:text="${entry.revision.authorName}">Mai Tran</span>
+                                    <span class="grow"></span>
+                                    <a class="btn btn-outline btn-xs"
+                                       th:href="@{/api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/download(projectId=${projectId},releaseId=${release.id},noteId=${note.id},revision=${entry.revision.revision})}"
+                                       th:aria-label="#{ui.releaseNote.downloadRevision(${entry.revision.revision})}"
+                                       th:text="#{ui.releaseNote.download}">Download</a>
+                                </div>
+                                <p class="mt-1 whitespace-pre-line text-sm [overflow-wrap:anywhere]" th:if="${entry.revision.reason != null}"
+                                   th:lang="${note.language}" th:text="${entry.revision.reason}">Placeholders restored.</p>
+                                <details class="mt-2" th:if="${entry.corrected()}">
+                                    <summary class="cursor-pointer text-sm font-semibold text-indigo-700"
+                                             th:text="#{ui.releaseNote.differenceFrom(${entry.revision.revision - 1})}">Difference from revision 1</summary>
+                                    <div th:replace="~{fragments/line-diff :: diff(${entry.difference}, #{ui.releaseNote.differenceLabel(${entry.revision.revision}, ${entry.revision.revision - 1})})}"></div>
+                                </details>
+                                <details class="mt-2">
+                                    <summary class="cursor-pointer text-sm font-semibold text-indigo-700" th:text="#{ui.releaseNote.markdown}">Markdown</summary>
+                                    <textarea class="textarea textarea-bordered mt-2 h-60 w-full font-mono text-xs" readonly spellcheck="false"
+                                              th:lang="${note.language}"
+                                              th:aria-label="#{ui.releaseNote.revisionMarkdownLabel(${note.audienceName}, ${entry.revision.revision})}"
+                                              th:text="${entry.revision.content}"># Release 1.4.0</textarea>
+                                </details>
+                            </li>
+                        </ol>
+                    </section>
+
+                    <section class="mt-6" th:aria-labelledby="|deliveries-${note.id}-heading|">
+                        <h3 class="section-heading" th:id="|deliveries-${note.id}-heading|" th:text="#{ui.releaseNote.deliveriesHeading}">Where it went</h3>
+                        <p class="section-copy" th:if="${#lists.isEmpty(history.deliveries)}" th:text="#{ui.releaseNote.noDeliveries}">No automation has delivered this note.</p>
+                        <ul class="mt-2 grid gap-2" th:unless="${#lists.isEmpty(history.deliveries)}">
+                            <li th:each="delivery : ${history.deliveries}" class="flex flex-wrap items-center gap-2 text-sm">
+                                <span class="font-semibold" th:text="#{${delivery.destinationKey}}">Public changelog</span>
+                                <span class="text-slate-600" th:text="${delivery.ruleName}">Announce</span>
+                                <span class="badge badge-sm badge-ghost" th:text="#{ui.releaseNote.revision(${delivery.revision})}">Revision 1</span>
+                                <span class="badge badge-sm badge-warning" th:if="${history.behind(delivery)}" th:text="#{ui.releaseNote.behind}">Behind</span>
+                                <time class="text-xs text-slate-600" th:datetime="${delivery.deliveredAt}"
+                                      th:text="|${#temporals.format(delivery.deliveredAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">20 Nov 2026, 10:02 UTC</time>
+                                <a class="link text-xs" th:if="${delivery.externalReference != null}"
+                                   th:href="${delivery.externalReference}" target="_blank" rel="noopener noreferrer"
+                                   th:aria-label="#{ui.releaseNote.openDeliveryLabel(${#messages.msg(delivery.destinationKey)}, ${delivery.ruleName})}"
+                                   th:text="#{ui.releaseNote.openDelivery}">Open</a>
+                            </li>
+                        </ul>
+                    </section>
                 </div>
             </th:block>
         </div>

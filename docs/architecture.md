@@ -1470,6 +1470,15 @@ as its latest revision for the release page, the notes API, the download, and th
 a new automation run takes, which records the revision it carried in
 `automation_action_runs.note_revision`.
 
+`ReleaseNoteCorrectionService` writes a correction by hand: it requires an administrator,
+locks the release first like every other write to it, refuses a revision that is no longer
+the latest and text equal to it, and inserts the next `MANUAL` revision; the database's
+own check of the number backs it. `NoteCorrectionPageController` shows the difference
+(`LineDiff`, a line diff of the two texts) before it offers to save, and saves only the text
+whose difference it showed. The published release page reads each note's revisions, and
+`NoteDeliveries` (automation) gives each rule action's latest successful delivery of the
+release with the revision it carried, so the page marks a destination that is behind.
+
 ## Security changes and release-wide note structure
 
 ADR-0037 adds a security flag beside breaking and a footer per audience; see

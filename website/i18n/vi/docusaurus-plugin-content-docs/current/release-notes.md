@@ -2,7 +2,7 @@
 
 Một release gom các thay đổi đã review. Khi release được duyệt, ReleaseFlow viết một release
 note cho mỗi audience ở mỗi ngôn ngữ release note; khi release được publish, các release note
-đó được cố định lại.
+đó được cố định lại, và quản trị viên chỉ sửa một note bằng cách thêm một bản sửa đổi.
 
 ## Audience {#audiences}
 
@@ -711,8 +711,10 @@ GitHub Releases hoặc một changelog. Tệp tải về có tên `<version>-<au
 ![Release v1.3.0 đã publish: note Contributor · vi đã dịch, bảng thuật ngữ được gửi kèm mọi bản dịch, cùng nút Sao chép và Tải về Markdown](assets/release-notes/rn-9-publish.webp)
 
 Một release đã publish không sửa, đặt lịch, review, huỷ bỏ, gỡ publish hay đổi nội dung được, và
-các release note của nó cũng vậy. Các thay đổi của nó vẫn sửa được trong Hộp thay đổi, nhưng
-release note đã publish giữ nguyên những gì đã publish. Trigger của PostgreSQL bảo đảm điều này
+các release note như lúc publish của nó không bao giờ thay đổi. Các thay đổi của nó vẫn sửa được
+trong Hộp thay đổi, nhưng release note đã publish giữ nguyên những gì đã publish; quản trị viên sửa
+một note bằng cách thêm một bản sửa đổi
+([Sửa một release note đã publish](#correcting-a-published-note)). Trigger của PostgreSQL bảo đảm điều này
 kể cả khi chạy SQL trực tiếp. Xem
 [ADR-0005](adr/0005-immutable-release-note-snapshots.md) và
 [ADR-0011](adr/0011-audience-release-notes.md).
@@ -724,3 +726,36 @@ nhóm các thay đổi hiện có của release vào các section của release 
 trước Flyway `V13`. Publish một release
 chưa duyệt trả về `409 release_status_conflict`; mọi thao tác trên một release đã publish trả về
 `409 release_published`.
+
+### Sửa một release note đã publish {#correcting-a-published-note}
+
+Một release note đã publish không bao giờ bị sửa tại chỗ. Quản trị viên sửa nó bằng cách thêm
+một bản sửa đổi: note như lúc publish vẫn là bản sửa đổi 1, và mỗi lần sửa là số tiếp theo, kèm
+lý do, tên của người sửa như lúc đó, và thời điểm
+([ADR-0046](adr/0046-correcting-a-published-note.md)).
+
+Trên release đã publish, mở tab của note và chọn **Sửa note này**. Trang bắt đầu từ bản sửa đổi
+mới nhất của note. Sửa Markdown của nó, viết lý do bằng chính ngôn ngữ của note (tối đa 500 ký
+tự; lý do được công bố ở mọi nơi bản sửa xuất hiện), rồi chọn **Xem khác biệt**. Nút **Lưu thành
+bản sửa đổi 3**, hay số tiếp theo nào đó, chỉ xuất hiện khi khác biệt đã được hiển thị, và việc
+lưu bị từ chối nếu nội dung đổi sau đó. Note của một audience đã ngừng dùng cũng được sửa như vậy.
+
+Sau khi lưu, bản sửa đổi mới nhất chính là note ở mọi nơi note được đọc mà không nêu số: tab của
+nó, **Sao chép**, **Tải về**, và nội dung một lần chạy automation mới gửi đi. Lưu không gửi gì đi,
+nên mỗi nơi nhận giữ những gì nó nhận lần cuối. Dưới mỗi note, **Các bản sửa đổi** liệt kê mọi bản
+sửa đổi, mới nhất trước, với cách nội dung được tạo ra, thời điểm, người sửa, lý do, khác biệt so
+với bản trước, Markdown của nó, và một tệp tải về tên `<version>-<audience>-<language>.r<n>.md`.
+**Đã gửi tới đâu** liệt kê mỗi action automation đã gửi note, cùng bản sửa đổi nó mang theo, và
+đánh dấu **Chưa cập nhật** khi note đã được sửa kể từ đó. Một bản sửa đổi không bao giờ bị đổi hay
+xoá; chỉ một bản mới hơn thay thế nó. Mọi thành viên đều đọc được các bản sửa đổi; chỉ quản trị
+viên được sửa.
+
+REST client gọi `POST /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions`
+với `{"corrects", "content", "reason"}`, trong đó `corrects` là số của bản sửa đổi đang được sửa,
+và nhận `201` cùng bản sửa đổi mới. Một bản sửa đổi không còn là mới nhất bị từ chối với
+`409 release_note_revision_stale`, nội dung giống hệt bản mới nhất với
+`409 release_note_correction_unchanged`, note của một release chưa publish với
+`409 release_status_conflict`, và một thành viên với `403`.
+`GET …/notes/{noteId}/download?revision={n}` tải về một bản sửa đổi; một số mà note không có là
+`404 release_note_not_found`, và bất cứ gì không phải số nguyên dương là
+`400 release_note_revision_invalid`.

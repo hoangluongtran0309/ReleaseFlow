@@ -688,7 +688,7 @@ where it first appears; ADRs are linked from the slice they record.
 ## In progress
 
 - #87, Slice A of [ADR-0046](adr/0046-correcting-a-published-note.md), in five pull
-  requests. The first is in place, with Flyway `V40`:
+  requests. The first two are in place. The first, with Flyway `V40`:
   - `release_note_revisions` and `public_changelog_entry_revisions`, only ever inserted,
     each number the next, and the revision an automation action run carried; `CORRECTION`
     is allowed as a run trigger and never as a rule's;
@@ -696,8 +696,22 @@ where it first appears; ADRs are linked from the slice they record.
     download, and what a new automation run carries, and a note's `revision` says which;
   - `GET …/notes/{noteId}/revisions` and `…/revisions/{revision}`, revision 1 being the
     note as published, and `noteRevision` on each action of a run;
-  - nothing writes a revision yet, so every note, every API field that existed, and every
-    DeepL request are as they were.
+  - with no correction, every note, every API field that existed, and every DeepL request
+    are as they were.
+- The second, with no migration:
+  - an administrator corrects a published note by hand, on the release page's
+    **Correct this note** or through `POST …/notes/{noteId}/revisions`, saving only text
+    whose difference was shown; a stale revision is `409 release_note_revision_stale`,
+    unchanged text `409 release_note_correction_unchanged`, and a member `403`;
+  - a retired audience's note is corrected the same way, a removed member's revision keeps
+    their name, and saving delivers nothing;
+  - the published release lists each note's revisions with their differences, Markdown, and
+    downloads (`?revision=n`, `400 release_note_revision_invalid` for anything but a positive
+    whole number), and each destination with the revision it last received, marked when
+    it is behind;
+  - a note a person corrected by hand still counts as following its template for
+    `nothing_for_audience` until the third pull request decides it, with ADR-0035's other
+    questions.
 
 ## Planned
 

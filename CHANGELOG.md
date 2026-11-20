@@ -16,9 +16,14 @@ section into the version's entry, and the GitHub release is written from it.
 
 - A published note has revisions: revision 1 is the note as published, and the API reads
   each one at `GET …/notes/{noteId}/revisions` and `…/revisions/{revision}`. A note's
-  `revision` and each run action's `noteRevision` say which revision is meant. Nothing
-  writes a correction yet, so every note reads exactly as before
+  `revision` and each run action's `noteRevision` say which revision is meant. With no
+  correction, every note reads exactly as before
   ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+- An administrator corrects a published note by hand: **Correct this note** shows the
+  difference from the latest revision and saves the text as the next revision, with a
+  reason. The release page lists each note's revisions with their differences and
+  downloads (`?revision=n`), and which revision each destination last received. Saving
+  delivers nothing ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
 
 ## [1.3.1] - 2026-11-20
 

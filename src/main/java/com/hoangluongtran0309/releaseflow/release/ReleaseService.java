@@ -902,16 +902,24 @@ public class ReleaseService {
                 .orElseThrow(() -> new ReleaseNoteNotFoundException("error.release_note_not_found.revision"));
     }
 
-    /** One audience's note as a Markdown file named {@code <version>-<audience>-<language>.md}. */
+    /**
+     * One audience's note as a Markdown file named {@code <version>-<audience>-<language>.md}:
+     * its latest revision, or, when a revision is named, that revision as
+     * {@code <version>-<audience>-<language>.r<n>.md} (ADR-0046).
+     */
     @Transactional(readOnly = true)
-    ReleaseNoteFile noteFile(UUID organizationId, UUID projectId, UUID releaseId, UUID noteId) {
+    ReleaseNoteFile noteFile(UUID organizationId, UUID projectId, UUID releaseId, UUID noteId, Integer revision) {
         Release release = find(organizationId, projectId, releaseId);
         AudienceReleaseNote note = noteRepository.findByIdAndReleaseIdAndOrganizationId(noteId, releaseId, organizationId)
                 .orElseThrow(ReleaseNoteNotFoundException::new);
         // Anything but letters, digits, dots, dashes, and underscores in the version is replaced.
         String name = release.getVersion().replaceAll("[^A-Za-z0-9._-]", "-") + "-" + note.getAudienceCode() + "-"
-                + note.getLanguage() + ".md";
-        return new ReleaseNoteFile(name, noteRevisions.latest(organizationId, note).content());
+                + note.getLanguage();
+        if (revision == null) {
+            return new ReleaseNoteFile(name + ".md", noteRevisions.latest(organizationId, note).content());
+        }
+        return new ReleaseNoteFile(name + ".r" + revision + ".md",
+                noteRevision(organizationId, projectId, releaseId, noteId, revision).content());
     }
 
     /**

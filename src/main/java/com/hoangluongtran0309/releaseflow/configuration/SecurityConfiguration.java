@@ -202,6 +202,12 @@ public class SecurityConfiguration {
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/organization/slug")
                         .hasRole("ADMIN")
+                        // A correction changes what people read of a published note, with no review
+                        // and approval before it (ADR-0046).
+                        .requestMatchers(HttpMethod.POST, "/api/projects/*/releases/*/notes/*/revisions")
+                        .hasRole("ADMIN")
+                        .requestMatchers("/projects/*/releases/*/notes/*/correct")
+                        .hasRole("ADMIN")
                         // An automation rule delivers release notes outside ReleaseFlow and holds
                         // the credentials to do it.
                         .requestMatchers("/automation", "/automation/**", "/api/automation", "/api/automation/**")

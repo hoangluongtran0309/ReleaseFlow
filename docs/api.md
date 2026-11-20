@@ -191,6 +191,7 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `PUT /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}` | member |
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/download` | member |
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions` | member |
+| `POST /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions` | admin |
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions/{revision}` | member |
 | `GET /api/projects/{projectId}/release-assignments` | member |
 | `GET /api/audiences`, `POST /api/audiences` | admin |
@@ -212,7 +213,9 @@ publisher's name and time. A later revision is a correction, with its `origin`, 
 entry, the download, and what a new automation run carries, the latest revision is the
 note, and the note's `revision` says which one it is: `1` until it is corrected. A note of
 a release that is not published yet has no revisions (`409 release_status_conflict`), and a
-number the note does not have is `404 release_note_not_found`.
+number the note does not have is `404 release_note_not_found`. An administrator corrects a
+note with `POST …/revisions` and `{"corrects", "content", "reason"}`, and the download takes
+`?revision={n}`; see [Correcting a published note](release-notes.md#correcting-a-published-note).
 
 ### Automation — [Automation](automation.md)
 
@@ -277,7 +280,7 @@ Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
 | Audiences | `409` | `audience_code_taken`, `audience_limit`, `audience_last`, `audience_last_active`, `audience_already_retired`, `audience_not_retired`, `audience_in_use`, `audience_not_preset` |
 | Glossary | `404` | `glossary_term_not_found` |
 | Glossary | `409` | `glossary_term_taken`, `glossary_limit` |
-| Releases | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision` |
+| Releases | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision`, `release_note_revision_invalid` |
 | Releases | `404` | `release_not_found`, `release_note_not_found`, `folding_suggestion_not_found`, `linked_issue_not_found` |
-| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed` |
+| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed`, `release_note_revision_stale`, `release_note_correction_unchanged` |
 | Automation | `400`, `404`, `409` | See [Automation](automation.md#rest) |
