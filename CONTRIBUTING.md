@@ -304,7 +304,16 @@ them weekly).
   as in the Docker build, it switches to the `.tar.gz`, which no single checksum
   matches.) `mvnw` tries the jar's download once, so the workflows that run it keep
   the jar in an Actions cache keyed on `wrapperSha256Sum`; a restored jar is still
-  checked before it runs.
+  checked before it runs. A run that cannot read that cache downloads the jar, so
+  `scripts/ci/maven-wrapper-ready.sh` starts the wrapper up to three times before the
+  first Maven step, and the Dockerfile's build stage does the same before resolving
+  dependencies (#128).
+- "Failed to validate Maven wrapper SHA-256, your Maven wrapper might be compromised"
+  after a fresh checkout almost always means the download failed: `mvnw` deletes a
+  failed download and then checks a file that is no longer there. Run `./mvnw --version`
+  again. If `.mvn/wrapper/maven-wrapper.jar` exists and `sha256sum` of it still differs
+  from `wrapperSha256Sum`, that is a real mismatch: delete the jar and compare a fresh
+  download with the checksum Maven Central publishes before trusting either.
 
 `maven-enforcer-plugin` runs these rules at the start of every build, so
 `./mvnw verify` reports a violation before anything compiles.

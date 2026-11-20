@@ -45,7 +45,9 @@ jobs:
           java-version: "21"
           cache: maven
       # mvnw tries the jar's download once and fails on any error; a cached jar is still
-      # checked against wrapperSha256Sum before it runs.
+      # checked against wrapperSha256Sum before it runs. A run that cannot read the cache
+      # (a tag, a first push to main, an evicted entry) downloads it, so the wrapper's first
+      # start is retried (#128).
       - name: Read the Maven wrapper checksum
         if: matrix.language == 'java-kotlin'
         id: maven-wrapper
@@ -56,6 +58,9 @@ jobs:
         with:
           path: .mvn/wrapper/maven-wrapper.jar
           key: maven-wrapper-jar-${{ steps.maven-wrapper.outputs.sha256 }}
+      - name: Start the Maven wrapper, retrying its download
+        if: matrix.language == 'java-kotlin'
+        run: ./scripts/ci/maven-wrapper-ready.sh
       - name: Initialize CodeQL
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:

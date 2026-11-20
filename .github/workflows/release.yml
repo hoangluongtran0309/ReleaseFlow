@@ -118,7 +118,9 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
       # mvnw tries the jar's download once and fails on any error; a cached jar is still
-      # checked against wrapperSha256Sum before it runs.
+      # checked against wrapperSha256Sum before it runs. A run that cannot read the cache
+      # (a tag, a first push to main, an evicted entry) downloads it, so the wrapper's first
+      # start is retried (#128).
       - name: Read the Maven wrapper checksum
         id: maven-wrapper
         run: echo "sha256=$(sed -n 's/^wrapperSha256Sum=//p' .mvn/wrapper/maven-wrapper.properties)" >> "$GITHUB_OUTPUT"
@@ -127,6 +129,8 @@ jobs:
         with:
           path: .mvn/wrapper/maven-wrapper.jar
           key: maven-wrapper-jar-${{ steps.maven-wrapper.outputs.sha256 }}
+      - name: Start the Maven wrapper, retrying its download
+        run: ./scripts/ci/maven-wrapper-ready.sh
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
