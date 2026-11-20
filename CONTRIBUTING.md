@@ -305,9 +305,10 @@ them weekly).
   matches.) `mvnw` tries the jar's download once, so the workflows that run it keep
   the jar in an Actions cache keyed on `wrapperSha256Sum`; a restored jar is still
   checked before it runs. A run that cannot read that cache downloads the jar, so
-  `scripts/ci/maven-wrapper-ready.sh` starts the wrapper up to three times before the
-  first Maven step, and the Dockerfile's build stage does the same before resolving
-  dependencies (#128).
+  `scripts/ci/maven-wrapper-ready.sh` starts the wrapper up to five times before the
+  first Maven step, pausing 10, 20, 40, and 60 s between attempts so a short Maven
+  Central outage is outlasted, and the Dockerfile's build stage does the same before
+  resolving dependencies (#128).
 - "Failed to validate Maven wrapper SHA-256, your Maven wrapper might be compromised"
   after a fresh checkout almost always means the download failed: `mvnw` deletes a
   failed download and then checks a file that is no longer there. Run `./mvnw --version`
