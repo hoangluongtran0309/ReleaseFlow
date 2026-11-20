@@ -103,6 +103,8 @@ every note. An automation action does not deliver such a note: it is
 which is then delivered as written. See
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
+![The preview of a release's note for the Database administrators audience, which nothing in the release concerns: the title, the release summary, and one line saying so](assets/release-notes/rn-22-nothing-for-audience.webp)
+
 ![An audience's template and footer in the editor, and its preview: a sample change followed by the footer](assets/release-notes/rn-2-template.webp)
 
 ### Footer

@@ -100,6 +100,8 @@ không giao note như vậy: nó được [bỏ qua](automation.md#runs) với `
 một người đã sửa note, khi đó note được gửi đúng như đã viết.
 Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
 
+![Bản xem thử note của một release cho audience Database administrators, không có gì trong release liên quan tới audience này: tiêu đề, tóm tắt release, và một dòng nói như vậy](assets/release-notes/rn-22-nothing-for-audience.webp)
+
 ![Template và phần cuối của một audience trong trình sửa, cùng bản xem trước: một thay đổi mẫu rồi tới phần cuối](assets/release-notes/rn-2-template.webp)
 
 ### Phần cuối {#footer}
@@ -428,6 +430,8 @@ thứ tự.
 Vì vậy, hãy viết một tên mà người đọc phải tìm đúng như vậy, như một trường, một tham số hay một
 chuỗi giao diện in ra bằng tiếng Anh, trong **code span**: `limit`, không phải 'limit'. Chữ trong
 dấu nháy được dịch như mọi chữ khác, vì dấu nháy chứa từ thông thường cũng nhiều như chứa tên.
+
+![Note tiếng Việt của một release cho End user: hai code span `no objects checked` và `0 objects checked` giữ nguyên như bản tiếng Anh, trong khi chuỗi đặt trong dấu nháy đơn đã bị dịch; bên cạnh là Markdown của note](assets/release-notes/rn-23-code-span-vi.webp)
 
 ```text
 GET    /api/glossary

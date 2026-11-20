@@ -12,7 +12,7 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-11-19
+## [1.3.1] - 2026-11-20
 
 ### Fixed
 
