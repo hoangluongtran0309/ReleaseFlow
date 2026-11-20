@@ -10,6 +10,7 @@ record ActionResult(ExecutionStatus outcome, String externalReference, String er
     static final String NOTE_MISSING = "release_note_missing";
     static final String ACTION_UNSUPPORTED = "action_unsupported";
     static final String AUDIENCE_RETIRED = "audience_retired";
+    static final String NOTHING_FOR_AUDIENCE = "nothing_for_audience";
 
     static ActionResult succeeded(String externalReference) {
         return new ActionResult(ExecutionStatus.SUCCEEDED, externalReference, null);

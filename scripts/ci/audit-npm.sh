@@ -10,15 +10,8 @@
 set -euo pipefail
 
 # Each exception is the directory it applies to, as the repository names it, and the advisory.
-readonly ALLOWED=(
-  # GHSA-fc5q-39xc-vjpf, picomatch ReDoS through repeated extglobs: every version up to 4.0.7,
-  # the latest, and no release fixes it. picomatch runs only at build time, on ReleaseFlow's
-  # own fixed glob patterns: through postcss-cli -> tinyglobby -> picomatch in the CSS build,
-  # and through Docusaurus (micromatch, chokidar) in the site's build. It ships in neither the
-  # JAR nor the image, the site is static, and it never sees request input.
-  ". GHSA-fc5q-39xc-vjpf"
-  "website GHSA-fc5q-39xc-vjpf"
-)
+# None now. An entry reads ". GHSA-xxxx-xxxx-xxxx", with its reason in a comment above it.
+readonly ALLOWED=()
 
 [ "$#" -eq 1 ] || { echo "usage: $0 <package directory>, such as . or website" >&2; exit 2; }
 root="$(cd "$(dirname "$0")/../.." && pwd)"

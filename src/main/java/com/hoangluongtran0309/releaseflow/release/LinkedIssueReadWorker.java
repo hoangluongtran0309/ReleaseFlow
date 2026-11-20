@@ -45,6 +45,7 @@ class LinkedIssueReadWorker {
 
     private final LinkedIssueReadRepository readRepository;
     private final ReleaseLinkedIssueRepository issueRepository;
+    private final ReleaseRepository releaseRepository;
     private final ReleaseChangeRepository releaseChangeRepository;
     private final ChangeInboxService changeService;
     private final SourceAccess sourceAccess;
@@ -58,6 +59,7 @@ class LinkedIssueReadWorker {
     LinkedIssueReadWorker(
             LinkedIssueReadRepository readRepository,
             ReleaseLinkedIssueRepository issueRepository,
+            ReleaseRepository releaseRepository,
             ReleaseChangeRepository releaseChangeRepository,
             ChangeInboxService changeService,
             SourceAccess sourceAccess,
@@ -70,6 +72,7 @@ class LinkedIssueReadWorker {
     ) {
         this.readRepository = readRepository;
         this.issueRepository = issueRepository;
+        this.releaseRepository = releaseRepository;
         this.releaseChangeRepository = releaseChangeRepository;
         this.changeService = changeService;
         this.sourceAccess = sourceAccess;
@@ -163,7 +166,12 @@ class LinkedIssueReadWorker {
         }
         boolean everyIssueRead = unread == 0;
         int unreadCount = unread;
-        transactionTemplate.executeWithoutResult(status -> readRepository.findById(claim.releaseId())
+        // The release's row is locked first, as every transaction that writes its linked issues
+        // locks it (#119): an acceptance or a new review waits for this result, and this
+        // result waits for them, so neither overwrites the other.
+        transactionTemplate.executeWithoutResult(status -> releaseRepository
+                .lockByIdAndOrganizationId(claim.releaseId(), claim.organizationId())
+                .flatMap(release -> readRepository.findById(claim.releaseId()))
                 .filter(job -> job.isClaimedAt(claim.claimedAt()))
                 .ifPresent(job -> {
                     Instant at = now();

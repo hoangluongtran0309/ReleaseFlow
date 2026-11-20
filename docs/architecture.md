@@ -604,16 +604,25 @@ demands `X-GitHub-Delivery`.
 
 `POST /webhooks/linear/{webhookId}` is the third provider path on the same filter chain.
 `LinearWebhookVerifier` resolves the source by the untrusted webhook ID, requires
-it to be a Linear source, decrypts its secret, and then requires all four of: a
-`Linear-Delivery` header; a `createdAt` within
+it to be a Linear source, decrypts its secret, and then requires all four of, in this
+order: a `Linear-Delivery` header (and a `Linear-Signature` one); a hex HMAC-SHA256 of
+the raw bytes equal to `Linear-Signature`, compared in constant time; a
+`webhookTimestamp`, the time Linear sent the delivery, within
 `releaseflow.linear.webhook-clock-skew` (60 seconds) of the clock, read as
-ISO-8601 or as epoch seconds, or as milliseconds when the number exceeds 1e10; an
-`organizationId` equal to the workspace recorded when the team was connected; and
-a hex HMAC-SHA256 of the raw bytes equal to `Linear-Signature`, compared in
-constant time. Unlike the other two verifiers this one parses the body, because
-Linear puts the timestamp and the workspace inside it rather than in headers; an
-unreadable body is one more way to fail, and every failure answers the same
-`401 webhook_signature_invalid`.
+milliseconds when the number exceeds 1e10, as epoch seconds below that, or as
+ISO-8601; and an `organizationId` equal to the workspace recorded when the team was
+connected. `createdAt`, the time of the issue's change, is not a proof
+([ADR-0018](adr/0018-linear-sources.md), amended 2026-11-19). Unlike the other two
+verifiers this one parses the body, because Linear puts the timestamp and the workspace
+inside it rather than in headers; an unreadable body is one more way to fail, and every
+failure answers the same `401 webhook_signature_invalid`. A refusal on a known path is
+logged by `LinearRefusalLog` with the source's ID and the proof that failed, a stale
+stamp with its offset in seconds, and never the body, a header's value, the secret, or
+the caller. It writes at most one line per source and reason a minute: refusals in
+between are counted in a `ConcurrentHashMap` keyed by source and reason, the next line
+says how many were left out, and a sweep every ten seconds writes a count whose minute
+is over and forgets entries with nothing left to say, so the map holds only what was
+refused in the last two minutes.
 
 `LinearWebhookService` then decides whether the delivery is a change at all.
 `CompletedIssue.isCompletion` requires `type` `Issue`, `action` `update`, an
@@ -1237,6 +1246,16 @@ publication.
   finishes `FAILED` and the unread issues keep their recorded status. Each result publishes
   `LinkedIssuesRead`, which renders again an `APPROVED` release's notes that still follow
   their template.
+- **One release, one writer at a time.** Every transaction that writes a release or what
+  belongs to it locks the release's row first, before any other row
+  (`ReleaseRepository.lockByIdAndOrganizationIdAndProjectId`, `FOR NO KEY UPDATE`). That
+  covers each writing method of `ReleaseService` and the worker's transaction that records
+  a read. An acceptance, a new review, and a read's result therefore run one after the
+  other, each loading the rows the one before it committed, so none writes back a column
+  it loaded stale and none inserts a row the other already inserted. With one lock taken
+  first everywhere, none of them can deadlock another. The worker's claim and the read
+  itself take no release lock, and `FOR NO KEY UPDATE` lets other tables still insert rows
+  that refer to the release (#119).
 - **What a note gets.** `IssueStatuses` turns the rows into the `status`,
   `recordedStatus`, and `statusAtReview` of each `NoteIssue`: a status is given only when
   its category is `done`, or when a person accepted that very status; otherwise all three
@@ -1554,8 +1573,13 @@ ADR-0015 writes a note per audience and **release note language**; see
   `untranslated` and is never cached. `TranslationJob.succeed` then passes each text of
   its output, from DeepL or the cache, through `SourceForms.restore` (ADR-0040): a
   placeholder or lowercase hyphenated identifier of the source that the translation has in
-  another letter case alone, and matches unambiguously, gets the source's form back; the
-  cache keeps DeepL's answer, and a lost placeholder is only logged. `ReleaseNoteWriter` combines the jobs' outcomes per
+  another letter case alone, and matches unambiguously, gets the source's form back. Code
+  spans are restored first: a span of the answer whose text the source writes is kept, the
+  source's spans are matched to kept spans occurrence by occurrence, and the answer's other
+  spans get the unmatched source spans' text in order when the counts agree;
+  `SourceForms.unpairedSpans` reports when they do not, and a text with a fence, a
+  double-backtick span, or an odd number of backticks is left alone. The
+  cache keeps DeepL's answer, and a lost placeholder or unpaired spans are only logged. `ReleaseNoteWriter` combines the jobs' outcomes per
   language (`NOT_APPLIED` over `PENDING` over `APPLIED` over `NONE`) into
   `release_audience_notes.glossary_status`, and `ReleaseView.glossaries` reports it per
   language. `retryTranslations` also restarts a failed sync and re-translates jobs that went
@@ -1682,7 +1706,13 @@ every earlier action has succeeded or been skipped, with `FOR UPDATE OF action_r
 provider is called with no transaction open, and the result is written in a short
 transaction that first checks the claim is still this worker's. An action whose audience
 is retired is skipped with `audience_retired` before any provider is called; no metric is
-recorded for it, since nothing was delivered.
+recorded for it, since nothing was delivered. After that, and after an action with no
+ready note fails with `release_note_missing`, an action whose release note still follows
+its template is skipped with `nothing_for_audience` when no change the release includes
+concerns its audience. `ReleaseAccess.hasNothingFor` decides it in one read-only
+transaction, from the release's changes as they are then and `ReleaseNoteDigest.concerns`,
+the rule that chose the note's changes; the note's text is never read, and a note a person
+edited is always delivered (ADR-0035 and ADR-0044, amended 2026-11-19).
 
 ### Outcomes
 

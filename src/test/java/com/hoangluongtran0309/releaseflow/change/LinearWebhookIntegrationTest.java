@@ -156,27 +156,42 @@ class LinearWebhookIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    void refusesADeliveryStampedOutsideTheAllowedSkew() throws Exception {
+    void refusesADeliverySentOutsideTheAllowedSkew() throws Exception {
         Connected source = connect("stale@example.com");
 
-        // The window is a minute. These sit well outside and well inside it, rather than
-        // a second either side of the boundary, so a slow machine cannot move a stamp
-        // across it while the request is in flight.
+        // The window is a minute around webhookTimestamp, the time Linear sent the delivery.
+        // These sit well outside and well inside it, rather than a second either side of the
+        // boundary, so a slow machine cannot move a stamp across it while the request is in
+        // flight.
         for (long offset : List.of(-90L, 90L)) {
-            String body = issue(TEAM, 7, "started", "completed", quoted(Instant.now().plusSeconds(offset)));
+            String body = issue(TEAM, 7, "started", "completed", quoted(Instant.now()),
+                    millis(Instant.now().plusSeconds(offset)));
             expectUnauthorized(signed(source.webhookPath(), body, sign(SECRET, body)));
         }
-        String fresh = issue(TEAM, 8, "started", "completed", quoted(Instant.now().minusSeconds(30)));
+        String fresh = issue(TEAM, 8, "started", "completed", quoted(Instant.now()),
+                millis(Instant.now().minusSeconds(30)));
         mockMvc.perform(signed(source.webhookPath(), fresh, sign(SECRET, fresh))).andExpect(status().isOk());
 
-        // Linear may stamp the delivery with epoch milliseconds instead.
-        String millis = issue(TEAM, 9, "started", "completed", Long.toString(Instant.now().toEpochMilli()));
-        mockMvc.perform(signed(source.webhookPath(), millis, sign(SECRET, millis))).andExpect(status().isOk());
-        String stale = issue(TEAM, 10, "started", "completed",
-                Long.toString(Instant.now().minusSeconds(120).toEpochMilli()));
-        expectUnauthorized(signed(source.webhookPath(), stale, sign(SECRET, stale)));
+        // Without a stamp there is nothing to judge freshness by.
+        String unstamped = issue(TEAM, 9, "started", "completed", quoted(Instant.now()), null);
+        expectUnauthorized(signed(source.webhookPath(), unstamped, sign(SECRET, unstamped)));
 
-        assertThat(changeRepository.findAll()).hasSize(2);
+        assertThat(changeRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    void recordsAnIssueWhoseDeliveryLinearSentLongAfterTheChange() throws Exception {
+        Connected source = connect("late@example.com");
+        Instant completedAt = Instant.now().minusSeconds(600).truncatedTo(ChronoUnit.SECONDS);
+
+        // The lab's loss on 1.3.0: Linear sent the completion more than a minute after it.
+        // createdAt is when the issue changed and still gives the change its time.
+        deliver(source, issue(TEAM, 10, "started", "completed", quoted(completedAt), millis(Instant.now())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outcome").value("recorded"));
+
+        assertThat(changeRepository.findAll()).singleElement()
+                .satisfies(change -> assertThat(change.getMergedAt()).isEqualTo(completedAt));
     }
 
     @Test
@@ -292,23 +307,38 @@ class LinearWebhookIntegrationTest extends PostgreSqlIntegrationTest {
         return issue(teamId, number, previousState, state, quoted(Instant.now()));
     }
 
-    /** @param createdAt the JSON value Linear stamps the delivery with, quoted or not */
+    /** @param createdAt the JSON value of the time the issue changed, quoted or not */
     private static String issue(String teamId, int number, String previousState, String state, String createdAt) {
+        return issue(teamId, number, previousState, state, createdAt, millis(Instant.now()));
+    }
+
+    /**
+     * @param createdAt        the JSON value of the time the issue changed, quoted or not
+     * @param webhookTimestamp the JSON value of the time Linear sent the delivery, or null to
+     *                         leave it out
+     */
+    private static String issue(String teamId, int number, String previousState, String state, String createdAt,
+                                String webhookTimestamp) {
         String updatedFrom = previousState == null
                 ? "{\"title\":\"Old title\"}"
                 : "{\"stateType\":\"%s\"}".formatted(previousState);
+        String stamp = webhookTimestamp == null ? "" : "\"webhookTimestamp\":" + webhookTimestamp + ",";
         return """
-                {"type":"Issue","action":"update","createdAt":%s,\
+                {"type":"Issue","action":"update","createdAt":%s,%s\
                 "organizationId":"%s","updatedFrom":%s,\
                 "data":{"id":"%s","number":%d,\
                 "title":"Rotate the export credential","description":"The exporter now reads a rotated key.",\
                 "stateType":"%s","teamId":"%s","creator":{"name":"Mai Tran"},\
                 "url":"https://linear.app/acme/issue/ENG-%d","labels":[{"name":"security"}]}}"""
-                .formatted(createdAt, WORKSPACE, updatedFrom, issueId(number), number, state, teamId, number);
+                .formatted(createdAt, stamp, WORKSPACE, updatedFrom, issueId(number), number, state, teamId, number);
     }
 
     private static String issueId(int number) {
         return "33333333-3333-4333-8333-%012d".formatted(number);
+    }
+
+    private static String millis(Instant instant) {
+        return Long.toString(instant.toEpochMilli());
     }
 
     private static String quoted(Instant instant) {

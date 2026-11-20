@@ -10,6 +10,8 @@
   and relevance), [ADR-0015](0015-multilingual-release-notes.md) and
   [ADR-0036](0036-translation-glossary.md) (translation), and
   [ADR-0020](0020-automation-rules-and-runs.md) (actions)
+- Amended: 2026-11-19, for a second reason to skip an action; see
+  [the amendment](#amendment-2026-11-19-a-second-reason-to-skip)
 
 ## Context
 
@@ -149,7 +151,8 @@ Four facts of the current model decide what follows:
   failure, but it never stops the run, a run's outcome is decided by its other actions, and
   a run whose every action was skipped ends `SUCCEEDED` with nothing delivered. A skipped
   action is not retried: it attempted nothing. It records no delivery metric. To deliver
-  once the audience is back, run the rule again.
+  once the audience is back, run the rule again. (Amended on 2026-11-19: an action whose
+  note has nothing for its audience is skipped too, with its own reason; see the end.)
 - **The run page marks a skipped action** with its reason, in both interface languages.
 - **Retiring does not disable rules.** The confirmation names the enabled rules that
   deliver the audience, and the Automation page marks each one until it is brought back or
@@ -212,3 +215,58 @@ asks.
 - Deleting an audience together with its notes, and archiving its published notes.
 - Asking the AI for a returning audience's missing narratives without a person asking, or
   for every such change of a release in one step.
+
+## Amendment, 2026-11-19: a second reason to skip
+
+- Status: Accepted
+- Tracked by: [#108](https://github.com/hoangluongtran0309/ReleaseFlow/issues/108)
+- Amends with it: [ADR-0035](0035-evidence-bound-notes-and-audience-relevance.md#amendment-2026-11-19-an-action-whose-note-has-nothing-for-its-audience),
+  which decides when a note has nothing for its audience and why it is no longer delivered
+
+The decision above stands. `SKIPPED` gains a second reason, `nothing_for_audience`, and
+means what it already means: the action attempted nothing, it is terminal, it stops
+nothing, it is not retried, it records no delivery metric, and a run whose actions all
+succeeded or were skipped ends `SUCCEEDED`.
+
+**Decision.**
+
+- **The worker checks, in this order, when it claims an action and before any call:**
+  1. the audience is retired: `SKIPPED` with `audience_retired`, as above;
+  2. the run has no ready note for the action's audience and language: `FAILED` with
+     `release_note_missing`, as today, since there is nothing to skip;
+  3. the note does not follow its template, because a person wrote it: delivered as
+     written, and the changes are not asked;
+  4. no change the release includes concerns the audience, by
+     `ReleaseNoteDigest.concerns`: `SKIPPED` with `nothing_for_audience`;
+  5. otherwise the executor delivers it, as today.
+
+  A retired audience keeps its own reason even when its note has nothing for it, because
+  bringing it back, not editing a change, is what would deliver it.
+- **Every trigger, the same way**: publication, a person, a cron schedule, a reminder, and
+  a signed call. A correction run is [ADR-0046](0046-correcting-a-published-note.md)'s,
+  and how it skips is left to
+  [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87) (see ADR-0035's
+  amendment).
+- **Enabling a rule is not refused for it.** Whether a release has something for an
+  audience is known only once its changes are chosen, and a rule outlives every release,
+  unlike a retired audience, which the rule names.
+- **The reason is shown and returned like `audience_retired`.** The run page shows it in
+  both interface languages, from its own key in both bundles. The automation API returns
+  it as the action's `errorCode`, documented in `docs/automation.md` beside
+  `audience_retired` and in `docs/api.md`. A caller that matches on `SKIPPED` alone needs
+  no change.
+- **No migration.** `automation_action_runs` already allows `SKIPPED` with an error code
+  and a completion time (`V39`), and the error code is free text, so a second reason adds
+  no constraint and changes no row. No metric label changes: a skip records no delivery
+  metric whatever its reason.
+
+**Consequences.**
+
+- A rule keeps delivering the audiences a release concerns while it skips the ones it
+  does not, as it already does for a retired audience.
+- Runs recorded before this amendment keep the outcomes they had; nothing runs again.
+- The tests: a run whose first action is skipped with `nothing_for_audience` and whose
+  second delivers; a run whose every action is skipped, which succeeds; a retired
+  audience whose note has nothing for it, skipped with `audience_retired`; and an action
+  without a ready note, which still fails with `release_note_missing`. The browser suite
+  covers the run page with the new reason, in both languages, under Axe.

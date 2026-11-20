@@ -12,6 +12,37 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-20
+
+### Fixed
+
+- A Linear delivery is checked against `webhookTimestamp`, the time Linear sent it, not
+  `createdAt`, the time the issue changed, so a completion Linear sends more than a
+  minute late is recorded instead of lost. The server log names the proof a refused
+  delivery failed, without its body or the secret, at most once a minute per source and
+  reason, with a count of those it left out
+  ([ADR-0018](docs/adr/0018-linear-sources.md), [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94)).
+- Reconnecting a Linear source says it needs a Linear API key besides the signing secret,
+  and labels that field API key, as connecting does
+  ([#106](https://github.com/hoangluongtran0309/ReleaseFlow/issues/106)).
+- An automation action whose note has nothing for its audience is skipped with
+  `nothing_for_audience` instead of delivered, so a rule no longer writes a permanent
+  public changelog entry, page, article, or message that only says nothing in the release
+  concerns its reader; the actions behind it still run. A note a person edited is
+  delivered as written
+  ([ADR-0035](docs/adr/0035-evidence-bound-notes-and-audience-relevance.md),
+  [ADR-0044](docs/adr/0044-retire-an-audience.md), [#108](https://github.com/hoangluongtran0309/ReleaseFlow/issues/108)).
+- Accepting a linked issue's status while its review-time read was being recorded could fail
+  with an error, or silently undo either the acceptance or the read. A new review requested
+  meanwhile could keep the old read and never read the issue again. Every change to a
+  release and what belongs to it now locks the release first, so these run one after the
+  other ([#119](https://github.com/hoangluongtran0309/ReleaseFlow/issues/119)).
+- A translated note keeps the text of each code span as the change wrote it: DeepL
+  translated the words inside spans, so a Vietnamese note could not quote what an English
+  interface prints (`under 1 s` came back as `dưới 1 giây`). Requests, the cache, and their
+  keys are unchanged; a cached answer is repaired at the next approval
+  ([ADR-0040](docs/adr/0040-translation-placeholders.md), [#107](https://github.com/hoangluongtran0309/ReleaseFlow/issues/107)).
+
 ## [1.3.0] - 2026-11-18
 
 ### Added
@@ -326,7 +357,8 @@ section into the version's entry, and the GitHub release is written from it.
   self-hosting, community, and security pages, a REST API reference checked against the
   code on every build, a changelog page read from this file, and search.
 
-[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/hoangluongtran0309/ReleaseFlow/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.3.1
 [1.3.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.3.0
 [1.2.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.2.0
 [1.1.0]: https://github.com/hoangluongtran0309/ReleaseFlow/releases/tag/v1.1.0

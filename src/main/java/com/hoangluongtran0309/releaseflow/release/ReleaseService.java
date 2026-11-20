@@ -245,7 +245,7 @@ public class ReleaseService {
 
     @Transactional
     ReleaseView edit(UUID organizationId, UUID projectId, UUID releaseId, ReleaseRequest request) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireDraft();
         if (releaseRepository.existsByOrganizationIdAndProjectIdAndVersionIgnoreCaseAndIdNot(
                 organizationId,
@@ -275,7 +275,7 @@ public class ReleaseService {
 
     @Transactional
     ReleaseView schedule(UUID organizationId, UUID projectId, UUID releaseId, ReleaseScheduleRequest request) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireUnpublished();
         release.schedule(request.plannedInstant(), clock.instant());
         return view(release, includedChanges(release));
@@ -285,7 +285,7 @@ public class ReleaseService {
     // available pool.
     @Transactional
     void discard(UUID organizationId, UUID projectId, UUID releaseId) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireUnpublished();
         releaseRepository.delete(release);
     }
@@ -301,7 +301,7 @@ public class ReleaseService {
 
     @Transactional
     ReleaseView addChanges(UUID organizationId, UUID projectId, UUID releaseId, ReleaseChangesRequest request) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireDraft();
         Map<UUID, UUID> membership = membership(organizationId, projectId);
 
@@ -351,7 +351,7 @@ public class ReleaseService {
      */
     @Transactional
     ReleaseView removeChange(UUID organizationId, UUID projectId, UUID releaseId, UUID changeId) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireChangesRemovable();
         if (releaseChangeRepository.deleteByReleaseIdAndChangeIdAndOrganizationId(releaseId, changeId, organizationId) == 0) {
             throw new ChangeNotFoundException();
@@ -362,7 +362,7 @@ public class ReleaseService {
 
     @Transactional
     ReleaseView requestReview(UUID organizationId, UUID projectId, UUID releaseId) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireDraft();
         List<ChangeView> changes = includedChanges(release);
         if (changes.isEmpty()) {
@@ -398,7 +398,7 @@ public class ReleaseService {
             UUID releaseId,
             LinkedIssueAcceptanceRequest request
     ) {
-        Release release = find(person.organizationId(), projectId, releaseId);
+        Release release = lock(person.organizationId(), projectId, releaseId);
         release.requireReviewedOrApproved();
         List<ChangeView> changes = includedChanges(release);
         LinkedIssue issue = changes.stream()
@@ -441,7 +441,7 @@ public class ReleaseService {
             FoldDecisionRequest request
     ) {
         UUID organizationId = person.organizationId();
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireInReview();
         List<ChangeView> changes = includedChanges(release);
         FoldingSuggestion suggestion = foldingSuggestions(release, changes).stream()
@@ -666,7 +666,7 @@ public class ReleaseService {
             ReleaseDecisionRequest request
     ) {
         UUID organizationId = reviewer.organizationId();
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.requireInReview();
         ChangeView change = includedChanges(release).stream()
                 .filter(included -> included.id().equals(changeId))
@@ -696,7 +696,7 @@ public class ReleaseService {
 
     @Transactional
     ReleaseView approve(ReleaseFlowPrincipal approver, UUID projectId, UUID releaseId) {
-        Release release = find(approver.organizationId(), projectId, releaseId);
+        Release release = lock(approver.organizationId(), projectId, releaseId);
         release.requireInReview();
         List<ChangeView> changes = includedChanges(release);
         if (changes.isEmpty()) {
@@ -728,7 +728,7 @@ public class ReleaseService {
      */
     @Transactional
     ReleaseView returnToDraft(UUID organizationId, UUID projectId, UUID releaseId) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         release.returnToDraft(clock.instant());
         // The database keeps an approved release's decisions fixed, so the release must be
         // a draft again before they are removed.
@@ -748,7 +748,7 @@ public class ReleaseService {
      */
     @Transactional
     ReleaseView publish(ReleaseFlowPrincipal publisher, UUID projectId, UUID releaseId) {
-        Release release = find(publisher.organizationId(), projectId, releaseId);
+        Release release = lock(publisher.organizationId(), projectId, releaseId);
         release.requireUnpublished();
         if (release.getStatus() == ReleaseStatus.APPROVED) {
             List<AudienceReleaseNote> notes = notes(release);
@@ -789,7 +789,7 @@ public class ReleaseService {
             UUID noteId,
             ReleaseNoteRequest request
     ) {
-        Release release = find(editor.organizationId(), projectId, releaseId);
+        Release release = lock(editor.organizationId(), projectId, releaseId);
         release.requireUnpublished();
         if (release.getStatus() != ReleaseStatus.APPROVED) {
             throw new ReleaseStatusException("error.release_status_conflict.notesAtApproval");
@@ -817,7 +817,7 @@ public class ReleaseService {
             UUID changeId,
             ChangeSummaryRequest request
     ) {
-        Release release = find(editor.organizationId(), projectId, releaseId);
+        Release release = lock(editor.organizationId(), projectId, releaseId);
         release.requireUnpublished();
         if (release.getStatus() != ReleaseStatus.IN_REVIEW && release.getStatus() != ReleaseStatus.APPROVED) {
             throw new ReleaseStatusException("error.release_status_conflict.summaryStage");
@@ -841,7 +841,7 @@ public class ReleaseService {
      */
     @Transactional
     ReleaseView retryTranslations(UUID organizationId, UUID projectId, UUID releaseId) {
-        Release release = find(organizationId, projectId, releaseId);
+        Release release = lock(organizationId, projectId, releaseId);
         if (release.getStatus() != ReleaseStatus.APPROVED) {
             throw new ReleaseStatusException("error.release_status_conflict.translationStage");
         }
@@ -1050,6 +1050,14 @@ public class ReleaseService {
                 release.getId(),
                 release.getOrganizationId()
         );
+    }
+
+    // Locks the release first, before any other row, in every transaction that writes it or
+    // what belongs to it (#119): linked issues, notes, decisions, the read job. One order for
+    // all of them, so they serialise rather than overwrite each other or deadlock.
+    private Release lock(UUID organizationId, UUID projectId, UUID releaseId) {
+        return releaseRepository.lockByIdAndOrganizationIdAndProjectId(releaseId, organizationId, projectId)
+                .orElseThrow(ReleaseNotFoundException::new);
     }
 
     private Release find(UUID organizationId, UUID projectId, UUID releaseId) {

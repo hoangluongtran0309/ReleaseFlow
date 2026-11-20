@@ -140,10 +140,10 @@ class TranslationJob {
     }
 
     /**
-     * Records the translations, each with its source's placeholders and lowercase hyphenated
-     * identifiers written as in the source (ADR-0040), whether DeepL just answered or the
-     * cache did; the cache keeps DeepL's own answer. A placeholder a translation lost is left
-     * so, and logged.
+     * Records the translations, each with its source's code spans, placeholders, and lowercase
+     * hyphenated identifiers written as in the source (ADR-0040), whether DeepL just answered
+     * or the cache did; the cache keeps DeepL's own answer. A placeholder a translation lost
+     * is left so, and logged, and so are code spans that could not be paired.
      */
     void succeed(Map<String, String> translated, String glossaryOutcome, Instant now) {
         Map<String, String> restored = new LinkedHashMap<>();
@@ -156,6 +156,12 @@ class TranslationJob {
                         targetLanguage, releaseId != null ? "release" : "change", releaseId != null ? releaseId : changeId,
                         key, lost);
             }
+            // Counts only: a span's text can be a whole sentence of the change.
+            SourceForms.unpairedSpans(source, translation).ifPresent(unpaired -> log.warn(
+                    "The {} translation of {} {} ({}) has {} translated code span(s) for {} lost; its spans are kept "
+                            + "as DeepL wrote them.",
+                    targetLanguage, releaseId != null ? "release" : "change", releaseId != null ? releaseId : changeId,
+                    key, unpaired.translated(), unpaired.lost()));
         });
         this.status = Status.SUCCEEDED;
         this.output = restored;

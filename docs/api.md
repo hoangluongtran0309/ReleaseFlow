@@ -216,6 +216,10 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `GET /api/automation/runs`, `GET /api/automation/runs/{runId}` | admin |
 | `POST /api/automation/runs/{runId}/retry`, `POST /api/automation/runs/{runId}/cancel` | admin |
 
+A run's action that was skipped is `SKIPPED`, and its `errorCode` says why:
+`audience_retired` or `nothing_for_audience`. A skip is not an error and has no Problem
+Details; see [Runs](automation.md#runs).
+
 ### Signed webhooks
 
 These take no session and no CSRF token; each proves itself with its own secret.

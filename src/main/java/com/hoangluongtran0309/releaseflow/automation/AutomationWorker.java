@@ -263,6 +263,12 @@ class AutomationWorker {
         if (claim.noteContent() == null) {
             return ActionResult.failed(ActionResult.NOTE_MISSING);
         }
+        // A note that nothing in the release concerns is skipped too, decided from the
+        // release's changes and never from the note's text; a note a person wrote is
+        // delivered as written (ADR-0035 and ADR-0044, amended 2026-11-19).
+        if (releaseAccess.hasNothingFor(claim.organizationId(), claim.releaseId(), claim.audienceId(), claim.language())) {
+            return ActionResult.skipped(ActionResult.NOTHING_FOR_AUDIENCE);
+        }
         RuleActionExecutor executor = executors.get(claim.actionType());
         if (executor == null) {
             return ActionResult.failed(ActionResult.ACTION_UNSUPPORTED);

@@ -232,8 +232,11 @@ at its path last:
 proves itself with four things, all of which must hold:
 
 - a `Linear-Delivery` header;
-- a `createdAt` within `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` (60 seconds) of
-  ReleaseFlow's clock, in ISO-8601 or as epoch seconds or milliseconds;
+- a `webhookTimestamp`, the time Linear sent the delivery, within
+  `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` (60 seconds) of ReleaseFlow's clock, in epoch
+  milliseconds as Linear sends it, or as epoch seconds or ISO-8601. `createdAt`, the
+  time of the issue's change, is not checked, so a delivery Linear sends late is
+  accepted;
 - an `organizationId` equal to the workspace the team belongs to, which
   ReleaseFlow learned when the team was connected;
 - a hex HMAC-SHA256 of the raw body in `Linear-Signature`.
@@ -257,14 +260,37 @@ Linear names no delivery ReleaseFlow can record as a GUID, so a Linear change
 carries no delivery ID. Each issue is still stored once per source, by its UUID,
 so redeliveries are harmless.
 
-> **Known issue.** ReleaseFlow refuses a Linear delivery that arrives more than 60 seconds
-> after the action it reports: it checks `createdAt`, the time of the issue's change, not
-> the time of sending. Do not count on Linear to send a refused delivery again. Its
-> documentation says it retries a failed delivery after a minute, an hour, and six hours,
-> but on the dbvault lab it sent no retry of a delivery ReleaseFlow refused with `401`, at
-> any of those marks. ReleaseFlow cannot import Linear's history either, so an issue whose
-> delivery was refused, for any reason, is recorded only if it is completed again. See
-> [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
+Every refusal answers the same `401`, and the source's page counts it once. The server
+log says which proof failed, in one line with the source's ID: no `Linear-Delivery` or
+`Linear-Signature` header, a signature that does not match the body, a body that is not
+a JSON object, no `webhookTimestamp` that can be read, a `webhookTimestamp` outside the
+skew with its offset in seconds, another workspace, or a stored secret that cannot be
+decrypted. The line never holds the body, a header's value, the secret, or the caller.
+So a skewed clock reads differently from a wrong secret:
+
+```text
+Refused a Linear delivery to source 6f1c…: webhookTimestamp is -75 s from this server's clock, beyond the allowed 60 s.
+Refused a Linear delivery to source 6f1c…: Linear-Signature does not match the body.
+```
+
+A source writes at most one line per reason a minute, so a flood cannot fill the log.
+The refusals in between are counted, and the next line for that reason says how many,
+either with the next refusal or, once refusals stop, by itself within about ten seconds
+of the minute's end:
+
+```text
+Refused a Linear delivery to source 6f1c…: Linear-Signature does not match the body. Left out 41 more for the same reason since 2026-11-19T04:10:02Z.
+Left out 2 more refused Linear deliveries to source 6f1c… since 2026-11-19T04:10:02Z: webhookTimestamp outside the allowed skew.
+```
+
+The signature is checked first, so a stale stamp or another workspace is named only for
+a body the source's secret signed.
+
+> **A refused delivery is not sent again.** Linear's documentation says it retries a
+> failed delivery after a minute, an hour, and six hours, but on the dbvault lab it sent
+> no retry of a delivery ReleaseFlow refused with `401`, at any of those marks.
+> ReleaseFlow cannot import Linear's history either, so an issue whose delivery was
+> refused, for any reason, is recorded only if it is completed again.
 
 ## Poll Jira
 

@@ -136,7 +136,8 @@
                 </label>
                 <label class="form-control">
                     <span class="label-text font-medium"
-                          th:text="${type == 'GITHUB' or type == 'GITLAB'} ? #{ui.source.tokenOptional} : #{ui.source.tokenRequired}">Access token, optional</span>
+                          th:text="${type == 'GITHUB' or type == 'GITLAB'} ? #{ui.source.tokenOptional}
+                                   : (${type == 'LINEAR'} ? #{ui.projects.apiKey} : #{ui.source.tokenRequired})">Access token, optional</span>
                     <input id="reconnect-token" type="password" name="token" maxlength="255" autocomplete="off" spellcheck="false"
                            class="input input-bordered w-full font-mono"
                            th:attr="required=${type == 'LINEAR' or type == 'JIRA'} ? 'required' : null,aria-invalid=${failed and #fields.hasErrors('token')} ? 'true' : null,aria-describedby=${failed and #fields.hasErrors('token')} ? 'reconnect-token-error' : null"

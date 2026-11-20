@@ -42,7 +42,7 @@ Never commit or share these values.
 | `RELEASEFLOW_GITLAB_WEBHOOK_CLOCK_SKEW` | `PT5M` | How stale a signed GitLab delivery may be |
 | `RELEASEFLOW_LINEAR_API_BASE_URL` | `https://api.linear.app` | Where Linear's GraphQL API is called |
 | `RELEASEFLOW_LINEAR_TIMEOUT` | `PT5S` | Connect and read timeout for Linear |
-| `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` | `PT60S` | How stale a signed Linear delivery may be |
+| `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` | `PT60S` | How far a Linear delivery's `webhookTimestamp`, the time Linear sent it, may be from the clock |
 | `RELEASEFLOW_JIRA_TIMEOUT` | `PT10S` | Connect and read timeout for Jira |
 | `RELEASEFLOW_JIRA_POLL_INTERVAL` | `PT5M` | How often each Jira project is read; a source whose next read is more than one interval late is shown as [overdue](sources.md#source-health) |
 | `RELEASEFLOW_JIRA_POLL_OVERLAP` | `PT10M` | How far each read reaches back before the previous one |

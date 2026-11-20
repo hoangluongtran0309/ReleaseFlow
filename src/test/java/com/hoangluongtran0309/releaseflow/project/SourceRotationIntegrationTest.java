@@ -12,7 +12,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
@@ -32,6 +35,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -47,8 +51,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * A new webhook secret, a reconnect, and a new token for the providers other than GitHub,
- * and the counting of refused deliveries under a flood (ADR-0042).
+ * the counting of refused deliveries under a flood (ADR-0042), and the proof a refused
+ * Linear delivery names in the log (ADR-0018, amended 2026-11-19).
  */
+@ExtendWith(OutputCaptureExtension.class)
 class SourceRotationIntegrationTest extends PostgreSqlIntegrationTest {
 
     private static final LinearStub LINEAR = LinearStub.start();
@@ -287,6 +293,92 @@ class SourceRotationIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(failureCount(sourceId)).isZero();
     }
 
+    @Test
+    void aLinearDeliveryIsFreshByWhenLinearSentItNotWhenTheIssueChanged() throws Exception {
+        Owner owner = registerAndLogin("fresh@example.com");
+        Connected linear = connectLinear(owner);
+        Instant now = Instant.now();
+
+        // Sent now about a change ten minutes old: fresh. createdAt is not a proof.
+        assertThat(verifyLinear(linear.webhookId(), linearBody(now.minusSeconds(600), stamp(now)))).isPresent();
+        // The stamp is read leniently, since the secret signed it: seconds and ISO-8601 too.
+        assertThat(verifyLinear(linear.webhookId(), linearBody(now, Long.toString(now.getEpochSecond()))))
+                .isPresent();
+        assertThat(verifyLinear(linear.webhookId(), linearBody(now, "\"" + now + "\""))).isPresent();
+        failures.drain();
+        assertThat(failureCount(linear.id())).isZero();
+    }
+
+    @Test
+    void aStaleMissingOrAlteredWebhookTimestampIsRefusedCountedAndNamed(CapturedOutput output) throws Exception {
+        Owner owner = registerAndLogin("stamp@example.com");
+        Connected linear = connectLinear(owner);
+        Instant now = Instant.now();
+
+        // Well outside and well inside the minute, so a slow machine cannot move a stamp
+        // across it while the check runs. A fresh createdAt does not save a stale send.
+        assertThat(verifyLinear(linear.webhookId(), linearBody(now, stamp(now.minusSeconds(120))))).isEmpty();
+        assertThat(verifyLinear(linear.webhookId(), linearBody(now, stamp(now.plusSeconds(120))))).isEmpty();
+        assertThat(verifyLinear(linear.webhookId(), linearBody(now, null))).isEmpty();
+        assertThat(verifyLinear(linear.webhookId(), linearBody(now, "\"not a time\""))).isEmpty();
+        // Signed when stale, then given a fresh stamp: the signature no longer matches.
+        byte[] signed = linearBody(now, stamp(now.minusSeconds(120)));
+        byte[] altered = new String(signed, StandardCharsets.UTF_8)
+                .replace(stamp(now.minusSeconds(120)), stamp(now)).getBytes(StandardCharsets.UTF_8);
+        assertThat(linearVerifier.verify(linear.webhookId(), sign(LINEAR_SECRET, signed), "d-altered", altered))
+                .isEmpty();
+        failures.drain();
+        assertThat(failureCount(linear.id())).isEqualTo(5);
+
+        String refusal = "Refused a Linear delivery to source " + linear.id() + ": ";
+        // The offset in whole seconds, so a skewed clock shows by how much.
+        assertThat(output).containsPattern(Pattern.quote(refusal)
+                + "webhookTimestamp is -12[01] s from this server's clock, beyond the allowed 60 s\\.");
+        // The other way off is the same reason inside the same minute, so it is only counted.
+        assertThat(output).doesNotContainPattern("webhookTimestamp is \\+1(19|20) s");
+        assertThat(output).contains(refusal + "no webhookTimestamp that can be read.");
+        assertThat(output).contains(refusal + "Linear-Signature does not match the body.");
+        // Nothing of the body or the secret is written.
+        assertThat(output).doesNotContain(LINEAR_SECRET).doesNotContain(WORKSPACE).doesNotContain("not a time");
+    }
+
+    @Test
+    void eachRefusedLinearDeliveryNamesTheProofThatFailed(CapturedOutput output) throws Exception {
+        Owner owner = registerAndLogin("proofs@example.com");
+        Connected linear = connectLinear(owner);
+        byte[] body = linearBody(Instant.now(), stamp(Instant.now()));
+        String signature = sign(LINEAR_SECRET, body);
+
+        assertThat(linearVerifier.verify(linear.webhookId(), signature, null, body)).isEmpty();
+        assertThat(linearVerifier.verify(linear.webhookId(), null, "d-1", body)).isEmpty();
+        assertThat(linearVerifier.verify(linear.webhookId(), sign("lin_wh_another-secret", body), "d-2", body))
+                .isEmpty();
+        byte[] otherWorkspace = new String(body, StandardCharsets.UTF_8)
+                .replace(WORKSPACE, "99999999-9999-4999-8999-999999999999").getBytes(StandardCharsets.UTF_8);
+        assertThat(linearVerifier.verify(linear.webhookId(), sign(LINEAR_SECRET, otherWorkspace), "d-3",
+                otherWorkspace)).isEmpty();
+        byte[] notJson = "not json".getBytes(StandardCharsets.UTF_8);
+        assertThat(linearVerifier.verify(linear.webhookId(), sign(LINEAR_SECRET, notJson), "d-4", notJson)).isEmpty();
+        failures.drain();
+        assertThat(failureCount(linear.id())).isEqualTo(5);
+
+        String refusal = "Refused a Linear delivery to source " + linear.id() + ": ";
+        assertThat(output).contains(refusal + "no Linear-Delivery header.");
+        assertThat(output).contains(refusal + "no Linear-Signature header.");
+        assertThat(output).contains(refusal + "Linear-Signature does not match the body.");
+        assertThat(output).contains(refusal + "organizationId is not this source's workspace.");
+        assertThat(output).contains(refusal + "the body is not JSON.");
+        assertThat(output).doesNotContain(LINEAR_SECRET).doesNotContain(signature).doesNotContain("99999999-9999");
+    }
+
+    private Optional<VerifiedWebhook> verifyLinear(String webhookId, byte[] body) {
+        return linearVerifier.verify(webhookId, sign(LINEAR_SECRET, body), "d-" + UUID.randomUUID(), body);
+    }
+
+    private static String stamp(Instant instant) {
+        return Long.toString(instant.toEpochMilli());
+    }
+
     private long failureCount(UUID sourceId) {
         return jdbcTemplate.queryForObject("SELECT signature_failure_count FROM integration_sources WHERE id = ?",
                 Long.class, sourceId);
@@ -298,9 +390,15 @@ class SourceRotationIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     private static byte[] linearBody() {
+        return linearBody(Instant.now(), stamp(Instant.now()));
+    }
+
+    /** @param webhookTimestamp the JSON value of the stamp, or null to leave it out */
+    private static byte[] linearBody(Instant createdAt, String webhookTimestamp) {
+        String stamp = webhookTimestamp == null ? "" : ",\"webhookTimestamp\":" + webhookTimestamp;
         return """
-                {"type":"Issue","action":"create","createdAt":"%s","organizationId":"%s","data":{}}"""
-                .formatted(Instant.now(), WORKSPACE).getBytes(StandardCharsets.UTF_8);
+                {"type":"Issue","action":"create","createdAt":"%s","organizationId":"%s","data":{}%s}"""
+                .formatted(createdAt, WORKSPACE, stamp).getBytes(StandardCharsets.UTF_8);
     }
 
     private static String sign(String secret, byte[] body) {

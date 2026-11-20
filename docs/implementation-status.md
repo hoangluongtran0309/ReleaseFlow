@@ -196,8 +196,9 @@ where it first appears; ADRs are linked from the slice they record.
   - a Linear team connected with the signing secret Linear minted and an API key,
     both write-only, confirmed with GraphQL `team(id)` before anything is stored,
     which is also how the workspace every delivery is checked against is learned;
-  - `POST /webhooks/linear/{webhookId}`, proven by a delivery header, a stamp
-    within 60 seconds, the workspace, and a hex HMAC of the raw body;
+  - `POST /webhooks/linear/{webhookId}`, proven by a delivery header, a hex HMAC of
+    the raw body, a `webhookTimestamp` (the time Linear sent it) within 60 seconds, and
+    the workspace, with the proof that failed named in the log (amended 2026-11-19);
   - only an issue that really moves into a completed state recorded, by its UUID,
     with the number a person sees kept for release notes;
   - `ChangedFileStatus.NOT_SUPPORTED` and a `SENSITIVE_KEYWORD` trigger from the
@@ -563,7 +564,9 @@ where it first appears; ADRs are linked from the slice they record.
     never blocking approval or publication;
   - [ADR-0040](adr/0040-translation-placeholders.md): placeholders and lowercase
     hyphenated identifiers keep their source's letter case in every recorded translation,
-    fresh or cached, without changing any request.
+    fresh or cached, without changing any request;
+  - code spans DeepL translated get their source text back, paired in order when the
+    counts agree and logged by counts when they do not (#107, amending ADR-0040).
 
 ### Security changes and note structure (V34)
 
@@ -662,6 +665,12 @@ where it first appears; ADRs are linked from the slice they record.
   - an automation action for a retired audience is `SKIPPED` with `audience_retired` and
     the run goes on; enabling such a rule is refused with
     `409 automation_audience_retired`, and the Automation page marks it;
+  - an automation action whose note has nothing for its audience is `SKIPPED` with
+    `nothing_for_audience`, decided when it runs from the release's changes by the rule
+    the digest uses, after the retired-audience and missing-note checks; a note a person
+    edited is delivered as written, every trigger skips the same way, the run page shows
+    the reason in both interface languages, and no migration was needed (#108, amending
+    ADR-0035 and ADR-0044);
   - a brought-back audience's note includes every change, under its neutral headline when
     it has no narrative; the Review tab lists those changes, and a person asks the AI for
     only the missing narratives, with the request's rough token size shown first.

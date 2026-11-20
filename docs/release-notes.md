@@ -97,9 +97,13 @@ change, unless it is also breaking. See
 The counts and the breaking-change warning describe what the note shows, and every
 change counts once, in the section it is listed in. An audience that nothing in the release concerns still gets its note: the title,
 the release summary, and one line saying that nothing in the release concerns it.
-Approval still writes one note per audience and language, and an automation action
-delivers that note like any other. See
+Approval still writes one note per audience and language, and publication still needs
+every note. An automation action does not deliver such a note: it is
+[skipped](automation.md#runs) with `nothing_for_audience`, unless a person edited the note,
+which is then delivered as written. See
 [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
+
+![The preview of a release's note for the Database administrators audience, which nothing in the release concerns: the title, the release summary, and one line saying so](assets/release-notes/rn-22-nothing-for-audience.webp)
 
 ![An audience's template and footer in the editor, and its preview: a sample change followed by the footer](assets/release-notes/rn-2-template.webp)
 
@@ -431,6 +435,19 @@ DeepL wrote it. This happens when a translation is recorded, from DeepL or from 
 so a translation cached earlier is corrected at the next approval without a request, and
 nothing that is sent changes. A placeholder DeepL drops is left out and logged. See
 [ADR-0040](adr/0040-translation-placeholders.md).
+
+DeepL also translates the words inside a **code span**: `under 1 s` came back as
+`dưới 1 giây`. A code span tells the reader to type or look for exactly that text, so a
+translation keeps the source's spans too. A span whose text the source writes stays as it
+is; the spans DeepL translated get the source's text back, in order, when there are as many
+of them as source spans the translation lost. Otherwise they are left as DeepL wrote them
+and the count is logged. A text holding a fenced code block or a double-backtick span keeps
+its spans as written. If DeepL both reorders two spans and translates them, each gets the
+other's text; that is the known limit of pairing in order.
+
+So write a name the reader must find as written, such as a field, a parameter, or a string
+the interface prints in English, in a **code span**: `limit`, not 'limit'. Text in quotes is
+translated like any other text, because quotes hold ordinary words as often as names.
 
 ```text
 GET    /api/glossary

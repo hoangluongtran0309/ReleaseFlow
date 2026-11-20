@@ -95,8 +95,12 @@ nó cũng phá vỡ tương thích. Xem
 Các con số và cảnh báo phá vỡ tương thích mô tả đúng những gì note hiển thị, và mỗi thay đổi chỉ
 được đếm một lần, trong mục mà nó được liệt kê. Audience không liên quan tới bất cứ thay đổi nào trong release vẫn có note của mình: tiêu đề,
 tóm tắt release, và một dòng nói rằng release này không có gì liên quan tới họ. Việc duyệt vẫn viết
-một note cho mỗi audience và ngôn ngữ, và một hành động automation giao note đó như mọi note khác.
+một note cho mỗi audience và ngôn ngữ, và việc publish vẫn cần mọi note. Một hành động automation
+không giao note như vậy: nó được [bỏ qua](automation.md#runs) với `nothing_for_audience`, trừ khi
+một người đã sửa note, khi đó note được gửi đúng như đã viết.
 Xem [ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md).
+
+![Bản xem thử note của một release cho audience Database administrators, không có gì trong release liên quan tới audience này: tiêu đề, tóm tắt release, và một dòng nói như vậy](assets/release-notes/rn-22-nothing-for-audience.webp)
 
 ![Template và phần cuối của một audience trong trình sửa, cùng bản xem trước: một thay đổi mẫu rồi tới phần cuối](assets/release-notes/rn-2-template.webp)
 
@@ -413,6 +417,21 @@ bản gốc viết theo hai cách được để nguyên như DeepL viết. Vi�
 lại, dù lấy từ DeepL hay từ cache, nên bản dịch đã cache trước đó được sửa ở lần duyệt tới mà
 không gửi yêu cầu nào, và không gì được gửi đi thay đổi. Placeholder mà DeepL làm mất thì để
 nguyên là mất và được ghi vào log. Xem [ADR-0040](adr/0040-translation-placeholders.md).
+
+DeepL còn dịch cả chữ bên trong một **code span**: `under 1 s` trở thành `dưới 1 giây`. Code
+span báo cho người đọc gõ hoặc tìm đúng chuỗi đó, nên bản dịch cũng giữ các span của bản gốc. Một
+span có nội dung mà bản gốc có viết thì được giữ nguyên; các span mà DeepL đã dịch được trả lại
+nội dung của bản gốc, theo thứ tự, khi số của chúng bằng số span của bản gốc mà bản dịch làm mất.
+Nếu không thì chúng được để nguyên như DeepL viết và số lượng được ghi vào log. Văn bản có code
+block dạng fence hoặc span hai backtick giữ nguyên các span như đã viết. Nếu DeepL vừa đổi chỗ vừa
+dịch hai span thì mỗi span nhận nội dung của span kia; đó là giới hạn đã biết của việc ghép theo
+thứ tự.
+
+Vì vậy, hãy viết một tên mà người đọc phải tìm đúng như vậy, như một trường, một tham số hay một
+chuỗi giao diện in ra bằng tiếng Anh, trong **code span**: `limit`, không phải 'limit'. Chữ trong
+dấu nháy được dịch như mọi chữ khác, vì dấu nháy chứa từ thông thường cũng nhiều như chứa tên.
+
+![Note tiếng Việt của một release cho End user: hai code span `no objects checked` và `0 objects checked` giữ nguyên như bản tiếng Anh, trong khi chuỗi đặt trong dấu nháy đơn đã bị dịch; bên cạnh là Markdown của note](assets/release-notes/rn-23-code-span-vi.webp)
 
 ```text
 GET    /api/glossary

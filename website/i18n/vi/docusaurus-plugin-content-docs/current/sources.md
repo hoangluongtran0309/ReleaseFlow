@@ -226,8 +226,11 @@ của nó sau cùng:
 chứng minh bằng bốn điều, tất cả đều phải đúng:
 
 - có header `Linear-Delivery`;
-- `createdAt` lệch không quá `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` (60 giây) so với đồng hồ
-  của ReleaseFlow, ở dạng ISO-8601 hoặc số giây hay mili giây tính từ epoch;
+- `webhookTimestamp`, thời điểm Linear gửi đi, lệch không quá
+  `RELEASEFLOW_LINEAR_WEBHOOK_CLOCK_SKEW` (60 giây) so với đồng hồ của ReleaseFlow, ở dạng số
+  mili giây tính từ epoch như Linear gửi, hoặc số giây tính từ epoch hay ISO-8601. `createdAt`,
+  thời điểm issue thay đổi, không được kiểm tra, nên một lần gửi mà Linear gửi muộn vẫn được
+  nhận;
 - `organizationId` bằng đúng workspace mà team thuộc về, thông tin ReleaseFlow biết được khi
   kết nối team;
 - `Linear-Signature` chứa HMAC-SHA256 dạng hex của body thô.
@@ -250,13 +253,37 @@ Linear không đặt cho lần gửi một định danh mà ReleaseFlow có th�
 thay đổi từ Linear không có delivery ID. Mỗi issue vẫn chỉ được lưu một lần cho mỗi nguồn,
 theo UUID của nó, nên gửi lại cũng không sao.
 
-> **Vấn đề đã biết.** ReleaseFlow từ chối một lần gửi của Linear đến muộn hơn 60 giây so với
-> hành động mà nó báo: nó kiểm tra `createdAt`, thời điểm issue thay đổi, không phải thời điểm
-> gửi. Đừng trông vào việc Linear gửi lại một lần gửi đã bị từ chối. Tài liệu của Linear nói nó
-> thử lại một lần gửi thất bại sau một phút, một giờ và sáu giờ, nhưng trên lab dbvault nó không
-> gửi lại lần nào sau khi ReleaseFlow từ chối với `401`, ở cả ba mốc đó. ReleaseFlow cũng không
-> import được lịch sử của Linear, nên một issue có lần gửi bị từ chối, vì bất kỳ lý do gì, chỉ
-> được ghi nếu nó được hoàn thành lại. Xem [#94](https://github.com/hoangluongtran0309/ReleaseFlow/issues/94).
+Mọi lần từ chối đều trả về cùng một `401`, và trang của nguồn đếm nó một lần. Log của máy chủ
+cho biết bằng chứng nào không đạt, trong một dòng kèm ID của nguồn: thiếu header
+`Linear-Delivery` hoặc `Linear-Signature`, chữ ký không khớp với body, body không phải một JSON
+object, không có `webhookTimestamp` đọc được, `webhookTimestamp` lệch quá giới hạn kèm độ lệch
+tính bằng giây, workspace khác, hoặc secret đã lưu không giải mã được. Dòng log không bao giờ
+chứa body, giá trị của header, secret hay bên gọi. Nhờ vậy, đồng hồ bị lệch được ghi khác với
+secret sai:
+
+```text
+Refused a Linear delivery to source 6f1c…: webhookTimestamp is -75 s from this server's clock, beyond the allowed 60 s.
+Refused a Linear delivery to source 6f1c…: Linear-Signature does not match the body.
+```
+
+Mỗi nguồn ghi nhiều nhất một dòng cho mỗi lý do trong một phút, nên một đợt gửi ồ ạt không thể
+làm đầy log. Các lần từ chối ở giữa được đếm, và dòng tiếp theo cho lý do đó cho biết đã bỏ qua
+bao nhiêu lần: hoặc cùng lần từ chối kế tiếp, hoặc, khi không còn lần từ chối nào, tự ghi trong
+khoảng mười giây sau khi hết phút:
+
+```text
+Refused a Linear delivery to source 6f1c…: Linear-Signature does not match the body. Left out 41 more for the same reason since 2026-11-19T04:10:02Z.
+Left out 2 more refused Linear deliveries to source 6f1c… since 2026-11-19T04:10:02Z: webhookTimestamp outside the allowed skew.
+```
+
+Chữ ký được kiểm tra trước, nên dấu thời gian quá hạn hay workspace khác chỉ được nêu cho một
+body mà secret của nguồn đã ký.
+
+> **Một lần gửi bị từ chối sẽ không được gửi lại.** Tài liệu của Linear nói nó thử lại một lần
+> gửi thất bại sau một phút, một giờ và sáu giờ, nhưng trên lab dbvault nó không gửi lại lần nào
+> sau khi ReleaseFlow từ chối với `401`, ở cả ba mốc đó. ReleaseFlow cũng không import được lịch
+> sử của Linear, nên một issue có lần gửi bị từ chối, vì bất kỳ lý do gì, chỉ được ghi nếu nó
+> được hoàn thành lại.
 
 ## Đọc Jira theo lịch {#poll-jira}
 
