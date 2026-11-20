@@ -71,6 +71,35 @@ class ReleaseNoteRevision {
     protected ReleaseNoteRevision() {
     }
 
+    /** A correction a person wrote by hand: it claims no glossary, as an edit does not. */
+    static ReleaseNoteRevision manual(
+            UUID noteId,
+            Release release,
+            int revision,
+            String content,
+            String reason,
+            UUID authorId,
+            String authorName,
+            Instant createdAt
+    ) {
+        ReleaseNoteRevision written = new ReleaseNoteRevision();
+        written.id = UUID.randomUUID();
+        written.noteId = noteId;
+        written.releaseId = release.getId();
+        written.organizationId = release.getOrganizationId();
+        written.projectId = release.getProjectId();
+        written.revision = revision;
+        written.content = content;
+        written.origin = ReleaseNoteRevisionView.Origin.MANUAL;
+        written.reason = reason;
+        written.authorId = authorId;
+        written.authorName = authorName;
+        written.glossaryStatus = GlossaryUse.Status.NONE;
+        written.glossaryReason = null;
+        written.createdAt = createdAt;
+        return written;
+    }
+
     UUID getNoteId() {
         return noteId;
     }

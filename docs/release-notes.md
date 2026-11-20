@@ -2,7 +2,7 @@
 
 A release collects reviewed changes. When it is approved, ReleaseFlow writes one note
 for every audience in every release note language; when it is published, those notes
-are frozen.
+are frozen, and an administrator corrects one only by adding a revision.
 
 ## Audiences
 
@@ -749,9 +749,10 @@ changelog. Downloaded files are named `<version>-<audience>-<language>.md`.
 ![Publishing approved v1.3.0: it becomes Published, an immutable snapshot whose glossary went with every translation, and the Contributor note downloads as Markdown](assets/release-notes/rn-9-publish.webp)
 
 A published release cannot be edited, scheduled, reviewed, discarded,
-unpublished, or changed in content, and neither can its notes. Its changes can
-still be corrected in the Change Inbox, but the published notes keep what was
-published. PostgreSQL triggers enforce this even for direct SQL. See [ADR-0005](adr/0005-immutable-release-note-snapshots.md) and
+unpublished, or changed in content, and its notes as published never change. Its changes
+can still be corrected in the Change Inbox, but the published notes keep what was
+published; an administrator corrects a note by adding a revision
+([Correcting a published note](#correcting-a-published-note)). PostgreSQL triggers enforce this even for direct SQL. See [ADR-0005](adr/0005-immutable-release-note-snapshots.md) and
 [ADR-0011](adr/0011-audience-release-notes.md).
 
 REST clients call `POST /api/projects/{projectId}/releases/{releaseId}/publish`.
@@ -761,3 +762,37 @@ note's sections; after it, `preview` is empty and the notes are in `notes`. `mar
 null, except for a release published before Flyway `V13`. Publishing a release that is not
 approved returns `409 release_status_conflict`; any operation on a published
 release returns `409 release_published`.
+
+### Correcting a published note
+
+A published note is never changed in place. An administrator corrects one by adding a
+revision: the note as published stays revision 1, and each correction is the next number,
+with its reason, the corrector's name as it was then, and the time
+([ADR-0046](adr/0046-correcting-a-published-note.md)).
+
+On the published release, open the note's tab and choose **Correct this note**. The page
+starts from the note's latest revision. Edit its Markdown, write the reason in the note's
+own language (at most 500 characters; it is published wherever the correction is), and
+choose **Show the difference**. **Save as revision 3**, or whichever number is next, appears
+only once the difference is shown, and saving is refused if the text changed after that.
+A retired audience's note is corrected the same way.
+
+Once saved, the latest revision is the note wherever a note is read without a number: its
+tab, **Copy**, **Download**, and what a new automation run delivers. Saving delivers
+nothing, so each destination keeps what it last received. Under each note, **Revisions**
+lists every revision, newest first, with how its text was made, when, by whom, its reason,
+its difference from the one before, its Markdown, and a download named
+`<version>-<audience>-<language>.r<n>.md`. **Where it went** lists each automation action
+that delivered the note, with the revision it carried, and marks one **Behind** when the
+note has been corrected since. A revision is never changed or removed; only a newer one
+supersedes it. Every member reads revisions; only administrators correct.
+
+REST clients call `POST /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions`
+with `{"corrects", "content", "reason"}`, where `corrects` is the number of the revision being
+corrected, and get `201` with the new revision. A revision that is no longer the latest is
+refused with `409 release_note_revision_stale`, text identical to the latest with
+`409 release_note_correction_unchanged`, a note of a release that is not published with
+`409 release_status_conflict`, and a member with `403`.
+`GET …/notes/{noteId}/download?revision={n}` downloads one revision; a number the note does
+not have is `404 release_note_not_found`, and anything but a positive whole number is
+`400 release_note_revision_invalid`.

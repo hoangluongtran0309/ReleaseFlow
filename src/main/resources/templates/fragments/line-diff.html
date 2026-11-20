@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* The difference between two revisions of a note, line by line (ADR-0046). A removed
+       line is struck through and marked "−", an added one marked "+", and each says so to a
+       screen reader, so colour is never the only signal. The list scrolls on its own, so it
+       takes the keyboard focus and is named. */-->
+<div th:fragment="diff(lines, label)" class="line-diff mt-2 max-h-96 overflow-auto rounded-box border border-base-300"
+     tabindex="0" role="region" th:aria-label="${label}">
+    <ol class="m-0 list-none p-0 font-mono text-xs">
+        <li th:each="line : ${lines}" class="flex gap-2 whitespace-pre-wrap px-3 py-0.5 [overflow-wrap:anywhere]"
+            th:classappend="${line.isAdded()} ? 'bg-emerald-50 text-emerald-900' : (${line.isRemoved()} ? 'bg-rose-50 text-rose-900' : 'text-slate-700')">
+            <span class="w-3 shrink-0 select-none" aria-hidden="true"
+                  th:text="${line.isAdded()} ? '+' : (${line.isRemoved()} ? '−' : ' ')"> </span>
+            <ins class="no-underline" th:if="${line.isAdded()}"><span class="sr-only" th:text="#{ui.lineDiff.added}">Added:</span><span th:text="${line.text()}">Added line</span></ins>
+            <del th:if="${line.isRemoved()}"><span class="sr-only" th:text="#{ui.lineDiff.removed}">Removed:</span><span th:text="${line.text()}">Removed line</span></del>
+            <span th:unless="${line.isAdded() or line.isRemoved()}" th:text="${line.text()}">Kept line</span>
+        </li>
+    </ol>
+</div>
+</body>
+</html>

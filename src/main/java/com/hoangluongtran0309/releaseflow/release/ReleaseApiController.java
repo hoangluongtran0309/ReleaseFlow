@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
@@ -28,9 +29,11 @@ import java.util.UUID;
 public class ReleaseApiController {
 
     private final ReleaseService releaseService;
+    private final ReleaseNoteCorrectionService correctionService;
 
-    ReleaseApiController(ReleaseService releaseService) {
+    ReleaseApiController(ReleaseService releaseService, ReleaseNoteCorrectionService correctionService) {
         this.releaseService = releaseService;
+        this.correctionService = correctionService;
     }
 
     @GetMapping("/releases")
@@ -259,15 +262,30 @@ public class ReleaseApiController {
         return releaseService.noteRevision(principal.organizationId(), projectId, releaseId, noteId, revision);
     }
 
+    // ADR-0046: an administrator corrects a published note by hand, as its next revision.
+    @PostMapping("/releases/{releaseId}/notes/{noteId}/revisions")
+    ResponseEntity<ReleaseNoteRevisionView> correctNote(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @PathVariable UUID noteId,
+            @Valid @RequestBody NoteCorrectionRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(correctionService.correctByHand(principal, projectId, releaseId, noteId, request));
+    }
+
     // Also linked from the release pages, so a signed-in browser downloads the file directly.
     @GetMapping("/releases/{releaseId}/notes/{noteId}/download")
     ResponseEntity<String> downloadNote(
             @AuthenticationPrincipal ReleaseFlowPrincipal principal,
             @PathVariable UUID projectId,
             @PathVariable UUID releaseId,
-            @PathVariable UUID noteId
+            @PathVariable UUID noteId,
+            @RequestParam(required = false) String revision
     ) {
-        ReleaseNoteFile file = releaseService.noteFile(principal.organizationId(), projectId, releaseId, noteId);
+        ReleaseNoteFile file = releaseService.noteFile(principal.organizationId(), projectId, releaseId, noteId,
+                NoteRevisionNumber.parse(revision));
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "markdown", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()

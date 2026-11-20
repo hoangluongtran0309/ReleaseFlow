@@ -88,6 +88,9 @@ import com.hoangluongtran0309.releaseflow.release.ChangeSummaryRequiredException
 import com.hoangluongtran0309.releaseflow.release.ReleaseEmptyException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNotFoundException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteNotFoundException;
+import com.hoangluongtran0309.releaseflow.release.ReleaseNoteRevisionStaleException;
+import com.hoangluongtran0309.releaseflow.release.ReleaseNoteCorrectionUnchangedException;
+import com.hoangluongtran0309.releaseflow.release.InvalidNoteRevisionException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteRenderException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNotesMissingException;
 import com.hoangluongtran0309.releaseflow.release.ReleasePublishedException;
@@ -406,6 +409,21 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ReleaseNoteNotFoundException.class)
     ResponseEntity<ProblemDetail> releaseNoteNotFound(ReleaseNoteNotFoundException exception) {
         return localized(HttpStatus.NOT_FOUND, "release_note_not_found", exception);
+    }
+
+    @ExceptionHandler(InvalidNoteRevisionException.class)
+    ResponseEntity<ProblemDetail> invalidNoteRevision(InvalidNoteRevisionException exception) {
+        return localized(HttpStatus.BAD_REQUEST, "release_note_revision_invalid", exception);
+    }
+
+    @ExceptionHandler(ReleaseNoteRevisionStaleException.class)
+    ResponseEntity<ProblemDetail> releaseNoteRevisionStale(ReleaseNoteRevisionStaleException exception) {
+        return localized(HttpStatus.CONFLICT, "release_note_revision_stale", exception);
+    }
+
+    @ExceptionHandler(ReleaseNoteCorrectionUnchangedException.class)
+    ResponseEntity<ProblemDetail> releaseNoteCorrectionUnchanged(ReleaseNoteCorrectionUnchangedException exception) {
+        return localized(HttpStatus.CONFLICT, "release_note_correction_unchanged", exception);
     }
 
     @ExceptionHandler(LinkedIssueNotFoundException.class)

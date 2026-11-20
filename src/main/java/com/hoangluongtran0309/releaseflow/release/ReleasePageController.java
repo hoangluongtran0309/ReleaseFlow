@@ -3,6 +3,7 @@ package com.hoangluongtran0309.releaseflow.release;
 import com.hoangluongtran0309.releaseflow.account.OutputLanguageService;
 import com.hoangluongtran0309.releaseflow.account.ReleaseFlowPrincipal;
 import com.hoangluongtran0309.releaseflow.audience.AudienceService;
+import com.hoangluongtran0309.releaseflow.automation.NoteDeliveries;
 import com.hoangluongtran0309.releaseflow.category.CategoryService;
 import com.hoangluongtran0309.releaseflow.change.AiClassificationFailedException;
 import com.hoangluongtran0309.releaseflow.change.AiClassificationUnavailableException;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,8 +54,7 @@ public class ReleasePageController {
     private final SelectedProject selectedProject;
     private final OverviewService overviewService;
     private final MissingNarratives missingNarratives;
-
-
+    private final NoteDeliveries noteDeliveries;
 
     ReleasePageController(
             ProjectService projectService,
@@ -63,7 +64,8 @@ public class ReleasePageController {
             CategoryService categoryService,
             SelectedProject selectedProject,
             OverviewService overviewService,
-            MissingNarratives missingNarratives
+            MissingNarratives missingNarratives,
+            NoteDeliveries noteDeliveries
     ) {
         this.categoryService = categoryService;
         this.projectService = projectService;
@@ -73,6 +75,7 @@ public class ReleasePageController {
         this.selectedProject = selectedProject;
         this.overviewService = overviewService;
         this.missingNarratives = missingNarratives;
+        this.noteDeliveries = noteDeliveries;
     }
 
     // A URL that names no Project opens on the one this person was last looking at.
@@ -574,6 +577,7 @@ public class ReleasePageController {
         ReleaseView release = releaseService.get(principal.organizationId(), projectId, releaseId);
         model.addAttribute("release", release);
         if (release.status() == ReleaseStatus.PUBLISHED) {
+            model.addAttribute("histories", histories(principal.organizationId(), projectId, release));
             return "release-note";
         }
         model.addAttribute("categories", categoryService.active(principal.organizationId()).stream()
@@ -616,6 +620,21 @@ public class ReleasePageController {
             }
         }
         return "release";
+    }
+
+    // Each published note's revisions and where it went, by note (ADR-0046).
+    private Map<UUID, NoteHistory> histories(UUID organizationId, UUID projectId, ReleaseView release) {
+        List<NoteDeliveries.Delivery> deliveries = noteDeliveries.latest(organizationId, release.id());
+        Map<UUID, NoteHistory> histories = new HashMap<>();
+        for (AudienceNoteView note : release.notes()) {
+            histories.put(note.id(), NoteHistory.of(
+                    releaseService.noteRevisions(organizationId, projectId, release.id(), note.id()),
+                    deliveries.stream()
+                            .filter(delivery -> delivery.audienceId().equals(note.audienceId())
+                                    && delivery.language().equals(note.language()))
+                            .toList()));
+        }
+        return histories;
     }
 
     // A template that cannot render only hides the preview; approval reports it as an error.

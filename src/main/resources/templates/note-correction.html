@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
+<head>
+    <title th:text="#{ui.noteCorrection.title}">Correct a release note</title>
+</head>
+<body>
+<p layout:fragment="page-title" th:text="#{ui.nav.releases}">Releases</p>
+<div layout:fragment="content">
+    <header class="page-header">
+        <div>
+            <p class="page-eyebrow">
+                <a class="link-hover" th:href="@{/releases(project=${projectId})}" th:text="#{ui.nav.releases}">Releases</a>
+                / <a class="link-hover" th:href="@{${releasePath}}" th:text="${version}">1.4.0</a>
+            </p>
+            <h1 class="page-heading" th:text="#{ui.noteCorrection.heading(${note.audienceName}, ${note.language})}">Correct the Operator note in vi</h1>
+            <p class="page-subtitle" th:text="#{ui.noteCorrection.subtitle(${note.revision})}">
+                You are correcting revision 2. The note as published stays readable as revision 1.
+            </p>
+        </div>
+    </header>
+
+    <div class="mb-6" th:if="${pageNotice != null}" th:insert="~{fragments/alert :: notice(${pageNotice})}"></div>
+
+    <section class="surface-card p-6" id="note-correction">
+        <div th:replace="~{fragments/alert :: alert('info', #{ui.noteCorrection.whatSavingDoes})}"></div>
+
+        <form class="mt-5 grid gap-4" method="post" th:object="${correctionRequest}"
+              th:action="@{${releasePath + '/notes/' + note.id + '/correct'}}" novalidate>
+            <th:block th:replace="~{fragments/form :: errorSummary(true)}"></th:block>
+            <input type="hidden" th:field="*{corrects}">
+            <input type="hidden" name="previewed" th:if="${previewed != null}" th:value="${previewed}">
+            <label class="form-control">
+                <span class="label-text font-medium" th:text="#{ui.noteCorrection.markdown}">Corrected Markdown</span>
+                <textarea th:field="*{content}" rows="18" required spellcheck="false"
+                          class="textarea textarea-bordered w-full font-mono text-xs" th:errorclass="textarea-error"
+                          th:lang="${note.language}"
+                          th:attr="aria-invalid=${#fields.hasErrors('content')} ? 'true' : null,aria-describedby=${#fields.hasErrors('content')} ? 'content-error' : null"></textarea>
+                <span th:replace="~{fragments/form :: fieldError('content', 'content-error')}"></span>
+            </label>
+            <label class="form-control">
+                <span class="label-text font-medium" th:text="#{ui.noteCorrection.reason}">Reason</span>
+                <textarea th:field="*{reason}" rows="2" maxlength="500" required
+                          class="textarea textarea-bordered w-full text-sm" th:errorclass="textarea-error"
+                          th:lang="${note.language}"
+                          th:attr="aria-invalid=${#fields.hasErrors('reason')} ? 'true' : null,aria-describedby=${#fields.hasErrors('reason')} ? 'reason-error' : 'reason-hint'"></textarea>
+                <span id="reason-hint" class="mt-1 text-xs text-slate-500"
+                      th:text="#{ui.noteCorrection.reasonHint(${note.language})}">Write it in vi, at most 500 characters. It is published wherever the correction is.</span>
+                <span th:replace="~{fragments/form :: fieldError('reason', 'reason-error')}"></span>
+            </label>
+
+            <section th:if="${difference != null}" aria-labelledby="difference-heading">
+                <h2 class="section-heading" id="difference-heading"
+                    th:text="#{ui.noteCorrection.differenceHeading(${note.revision})}">Difference from revision 2</h2>
+                <p class="section-copy" th:unless="${changed}" th:text="#{ui.noteCorrection.noDifference(${note.revision})}">
+                    The text is the same as revision 2.
+                </p>
+                <div th:if="${changed}"
+                     th:replace="~{fragments/line-diff :: diff(${difference}, #{ui.noteCorrection.differenceHeading(${note.revision})})}"></div>
+            </section>
+
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" name="intent" value="preview" class="btn"
+                        th:classappend="${difference == null or !changed} ? 'btn-primary'"
+                        th:text="#{ui.noteCorrection.preview}">Show the difference</button>
+                <button type="submit" name="intent" value="save" class="btn btn-primary" th:if="${difference != null and changed}"
+                        th:text="#{ui.noteCorrection.save(${note.revision + 1})}">Save as revision 3</button>
+                <a class="btn btn-ghost" th:href="@{${releasePath}}" th:text="#{ui.common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </section>
+</div>
+</body>
+</html>
