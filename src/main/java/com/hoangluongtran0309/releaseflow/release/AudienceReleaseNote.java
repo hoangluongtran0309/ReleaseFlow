@@ -10,7 +10,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * The note one audience gets in one language for an approved or published release. It
@@ -154,21 +158,34 @@ class AudienceReleaseNote {
         this.updatedAt = at;
     }
 
+    /** The note as published, or as it stands while its release is approved: revision 1. */
     AudienceNoteView view() {
-        return new AudienceNoteView(
-                id,
-                audienceId,
-                audienceCode,
-                audienceName,
-                language,
-                content,
-                autoRerender,
-                lastEditorName,
-                updatedAt,
-                translationStatus,
-                glossaryStatus,
-                glossaryReason
-        );
+        return view(null);
+    }
+
+    /** The note as its latest revision reads, or as revision 1 when there is none. */
+    AudienceNoteView view(ReleaseNoteRevision latest) {
+        if (latest == null) {
+            return new AudienceNoteView(id, audienceId, audienceCode, audienceName, language, content, autoRerender,
+                    lastEditorName, updatedAt, translationStatus, glossaryStatus, glossaryReason, 1);
+        }
+        GlossaryUse glossary = latest.glossary();
+        return new AudienceNoteView(id, audienceId, audienceCode, audienceName, language, latest.getContent(),
+                autoRerender, lastEditorName, latest.getCreatedAt(), translationStatus, glossary.status(),
+                glossary.reason(), latest.getRevision());
+    }
+
+    /** Each note as its latest revision reads, from the release's latest revisions. */
+    static List<AudienceNoteView> views(List<AudienceReleaseNote> notes, List<ReleaseNoteRevision> latest) {
+        Map<UUID, ReleaseNoteRevision> byNote = latest.stream()
+                .collect(Collectors.toMap(ReleaseNoteRevision::getNoteId, Function.identity()));
+        return notes.stream().map(note -> note.view(byNote.get(note.id))).toList();
+    }
+
+    /** Revision 1: the note as its release was published. */
+    ReleaseNoteRevisionView publishedRevision(Release release) {
+        return new ReleaseNoteRevisionView(1, ReleaseNoteRevisionView.Origin.PUBLISHED, content, null,
+                release.getPublisherName(), release.getPublishedAt(), glossaryStatus, glossaryReason);
     }
 
     UUID getId() {

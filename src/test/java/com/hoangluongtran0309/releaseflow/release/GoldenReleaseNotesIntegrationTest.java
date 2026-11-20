@@ -116,7 +116,7 @@ class GoldenReleaseNotesIntegrationTest extends PostgreSqlIntegrationTest {
         DEEPL.reset();
         LINEAR.reset();
         JIRA.reset();
-        jdbcTemplate.execute("TRUNCATE public_changelog_entries, automation_action_runs, automation_runs, "
+        jdbcTemplate.execute("TRUNCATE release_note_revisions, public_changelog_entry_revisions, public_changelog_entries, automation_action_runs, automation_runs, "
                 + "automation_publish_jobs, automation_rule_actions, automation_rules, translation_jobs, "
                 + "release_audience_notes, release_change_reviews, release_notes, release_changes, linked_issue_reads, release_linked_issues, release_fold_decisions, releases");
         jdbcTemplate.update("DELETE FROM glossary_syncs");

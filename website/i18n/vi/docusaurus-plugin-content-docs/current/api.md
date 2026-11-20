@@ -188,6 +188,8 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes` | thành viên |
 | `PUT /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}` | thành viên |
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/download` | thành viên |
+| `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions` | thành viên |
+| `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions/{revision}` | thành viên |
 | `GET /api/projects/{projectId}/release-assignments` | thành viên |
 | `GET /api/audiences`, `POST /api/audiences` | quản trị viên |
 | `GET`, `PUT`, `DELETE /api/audiences/{audienceId}` | quản trị viên |
@@ -200,6 +202,16 @@ nhập; **quản trị viên** cần một quản trị viên.
 | `GET /api/glossary`, `GET /api/glossary/suggestions` | thành viên |
 | `POST /api/glossary/kept-terms`, `DELETE /api/glossary/kept-terms/{termId}` | quản trị viên |
 | `POST /api/glossary/translations`, `DELETE /api/glossary/translations/{translationId}` | quản trị viên |
+
+Một release note đã publish có các bản sửa đổi
+([ADR-0046](adr/0046-correcting-a-published-note.md)). Bản sửa đổi 1 là note như lúc
+publish: `origin` là `PUBLISHED`, không có `reason`, cùng tên người publish và thời điểm
+publish. Một bản sửa đổi sau đó là một lần sửa, có `origin`, `reason`, `authorName` và
+`createdAt` của nó. Ở mọi nơi note được đọc mà không nêu số, tức mục của nó trong `notes`,
+bản tải về và nội dung một run automation mới mang theo, bản sửa đổi mới nhất chính là
+note, và `revision` của note cho biết đó là bản nào: `1` cho tới khi note được sửa. Note của
+một release chưa publish không có bản sửa đổi (`409 release_status_conflict`), và một số mà
+note không có là `404 release_note_not_found`.
 
 ### Automation — [Automation](automation.md) {#automation--automation}
 

@@ -82,6 +82,7 @@ public class ReleaseService {
     private final ReleaseChangeRepository releaseChangeRepository;
     private final ReleaseChangeReviewRepository reviewRepository;
     private final AudienceReleaseNoteRepository noteRepository;
+    private final ReleaseNoteRevisions noteRevisions;
     private final LegacyReleaseNoteRepository legacyNoteRepository;
     private final ReleaseLinkedIssueRepository linkedIssueRepository;
     private final LinkedIssueReadRepository linkedIssueReadRepository;
@@ -107,6 +108,7 @@ public class ReleaseService {
             ReleaseChangeRepository releaseChangeRepository,
             ReleaseChangeReviewRepository reviewRepository,
             AudienceReleaseNoteRepository noteRepository,
+            ReleaseNoteRevisions noteRevisions,
             LegacyReleaseNoteRepository legacyNoteRepository,
             ReleaseLinkedIssueRepository linkedIssueRepository,
             LinkedIssueReadRepository linkedIssueReadRepository,
@@ -131,6 +133,7 @@ public class ReleaseService {
         this.releaseChangeRepository = releaseChangeRepository;
         this.reviewRepository = reviewRepository;
         this.noteRepository = noteRepository;
+        this.noteRevisions = noteRevisions;
         this.legacyNoteRepository = legacyNoteRepository;
         this.linkedIssueRepository = linkedIssueRepository;
         this.linkedIssueReadRepository = linkedIssueReadRepository;
@@ -872,7 +875,31 @@ public class ReleaseService {
 
     @Transactional(readOnly = true)
     List<AudienceNoteView> notes(UUID organizationId, UUID projectId, UUID releaseId) {
-        return notes(find(organizationId, projectId, releaseId)).stream().map(AudienceReleaseNote::view).toList();
+        return noteViews(find(organizationId, projectId, releaseId));
+    }
+
+    /**
+     * Every revision of a published note, oldest first (ADR-0046). Revision 1 is the note as
+     * published; a note has revisions only once its release is published.
+     */
+    @Transactional(readOnly = true)
+    List<ReleaseNoteRevisionView> noteRevisions(UUID organizationId, UUID projectId, UUID releaseId, UUID noteId) {
+        Release release = find(organizationId, projectId, releaseId);
+        AudienceReleaseNote note = noteRepository.findByIdAndReleaseIdAndOrganizationId(noteId, releaseId, organizationId)
+                .orElseThrow(ReleaseNoteNotFoundException::new);
+        if (!release.isPublished()) {
+            throw new ReleaseStatusException("error.release_status_conflict.revisionsAfterPublication");
+        }
+        return noteRevisions.history(release, note);
+    }
+
+    /** One revision of a published note, by its number. */
+    @Transactional(readOnly = true)
+    ReleaseNoteRevisionView noteRevision(UUID organizationId, UUID projectId, UUID releaseId, UUID noteId, int revision) {
+        return noteRevisions(organizationId, projectId, releaseId, noteId).stream()
+                .filter(candidate -> candidate.revision() == revision)
+                .findFirst()
+                .orElseThrow(() -> new ReleaseNoteNotFoundException("error.release_note_not_found.revision"));
     }
 
     /** One audience's note as a Markdown file named {@code <version>-<audience>-<language>.md}. */
@@ -884,7 +911,7 @@ public class ReleaseService {
         // Anything but letters, digits, dots, dashes, and underscores in the version is replaced.
         String name = release.getVersion().replaceAll("[^A-Za-z0-9._-]", "-") + "-" + note.getAudienceCode() + "-"
                 + note.getLanguage() + ".md";
-        return new ReleaseNoteFile(name, note.view().content());
+        return new ReleaseNoteFile(name, noteRevisions.latest(organizationId, note).content());
     }
 
     /**
@@ -1045,6 +1072,11 @@ public class ReleaseService {
         return previousReleaseId;
     }
 
+    // The release's notes as their latest revisions read.
+    private List<AudienceNoteView> noteViews(Release release) {
+        return noteRevisions.latest(release.getOrganizationId(), release.getId(), notes(release));
+    }
+
     private List<AudienceReleaseNote> notes(Release release) {
         return noteRepository.findAllByReleaseIdAndOrganizationIdOrderByAudienceNameAscAudienceCodeAscLanguageAsc(
                 release.getId(),
@@ -1088,7 +1120,7 @@ public class ReleaseService {
                 .stream()
                 .map(ReleaseChangeReview::view)
                 .toList();
-        List<AudienceNoteView> notes = notes(release).stream().map(AudienceReleaseNote::view).toList();
+        List<AudienceNoteView> notes = noteViews(release);
         Review review = review(release, changes);
         if (!release.isPublished()) {
             return view(release, previousVersion, changes, decisions, ReleaseNotePreview.sections(changes), null, notes,

@@ -108,6 +108,7 @@ class AutomationRunFactory {
                 note.map(AudienceNoteView::audienceName).orElseGet(() -> audienceName(action, audienceNames)),
                 action.getTargetLanguage(),
                 note.map(AudienceNoteView::content).orElse(null),
+                note.map(AudienceNoteView::revision).orElse(null),
                 configuration(action, release),
                 action.getSecret()
         );

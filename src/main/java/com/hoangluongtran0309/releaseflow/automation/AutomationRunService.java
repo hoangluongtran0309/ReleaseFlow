@@ -217,7 +217,8 @@ public class AutomationRunService {
                 action.getErrorCode(),
                 action.getAttempts(),
                 action.getStartedAt(),
-                action.getCompletedAt()
+                action.getCompletedAt(),
+                action.getNoteRevision()
         );
     }
 
