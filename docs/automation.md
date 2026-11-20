@@ -238,7 +238,10 @@ without its `id` is a new action that needs its secret again.
 choose and is the promise that a repeat is the same run rather than a second
 delivery. `DELETE /api/automation/rules/{id}` archives a rule, which cancels the
 runs it had not finished and frees its name. `GET /api/automation/runs` answers
-`{"items", "page", "size", "total"}`, with `size` between 1 and 100.
+`{"items", "page", "size", "total"}`, with `size` between 1 and 100. Each of a run's
+actions has `noteRevision`, the revision of its note it carried
+([ADR-0046](adr/0046-correcting-a-published-note.md)), or `null` when it carried no note;
+a run made before revisions existed carried revision `1`.
 
 A public changelog action's refusal is `public_changelog_conflict`, recorded on the
 action rather than returned to anybody; see [Public changelog](#public-changelog).

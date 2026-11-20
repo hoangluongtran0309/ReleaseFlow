@@ -687,7 +687,17 @@ where it first appears; ADRs are linked from the slice they record.
 
 ## In progress
 
-- Nothing; the next slice starts from the planned work below.
+- #87, Slice A of [ADR-0046](adr/0046-correcting-a-published-note.md), in five pull
+  requests. The first is in place, with Flyway `V40`:
+  - `release_note_revisions` and `public_changelog_entry_revisions`, only ever inserted,
+    each number the next, and the revision an automation action run carried; `CORRECTION`
+    is allowed as a run trigger and never as a rule's;
+  - a published note reads as its latest revision in the notes API, the release view, the
+    download, and what a new automation run carries, and a note's `revision` says which;
+  - `GET …/notes/{noteId}/revisions` and `…/revisions/{revision}`, revision 1 being the
+    note as published, and `noteRevision` on each action of a run;
+  - nothing writes a revision yet, so every note, every API field that existed, and every
+    DeepL request are as they were.
 
 ## Planned
 
@@ -737,6 +747,7 @@ deliberately deferred list below, one reviewed slice at a time.
 - A dashboard beyond one Project at a time, and figures on it that are not counts.
 - Review history, comments, reviewer roles, and bulk review.
 - Item reordering.
-- Unpublishing or correcting published release notes.
+- Unpublishing a release or withdrawing a public changelog entry; ADR-0046 corrects a
+  published note with a new revision and decides neither.
 - Deleting an audience together with its notes, archiving its published notes, and asking
   the AI for a returning audience's missing narratives without a person asking.

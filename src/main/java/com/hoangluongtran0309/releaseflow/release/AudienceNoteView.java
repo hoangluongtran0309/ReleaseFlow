@@ -13,6 +13,8 @@ import java.util.UUID;
  * {@code translationStatus} is READY once every translation it needs is in; until then
  * it shows the untranslated text. {@code glossaryStatus} says what those translations did
  * with the Organization's glossary, with {@code glossaryReason} when it was not applied.
+ * {@code revision} is the note's latest revision (ADR-0046): 1 until a published note is
+ * corrected, and then the content, glossary, and update time are that revision's.
  */
 public record AudienceNoteView(
         UUID id,
@@ -26,7 +28,8 @@ public record AudienceNoteView(
         Instant updatedAt,
         TranslationState.Status translationStatus,
         GlossaryUse.Status glossaryStatus,
-        String glossaryReason
+        String glossaryReason,
+        int revision
 ) {
 
     /** The content as HTML that is safe to insert into a page. */

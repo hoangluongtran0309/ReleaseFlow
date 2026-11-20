@@ -127,6 +127,7 @@ class AutomationRunTest {
                 "End user",
                 "en",
                 "A note.",
+                1,
                 Map.of(),
                 null
         );

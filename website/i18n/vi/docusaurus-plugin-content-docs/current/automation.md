@@ -232,7 +232,10 @@ secret của nó một lần nữa.
 lần lặp lại là cùng một lần chạy chứ không phải một lần gửi thứ hai.
 `DELETE /api/automation/rules/{id}` lưu trữ một quy tắc, việc này huỷ các lần chạy chưa xong của
 nó và giải phóng tên của nó. `GET /api/automation/runs` trả về
-`{"items", "page", "size", "total"}`, với `size` từ 1 đến 100.
+`{"items", "page", "size", "total"}`, với `size` từ 1 đến 100. Mỗi action của một lần chạy có
+`noteRevision`, là bản sửa đổi của note mà nó mang theo
+([ADR-0046](adr/0046-correcting-a-published-note.md)), hoặc `null` khi nó không mang note nào;
+một lần chạy có từ trước khi có bản sửa đổi đã mang bản sửa đổi `1`.
 
 Lời từ chối của action changelog công khai là `public_changelog_conflict`, được ghi trên action
 chứ không trả về cho ai; xem [Changelog công khai](#public-changelog). Tương tự, một action mà

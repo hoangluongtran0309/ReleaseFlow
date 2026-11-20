@@ -238,6 +238,27 @@ public class ReleaseApiController {
         return releaseService.editNote(principal, projectId, releaseId, noteId, request);
     }
 
+    @GetMapping("/releases/{releaseId}/notes/{noteId}/revisions")
+    List<ReleaseNoteRevisionView> noteRevisions(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @PathVariable UUID noteId
+    ) {
+        return releaseService.noteRevisions(principal.organizationId(), projectId, releaseId, noteId);
+    }
+
+    @GetMapping("/releases/{releaseId}/notes/{noteId}/revisions/{revision}")
+    ReleaseNoteRevisionView noteRevision(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID projectId,
+            @PathVariable UUID releaseId,
+            @PathVariable UUID noteId,
+            @PathVariable int revision
+    ) {
+        return releaseService.noteRevision(principal.organizationId(), projectId, releaseId, noteId, revision);
+    }
+
     // Also linked from the release pages, so a signed-in browser downloads the file directly.
     @GetMapping("/releases/{releaseId}/notes/{noteId}/download")
     ResponseEntity<String> downloadNote(

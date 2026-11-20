@@ -190,6 +190,8 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes` | member |
 | `PUT /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}` | member |
 | `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/download` | member |
+| `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions` | member |
+| `GET /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions/{revision}` | member |
 | `GET /api/projects/{projectId}/release-assignments` | member |
 | `GET /api/audiences`, `POST /api/audiences` | admin |
 | `GET`, `PUT`, `DELETE /api/audiences/{audienceId}` | admin |
@@ -202,6 +204,15 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `GET /api/glossary`, `GET /api/glossary/suggestions` | member |
 | `POST /api/glossary/kept-terms`, `DELETE /api/glossary/kept-terms/{termId}` | admin |
 | `POST /api/glossary/translations`, `DELETE /api/glossary/translations/{translationId}` | admin |
+
+A published note has revisions ([ADR-0046](adr/0046-correcting-a-published-note.md)).
+Revision 1 is the note as published: `origin` `PUBLISHED`, no `reason`, and the
+publisher's name and time. A later revision is a correction, with its `origin`, `reason`,
+`authorName`, and `createdAt`. Wherever a note is read without a number, its `notes`
+entry, the download, and what a new automation run carries, the latest revision is the
+note, and the note's `revision` says which one it is: `1` until it is corrected. A note of
+a release that is not published yet has no revisions (`409 release_status_conflict`), and a
+number the note does not have is `404 release_note_not_found`.
 
 ### Automation — [Automation](automation.md)
 

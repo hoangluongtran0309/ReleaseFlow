@@ -12,6 +12,14 @@ section into the version's entry, and the GitHub release is written from it.
 
 ## [Unreleased]
 
+### Added
+
+- A published note has revisions: revision 1 is the note as published, and the API reads
+  each one at `GET …/notes/{noteId}/revisions` and `…/revisions/{revision}`. A note's
+  `revision` and each run action's `noteRevision` say which revision is meant. Nothing
+  writes a correction yet, so every note reads exactly as before
+  ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+
 ## [1.3.1] - 2026-11-20
 
 ### Fixed

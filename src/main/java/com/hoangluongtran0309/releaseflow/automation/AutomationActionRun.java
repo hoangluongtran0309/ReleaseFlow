@@ -56,6 +56,10 @@ class AutomationActionRun {
     @Column(name = "note_content_snapshot", columnDefinition = "text", updatable = false)
     private String noteContentSnapshot;
 
+    // The revision of its note this run carried (ADR-0046); null on a run from before V40.
+    @Column(name = "note_revision", updatable = false)
+    private Integer noteRevision;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "configuration_snapshot", nullable = false, columnDefinition = "jsonb", updatable = false)
     private Map<String, String> configurationSnapshot;
@@ -102,6 +106,7 @@ class AutomationActionRun {
             String audienceName,
             String language,
             String noteContent,
+            Integer noteRevision,
             Map<String, String> configuration,
             AutomationSecrets.Secret secret
     ) {
@@ -115,6 +120,7 @@ class AutomationActionRun {
         this.audienceNameSnapshot = audienceName;
         this.languageSnapshot = language;
         this.noteContentSnapshot = noteContent;
+        this.noteRevision = noteContent == null ? null : noteRevision;
         this.configurationSnapshot = new LinkedHashMap<>(configuration);
         this.secretNonceSnapshot = secret == null ? null : secret.nonce();
         this.secretCiphertextSnapshot = secret == null ? null : secret.ciphertext();
@@ -213,6 +219,17 @@ class AutomationActionRun {
 
     String getNoteContentSnapshot() {
         return noteContentSnapshot;
+    }
+
+    /**
+     * The revision of its note this run carried, or null when it carried none. A run written
+     * before revisions existed carried revision 1, the only one there was.
+     */
+    Integer getNoteRevision() {
+        if (noteContentSnapshot == null) {
+            return null;
+        }
+        return noteRevision == null ? 1 : noteRevision;
     }
 
     Map<String, String> getConfigurationSnapshot() {

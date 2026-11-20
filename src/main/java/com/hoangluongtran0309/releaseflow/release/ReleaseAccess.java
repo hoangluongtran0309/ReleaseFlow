@@ -21,15 +21,18 @@ public class ReleaseAccess {
     private final AudienceReleaseNoteRepository noteRepository;
     private final ReleaseChangeRepository releaseChangeRepository;
     private final ChangeInboxService changeService;
+    private final ReleaseNoteRevisions noteRevisions;
 
     ReleaseAccess(
             ReleaseRepository releaseRepository,
             AudienceReleaseNoteRepository noteRepository,
+            ReleaseNoteRevisions noteRevisions,
             ReleaseChangeRepository releaseChangeRepository,
             ChangeInboxService changeService
     ) {
         this.releaseRepository = releaseRepository;
         this.noteRepository = noteRepository;
+        this.noteRevisions = noteRevisions;
         this.releaseChangeRepository = releaseChangeRepository;
         this.changeService = changeService;
     }
@@ -46,12 +49,10 @@ public class ReleaseAccess {
                         release.getProjectId(),
                         release.getVersion(),
                         release.getStatus(),
-                        noteRepository
+                        // A note is its latest revision, so a new run delivers the corrected text.
+                        noteRevisions.latest(organizationId, release.getId(), noteRepository
                                 .findAllByReleaseIdAndOrganizationIdOrderByAudienceNameAscAudienceCodeAscLanguageAsc(
-                                        release.getId(), organizationId)
-                                .stream()
-                                .map(AudienceReleaseNote::view)
-                                .toList()
+                                        release.getId(), organizationId))
                 ));
     }
 

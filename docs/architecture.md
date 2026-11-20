@@ -347,6 +347,13 @@ release_audience_notes (written while APPROVED, immutable once PUBLISHED)
   glossary_status (NONE | PENDING | APPLIED | NOT_APPLIED, V33), glossary_reason (exactly when NOT_APPLIED)
   created_at, updated_at
 
+release_note_revisions (V40, only ever inserted; revision 1 is the release_audience_notes row)
+  id (UUID PK); note_id + revision unique; revision >= 2, and only the next number
+  (note_id, release_id, organization_id, project_id) FK -> release_audience_notes, no action on delete
+  content, origin (MANUAL | RENDERED | TRANSLATED), reason (1-500 characters)
+  author_id (composite FK -> app_users), author_name (the name they had then)
+  glossary_status (NONE | APPLIED | NOT_APPLIED; NONE when MANUAL), glossary_reason, created_at
+
 release_notes (legacy, immutable; releases published before V13)
   release_id (PK; composite FK with organization_id, project_id -> releases)
   version, summary, sections (jsonb), markdown, published_at
@@ -355,7 +362,7 @@ automation_rules (V22, V23)
   id (UUID PK), organization_id, project_id (null: every project)
   name (unique per Organization ignoring case while active), enabled, active
   trigger_type (RELEASE_PUBLISHED | MANUAL | SCHEDULED_CRON | UPCOMING_RELEASE_REMINDER
-    | EXTERNAL_WEBHOOK), with a CHECK per trigger for the columns it uses:
+    | EXTERNAL_WEBHOOK; never CORRECTION), with a CHECK per trigger for the columns it uses:
   trigger_release_id, cron_expression, cron_time_zone (SCHEDULED_CRON)
   reminder_days_before (UPCOMING_RELEASE_REMINDER)
   webhook_id, webhook_secret_nonce + webhook_secret_ciphertext (EXTERNAL_WEBHOOK)
@@ -371,9 +378,9 @@ automation_rule_actions (V22)
 
 automation_runs (V22)
   id (UUID PK), rule_id, organization_id, project_id, release_id
-  rule_name_snapshot, release_version_snapshot, trigger_type
-  request_id (MANUAL and EXTERNAL_WEBHOOK), scheduled_for (cron and reminder)
-  initiated_by + initiator_name (MANUAL only)
+  rule_name_snapshot, release_version_snapshot, trigger_type (a rule's, or CORRECTION since V40)
+  request_id (MANUAL, EXTERNAL_WEBHOOK, and CORRECTION), scheduled_for (cron and reminder)
+  initiated_by + initiator_name (MANUAL, and always for CORRECTION)
   status (PENDING | RUNNING | SUCCEEDED | FAILED | UNKNOWN | CANCELLED)
   cancellation_requested, created_at, started_at, completed_at
 
@@ -381,6 +388,7 @@ automation_action_runs (V22)
   id (UUID PK), run_id, organization_id, rule_action_id; run_id + position unique
   action_type, audience_id, audience_name_snapshot, language_snapshot
   note_content_snapshot, configuration_snapshot, secret_nonce_snapshot + secret_ciphertext_snapshot
+  note_revision (V40; the revision it carried, only with a note; null before V40 reads as 1)
   status (as runs, plus SKIPPED since V39), external_reference
   error_code (exactly when FAILED, UNKNOWN, or SKIPPED)
   attempts, claimed_at, started_at, completed_at
@@ -395,6 +403,13 @@ public_changelog_entries (V24, immutable)
   organization_slug_snapshot, organization_name_snapshot, project_name_snapshot
   release_version_snapshot, audience_name_snapshot, language, content_snapshot, published_at
   organization_id + release_id + audience_name_snapshot + language unique
+
+public_changelog_entry_revisions (V40, immutable; revision 1 is the entry row)
+  id (UUID PK); entry_id + revision unique; revision >= 2, and only the next number
+  (entry_id, organization_id) FK -> public_changelog_entries
+  (action_run_id, organization_id) FK -> automation_action_runs (unique: one per delivery)
+  note_revision (the note revision it copied), content_snapshot, reason, corrected_at
+  no person: a public page never names who corrected it
 ```
 
 Authenticated `ReleaseFlowPrincipal` contains both user ID and Organization ID.
@@ -1438,6 +1453,22 @@ updates only while the release is approved. An update may change only the
 content and the edit record, and deletes are rejected once the release is
 published. `release_audience_notes_edit_recorded` ties `auto_rerender` to the
 editor columns.
+
+A published note is corrected by a new revision, never in place
+([ADR-0046](adr/0046-correcting-a-published-note.md)). The note row is revision 1 and
+stays as published; `release_note_revisions` holds revisions 2 and up.
+`release_note_revisions_immutable` refuses every update and delete of one, and
+`release_note_revisions_next_number` refuses an insert unless the release is published and
+the number is the next, after locking the note's row so two corrections cannot both write
+the same number. No foreign key above a revision cascades into it, and nothing can remove a
+published note in the first place: `releases_published_immutable` refuses deleting a
+published release, which is the only path that cascades to its notes; a published note's
+own delete is refused by its trigger; an audience with notes cannot be deleted; and no
+Project or Organization is ever deleted. `TRUNCATE` bypasses row triggers, as it does for
+every immutable table here, and only the tests use it. `ReleaseNoteRevisions` reads a note
+as its latest revision for the release page, the notes API, the download, and the snapshot
+a new automation run takes, which records the revision it carried in
+`automation_action_runs.note_revision`.
 
 ## Security changes and release-wide note structure
 
