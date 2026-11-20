@@ -13,7 +13,7 @@
   [ADR-0040](0040-translation-placeholders.md) (translation, its cache, and the repair of
   an answer), [ADR-0043](0043-member-roles-and-removal.md) (removed members), and
   [ADR-0044](0044-retire-an-audience.md) (retired audiences and `SKIPPED`)
-- Amended: 2026-11-20, for which job rendering again reads, two corrections to the
+- Amended: 2026-11-20, for which job rendering again reads, three corrections to the
   Context, and how a corrected note meets ADR-0035's skip; see
   [the amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip)
 
@@ -39,7 +39,8 @@ captured notes (fixture set `v2`):
 | the other nine | 0 | 0 |
 
 (Amended on 2026-11-20: rendering again also restores `dbvault-CLI` to `dbvault-cli` in
-all six Vietnamese notes, so it changes four of the notes counted here as clean; see the
+all six Vietnamese notes, so it changes four of the notes counted here as clean, and
+"Điểm endpoint", a second half-translation of "Endpoint", is in three of them; see the
 [amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip).)
 
 - **The placeholders** are the lab's FINDINGS #23. 1.1.0-rc.3 repairs DeepL's answer when
@@ -402,7 +403,7 @@ What each destination does:
 - Answers: the three questions [ADR-0035's amendment](0035-evidence-bound-notes-and-audience-relevance.md#amendment-2026-11-19-an-action-whose-note-has-nothing-for-its-audience)
   left to #87
 
-The decision above stands. This amendment decides one thing it left open, corrects two
+The decision above stands. This amendment decides one thing it left open, corrects three
 statements of its Context, and decides how a corrected note meets ADR-0035's skip.
 
 **What was found.** The dbvault workspace built the second golden package that part 7
@@ -450,7 +451,7 @@ The golden case seeds the cache with the package's answers under the context and
 glossary version of the jobs it writes; the package itself has neither, since set `v2`
 holds no Project context and no glossary.
 
-### Two corrections to the Context
+### Three corrections to the Context
 
 - **Rendering again changes six notes, not two.** "The other nine: 0" is wrong for three
   of them: `dba`/vi, `end_user`/vi, and `support`/vi each have `dbvault-CLI`, and so does
@@ -458,11 +459,16 @@ holds no Project context and no glossary.
   `contributor`/vi. The golden case of part 7 therefore renders all six and compares each
   with the package's revision 2. "Điểm cuối" is unchanged by it, as part 2 says: it needs
   translating again, or a hand.
+- **"Endpoint" has a second half-translation.** "Điểm endpoint" is in `aut_r4_probe`/vi,
+  `end_user`/vi, and `support`/vi, and the Context counts only "Điểm cuối". Rendering again
+  does not fix it either: it is DeepL's answer, not a token ADR-0040 restores, so like
+  "Điểm cuối" it needs translating again, or a hand.
 - **An error is outside ReleaseFlow.** `end_user`/vi carries `dbvault-CLI` twice, and rule
   R1 copied it to the public changelog and to Zendesk. So "no copy outside ReleaseFlow
-  carries them" is wrong. Slice A corrects the public changelog's entry: rendering
-  `end_user`/vi again, then a correction run. Zendesk keeps the old text
-  (`correction_not_supported`), and the article is corrected there by hand.
+  carries them" is wrong. It also carries "Điểm endpoint". Slice A corrects the public
+  changelog's entry: rendering `end_user`/vi again, correcting it by hand, then a
+  correction run. Zendesk keeps the old text (`correction_not_supported`), and the article
+  is corrected there by hand.
 
 `aut_r4_probe` is active in set `v2`, so its revision 2 in the package is a real render. On
 an Organization where it is retired, rendering again is refused with `409 audience_retired`
@@ -505,4 +511,7 @@ person wrote the note, and left three questions to #87.
 - The golden case of part 7 renders the six Vietnamese notes of the second package and
   compares each byte for byte; the first package and its test are unchanged.
 - `end_user`/vi's entry on the lab's public changelog is the correction the lab's 1.4.0
-  acceptance checks for Slice A; its Zendesk article is corrected there by hand.
+  acceptance checks for Slice A, and it takes two revisions: revision 2 rendered again,
+  for `dbvault-CLI`, then revision 3 by hand, for "Điểm endpoint". The correction run then
+  delivers revision 3, the latest, to the public changelog. Its Zendesk article is corrected
+  there by hand.
