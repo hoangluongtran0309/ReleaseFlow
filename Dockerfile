@@ -14,15 +14,18 @@ WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 # mvnw downloads maven-wrapper.jar, then Maven, from Maven Central and tries each once, so
-# its first start is retried (#128). The jar never comes from the build context
+# its first start is retried, five times with longer pauses, as
+# scripts/ci/maven-wrapper-ready.sh does (#128). The jar never comes from the build context
 # (.dockerignore), so whatever a failed attempt left is a bad download and goes.
 RUN chmod +x mvnw \
- && for attempt in 1 2 3; do \
+ && attempt=1 \
+ && for pause in 10 20 40 60 ""; do \
       ./mvnw -B --no-transfer-progress --version >/dev/null && break; \
       rm -f .mvn/wrapper/maven-wrapper.jar; \
-      [ "$attempt" -lt 3 ] || exit 1; \
-      echo "The Maven wrapper did not start (attempt $attempt of 3); trying again in 10 s." >&2; \
-      sleep 10; \
+      [ -n "$pause" ] || exit 1; \
+      echo "The Maven wrapper did not start (attempt $attempt of 5); trying again in $pause s." >&2; \
+      sleep "$pause"; \
+      attempt=$((attempt + 1)); \
     done \
  && ./mvnw -B --no-transfer-progress dependency:go-offline
 

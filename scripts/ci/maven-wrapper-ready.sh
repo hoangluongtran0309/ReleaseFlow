@@ -11,8 +11,10 @@
 #   ./scripts/ci/maven-wrapper-ready.sh
 set -euo pipefail
 
-readonly ATTEMPTS=3
-readonly PAUSE_SECONDS=10
+# The pause before each attempt after the first, longer each time, so an outage of Maven
+# Central of up to about two minutes is outlasted (#128).
+readonly PAUSES=(10 20 40 60)
+readonly ATTEMPTS=$(( ${#PAUSES[@]} + 1 ))
 
 cd "$(dirname "$0")/../.."
 
@@ -29,8 +31,9 @@ for attempt in $(seq 1 "${ATTEMPTS}"); do
     rm -f "${jar}"
   fi
   if [ "${attempt}" -lt "${ATTEMPTS}" ]; then
-    echo "The Maven wrapper did not start (attempt ${attempt} of ${ATTEMPTS}); trying again in ${PAUSE_SECONDS} s." >&2
-    sleep "${PAUSE_SECONDS}"
+    pause="${PAUSES[$(( attempt - 1 ))]}"
+    echo "The Maven wrapper did not start (attempt ${attempt} of ${ATTEMPTS}); trying again in ${pause} s." >&2
+    sleep "${pause}"
   fi
 done
 echo "The Maven wrapper did not start after ${ATTEMPTS} attempts." >&2
