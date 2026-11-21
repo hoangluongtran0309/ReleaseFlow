@@ -15,7 +15,9 @@
   [ADR-0044](0044-retire-an-audience.md) (retired audiences and `SKIPPED`)
 - Amended: 2026-11-20, for which job rendering again reads, three corrections to the
   Context, and how a corrected note meets ADR-0035's skip; see
-  [the amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip)
+  [the amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip);
+  and 2026-11-21, for the language in a public page's ETag; see
+  [that amendment](#amendment-2026-11-21-the-language-in-a-public-pages-etag)
 
 This record decides issue #22 and writes no code. Nothing it describes exists yet.
 
@@ -520,3 +522,24 @@ person wrote the note, and left three questions to #87.
   for `dbvault-CLI`, then revision 3 by hand, for "Điểm endpoint". The correction run then
   delivers revision 3, the latest, to the public changelog. Its Zendesk article is corrected
   there by hand.
+
+## Amendment, 2026-11-21: the language in a public page's ETag
+
+Part 4 gives the entry's address "the entry ID and revision as its ETag". The page around a
+note follows the reader's interface language, and the response says so with
+`Vary: Accept-Language, Cookie`, but a validator of the entry and revision alone is the same
+for the English and the Vietnamese page. A browser that revalidates after its reader switches
+language is answered `304` and keeps the other language's page. That was already so before
+this record, with the entry ID alone as the ETag.
+
+- **Every public page's ETag is the entry ID, the revision, and the reader's resolved
+  interface language**, as `"{entryId}-{revision}-{language}"`: the entry's address, with its
+  latest revision, and an earlier revision at `…/revisions/{n}`, with that number. The
+  language is the one the page was rendered in: a `?lang=` on that page, the reader's cookie,
+  or `Accept-Language`, narrowed to the languages the deployment ships. On a public page a
+  `?lang=` changes only the page it is on and is never kept in the cookie.
+- A page answers `304` only to the validator of its own revision and language. Nothing else in
+  part 4 changes: the note in the page stays in the entry's language, and the caching of the
+  entry and of an earlier revision is as part 4 says.
+- An entry nobody corrected has revision 1, so its ETag changes once, from `"{entryId}"` to
+  `"{entryId}-1-{language}"`, and a copy cached under the old one is sent again in full.

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    
+    <title>ReleaseFlow 2.0.25</title>
+    <link rel="icon" type="image/svg+xml" href="/svg/releaseflow-logo-mark.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="canonical" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000049">
+    <link rel="alternate" type="application/rss+xml" title="owner@example.com releases" href="http://localhost:8080/changelog/as-today/rss.xml">
+    <script>
+        (() => {
+            let saved = null;
+            try { saved = localStorage.getItem('releaseflow:theme'); } catch (ignored) { }
+            document.documentElement.dataset.theme = saved === 'dark' || saved === 'light'
+                ? saved : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/application.css">
+    
+</head>
+<!-- Nobody is signed in here, so there is no navigation, no account menu, and nothing
+     that would make the page depend on a session. -->
+<body class="theme-canvas min-h-screen">
+<a href="#changelog-content" class="skip-link">Skip to the release notes</a>
+<header class="border-b theme-border">
+    <div class="mx-auto flex min-h-16 max-w-4xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <a class="flex items-center gap-3 font-bold tracking-tight" href="http://localhost:8080/changelog/as-today">
+            <img src="/svg/releaseflow-logo-mark.svg"
+                 width="32" height="32" alt="" aria-hidden="true" class="h-8 w-8">
+            <span>owner@example.com</span>
+        </a>
+        <a class="btn btn-outline btn-sm" href="http://localhost:8080/changelog/as-today/rss.xml">RSS</a>
+    </div>
+</header>
+<main id="changelog-content" class="mx-auto max-w-4xl px-4 py-10 sm:px-6" tabindex="-1">
+    <nav class="text-sm"><a class="hover:underline" href="http://localhost:8080/changelog/as-today">← All release notes</a></nav>
+
+    <header class="mt-4 max-w-3xl">
+        <p class="page-eyebrow">ReleaseFlow</p>
+        <h1 class="page-heading">2.0.25</h1>
+        <p class="page-subtitle">
+            <time datetime="2031-01-03T01:00:00Z">3 Jan 2031</time>
+            <span>· written for Audience 25</span>
+            <span>· in</span>
+            <span lang="en">English</span>
+        </p>
+    </header>
+
+    <!-- The only HTML here is what MarkdownHtml produced: raw HTML in a note is escaped,
+         link targets are sanitized, and images became plain links. -->
+    <article class="release-note-body surface-card mt-8 p-6" lang="en"><h1>Release 2.0.25</h1>
+<h2>✨ New Features</h2>
+<ul>
+<li><strong>Export</strong> a vault with <code>dbvault-cli export &lt;backup-id&gt;</code>.</li>
+<li>A <a rel="nofollow noopener noreferrer" href="https://example.com/docs">link</a> &amp; an &lt;b&gt;inline&lt;/b&gt; tag, &quot;quoted&quot;.</li>
+</ul>
+<p>&lt;script&gt;alert('x')&lt;/script&gt;</p>
+</article>
+</main>
+<footer class="mx-auto max-w-4xl px-4 pb-10 text-sm text-slate-500 sm:px-6">
+    <p>Published with ReleaseFlow.</p>
+</footer>
+</body>
+</html>

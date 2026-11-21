@@ -272,8 +272,9 @@ ReleaseFlow phục vụ, cho những người không có tài khoản:
 | Địa chỉ | Là gì |
 | --- | --- |
 | `/changelog/{slug}` | Các release note của Organization, mới nhất trước, cache trong năm phút |
-| `/changelog/{slug}/releases/{entry}` | Một release note, cố định vĩnh viễn, cache trong một ngày kèm ETag |
-| `/changelog/{slug}/rss.xml` | RSS 2.0 với 50 release note mới nhất |
+| `/changelog/{slug}/releases/{entry}` | Một release note ở bản sửa đổi mới nhất, cố định vĩnh viễn, cache trong năm phút kèm ETag |
+| `/changelog/{slug}/releases/{entry}/revisions/{n}` | Một bản sửa đổi đã bị một lần sửa thay thế, cache trong một ngày và không bao giờ được lập chỉ mục |
+| `/changelog/{slug}/rss.xml` | RSS 2.0 với 50 mục mới nhất: các release note, và các lần sửa chúng |
 
 `{slug}` là địa chỉ của Organization: một nhãn DNS, tạo từ tên của nó khi bạn đăng ký. Thẻ
 **Changelog công khai** trên trang Project hiển thị nó và cho phép quản trị viên đổi nó — việc
@@ -282,7 +283,8 @@ này dời changelog đi chỗ khác, nên các liên kết đã chia sẻ sẽ 
 hoặc `409 organization_slug_taken`.
 
 Mỗi mục là một bản chụp: tên Organization, project, phiên bản, audience, và release note đúng như
-lúc được publish. Sau đó không có gì sửa hay xoá được nó, kể cả SQL trực tiếp. Publish lại đúng
+lúc được publish. Sau đó không có gì sửa hay xoá được nó, kể cả SQL trực tiếp; một lần sửa là
+một bản sửa đổi nằm bên cạnh nó (xem [Một mục đã sửa](#a-corrected-entry)). Publish lại đúng
 release note đó không tốn gì — action tìm thấy mục của chính nó và thành công — còn một quy tắc
 định publish nội dung *khác* cho một release, audience và ngôn ngữ đã công khai sẽ thất bại với
 `public_changelog_conflict`, thay vì viết đè lên thứ mà ai đó có thể đã đọc. Action changelog
@@ -293,10 +295,12 @@ công khai không cần secret hay cấu hình, và không dùng được cho qu
 Một release được publish cho một audience bằng nhiều ngôn ngữ, mỗi ngôn ngữ một action, là một
 thẻ duy nhất trên `/changelog/{slug}`: thẻ mở bằng ngôn ngữ được publish trước, và liệt kê mọi
 ngôn ngữ dưới dạng liên kết gọi bằng chính ngôn ngữ đó, như *English* và *Tiếng Việt*, kèm
-`hreflang` và `lang`. Trang riêng của một mục ghi rõ ngôn ngữ của nó. Trang đó không liệt kê các
-ngôn ngữ khác: nó được cache dạng bất biến, nên một ngôn ngữ publish sau sẽ không có mặt trên đó.
-Phần khung quanh một release note theo ngôn ngữ giao diện của người đọc, nên `<html lang>` là
-ngôn ngữ đó, còn bản thân release note mang ngôn ngữ của mục.
+`hreflang` và `lang`, và được đánh dấu **Đã sửa** khi mục đó có một lần sửa. Trang riêng của một
+mục ghi rõ ngôn ngữ của nó và không liệt kê các ngôn ngữ khác. Phần khung quanh một release note
+theo ngôn ngữ giao diện của người đọc, nên `<html lang>` là ngôn ngữ đó, còn bản thân release note
+mang ngôn ngữ của mục. `ETag` của một mục ghi mục đó, bản sửa đổi của nó, và ngôn ngữ giao diện
+đó, như `"{entry}-1-en"`: người đọc đổi ngôn ngữ sẽ nhận trang bằng ngôn ngữ mới, chứ không phải
+`304` cho ngôn ngữ cũ.
 
 ![Changelog công khai bằng tiếng Việt, mới nhất trước: mỗi release một thẻ với liên kết English và Tiếng Việt](assets/automation/a-9-public-changelog.webp)
 
@@ -305,6 +309,37 @@ ngôn ngữ đó, còn bản thân release note mang ngôn ngữ của mục.
 báo lại — đều được dựng từ nó, không bao giờ từ header `Host` của request.
 
 Đặt thêm `RELEASEFLOW_PUBLIC_CHANGELOG_BASE_DOMAIN` sẽ phục vụ mỗi Organization tại
-`https://{slug}.{that domain}/`, với `/releases/{entry}` và `/rss.xml` bên dưới. Chỉ GET được
+`https://{slug}.{that domain}/`, với `/releases/{entry}`, `/releases/{entry}/revisions/{n}` và
+`/rss.xml` bên dưới. Chỉ GET được
 định tuyến theo cách đó, chỉ cho đúng một nhãn ngay dưới domain, và bạn tự lo wildcard DNS cùng
 TLS. Để trống thì changelog chỉ trả lời theo đường dẫn.
+
+### Một mục đã sửa {#a-corrected-entry}
+
+Một release note đã publish có thể được sửa bằng một bản sửa đổi mới
+([ADR-0046](adr/0046-correcting-a-published-note.md);
+xem [Sửa một release note đã publish](release-notes.md#correcting-a-published-note)). Chỉ một lần
+chạy sửa mới thêm được bản sửa đổi vào một mục công khai, và bản thân mục không bao giờ thay đổi:
+văn bản đã sửa, lý do, và thời điểm là một bản sửa đổi nằm bên cạnh nó, còn bản sửa đổi 1 là mục
+đúng như lúc được publish.
+
+- **Địa chỉ của mục hiển thị bản sửa đổi mới nhất**, dưới một dòng bằng chính ngôn ngữ của mục,
+  như *Đã sửa vào ngày 15 tháng 11 năm 2026: {lý do}* hoặc *Corrected on 15 November 2026:
+  {reason}*, ghi ngày theo UTC như ngày publish. Bên dưới release note, **Các bản sửa đổi trước**
+  liên kết tới từng bản mà nó đã thay thế. Trang được cache dạng `public, max-age=300`, nên một
+  lần sửa đến với người đọc trong vòng năm phút, kèm `ETag` là `"{entry}-{revision}-{language}"`.
+- **Một bản sửa đổi trước** trả lời tại `…/releases/{entry}/revisions/{n}` với mọi `n` nhỏ hơn bản
+  mới nhất. Nó cho biết bản sửa đổi nào đã thay thế nó và vào lúc nào, không bao giờ cho biết bản
+  nào là mới nhất lúc này, nên nó không bao giờ thay đổi: `public, max-age=86400, immutable`. Nó
+  yêu cầu công cụ tìm kiếm không lập chỉ mục nó, bằng `<meta name="robots" content="noindex">` và
+  `X-Robots-Tag: noindex`, để tìm kiếm dẫn tới mục. Mọi số khác, kể cả bản mới nhất, một số quá
+  lớn để đếm, hay một số viết với số 0 ở đầu, đều là `404` không được cache công khai: nó có thể
+  trở thành một bản sửa đổi sau lần sửa tiếp theo.
+- **Feed có thêm một mục cho mỗi lần sửa**, với *(corrected)* trong tiêu đề, liên kết tới mục,
+  thời điểm sửa làm `pubDate`, và phần mô tả bắt đầu bằng dòng sửa. `guid` của nó là
+  `{địa chỉ của mục}#revision-{n}` với `isPermaLink="false"`. Mục mà feed đã có từ lúc publish vẫn
+  giữ nguyên: RSS 2.0 không có cách nói một mục đã thay đổi, và trình đọc đã thấy một `guid`
+  sẽ không hiển thị nó lần nữa.
+- **Lý do là văn bản của một người**, và được hiển thị dưới dạng văn bản: được escape trên trang,
+  và được escape một lần vào HTML của phần mô tả, rồi feed mã hoá HTML đó như mọi phần mô tả khác.
+- **Không trang nào nêu tên người** đã yêu cầu lần sửa.

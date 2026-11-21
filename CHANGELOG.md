@@ -30,6 +30,23 @@ section into the version's entry, and the GitHub release is written from it.
   into one by hand. A note a person wrote, and a retired audience's note, are corrected by
   hand only, and a note whose latest revision was written by hand is delivered as written
   ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+- A corrected public changelog entry shows its latest revision under a line in the entry's
+  language, such as "Corrected on 15 November 2026: {reason}", and links each earlier
+  revision, which keeps its own address at `…/releases/{entryId}/revisions/{n}`, cached for a
+  day and not indexed. The feed adds an item per correction and leaves the published one as
+  it was. Neither names the person. An entry is now cached for five minutes rather than a
+  day, so a correction reaches readers; an entry nobody corrected is otherwise served as
+  before ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+
+### Fixed
+
+- The public changelog's RSS feed closes each item. Since the feed was added, every item was
+  left open, so with two entries or more each one sat inside the one before it, as 1.3.0 and
+  1.3.1 serve it, and most readers showed only the newest entry. Each item is now a child of
+  the channel, and its own content is unchanged.
+- A public changelog entry's `ETag` names the reader's interface language, so a reader who
+  switches between English and Vietnamese gets the page in the new language instead of a
+  `304` that kept the old one.
 
 ## [1.3.1] - 2026-11-20
 

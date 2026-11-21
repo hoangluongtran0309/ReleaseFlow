@@ -33,7 +33,7 @@
                     <li th:each="language : ${card.languages()}">
                         <a class="badge badge-outline badge-sm hover:underline" th:href="${language.url}"
                            th:hreflang="${language.language}" th:lang="${language.language}"
-                           th:text="${language.languageName()}">English</a>
+                           th:text="${language.languageName()}">English</a><span class="badge badge-sm ms-1" th:if="${language.corrected()}" th:text="#{ui.changelog.corrected}">Corrected</span>
                     </li>
                 </ul>
             </nav>

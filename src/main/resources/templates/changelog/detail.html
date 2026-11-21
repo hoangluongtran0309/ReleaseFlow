@@ -18,12 +18,30 @@
             <span th:text="#{ui.changelog.inLanguageInline}"> · in</span>
             <span th:lang="${entry.language}" th:text="${entry.languageName()}">English</span>
         </p>
-    </header>
+    </header><th:block th:if="${correction != null}">
+    <!--/* A correction begins on the same line as what comes before it, so an entry nobody
+         corrected is the same page, byte for byte, it was before revisions existed. The
+         line is the note's own, in the note's language; the reason in it is a person's
+         text, and th:text escapes it. */-->
+
+    <p class="correction-line mt-8 max-w-3xl" th:lang="${entry.language}" th:text="${correction.line()}">Corrected on 15 November 2026: the reason.</p></th:block>
 
     <!-- The only HTML here is what MarkdownHtml produced: raw HTML in a note is escaped,
          link targets are sanitized, and images became plain links. -->
     <article class="release-note-body surface-card mt-8 p-6" th:lang="${entry.language}"
-             th:utext="${entry.html()}"></article>
+             th:utext="${entry.html()}"></article><th:block th:unless="${#lists.isEmpty(earlierRevisions)}">
+
+    <nav class="mt-8" aria-labelledby="earlier-revisions">
+        <h2 id="earlier-revisions" class="text-lg font-semibold" th:text="#{ui.changelog.earlierRevisions}">Earlier revisions</h2>
+        <ol class="mt-2 grid gap-1 text-sm">
+            <li th:each="earlier : ${earlierRevisions}">
+                <a class="link" th:href="${earlier.url()}"
+                   th:text="${earlier.revision() == 1}
+                       ? #{ui.changelog.revisionPublished(${publishedOn.format(earlier.at())})}
+                       : #{ui.changelog.revisionCorrected(${earlier.revision()}, ${publishedOn.format(earlier.at())})}">Revision 1, as published on 18 Sep 2026</a>
+            </li>
+        </ol>
+    </nav></th:block>
 </main>
 </body>
 </html>

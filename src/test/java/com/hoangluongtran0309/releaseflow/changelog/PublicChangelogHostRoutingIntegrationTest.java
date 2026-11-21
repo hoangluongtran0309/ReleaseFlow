@@ -10,6 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -58,8 +60,23 @@ class PublicChangelogHostRoutingIntegrationTest extends PostgreSqlIntegrationTes
     }
 
     @Test
+    void servesAnEarlierRevisionAtTheSameHost() throws Exception {
+        // Rewritten onto the changelog, which knows no such entry: not found, rather than
+        // the signed-in application asking whoever looks to sign in.
+        String entry = "/releases/" + UUID.randomUUID();
+        mockMvc.perform(get(entry + "/revisions/1").header("Host", "acme.changelog.example.test"))
+                .andExpect(status().isNotFound());
+        // However large the number, the changelog decides, and says the same.
+        mockMvc.perform(get(entry + "/revisions/99999999999999999999").header("Host", "acme.changelog.example.test"))
+                .andExpect(status().isNotFound());
+        // Something that is not a number is not one of the four paths.
+        mockMvc.perform(get(entry + "/revisions/latest").header("Host", "acme.changelog.example.test"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void rewritesNothingElse() throws Exception {
-        // Only GET, and only the three public paths: a POST falls through to the
+        // Only GET, and only the four public paths: a POST falls through to the
         // ordinary application, which has nothing to post to at "/".
         mockMvc.perform(post("/").header("Host", "acme.changelog.example.test").with(csrf()))
                 .andExpect(status().isMethodNotAllowed());
