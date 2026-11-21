@@ -688,7 +688,7 @@ where it first appears; ADRs are linked from the slice they record.
 ## In progress
 
 - #87, Slice A of [ADR-0046](adr/0046-correcting-a-published-note.md), in five pull
-  requests. The first three are in place. The first, with Flyway `V40`:
+  requests. The first four are in place. The first, with Flyway `V40`:
   - `release_note_revisions` and `public_changelog_entry_revisions`, only ever inserted,
     each number the next, and the revision an automation action run carried; `CORRECTION`
     is allowed as a run trigger and never as a rule's;
@@ -721,6 +721,20 @@ where it first appears; ADRs are linked from the slice they record.
     is skipped or delivered by the changes it was rendered from;
   - `GoldenRevisionsIntegrationTest` renders dbvault v1.2.0's six Vietnamese notes again
     against the workspace's second package.
+- The fourth, with no migration and no new error code:
+  - a corrected public entry shows its latest revision under a correction line in the
+    entry's language, with links to earlier revisions, each at
+    `…/releases/{entryId}/revisions/{n}`, cached for a day and never indexed; any other
+    number is an uncached `404`;
+  - an entry is cached for five minutes, with an ETag of its revision and the reader's
+    interface language, which also ends a `304` for a page in the language the reader
+    left;
+  - the feed adds an item per correction, with a `guid` that is no permalink, and closes
+    each item, which it never did; an entry nobody corrected is otherwise served byte for
+    byte as before, as `PublicChangelogAsTodayIntegrationTest` proves against pages
+    captured from the code before it;
+  - only a correction run, the fifth pull request, appends a revision; until then the tests
+    write its rows.
 
 ## Planned
 

@@ -278,8 +278,9 @@ serves itself, for people who have no account:
 | Address | What it is |
 | --- | --- |
 | `/changelog/{slug}` | The Organization's release notes, newest first, cached for five minutes |
-| `/changelog/{slug}/releases/{entry}` | One note, permanent, cached for a day with an ETag |
-| `/changelog/{slug}/rss.xml` | RSS 2.0 with the 50 newest notes |
+| `/changelog/{slug}/releases/{entry}` | One note at its latest revision, permanent, cached for five minutes with an ETag |
+| `/changelog/{slug}/releases/{entry}/revisions/{n}` | A revision a correction replaced, cached for a day and never indexed |
+| `/changelog/{slug}/rss.xml` | RSS 2.0 with the 50 newest items: notes, and corrections of them |
 
 The `{slug}` is your Organization's address: one DNS label, made from its name when you
 register. The **Public changelog** card on the Projects page shows it and lets an
@@ -289,7 +290,8 @@ working. `GET`/`PUT /api/organization/slug` does the same thing, and answers
 
 An entry is a snapshot: the Organization's name, the project, the version, the audience,
 and the note as they read when it was published. Nothing edits or removes it afterwards,
-not even direct SQL. Publishing the same note again is free — the action finds its own
+not even direct SQL; a correction is a revision beside it (see
+[A corrected entry](#a-corrected-entry)). Publishing the same note again is free — the action finds its own
 entry and succeeds — while a rule that would publish *different* words for a release,
 audience, and language that are already public fails as
 `public_changelog_conflict` rather than rewriting what somebody may have read. A
@@ -301,10 +303,12 @@ rule that fires on a schedule.
 A release published for one audience in several languages, by one action per language,
 is one card on `/changelog/{slug}`: it opens on the language published first, and lists
 every language as a link named in its own language, such as *English* and *Tiếng Việt*,
-with `hreflang` and `lang`. An entry's own page names its language. It does not list the
-other languages: it is cached as immutable, and a language published later would be
-missing from it. The page around a note follows the reader's interface language, so
-`<html lang>` is that language and the note itself carries the entry's.
+with `hreflang` and `lang`, and marked **Corrected** when that entry has a correction. An
+entry's own page names its language and does not list the other languages. The page
+around a note follows the reader's interface language, so `<html lang>` is that language
+and the note itself carries the entry's. An entry's `ETag` names its entry, its revision,
+and that interface language, such as `"{entry}-1-en"`: a reader who switches language gets
+the page in the new one rather than `304` for the old.
 
 ![A public changelog read signed out: one card per release, with a link for each language](assets/automation/a-9-public-changelog.webp)
 
@@ -313,6 +317,38 @@ Set `RELEASEFLOW_PUBLIC_BASE_URL` to the address this deployment is reached at (
 address a run reports — is built from it and never from a request's `Host` header.
 
 Setting `RELEASEFLOW_PUBLIC_CHANGELOG_BASE_DOMAIN` additionally serves each Organization
-at `https://{slug}.{that domain}/`, with `/releases/{entry}` and `/rss.xml` beneath it.
+at `https://{slug}.{that domain}/`, with `/releases/{entry}`,
+`/releases/{entry}/revisions/{n}`, and `/rss.xml` beneath it.
 Only GET is routed that way, only for exactly one label beneath the domain, and wildcard
 DNS and TLS are yours to provision. Leave it empty and changelogs answer by path only.
+
+### A corrected entry
+
+A published note can be corrected with a new revision
+([ADR-0046](adr/0046-correcting-a-published-note.md); see
+[Correcting a published note](release-notes.md#correcting-a-published-note)). Only a correction run appends one to a
+public entry, and the entry itself never changes: the corrected text, the reason, and the
+time are a revision beside it, and revision 1 is the entry as it was published.
+
+- **The entry's address shows the latest revision**, under a line in the entry's own
+  language, such as *Corrected on 15 November 2026: {reason}* or *Đã sửa vào ngày 15
+  tháng 11 năm 2026: {reason}*, dated in UTC as the published date is. Below the note,
+  **Earlier revisions** links to each one it replaced. It is cached as `public,
+  max-age=300`, so a correction reaches a reader within five minutes, with an `ETag` of
+  `"{entry}-{revision}-{language}"`.
+- **An earlier revision** answers at `…/releases/{entry}/revisions/{n}` for every `n` below
+  the latest. It says which revision replaced it and when, never which is the latest now,
+  so it never changes: `public, max-age=86400, immutable`. It asks search engines not to
+  index it, with `<meta name="robots" content="noindex">` and `X-Robots-Tag: noindex`, so a
+  search finds the entry. Any other number, including the latest, one too large to count,
+  or one written with a leading zero, is `404` with no public caching: it may become a
+  revision after the next correction.
+- **The feed gains one item per correction**, with *(corrected)* in its title, the entry
+  as its link, the correction's time as its `pubDate`, and a description that starts with
+  the correction line. Its `guid` is `{entry address}#revision-{n}` with
+  `isPermaLink="false"`. The item the entry was published with stays as it was: RSS 2.0
+  cannot say an item changed, and a reader that has seen a `guid` does not show it again.
+- **The reason is a person's text**, and it is shown as text: escaped on the page, and
+  escaped once into the description's HTML, which the feed encodes as it encodes every
+  description.
+- **Neither page names the person** who asked for the correction.

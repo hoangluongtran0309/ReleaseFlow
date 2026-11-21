@@ -6,7 +6,10 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
 
-/** One public entry as a page or a feed needs it. */
+/**
+ * One public entry as a page or a feed needs it. {@code content} is the revision being
+ * shown, and {@code corrected} says whether the entry has any revision after the first.
+ */
 public record EntryView(
         UUID id,
         String projectName,
@@ -15,8 +18,15 @@ public record EntryView(
         String language,
         String content,
         Instant publishedAt,
-        String url
+        String url,
+        boolean corrected
 ) {
+
+    /** The same entry showing another of its revisions. */
+    EntryView withContent(String revisionContent) {
+        return new EntryView(id, projectName, releaseVersion, audienceName, language, revisionContent, publishedAt, url,
+                corrected);
+    }
 
     /**
      * The note's language named in that language, such as "English" or "Tiếng Việt", so a

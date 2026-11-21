@@ -56,6 +56,11 @@ public class PublicChangelogUrls {
         return rootUrl(slug) + (servesSubdomain(slug) ? "" : "/") + "releases/" + entryId;
     }
 
+    /** An earlier revision of an entry (ADR-0046); the latest is read at the entry's own address. */
+    public String revisionUrl(String slug, UUID entryId, int revision) {
+        return entryUrl(slug, entryId) + "/revisions/" + revision;
+    }
+
     public String feedUrl(String slug) {
         return rootUrl(slug) + (servesSubdomain(slug) ? "" : "/") + "rss.xml";
     }

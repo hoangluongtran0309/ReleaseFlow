@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/public}">
+<head>
+    <title th:text="#{ui.changelog.revisionTitle(${entry.projectName}, ${entry.releaseVersion}, ${revision.revision()})}">Release, revision 1</title>
+    <!--/* A later revision replaced this one, so a search should find the entry instead;
+         the response says so in X-Robots-Tag as well. */-->
+    <meta name="robots" content="noindex">
+</head>
+<body>
+<main layout:fragment="content">
+    <nav class="text-sm"><a class="hover:underline" th:href="${changelogUrl}" th:text="#{ui.changelog.allNotes}">← All release notes</a></nav>
+
+    <header class="mt-4 max-w-3xl">
+        <p class="page-eyebrow" th:text="${entry.projectName}">Project</p>
+        <h1 class="page-heading" th:text="${entry.releaseVersion}">1.4.0</h1>
+        <p class="page-subtitle">
+            <time th:datetime="${entry.publishedAt}"
+                  th:text="${publishedOn.format(entry.publishedAt)}">18 Sep 2026</time>
+            <span th:text="#{ui.changelog.writtenForInline(${entry.audienceName})}"> · written for End user</span>
+            <span th:text="#{ui.changelog.inLanguageInline}"> · in</span>
+            <span th:lang="${entry.language}" th:text="${entry.languageName()}">English</span>
+        </p>
+    </header>
+
+    <!--/* Which revision replaced this one never changes, so neither does this page; it
+         never names the latest, which can. */-->
+    <div class="revision-notice mt-8 max-w-3xl">
+        <p th:text="#{ui.changelog.revisionNotice(${revision.revision()}, ${revision.replacedBy()}, ${publishedOn.format(revision.replacedAt())})}">
+            This is revision 1 of this note. Revision 2 replaced it on 15 Nov 2026.</p>
+        <p class="mt-2"><a class="link" th:href="${entryUrl}" th:text="#{ui.changelog.readLatest}">Read the note as it is now</a></p>
+    </div>
+
+    <p class="correction-line mt-4 max-w-3xl" th:if="${correction != null}" th:lang="${entry.language}"
+       th:text="${correction.line()}">Corrected on 15 November 2026: the reason.</p>
+
+    <!-- The only HTML here is what MarkdownHtml produced: raw HTML in a note is escaped,
+         link targets are sanitized, and images became plain links. -->
+    <article class="release-note-body surface-card mt-8 p-6" th:lang="${entry.language}"
+             th:utext="${entry.html()}"></article>
+</main>
+</body>
+</html>

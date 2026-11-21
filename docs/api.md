@@ -252,8 +252,14 @@ Anything else under `/webhooks/` is refused.
 ### Public changelog
 
 Anonymous, `GET` only, and never given a session: `/changelog/{slug}`,
-`/changelog/{slug}/releases/{entryId}`, and `/changelog/{slug}/rss.xml`. See
-[Public changelog](automation.md#public-changelog).
+`/changelog/{slug}/releases/{entryId}`, `/changelog/{slug}/releases/{entryId}/revisions/{n}`,
+and `/changelog/{slug}/rss.xml`. They answer pages and a feed, never Problem Details: an
+address nobody answers, and a number that is not an earlier revision, is `404` with no public
+caching. An entry is `public, max-age=300` with an `ETag` of `"{entryId}-{revision}-{language}"`,
+the language being the reader's interface language, and `304` to a matching `If-None-Match`;
+an earlier revision is `public, max-age=86400, immutable` with `X-Robots-Tag: noindex`. See
+[Public changelog](automation.md#public-changelog) and
+[A corrected entry](automation.md#a-corrected-entry).
 
 ## Error codes by area
 

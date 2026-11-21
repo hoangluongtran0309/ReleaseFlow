@@ -1867,25 +1867,40 @@ who have no account. See [ADR-0022](adr/0022-public-changelog.md).
   also why it is the only executor that opens a transaction rather than calling out.
 - **Reading is anonymous and cached.** `PublicChangelogController` serves
   `GET /changelog/{slug}` (`public, max-age=300`),
-  `GET /changelog/{slug}/releases/{entryId}` (`public, max-age=86400, immutable`, with the
-  entry's identifier as its ETag and `304` for a reader who has it), and
-  `GET /changelog/{slug}/rss.xml` (RSS 2.0, at most 50 entries). `/changelog/**` has its
+  `GET /changelog/{slug}/releases/{entryId}` (`public, max-age=300`, with
+  `"{entryId}-{revision}-{language}"` as its ETag and `304` for a reader who has it),
+  `GET /changelog/{slug}/releases/{entryId}/revisions/{n}` (`public, max-age=86400,
+  immutable`, `X-Robots-Tag: noindex`), and `GET /changelog/{slug}/rss.xml` (RSS 2.0, at
+  most 50 items). The ETag carries the reader's resolved interface language because the
+  page around the note follows it (`Vary: Accept-Language, Cookie`). Caching headers are
+  set only once a page is found, so a `404` is never cached publicly. `/changelog/**` has its
   own security chain: GET only, no request cache, and no session, so looking never earns a
   cookie. Nothing there is excused from CSRF, and nothing needs to be: the chain denies
   every method a token would have been required for. An address nobody answers is `404`, and an Organization with nothing published
   looks the same as one that does not exist.
 - **The list groups languages.** `PublicChangelogService.findFeed` turns the 50 newest
   entries into one card per release and audience, holding each language in publication
-  order and named by `EntryView.languageName()` in that language. An entry page names its
-  own language only, because its immutable cache would keep a sibling published later
-  off it.
+  order and named by `EntryView.languageName()` in that language, and marks a corrected
+  language. An entry page names its own language only.
+- **A correction is a revision beside the entry** (ADR-0046, part 4).
+  `PublicChangelogEntryRevision` maps `public_changelog_entry_revisions` read-only; only a
+  correction run appends a row. `findEntry` shows the latest revision's text under its
+  `CorrectionLine`, the line from the `release-note` bundle in the entry's language, dated in
+  UTC, and links each earlier revision. `findEarlierRevision` answers only a number below the
+  latest, because what a page says about its successor must never change; the latest is
+  read at the entry's address. The feed merges the newest entries and the newest
+  corrections by time: an entry's own item is written as it always was, and a correction is
+  an item of its own whose `guid` (`{entry}#revision-{n}`, `isPermaLink="false"`) is no
+  address. Neither page nor feed names the person.
 - **The note is rendered by `MarkdownHtml`**, the same renderer the application's own
   pages use: raw HTML escaped, link targets sanitized, images turned into plain links. The
   RSS `description` carries that HTML, escaped into the document by the JDK's XML writer.
+  A correction's reason is HTML-escaped once into its description's first paragraph, and
+  the writer encodes that HTML like any other.
 - **Links come from configuration.** `releaseflow.public.base-url` is where this
   deployment is reached; `releaseflow.public.changelog-base-domain`, when set, serves each
   Organization at `{slug}.{domain}` through `PublicChangelogHostRoutingFilter`, which
-  rewrites exactly three paths for exactly one label, for GET only, before Spring Security
+  rewrites exactly four paths for exactly one label, for GET only, before Spring Security
   sees the request. A `Host` header chooses which slug to look up and decides nothing
   else; no link ReleaseFlow writes ever comes from a request.
 

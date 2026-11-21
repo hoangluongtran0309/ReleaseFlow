@@ -18,12 +18,12 @@ import java.util.regex.Pattern;
 
 /**
  * Lets a deployment serve each Organization's changelog at
- * {@code {slug}.{base domain}} by rewriting exactly three paths onto the ones the
+ * {@code {slug}.{base domain}} by rewriting exactly four paths onto the ones the
  * controller already answers. It runs before Spring Security, so the rest of the
  * application only ever sees the rewritten path.
  *
  * <p>It rewrites nothing unless a base domain is configured, the host is exactly one
- * label beneath it, the method is GET, and the path is one of the three. Everything
+ * label beneath it, the method is GET, and the path is one of the four. Everything
  * else — including a request for the signed-in application on that host — passes
  * through untouched. The slug still names the Organization; the host only says which
  * slug, and is never trusted for anything else.
@@ -33,6 +33,9 @@ import java.util.regex.Pattern;
 class PublicChangelogHostRoutingFilter extends OncePerRequestFilter {
 
     private static final Pattern ENTRY = Pattern.compile("/releases/([0-9a-fA-F-]{36})");
+    // Any run of digits: the controller decides which numbers are revisions, so a number
+    // out of range is the same not-found as one that is not there.
+    private static final Pattern REVISION = Pattern.compile("/releases/([0-9a-fA-F-]{36})/revisions/([0-9]+)");
     private static final Pattern LABEL = Pattern.compile("[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?");
 
     private final String baseDomain;
@@ -100,6 +103,12 @@ class PublicChangelogHostRoutingFilter extends OncePerRequestFilter {
             return "/changelog/" + slug + "/rss.xml";
         }
         var entry = ENTRY.matcher(path);
-        return entry.matches() ? "/changelog/" + slug + "/releases/" + entry.group(1) : null;
+        if (entry.matches()) {
+            return "/changelog/" + slug + "/releases/" + entry.group(1);
+        }
+        var revision = REVISION.matcher(path);
+        return revision.matches()
+                ? "/changelog/" + slug + "/releases/" + revision.group(1) + "/revisions/" + revision.group(2)
+                : null;
     }
 }

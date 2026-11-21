@@ -59,15 +59,17 @@ class PublicChangelogIntegrationTest extends AutomationIntegrationTestBase {
         UUID entryId = onlyEntryId();
         assertThat(page.getResponse().getContentAsString()).contains("entry-" + entryId);
 
+        // A correction may follow, so the entry is cached for minutes, not a day, and
+        // validated by its revision and the language of the page around it.
         mockMvc.perform(get("/changelog/{slug}/releases/{entryId}", slug, entryId))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Cache-Control", containsString("immutable")))
-                .andExpect(header().string("ETag", "\"" + entryId + "\""))
+                .andExpect(header().string("Cache-Control", "max-age=300, public"))
+                .andExpect(header().string("ETag", "\"" + entryId + "-1-en\""))
                 .andExpect(content().string(containsString("add the inbox")));
 
         // A reader who already has the entry is told nothing changed.
         mockMvc.perform(get("/changelog/{slug}/releases/{entryId}", slug, entryId)
-                        .header("If-None-Match", "\"" + entryId + "\""))
+                        .header("If-None-Match", "\"" + entryId + "-1-en\""))
                 .andExpect(status().isNotModified());
 
         mockMvc.perform(get("/changelog/{slug}/rss.xml", slug))

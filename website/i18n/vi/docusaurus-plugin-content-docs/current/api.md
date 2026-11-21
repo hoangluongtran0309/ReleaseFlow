@@ -252,8 +252,14 @@ của riêng nó. Mọi thứ khác dưới `/webhooks/` đều bị từ chối
 ### Changelog công khai {#public-changelog}
 
 Ẩn danh, chỉ `GET`, và không bao giờ được cấp phiên đăng nhập: `/changelog/{slug}`,
-`/changelog/{slug}/releases/{entryId}` và `/changelog/{slug}/rss.xml`. Xem
-[Changelog công khai](automation.md#public-changelog).
+`/changelog/{slug}/releases/{entryId}`, `/changelog/{slug}/releases/{entryId}/revisions/{n}` và
+`/changelog/{slug}/rss.xml`. Chúng trả về trang và feed, không bao giờ là Problem Details: một địa
+chỉ không ai trả lời, và một số không phải bản sửa đổi trước, là `404` không được cache công khai.
+Một mục là `public, max-age=300` với `ETag` là `"{entryId}-{revision}-{language}"`, trong đó
+ngôn ngữ là ngôn ngữ giao diện của người đọc, và `304` khi `If-None-Match` khớp; một bản sửa đổi
+trước là `public, max-age=86400, immutable` với `X-Robots-Tag: noindex`. Xem
+[Changelog công khai](automation.md#public-changelog) và
+[Một mục đã sửa](automation.md#a-corrected-entry).
 
 ## Mã lỗi theo khu vực {#error-codes-by-area}
 

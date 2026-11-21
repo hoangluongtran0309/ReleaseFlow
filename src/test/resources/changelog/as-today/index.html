@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    
+    <title>owner@example.com release notes</title>
+    <link rel="icon" type="image/svg+xml" href="/svg/releaseflow-logo-mark.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="canonical" href="http://localhost:8080/changelog/as-today">
+    <link rel="alternate" type="application/rss+xml" title="owner@example.com releases" href="http://localhost:8080/changelog/as-today/rss.xml">
+    <script>
+        (() => {
+            let saved = null;
+            try { saved = localStorage.getItem('releaseflow:theme'); } catch (ignored) { }
+            document.documentElement.dataset.theme = saved === 'dark' || saved === 'light'
+                ? saved : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/application.css">
+    
+</head>
+<!-- Nobody is signed in here, so there is no navigation, no account menu, and nothing
+     that would make the page depend on a session. -->
+<body class="theme-canvas min-h-screen">
+<a href="#changelog-content" class="skip-link">Skip to the release notes</a>
+<header class="border-b theme-border">
+    <div class="mx-auto flex min-h-16 max-w-4xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <a class="flex items-center gap-3 font-bold tracking-tight" href="http://localhost:8080/changelog/as-today">
+            <img src="/svg/releaseflow-logo-mark.svg"
+                 width="32" height="32" alt="" aria-hidden="true" class="h-8 w-8">
+            <span>owner@example.com</span>
+        </a>
+        <a class="btn btn-outline btn-sm" href="http://localhost:8080/changelog/as-today/rss.xml">RSS</a>
+    </div>
+</header>
+<main id="changelog-content" class="mx-auto max-w-4xl px-4 py-10 sm:px-6" tabindex="-1">
+    <header class="max-w-3xl">
+        <p class="page-eyebrow">Release notes</p>
+        <h1 class="page-heading">owner@example.com</h1>
+        <p class="page-subtitle">What has shipped, newest first.</p>
+    </header>
+
+    
+
+    
+    <ol class="mt-8 grid grid-cols-1 gap-4">
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000049">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-03T01:00:00Z">3 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000049" hreflang="en">2.0.25</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 25</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.25">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000049"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000050"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000047">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T23:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000047" hreflang="en">2.0.24</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 24</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.24">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000047"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000048"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000045">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T21:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000045" hreflang="en">2.0.23</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 23</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.23">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000045"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000046"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000043">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T19:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000043" hreflang="en">2.0.22</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 22</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.22">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000043"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000044"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000041">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T17:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000041" hreflang="en">2.0.21</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 21</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.21">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000041"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000042"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000039">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T15:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000039" hreflang="en">2.0.20</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 20</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.20">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000039"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000040"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000037">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T13:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000037" hreflang="en">2.0.19</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 19</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.19">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000037"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000038"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000035">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T11:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000035" hreflang="en">2.0.18</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 18</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.18">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000035"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000036"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000033">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T09:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000033" hreflang="en">2.0.17</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 17</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.17">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000033"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000034"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000031">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T07:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000031" hreflang="en">2.0.16</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 16</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.16">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000031"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000032"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000029">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T05:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000029" hreflang="en">2.0.15</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 15</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.15">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000029"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000030"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000027">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T03:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000027" hreflang="en">2.0.14</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 14</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.14">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000027"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000028"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000025">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-02T01:00:00Z">2 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000025" hreflang="en">2.0.13</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 13</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.13">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000025"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000026"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000023">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T23:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000023" hreflang="en">2.0.12</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 12</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.12">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000023"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000024"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000021">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T21:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000021" hreflang="en">2.0.11</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 11</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.11">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000021"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000022"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000019">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T19:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000019" hreflang="en">2.0.10</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 10</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.10">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000019"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000020"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000017">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T17:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000017" hreflang="en">2.0.9</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 9</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.9">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000017"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000018"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000015">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T15:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000015" hreflang="en">2.0.8</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 8</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.8">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000015"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000016"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000013">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T13:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000013" hreflang="en">2.0.7</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 7</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.7">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000013"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000014"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000011">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T11:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000011" hreflang="en">2.0.6</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 6</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.6">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000011"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000012"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000009">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T09:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000009" hreflang="en">2.0.5</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 5</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.5">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000009"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000010"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000007">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T07:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000007" hreflang="en">2.0.4</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 4</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.4">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000007"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000008"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000005">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T05:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000005" hreflang="en">2.0.3</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 3</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.3">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000005"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000006"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000003">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T03:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000003" hreflang="en">2.0.2</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 2</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.2">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000003"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000004"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+        <li class="surface-card min-w-0 p-5 sm:p-6" id="entry-00000000-0000-4000-8000-000000000001">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span class="badge badge-ghost badge-sm">ReleaseFlow</span>
+                <time datetime="2031-01-01T01:00:00Z">1 Jan 2031</time>
+            </div>
+            <h2 class="mt-3 text-2xl font-bold tracking-tight">
+                <a class="hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000001" hreflang="en">2.0.1</a>
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">Written for Audience 1</p>
+            <nav class="mt-3" aria-label="Languages of 2.0.1">
+                <ul class="flex flex-wrap gap-2">
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000001"
+                           hreflang="en" lang="en">English</a>
+                    </li>
+                    <li>
+                        <a class="badge badge-outline badge-sm hover:underline" href="http://localhost:8080/changelog/as-today/releases/00000000-0000-4000-8000-000000000002"
+                           hreflang="vi" lang="vi">Tiếng Việt</a>
+                    </li>
+                </ul>
+            </nav>
+        </li>
+    </ol>
+</main>
+<footer class="mx-auto max-w-4xl px-4 pb-10 text-sm text-slate-500 sm:px-6">
+    <p>Published with ReleaseFlow.</p>
+</footer>
+</body>
+</html>
