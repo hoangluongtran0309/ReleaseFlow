@@ -893,6 +893,37 @@ public class ReleaseService {
         return noteRevisions.history(release, note);
     }
 
+    /**
+     * Renders a published note again (ADR-0046): today's writer, the note's own template and
+     * footer snapshots, the release's changes as they read now, its stored links and issue
+     * statuses, and each translated text as the release was published with it. Nothing is
+     * stored and no provider is called. A retired audience's note, and a note a person wrote,
+     * are corrected by hand only.
+     */
+    @Transactional(readOnly = true)
+    RenderedNote renderAgain(UUID organizationId, UUID projectId, UUID releaseId, UUID noteId) {
+        Release release = find(organizationId, projectId, releaseId);
+        AudienceReleaseNote note = noteRepository.findByIdAndReleaseIdAndOrganizationId(noteId, releaseId, organizationId)
+                .orElseThrow(ReleaseNoteNotFoundException::new);
+        if (!release.isPublished()) {
+            throw new ReleaseStatusException("error.release_status_conflict.revisionsAfterPublication");
+        }
+        if (audienceService.retiredCodes(organizationId).contains(note.getAudienceCode())) {
+            throw new NoteAudienceRetiredException();
+        }
+        if (noteRevisions.writtenByPerson(organizationId, note)) {
+            throw new ReleaseNoteManualException();
+        }
+        ReleaseNoteWriter.Published localized = noteWriter.localizePublished(release, includedChanges(release),
+                note.getLanguage(), note.getAudienceCode());
+        String content = render(localized.summary(), localized.changes(), note.getTemplateBodySnapshot(),
+                note.getFooterTemplateSnapshot(), links(release), note.getAudienceCode(), note.getLanguage(),
+                note.getAudienceName(), statuses(release));
+        AudienceNoteView latest = noteRevisions.latest(organizationId, note);
+        return new RenderedNote(latest.revision(), latest.content(), content, localized.missingTexts(),
+                localized.missingCharacters(), localized.glossary());
+    }
+
     /** One revision of a published note, by its number. */
     @Transactional(readOnly = true)
     ReleaseNoteRevisionView noteRevision(UUID organizationId, UUID projectId, UUID releaseId, UUID noteId, int revision) {

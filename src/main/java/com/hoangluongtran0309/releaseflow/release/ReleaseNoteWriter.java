@@ -5,6 +5,7 @@ import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.translation.GlossaryUse;
+import com.hoangluongtran0309.releaseflow.translation.PublishedTranslation;
 import com.hoangluongtran0309.releaseflow.translation.TranslationService;
 import com.hoangluongtran0309.releaseflow.translation.TranslationState;
 import org.springframework.stereotype.Component;
@@ -95,6 +96,53 @@ class ReleaseNoteWriter {
         return new Localized(localized, summary, status, GlossaryUse.combine(glossary));
     }
 
+    /**
+     * A published release's changes and summary in one note's language, for rendering that note
+     * again (ADR-0046, amended 2026-11-20): each text the note uses, its summary fields and its
+     * own audience's headline and narrative, as the release was published with it. Nothing is
+     * asked of a provider and no job is created; a text with no answer stays in its own
+     * language and is counted.
+     */
+    Published localizePublished(Release release, List<ChangeView> changes, String language, String audienceCode) {
+        List<ChangeView> localized = new ArrayList<>(changes.size());
+        List<GlossaryUse> glossary = new ArrayList<>();
+        int missingTexts = 0;
+        int missingCharacters = 0;
+        for (ChangeView change : changes) {
+            NeutralSummary summary = change.neutralSummary();
+            if (summary == null || change.contentLanguage() == null) {
+                localized.add(change);
+                continue;
+            }
+            PublishedTranslation found = translationService.published(release.getOrganizationId(), change.id(),
+                    change.contentLanguage(), language, textsFor(change, audienceCode), release.getPublishedAt());
+            glossary.add(found.glossary());
+            missingTexts += found.missing().size();
+            missingCharacters += found.missingCharacters();
+            localized.add(translated(change, found.texts(), language));
+        }
+        String summary = release.getSummary();
+        if (summary != null && !summary.isBlank()) {
+            String sourceLanguage = outputLanguageService.outputLanguage(release.getOrganizationId()).tag();
+            PublishedTranslation found = translationService.publishedForRelease(release.getOrganizationId(),
+                    release.getId(), sourceLanguage, language, Map.of(RELEASE_SUMMARY, summary), release.getPublishedAt());
+            glossary.add(found.glossary());
+            missingTexts += found.missing().size();
+            missingCharacters += found.missingCharacters();
+            summary = found.texts().get(RELEASE_SUMMARY);
+        }
+        return new Published(localized, summary, missingTexts, missingCharacters, GlossaryUse.combine(glossary));
+    }
+
+    // The texts one audience's note uses: the summary fields, and that audience's own headline
+    // and narrative. Another audience's are not this note's, so none of them is looked for.
+    private static Map<String, String> textsFor(ChangeView change, String audienceCode) {
+        Map<String, String> texts = texts(change);
+        texts.keySet().removeIf(key -> (key.startsWith(NARRATIVE) || key.startsWith(HEADLINE))
+                && !key.equals(NARRATIVE + audienceCode) && !key.equals(HEADLINE + audienceCode));
+        return texts;
+    }
+
     static Map<String, String> texts(ChangeView change) {
         return texts(change, Set.of());
     }
@@ -159,5 +207,14 @@ class ReleaseNoteWriter {
      * and what its translations did with the glossary.
      */
     record Localized(List<ChangeView> changes, String summary, TranslationState.Status status, GlossaryUse glossary) {
+    }
+
+    /**
+     * A published release's changes and summary in one note's language, how many of the
+     * note's texts had no answer and how long they are, and what the answers found did with
+     * the glossary.
+     */
+    record Published(List<ChangeView> changes, String summary, int missingTexts, int missingCharacters,
+                     GlossaryUse glossary) {
     }
 }

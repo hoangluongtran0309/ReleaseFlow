@@ -33,6 +33,15 @@ for (const language of ['en', 'vi']) {
       // The correction page starts from the latest revision and shows the difference first.
       await expect(page.locator('h1.page-heading')).toContainText(/correct the .+ note in en|sửa note .+ bằng en/i);
       await expectNoAccessibilityViolations(page, `the correction page (${language})`);
+
+      // Rendering again, with nothing changed since publication, gives the same note: there
+      // is nothing to save, and nothing was sent anywhere.
+      await page.getByRole('button', { name: /^(render again|dựng lại)$/i }).click();
+      await expect(page.getByText(/rendered again by today|được dựng lại bằng bộ viết hiện nay/i)).toBeVisible();
+      await expect(page.getByText(/the text is the same as revision 1|nội dung giống hệt bản sửa đổi 1/i)).toBeVisible();
+      await expect(page.getByRole('button', { name: /^(save as revision 2|lưu thành bản sửa đổi 2)$/i })).toHaveCount(0);
+      await expectNoAccessibilityViolations(page, `a note rendered again (${language})`);
+
       const markdown = page.locator('textarea[name="content"]');
       // One line changes and one is added, so the difference both removes and adds.
       const published = await markdown.inputValue();
@@ -61,6 +70,12 @@ for (const language of ['en', 'vi']) {
       await expect(corrected.getByRole('region', { name: /revision 2|bản sửa đổi 2/i })
         .locator('ins', { hasText: 'Restore <backup-id> first.' })).toBeVisible();
       await expectNoAccessibilityViolations(page, `a corrected note and its revisions (${language})`);
+
+      // A note corrected by hand is a person's, so it is never rendered again.
+      await corrected.getByRole('link', { name: /^(correct this note|sửa note này)$/i }).click();
+      await expect(page.getByRole('button', { name: /^(render again|dựng lại)$/i })).toHaveCount(0);
+      await expect(page.getByText(/corrected by hand only|chỉ được sửa bằng tay/i)).toBeVisible();
+      await expectNoAccessibilityViolations(page, `a hand-corrected note's correction page (${language})`);
     });
 }
 

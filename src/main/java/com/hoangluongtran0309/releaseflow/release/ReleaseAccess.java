@@ -61,7 +61,8 @@ public class ReleaseAccess {
      * still follows its template, and no change the release includes concerns its audience,
      * by the same rule the digest uses to choose a note's changes (ADR-0035, amended
      * 2026-11-19). The changes are read as they are now, never the note's text. A note a
-     * person wrote, or no note at all, is never one with nothing.
+     * person wrote, or no note at all, is never one with nothing; a note whose latest
+     * revision was written by hand is one a person wrote (ADR-0046, amended 2026-11-20).
      */
     @Transactional(readOnly = true)
     public boolean hasNothingFor(UUID organizationId, UUID releaseId, UUID audienceId, String language) {
@@ -70,13 +71,13 @@ public class ReleaseAccess {
         if (release.isEmpty()) {
             return false;
         }
-        Optional<AudienceNoteView> note = noteRepository
+        Optional<AudienceReleaseNote> note = noteRepository
                 .findAllByReleaseIdAndOrganizationIdOrderByAudienceNameAscAudienceCodeAscLanguageAsc(releaseId, organizationId)
                 .stream()
-                .map(AudienceReleaseNote::view)
-                .filter(candidate -> candidate.audienceId().equals(audienceId) && candidate.language().equals(language))
+                .filter(candidate -> candidate.view().audienceId().equals(audienceId)
+                        && candidate.getLanguage().equals(language))
                 .findFirst();
-        if (note.isEmpty() || !note.get().autoRerender()) {
+        if (note.isEmpty() || noteRevisions.writtenByPerson(organizationId, note.get())) {
             return false;
         }
         List<UUID> ids = releaseChangeRepository.findAllByReleaseIdAndOrganizationId(releaseId, organizationId)
@@ -84,7 +85,7 @@ public class ReleaseAccess {
                 .map(ReleaseChange::getChangeId)
                 .toList();
         List<ChangeView> changes = changeService.changes(organizationId, release.get().getProjectId(), ids);
-        String audienceCode = note.get().audienceCode();
+        String audienceCode = note.get().getAudienceCode();
         return changes.stream().noneMatch(change -> ReleaseNoteDigest.concerns(change, audienceCode));
     }
 

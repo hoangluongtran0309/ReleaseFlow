@@ -740,6 +740,19 @@ tự; lý do được công bố ở mọi nơi bản sửa xuất hiện), rồ
 bản sửa đổi 3**, hay số tiếp theo nào đó, chỉ xuất hiện khi khác biệt đã được hiển thị, và việc
 lưu bị từ chối nếu nội dung đổi sau đó. Note của một audience đã ngừng dùng cũng được sửa như vậy.
 
+**Dựng lại** điền vào trình soạn thảo note do bộ viết hiện nay dựng: từ chính template và footer
+của nó như lúc duyệt, các thay đổi của release như hiện nay, và, với một note đã dịch, các bản dịch
+mà release đã được publish cùng, với placeholder, định danh viết thường có gạch nối và code span được
+viết như nguồn viết chúng ([ADR-0040](adr/0040-translation-placeholders.md)). Không có gì được gửi
+tới DeepL hay AI. Khác biệt so với bản sửa đổi mới nhất được hiển thị ngay. Lưu nguyên như vậy, nội
+dung được ghi là dựng lại và chỉ nhận đã dùng bảng thuật ngữ đúng như các bản dịch đó đã dùng; mọi
+chỉnh sửa sẽ biến nó thành một lần sửa tay. Một đoạn văn mà release không được publish cùng bản dịch
+của nó, chẳng hạn một tóm tắt được viết lại sau đó, vẫn chưa dịch và được đếm, và việc lưu nó như một
+lần dựng lại bị từ chối: hãy sửa nó bằng tay. Note do một người viết, trước khi publish hay ở một lần
+sửa sau đó, và note của một audience đã ngừng dùng, chỉ được sửa bằng tay. Một bản dịch cần một câu
+trả lời mới, chẳng hạn một thuật ngữ mà DeepL dịch sai, cũng cần sửa tay: dịch lại một note không nằm
+trong bản phát hành này.
+
 Sau khi lưu, bản sửa đổi mới nhất chính là note ở mọi nơi note được đọc mà không nêu số: tab của
 nó, **Sao chép**, **Tải về**, và nội dung một lần chạy automation mới gửi đi. Lưu không gửi gì đi,
 nên mỗi nơi nhận giữ những gì nó nhận lần cuối. Dưới mỗi note, **Các bản sửa đổi** liệt kê mọi bản
@@ -752,7 +765,15 @@ viên được sửa.
 
 REST client gọi `POST /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions`
 với `{"corrects", "content", "reason"}`, trong đó `corrects` là số của bản sửa đổi đang được sửa,
-và nhận `201` cùng bản sửa đổi mới. Một bản sửa đổi không còn là mới nhất bị từ chối với
+và nhận `201` cùng bản sửa đổi mới. Để dựng lại, client đọc
+`GET …/notes/{noteId}/correction-preview?origin=RENDERED`, lời gọi trả về `content`, `previewHash`,
+`changed`, `missingTexts` và `missingCharacters`, rồi lưu nó với
+`{"origin": "RENDERED", "corrects", "previewHash", "reason"}`. Dựng lại bị từ chối với note do một
+người viết bằng `409 release_note_manual` và với một audience đã ngừng dùng bằng
+`409 audience_retired`; lưu một bản xem trước mà việc dựng lại không còn cho ra bị từ chối bằng
+`409 release_note_preview_changed`, và một bản có đoạn văn chưa dịch bằng
+`409 release_note_render_incomplete`. Mọi `origin` khác `RENDERED` ở bản xem trước là
+`400 release_note_correction_origin_invalid`. Một bản sửa đổi không còn là mới nhất bị từ chối với
 `409 release_note_revision_stale`, nội dung giống hệt bản mới nhất với
 `409 release_note_correction_unchanged`, note của một release chưa publish với
 `409 release_status_conflict`, và một thành viên với `403`.

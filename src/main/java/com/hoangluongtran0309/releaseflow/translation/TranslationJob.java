@@ -251,6 +251,15 @@ class TranslationJob {
         return Map.copyOf(input);
     }
 
+    Instant getCompletedAt() {
+        return completedAt;
+    }
+
+    /** What the job did with the glossary, as its state says it. */
+    GlossaryUse glossaryUse() {
+        return GlossaryUse.fromOutcome(glossaryOutcome);
+    }
+
     String getContext() {
         return context;
     }

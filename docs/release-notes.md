@@ -777,6 +777,20 @@ choose **Show the difference**. **Save as revision 3**, or whichever number is n
 only once the difference is shown, and saving is refused if the text changed after that.
 A retired audience's note is corrected the same way.
 
+**Render again** fills the editor with the note as today's writer renders it: its own
+template and footer as they were at approval, the release's changes as they read now, and,
+for a translated note, the translations the release was published with, with placeholders,
+lowercase hyphenated identifiers, and code spans written as their source writes them
+([ADR-0040](adr/0040-translation-placeholders.md)). Nothing is sent to DeepL or to the AI.
+The difference from the latest revision is shown at once. Saved unchanged, the text is
+recorded as rendered again and claims the glossary only as those translations used it; any
+edit makes it a correction by hand. A text whose translation the release was not published
+with, such as a summary rewritten since, stays untranslated and is counted, and saving it as
+rendered again is refused: correct it by hand. A note a person wrote, before publication or
+in a later correction, and a retired audience's note, are corrected by hand only. A
+translation that needs a new answer, such as a glossary term DeepL got wrong, needs a hand
+too: translating a note again is not part of this release.
+
 Once saved, the latest revision is the note wherever a note is read without a number: its
 tab, **Copy**, **Download**, and what a new automation run delivers. Saving delivers
 nothing, so each destination keeps what it last received. Under each note, **Revisions**
@@ -789,7 +803,15 @@ supersedes it. Every member reads revisions; only administrators correct.
 
 REST clients call `POST /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions`
 with `{"corrects", "content", "reason"}`, where `corrects` is the number of the revision being
-corrected, and get `201` with the new revision. A revision that is no longer the latest is
+corrected, and get `201` with the new revision. To render again, they read
+`GET …/notes/{noteId}/correction-preview?origin=RENDERED`, which answers `content`,
+`previewHash`, `changed`, `missingTexts`, and `missingCharacters`, and save it with
+`{"origin": "RENDERED", "corrects", "previewHash", "reason"}`. Rendering again is refused for
+a note a person wrote with `409 release_note_manual` and for a retired audience with
+`409 audience_retired`; saving a preview that rendering no longer gives with
+`409 release_note_preview_changed`, and one with untranslated texts with
+`409 release_note_render_incomplete`. Any `origin` but `RENDERED` in the preview is
+`400 release_note_correction_origin_invalid`. A revision that is no longer the latest is
 refused with `409 release_note_revision_stale`, text identical to the latest with
 `409 release_note_correction_unchanged`, a note of a release that is not published with
 `409 release_status_conflict`, and a member with `403`.

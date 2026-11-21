@@ -91,6 +91,11 @@ import com.hoangluongtran0309.releaseflow.release.ReleaseNoteNotFoundException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteRevisionStaleException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteCorrectionUnchangedException;
 import com.hoangluongtran0309.releaseflow.release.InvalidNoteRevisionException;
+import com.hoangluongtran0309.releaseflow.release.InvalidCorrectionOriginException;
+import com.hoangluongtran0309.releaseflow.release.ReleaseNoteManualException;
+import com.hoangluongtran0309.releaseflow.release.NoteAudienceRetiredException;
+import com.hoangluongtran0309.releaseflow.release.ReleaseNotePreviewChangedException;
+import com.hoangluongtran0309.releaseflow.release.ReleaseNoteRenderIncompleteException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteRenderException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNotesMissingException;
 import com.hoangluongtran0309.releaseflow.release.ReleasePublishedException;
@@ -419,6 +424,31 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ReleaseNoteRevisionStaleException.class)
     ResponseEntity<ProblemDetail> releaseNoteRevisionStale(ReleaseNoteRevisionStaleException exception) {
         return localized(HttpStatus.CONFLICT, "release_note_revision_stale", exception);
+    }
+
+    @ExceptionHandler(InvalidCorrectionOriginException.class)
+    ResponseEntity<ProblemDetail> invalidCorrectionOrigin(InvalidCorrectionOriginException exception) {
+        return localized(HttpStatus.BAD_REQUEST, "release_note_correction_origin_invalid", exception);
+    }
+
+    @ExceptionHandler(ReleaseNoteManualException.class)
+    ResponseEntity<ProblemDetail> releaseNoteManual(ReleaseNoteManualException exception) {
+        return localized(HttpStatus.CONFLICT, "release_note_manual", exception);
+    }
+
+    @ExceptionHandler(NoteAudienceRetiredException.class)
+    ResponseEntity<ProblemDetail> noteAudienceRetired(NoteAudienceRetiredException exception) {
+        return localized(HttpStatus.CONFLICT, "audience_retired", exception);
+    }
+
+    @ExceptionHandler(ReleaseNotePreviewChangedException.class)
+    ResponseEntity<ProblemDetail> releaseNotePreviewChanged(ReleaseNotePreviewChangedException exception) {
+        return localized(HttpStatus.CONFLICT, "release_note_preview_changed", exception);
+    }
+
+    @ExceptionHandler(ReleaseNoteRenderIncompleteException.class)
+    ResponseEntity<ProblemDetail> releaseNoteRenderIncomplete(ReleaseNoteRenderIncompleteException exception) {
+        return localized(HttpStatus.CONFLICT, "release_note_render_incomplete", exception);
     }
 
     @ExceptionHandler(ReleaseNoteCorrectionUnchangedException.class)

@@ -147,9 +147,9 @@ nói điều đó, và phần còn lại của lần chạy tiếp tục như v�
 chọn thay đổi cho một note (xem
 [Release Note](release-notes.md#what-each-audience-reads)), không bao giờ từ nội dung của note.
 Các bước kiểm tra theo thứ tự này: audience đã ngừng dùng được bỏ qua với `audience_retired`; action
-không có note sẵn sàng thất bại với `release_note_missing`; note do một người sửa được gửi đúng như
-đã viết, dù các thay đổi của nó nói gì; và chỉ sau đó note không có gì cho audience của nó mới bị
-bỏ qua. Muốn gửi một note như vậy có chủ ý, hãy sửa nó trước khi publish. Bật một quy tắc không
+không có note sẵn sàng thất bại với `release_note_missing`; note do một người sửa, hoặc note có bản
+sửa đổi mới nhất do một người viết tay, được gửi đúng như đã viết, dù các thay đổi của nó nói gì; và
+chỉ sau đó note không có gì cho audience của nó mới bị bỏ qua. Muốn gửi một note như vậy có chủ ý, hãy sửa nó trước khi publish. Bật một quy tắc không
 bao giờ bị từ chối vì lý do này, vì một quy tắc tồn tại lâu hơn mọi release.
 
 Các thay đổi được đọc theo trạng thái lúc action chạy, nên một note đã publish và việc bỏ qua nó
@@ -157,7 +157,9 @@ có thể không khớp nhau. Nếu sau khi publish, một lần review bỏ c�
 đổi, hoặc AI được nhờ viết một narrative còn thiếu, thì một thay đổi mà note liệt kê có thể không
 còn liên quan tới audience, và chạy lại quy tắc sẽ bỏ qua một note vốn có nội dung. Ngược lại, một
 note nói rằng không có gì liên quan tới audience của nó sẽ được gửi khi một thay đổi của nó trở nên
-liên quan. Xem
+liên quan. Dựng lại note
+([Sửa một release note đã publish](release-notes.md#correcting-a-published-note)) đưa nội dung của
+nó về khớp với các thay đổi, nên việc bỏ qua và note lại khớp nhau. Xem
 [amendment của ADR-0035](adr/0035-evidence-bound-notes-and-audience-relevance.md#amendment-2026-11-19-an-action-whose-note-has-nothing-for-its-audience).
 
 ![Lần chạy của một quy tắc cho một release, Thành công: mười lần gửi theo thứ tự, lần thứ sáu là Email Đã bỏ qua với audience_retired và câu giải thích không gửi gì và các action sau vẫn chạy](assets/automation/a-11-skipped-action.webp)

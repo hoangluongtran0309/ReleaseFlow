@@ -9,6 +9,13 @@ unchanged: its own `README.md` says what each file holds and where it came from,
 `MANIFEST.sha256` lists the sha256 of every file. The test checks the manifest before it
 starts, so a file changed here fails it.
 
+`1.4.0-revisions/` is the second package, for ADR-0046 (#87), copied here unchanged too.
+`GoldenRevisionsIntegrationTest` approves v1.2.0 from it, puts each note back as 1.1.0-rc.2
+published it, publishes the release, and renders each Vietnamese note again: each must be
+the package's revision 2, byte for byte, with no DeepL request. Set `v2` holds no Project
+context and no glossary, so the jobs approval writes have neither, and the cache they leave
+is what rendering again reads (ADR-0046, amended 2026-11-20).
+
 **These files come from the dbvault workspace and are refreshed only from there.** Never
 edit a snapshot, an input, or a recorded DeepL answer by hand, and never update a snapshot
 to make the test pass. When a note changes on purpose, the workspace renders it again and

@@ -36,6 +36,20 @@ class ReleaseNoteRevisions {
         return note.view(revisions.isEmpty() ? null : revisions.getLast());
     }
 
+    /**
+     * Whether a person wrote the note's text: it was edited before publication, or its latest
+     * revision was written by hand. Such a note never follows its template again (ADR-0046),
+     * and is delivered as written (ADR-0046, amended 2026-11-20).
+     */
+    boolean writtenByPerson(UUID organizationId, AudienceReleaseNote note) {
+        if (!note.isAutoRerender()) {
+            return true;
+        }
+        List<ReleaseNoteRevision> revisions = revisionRepository
+                .findAllByNoteIdAndOrganizationIdOrderByRevisionAsc(note.getId(), organizationId);
+        return !revisions.isEmpty() && revisions.getLast().getOrigin() == ReleaseNoteRevisionView.Origin.MANUAL;
+    }
+
     /** Every revision of a published note, oldest first: revision 1 is the note as published. */
     List<ReleaseNoteRevisionView> history(Release release, AudienceReleaseNote note) {
         List<ReleaseNoteRevisionView> history = new ArrayList<>();

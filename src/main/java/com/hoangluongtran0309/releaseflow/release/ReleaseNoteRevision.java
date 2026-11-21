@@ -71,6 +71,29 @@ class ReleaseNoteRevision {
     protected ReleaseNoteRevision() {
     }
 
+    /**
+     * A correction rendered again: the text today's writer gives from the answers the note was
+     * published with, claiming the glossary only as those answers used it.
+     */
+    static ReleaseNoteRevision rendered(
+            UUID noteId,
+            Release release,
+            int revision,
+            String content,
+            String reason,
+            GlossaryUse glossary,
+            UUID authorId,
+            String authorName,
+            Instant createdAt
+    ) {
+        ReleaseNoteRevision written = manual(noteId, release, revision, content, reason, authorId, authorName,
+                createdAt);
+        written.origin = ReleaseNoteRevisionView.Origin.RENDERED;
+        written.glossaryStatus = glossary.status();
+        written.glossaryReason = glossary.reason();
+        return written;
+    }
+
     /** A correction a person wrote by hand: it claims no glossary, as an edit does not. */
     static ReleaseNoteRevision manual(
             UUID noteId,
@@ -106,6 +129,10 @@ class ReleaseNoteRevision {
 
     int getRevision() {
         return revision;
+    }
+
+    ReleaseNoteRevisionView.Origin getOrigin() {
+        return origin;
     }
 
     String getContent() {
