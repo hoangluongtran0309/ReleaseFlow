@@ -11,6 +11,8 @@ record ActionResult(ExecutionStatus outcome, String externalReference, String er
     static final String ACTION_UNSUPPORTED = "action_unsupported";
     static final String AUDIENCE_RETIRED = "audience_retired";
     static final String NOTHING_FOR_AUDIENCE = "nothing_for_audience";
+    // A correction this destination cannot take, or one that names no delivery to replace.
+    static final String CORRECTION_NOT_SUPPORTED = "correction_not_supported";
 
     static ActionResult succeeded(String externalReference) {
         return new ActionResult(ExecutionStatus.SUCCEEDED, externalReference, null);

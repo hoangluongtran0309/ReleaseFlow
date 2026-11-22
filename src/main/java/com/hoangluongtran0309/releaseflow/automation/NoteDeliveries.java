@@ -40,6 +40,7 @@ public class NoteDeliveries {
                 .collect(Collectors.toMap(AutomationRun::getId, Function.identity()));
         return deliveries.stream()
                 .map(delivery -> new Delivery(
+                        runs.get(delivery.getRunId()).getRuleId(),
                         delivery.getAudienceId(),
                         delivery.getLanguageSnapshot(),
                         delivery.getActionType().getLabelKey(),
@@ -53,10 +54,12 @@ public class NoteDeliveries {
     }
 
     /**
-     * One destination: the kind of action as a bundle key, the rule's name as the run recorded
-     * it, the revision it carried, when, and the link it recorded if any.
+     * One destination: the rule that delivered it, the kind of action as a bundle key, the
+     * rule's name as the run recorded it, the revision it carried, when, and the link it
+     * recorded if any.
      */
     public record Delivery(
+            UUID ruleId,
             UUID audienceId,
             String language,
             String destinationKey,

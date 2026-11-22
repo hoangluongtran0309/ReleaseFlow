@@ -736,7 +736,8 @@ lý do, tên của người sửa như lúc đó, và thời điểm
 
 Trên release đã publish, mở tab của note và chọn **Sửa note này**. Trang bắt đầu từ bản sửa đổi
 mới nhất của note. Sửa Markdown của nó, viết lý do bằng chính ngôn ngữ của note (tối đa 500 ký
-tự; lý do được công bố ở mọi nơi bản sửa xuất hiện), rồi chọn **Xem khác biệt**. Nút **Lưu thành
+tự; lý do được lưu cùng bản sửa đổi và là điểm bắt đầu cho lý do của lần chạy gửi bản sửa, tức
+điều mà nơi nhận đã sửa hiển thị), rồi chọn **Xem khác biệt**. Nút **Lưu thành
 bản sửa đổi 3**, hay số tiếp theo nào đó, chỉ xuất hiện khi khác biệt đã được hiển thị, và việc
 lưu bị từ chối nếu nội dung đổi sau đó. Note của một audience đã ngừng dùng cũng được sửa như vậy.
 
@@ -759,7 +760,9 @@ nên mỗi nơi nhận giữ những gì nó nhận lần cuối. Dưới mỗi 
 sửa đổi, mới nhất trước, với cách nội dung được tạo ra, thời điểm, người sửa, lý do, khác biệt so
 với bản trước, Markdown của nó, và một tệp tải về tên `<version>-<audience>-<language>.r<n>.md`.
 **Đã gửi tới đâu** liệt kê mỗi action automation đã gửi note, cùng bản sửa đổi nó mang theo, và
-đánh dấu **Chưa cập nhật** khi note đã được sửa kể từ đó. Một bản sửa đổi không bao giờ bị đổi hay
+đánh dấu **Chưa cập nhật** khi note đã được sửa kể từ đó; nút **Gửi bản sửa** của quản trị viên
+bên cạnh mở biểu mẫu sửa của quy tắc ([Gửi một bản sửa](automation.md#delivering-a-correction)).
+Một bản sửa đổi không bao giờ bị đổi hay
 xoá; chỉ một bản mới hơn thay thế nó. Mọi thành viên đều đọc được các bản sửa đổi; chỉ quản trị
 viên được sửa.
 

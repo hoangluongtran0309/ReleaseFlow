@@ -139,6 +139,10 @@ class ReleaseNoteRevision {
         return content;
     }
 
+    String getReason() {
+        return reason;
+    }
+
     Instant getCreatedAt() {
         return createdAt;
     }

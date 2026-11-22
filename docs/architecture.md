@@ -381,6 +381,7 @@ automation_runs (V22)
   rule_name_snapshot, release_version_snapshot, trigger_type (a rule's, or CORRECTION since V40)
   request_id (MANUAL, EXTERNAL_WEBHOOK, and CORRECTION), scheduled_for (cron and reminder)
   initiated_by + initiator_name (MANUAL, and always for CORRECTION)
+  reason (V41; exactly for CORRECTION, never blank: the line a corrected destination shows)
   status (PENDING | RUNNING | SUCCEEDED | FAILED | UNKNOWN | CANCELLED)
   cancellation_requested, created_at, started_at, completed_at
 
@@ -389,6 +390,7 @@ automation_action_runs (V22)
   action_type, audience_id, audience_name_snapshot, language_snapshot
   note_content_snapshot, configuration_snapshot, secret_nonce_snapshot + secret_ciphertext_snapshot
   note_revision (V40; the revision it carried, only with a note; null before V40 reads as 1)
+  corrects_action_run_id (V41; the delivery a correction replaces, same Organization, never itself)
   status (as runs, plus SKIPPED since V39), external_reference
   error_code (exactly when FAILED, UNKNOWN, or SKIPPED)
   attempts, claimed_at, started_at, completed_at
@@ -1715,6 +1717,31 @@ inside its own transaction. `ReleasePublishedListener` writes one
 per action carrying the note, configuration, and encrypted secret as they were. A
 publication fires each rule once, and a repeated manual request returns the same run.
 
+Every transaction that creates a run for a release locks the release's row first, through
+`ReleaseAccess.lockForRun`, which refuses to run outside a transaction (#119, #122, ADR-0046
+amended 2026-11-21): publication's runs in the worker, a manual run, a schedule's, a
+reminder's, a signed call's, and a correction's. A revision is saved under the same lock, so a
+run carries each note as of a moment no revision is half-way through. A schedule locks its rule
+first and then the release; nothing locks a release and then a rule. A manual, signed, or
+correction request looks for its request ID again after the lock, so a repeat that waited on it
+is the run already there.
+
+### Corrections
+
+`AutomationCorrectionService` is the only place a `CORRECTION` run is made (ADR-0046, part 5,
+amended 2026-11-21); no rule is written with the trigger (`TriggerType.isRuleTrigger`). For a
+rule and a published release it builds a `CorrectionOffer`: each rule action, offered when its
+last successful delivery for the release carried an older revision than the note's latest, or
+with the first `CorrectionOffer.Unavailable` reason that holds, type first. It reads each
+action's history with `findAllForRuleActionsAndRelease`. Starting one takes an administrator,
+a request ID, the picked actions of one language, and a reason (V41's `automation_runs.reason`);
+`AutomationRunFactory.createCorrection` writes only the picked actions, each with
+`corrects_action_run_id`, the delivery it replaces. The worker never asks
+`hasNothingFor` of a correction, and passes `ActionCommand.Correction` (that delivery, the
+audience's name as it delivered it, the revision, the reason) to the executor. Slice A
+corrects the public changelog alone; any other action in a correction fails as
+`correction_not_supported`, which nothing can offer.
+
 ### Schedules and reminders
 
 `AutomationTriggerWorker` ticks every fifteen seconds and
@@ -1897,6 +1924,14 @@ who have no account. See [ADR-0022](adr/0022-public-changelog.md).
   RSS `description` carries that HTML, escaped into the document by the JDK's XML writer.
   A correction's reason is HTML-escaped once into its description's first paragraph, and
   the writer encodes that HTML like any other.
+- **A correction run appends a revision** through `PublicChangelogService.correct`, which locks
+  the entry row first. A revision its own action run wrote is the delivery, and so is an entry
+  whose latest revision already says the same; an entry already showing that note revision in
+  other words, or a later one, is `public_changelog_conflict`; otherwise the next revision is
+  written with the run's reason. The entry is the one the corrected delivery wrote, the one
+  whose revision it wrote, or the entry of its release, audience as it named it, and
+  language. `publish` compares any other delivery that meets an entry with the entry's latest
+  revision, and the entry's own action with what it wrote.
 - **Links come from configuration.** `releaseflow.public.base-url` is where this
   deployment is reached; `releaseflow.public.changelog-base-domain`, when set, serves each
   Organization at `{slug}.{domain}` through `PublicChangelogHostRoutingFilter`, which

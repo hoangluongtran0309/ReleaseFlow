@@ -4,7 +4,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** One firing of one rule, with the deliveries it made. */
+/**
+ * One firing of one rule, with the deliveries it made. {@code reason} is the one a correction
+ * run gives (ADR-0046), and null on any other run.
+ */
 public record AutomationRunView(
         UUID id,
         UUID ruleId,
@@ -14,6 +17,7 @@ public record AutomationRunView(
         TriggerType triggerType,
         UUID requestId,
         String initiatorName,
+        String reason,
         ExecutionStatus status,
         boolean cancellationRequested,
         Instant createdAt,

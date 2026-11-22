@@ -193,12 +193,21 @@ public class AutomationRuleService implements SourceTokenBorrowers, AudienceDeli
                 && !sourceAccess.hasSole(organizationId, rule.getProjectId(), SourceType.GITHUB);
     }
 
+    // A correction is a run's trigger only: a rule written with it would be one that nothing
+    // but a person's correction could ever start (ADR-0046, part 5).
+    private static void requireRuleTrigger(AutomationRuleRequest request) {
+        if (request.getTriggerType() != null && !request.getTriggerType().isRuleTrigger()) {
+            throw AutomationActionInvalidException.triggerInvalid();
+        }
+    }
+
     /**
      * Writes a rule. A rule called by another system is given its path and its secret
      * here, and the secret is in the answer to this call and nowhere else afterwards.
      */
     @Transactional
     public AutomationRuleView create(UUID organizationId, AutomationRuleRequest request) {
+        requireRuleTrigger(request);
         Instant now = now();
         requireProject(organizationId, request.getProjectId());
         AutomationRule rule = new AutomationRule(
@@ -221,6 +230,7 @@ public class AutomationRuleService implements SourceTokenBorrowers, AudienceDeli
         requireProject(organizationId, request.getProjectId());
         // A webhook rule that stays one keeps its path and its secret, so the systems
         // already calling it are not silently cut off by an edit.
+        requireRuleTrigger(request);
         boolean keepsWebhook = rule.getTriggerType() == TriggerType.EXTERNAL_WEBHOOK
                 && request.getTriggerType() == TriggerType.EXTERNAL_WEBHOOK;
         UUID keptWebhookId = keepsWebhook ? rule.getWebhookId() : null;

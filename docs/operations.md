@@ -36,7 +36,7 @@ finite set:
 | `releaseflow_classification_completed_total` | `needs_human_review` | How much is classified, and how much of it still needs a person |
 | `releaseflow_classification_collect_to_complete_seconds` | — | How long a change waits between arriving and being classified |
 | `releaseflow_classification_provider_requests_total` | `provider`, `outcome` | How often the AI refuses or cannot be read |
-| `releaseflow_automation_action_executions_total` | `trigger`, `outcome` | How deliveries end, with unknown kept apart from failed |
+| `releaseflow_automation_action_executions_total` | `trigger`, `outcome` | How deliveries end, with unknown kept apart from failed; `trigger` is `release_published`, `manual`, `scheduled_cron`, `upcoming_release_reminder`, `external_webhook`, or `correction` |
 
 **No label ever carries an Organization, Project, release, rule, run, action,
 model, external reference, or error text.** Metrics are a deployment-wide view; a

@@ -7,7 +7,13 @@ public enum TriggerType {
     MANUAL("Run by hand"),
     SCHEDULED_CRON("On a schedule"),
     UPCOMING_RELEASE_REMINDER("Before a planned release"),
-    EXTERNAL_WEBHOOK("Called by another system");
+    EXTERNAL_WEBHOOK("Called by another system"),
+    /**
+     * A person delivering a corrected note to destinations that already hold an earlier
+     * revision (ADR-0046, part 5). It is a run's trigger only: no rule is ever written with it,
+     * and nothing but that person's request starts one.
+     */
+    CORRECTION("Correction");
 
     private final String label;
 
@@ -33,5 +39,10 @@ public enum TriggerType {
      */
     public boolean isScheduled() {
         return this == SCHEDULED_CRON || this == UPCOMING_RELEASE_REMINDER;
+    }
+
+    /** Whether a rule may be written with this trigger; a correction is only ever a run's. */
+    public boolean isRuleTrigger() {
+        return this != CORRECTION;
     }
 }

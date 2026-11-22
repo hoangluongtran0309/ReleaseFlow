@@ -186,6 +186,45 @@ has one again.
 
 ![An action whose outcome is unknown: running it again may deliver twice](assets/automation/a-8-run-unknown.webp)
 
+## Delivering a correction
+
+A [corrected note](release-notes.md#correcting-a-published-note) reaches nothing until a
+person delivers it: saving a revision sends nothing, and publication, a schedule, a reminder,
+or a signed call never start a correction
+([ADR-0046](adr/0046-correcting-a-published-note.md#amendment-2026-11-21-the-correction-run)).
+An administrator opens **Deliver a correction** on a rule, or **Deliver the correction** beside a
+destination the release page marks **Behind**, and chooses a published release. The form lists
+every action of the rule:
+
+- **Offered:** it delivered this release, and the note has a later revision than that delivery
+  carried. Public changelog actions are picked, and the line says which revision it delivers
+  and which the destination holds.
+- **Not offered**, with the first reason that holds, in this order: its audience is retired;
+  Zendesk keeps the article it published, so correct it there by hand; correcting GitHub
+  Releases, Confluence, Notion, Slack, Microsoft Teams, and email comes later
+  ([#88](https://github.com/hoangluongtran0309/ReleaseFlow/issues/88)); nobody knows whether its
+  last delivery arrived, so settle that run first; a delivery of it has not finished; it was
+  only ever skipped; it never delivered the release; or it already holds the latest revision.
+  An action only skipped or never delivered has nothing to correct: deliver it through a rule
+  run by hand that holds the same action, which is a first delivery of the latest revision
+  ([#135](https://github.com/hoangluongtran0309/ReleaseFlow/issues/135) proposes a direct
+  path). One whose run failed can also be run again, which delivers the revision that run
+  carried; a correction is offered after it.
+
+The **reason** is what every picked destination shows under "Corrected on". It starts as the
+reasons of the revisions they have not received; edit it to say what readers will see change.
+It is at most 500 characters, in the note's language, and one correction is in one language:
+deliver each language in a correction of its own.
+
+The run is a **Correction** in the run history, with its reason and who asked for it, and each
+action says which revision it delivers and which it replaces. It holds only the picked actions,
+in the rule's order, and otherwise runs as any other run: the first action that does not
+succeed stops those behind it, an unknown outcome is repeated only when a person confirms, and
+an action whose audience was retired meanwhile is skipped with `audience_retired`. It is never
+skipped with `nothing_for_audience`: a correction replaces what a destination already holds, and
+skipping it would leave text the note no longer says. A public changelog action appends a
+revision to the entry; see [A corrected entry](#a-corrected-entry).
+
 ## REST
 
 REST clients do the same thing, sending the session cookie and the signed-in session's
@@ -219,6 +258,8 @@ DELETE /api/automation/rules/{ruleId}                          (archives it)
 POST   /api/automation/rules/{ruleId}/enable
 POST   /api/automation/rules/{ruleId}/disable
 POST   /api/automation/rules/{ruleId}/execute                  {"releaseId", "requestId"} (202)
+GET    /api/automation/rules/{ruleId}/corrections?releaseId=   (what a correction could deliver)
+POST   /api/automation/rules/{ruleId}/corrections              {"releaseId", "requestId", "ruleActionIds", "reason"} (202)
 POST   /api/automation/rules/{ruleId}/webhook-secret/rotate    (the new secret, once)
 POST   /api/automation/rules/cron-preview                      {"cronExpression", "cronTimeZone"}
 GET    /api/automation/runs?page=0&size=20
@@ -245,6 +286,16 @@ actions has `noteRevision`, the revision of its note it carried
 ([ADR-0046](adr/0046-correcting-a-published-note.md)), or `null` when it carried no note;
 a run made before revisions existed carried revision `1`.
 
+`GET /{id}/corrections?releaseId=` answers `{"ruleId", "releaseId", "releaseVersion", "items",
+"suggestedReason"}`. Each item is `{"ruleActionId", "position", "actionType", "audienceName",
+"language", "unavailable", "picked", "carriedRevision", "latestRevision"}`, where
+`unavailable` is `null` for an offered action, or `AUDIENCE_RETIRED`, `NOT_SUPPORTED`, `LATER`,
+`UNKNOWN`, `IN_PROGRESS`, `ONLY_SKIPPED`, `NEVER_DELIVERED`, or `NOTHING_NEWER`.
+`POST /{id}/corrections` answers `202` with the run, whose `triggerType` is `CORRECTION` and
+whose `reason` is the one given; the request ID makes a repeat the same run, as `execute`'s
+does. Each action of a correction has `correctsRevision`, the revision the delivery it replaces
+had carried, and `null` on any other run. A rule's `triggerType` can never be `CORRECTION`.
+
 A public changelog action's refusal is `public_changelog_conflict`, recorded on the
 action rather than returned to anybody; see [Public changelog](#public-changelog).
 Likewise, an action whose release has no ready note for its audience and language fails
@@ -258,8 +309,9 @@ Refusals carry a stable code:
 | Status | Codes |
 | --- | --- |
 | `404` | `automation_rule_not_found`, `automation_run_not_found` — also for a rule or run of another Organization, never `403`, and for an archived rule: `GET`, `PUT`, enable, disable, and `DELETE` of one all answer `404 automation_rule_not_found` |
-| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required`, `automation_audience_retired` |
-| `400`, rule | `automation_action_required`, `automation_project_not_found`, `automation_audience_not_found`, `automation_language_not_configured`, `automation_secret_not_allowed`, `automation_request_id_required`, `invalid_automation_run_page` |
+| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required`, `automation_audience_retired`, `automation_correction_not_offered` (its detail names the action and why) |
+| `400`, rule | `automation_action_required`, `automation_project_not_found`, `automation_audience_not_found`, `automation_language_not_configured`, `automation_secret_not_allowed`, `automation_request_id_required`, `automation_trigger_invalid`, `invalid_automation_run_page` |
+| `400`, correction | `automation_correction_action_unknown`, `automation_correction_languages_mixed`, and a validation failure for a missing or over-long `reason` or no `ruleActionIds`; a disabled rule, or one for another project, is `409 automation_rule_unavailable` |
 | `400`, schedule | `automation_cron_invalid`, `automation_cron_time_zone_invalid`, `automation_cron_no_occurrence`, `automation_cron_release_required`, `automation_reminder_days_invalid` |
 | `400`, Slack and email | `automation_slack_webhook_required`, `automation_slack_webhook_invalid`, `automation_email_recipients_required`, `automation_email_recipient_invalid` |
 | `400`, Notion and Confluence | `automation_notion_parent_required`, `automation_notion_parent_invalid`, `automation_notion_token_required`, `automation_confluence_site_required`, `automation_confluence_site_invalid`, `automation_confluence_email_required`, `automation_confluence_email_invalid`, `automation_confluence_space_required`, `automation_confluence_space_invalid`, `automation_confluence_parent_invalid`, `automation_confluence_token_required` |
@@ -327,8 +379,16 @@ DNS and TLS are yours to provision. Leave it empty and changelogs answer by path
 A published note can be corrected with a new revision
 ([ADR-0046](adr/0046-correcting-a-published-note.md); see
 [Correcting a published note](release-notes.md#correcting-a-published-note)). Only a correction run appends one to a
-public entry, and the entry itself never changes: the corrected text, the reason, and the
-time are a revision beside it, and revision 1 is the entry as it was published.
+public entry, and the entry itself never changes: the corrected text, the reason the
+correction run gave, and the time are a revision beside it, and revision 1 is the entry as it
+was published. See [Delivering a correction](#delivering-a-correction).
+
+- **Delivering it.** A correction appends the next revision to the entry its rule's last
+  delivery made. The same revision delivered twice, or a retry of an action that already
+  wrote its revision, is the revision already there. An entry already showing this revision in
+  other words, or a later one, fails as `public_changelog_conflict`, so readers never get older
+  text. Any other run that meets a corrected entry is compared with its latest revision: the
+  same words are that entry, and different ones fail as `public_changelog_conflict`.
 
 - **The entry's address shows the latest revision**, under a line in the entry's own
   language, such as *Corrected on 15 November 2026: {reason}* or *Đã sửa vào ngày 15

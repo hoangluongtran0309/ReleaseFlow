@@ -180,6 +180,45 @@ quy tắc **Chưa kết nối nguồn GitHub** cho tới khi project có lại m
 
 ![Một action không rõ kết quả: chạy lại có thể gửi hai lần](assets/automation/a-8-run-unknown.webp)
 
+## Gửi một bản sửa {#delivering-a-correction}
+
+Một [note đã sửa](release-notes.md#correcting-a-published-note) không tới đâu cả cho tới khi
+một người gửi nó: lưu một bản sửa đổi không gửi gì, và việc publish, một lịch, một lời nhắc hay
+một lời gọi có chữ ký không bao giờ bắt đầu một bản sửa
+([ADR-0046](adr/0046-correcting-a-published-note.md#amendment-2026-11-21-the-correction-run)).
+Quản trị viên mở **Gửi bản sửa** trên một quy tắc, hoặc **Gửi bản sửa** bên cạnh một nơi nhận mà
+trang release đánh dấu **Chưa cập nhật**, rồi chọn một release đã publish. Biểu mẫu liệt kê mọi
+action của quy tắc:
+
+- **Được đề xuất:** nó đã gửi release này, và note có một bản sửa đổi mới hơn bản mà lần gửi đó
+  mang theo. Các action changelog công khai được chọn sẵn, và dòng của nó cho biết bản sửa đổi
+  nào sẽ được gửi và nơi nhận đang giữ bản nào.
+- **Không được đề xuất**, với lý do đầu tiên đúng, theo thứ tự này: audience của nó đã ngừng
+  dùng; Zendesk giữ bài viết đã publish, nên hãy sửa tay ở đó; việc sửa GitHub Release,
+  Confluence, Notion, Slack, Microsoft Teams và email sẽ có sau
+  ([#88](https://github.com/hoangluongtran0309/ReleaseFlow/issues/88)); không ai biết lần gửi gần
+  nhất của nó đã đến hay chưa, nên hãy xử lý lần chạy đó trước; một lần gửi của nó chưa xong; nó
+  chỉ từng bị bỏ qua; nó chưa từng gửi release này; hoặc nó đã giữ bản sửa đổi mới nhất. Một
+  action chỉ từng bị bỏ qua hoặc chưa từng gửi thì không có gì để sửa: hãy gửi nó qua một quy tắc
+  chạy bằng tay có cùng action đó, tức một lần gửi đầu tiên của bản sửa đổi mới nhất
+  ([#135](https://github.com/hoangluongtran0309/ReleaseFlow/issues/135) đề xuất một cách trực
+  tiếp). Action có lần chạy thất bại cũng có thể được chạy lại, việc này gửi bản sửa đổi mà lần
+  chạy đó mang theo; sau đó sẽ có đề xuất sửa.
+
+**Lý do** là điều mọi nơi nhận được chọn hiển thị dưới dòng "Đã sửa vào". Ban đầu nó là lý do của
+các bản sửa đổi mà chúng chưa nhận; hãy sửa nó để nói người đọc sẽ thấy gì thay đổi. Tối đa 500
+ký tự, bằng ngôn ngữ của note, và một bản sửa chỉ dùng một ngôn ngữ: hãy gửi mỗi ngôn ngữ bằng một
+bản sửa riêng.
+
+Trong lịch sử chạy, lần chạy là một **Bản sửa**, kèm lý do và người yêu cầu, và mỗi action cho
+biết bản sửa đổi nó gửi và bản nó thay thế. Nó chỉ gồm các action được chọn, theo thứ tự của quy
+tắc, và ngoài ra chạy như mọi lần chạy khác: action đầu tiên không thành công sẽ chặn các action
+sau nó, một kết quả không rõ chỉ được lặp lại khi một người xác nhận, và action có audience đã
+ngừng dùng trong lúc đó bị bỏ qua với `audience_retired`. Nó không bao giờ bị bỏ qua với
+`nothing_for_audience`: một bản sửa thay thế thứ mà nơi nhận đang giữ, và bỏ qua nó sẽ để lại một
+nội dung mà note không còn nói. Một action changelog công khai thêm một bản sửa đổi vào mục; xem
+[Một mục đã sửa](#a-corrected-entry).
+
 ## REST {#rest}
 
 REST client làm được những việc tương tự, gửi cookie phiên đăng nhập và CSRF token của phiên đã
@@ -213,6 +252,8 @@ DELETE /api/automation/rules/{ruleId}                          (archives it)
 POST   /api/automation/rules/{ruleId}/enable
 POST   /api/automation/rules/{ruleId}/disable
 POST   /api/automation/rules/{ruleId}/execute                  {"releaseId", "requestId"} (202)
+GET    /api/automation/rules/{ruleId}/corrections?releaseId=   (những gì một bản sửa có thể gửi)
+POST   /api/automation/rules/{ruleId}/corrections              {"releaseId", "requestId", "ruleActionIds", "reason"} (202)
 POST   /api/automation/rules/{ruleId}/webhook-secret/rotate    (the new secret, once)
 POST   /api/automation/rules/cron-preview                      {"cronExpression", "cronTimeZone"}
 GET    /api/automation/runs?page=0&size=20
@@ -239,6 +280,16 @@ nó và giải phóng tên của nó. `GET /api/automation/runs` trả về
 ([ADR-0046](adr/0046-correcting-a-published-note.md)), hoặc `null` khi nó không mang note nào;
 một lần chạy có từ trước khi có bản sửa đổi đã mang bản sửa đổi `1`.
 
+`GET /{id}/corrections?releaseId=` trả về `{"ruleId", "releaseId", "releaseVersion", "items",
+"suggestedReason"}`. Mỗi mục là `{"ruleActionId", "position", "actionType", "audienceName",
+"language", "unavailable", "picked", "carriedRevision", "latestRevision"}`, trong đó
+`unavailable` là `null` với một action được đề xuất, hoặc `AUDIENCE_RETIRED`, `NOT_SUPPORTED`,
+`LATER`, `UNKNOWN`, `IN_PROGRESS`, `ONLY_SKIPPED`, `NEVER_DELIVERED` hay `NOTHING_NEWER`.
+`POST /{id}/corrections` trả về `202` kèm lần chạy, có `triggerType` là `CORRECTION` và `reason`
+là lý do đã nhập; request ID làm một lần lặp lại thành cùng một lần chạy, như với `execute`. Mỗi
+action của một bản sửa có `correctsRevision`, bản sửa đổi mà lần gửi nó thay thế đã mang theo, và
+`null` ở mọi lần chạy khác. `triggerType` của một quy tắc không bao giờ là `CORRECTION`.
+
 Lời từ chối của action changelog công khai là `public_changelog_conflict`, được ghi trên action
 chứ không trả về cho ai; xem [Changelog công khai](#public-changelog). Tương tự, một action mà
 release của nó không có release note sẵn sàng cho audience và ngôn ngữ của action sẽ thất bại với
@@ -252,8 +303,9 @@ Các lời từ chối mang mã cố định:
 | Trạng thái | Mã |
 | --- | --- |
 | `404` | `automation_rule_not_found`, `automation_run_not_found` — kể cả với quy tắc hoặc lần chạy của Organization khác, không bao giờ là `403`, và với quy tắc đã lưu trữ: `GET`, `PUT`, bật, tắt và `DELETE` một quy tắc như vậy đều trả `404 automation_rule_not_found` |
-| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required`, `automation_audience_retired` |
-| `400`, quy tắc | `automation_action_required`, `automation_project_not_found`, `automation_audience_not_found`, `automation_language_not_configured`, `automation_secret_not_allowed`, `automation_request_id_required`, `invalid_automation_run_page` |
+| `409` | `automation_rule_name_taken`, `automation_rule_unavailable`, `automation_github_source_missing`, `automation_email_not_configured`, `automation_run_not_retryable`, `automation_unknown_needs_confirmation`, `automation_release_not_published`, `automation_scheduled_action_unsupported`, `automation_webhook_rule_required`, `automation_audience_retired`, `automation_correction_not_offered` (phần chi tiết nêu action và lý do) |
+| `400`, quy tắc | `automation_action_required`, `automation_project_not_found`, `automation_audience_not_found`, `automation_language_not_configured`, `automation_secret_not_allowed`, `automation_request_id_required`, `automation_trigger_invalid`, `invalid_automation_run_page` |
+| `400`, bản sửa | `automation_correction_action_unknown`, `automation_correction_languages_mixed`, và lỗi kiểm tra khi thiếu hay quá dài `reason` hoặc không có `ruleActionIds`; một quy tắc đang tắt, hoặc của project khác, là `409 automation_rule_unavailable` |
 | `400`, lịch | `automation_cron_invalid`, `automation_cron_time_zone_invalid`, `automation_cron_no_occurrence`, `automation_cron_release_required`, `automation_reminder_days_invalid` |
 | `400`, Slack và email | `automation_slack_webhook_required`, `automation_slack_webhook_invalid`, `automation_email_recipients_required`, `automation_email_recipient_invalid` |
 | `400`, Notion và Confluence | `automation_notion_parent_required`, `automation_notion_parent_invalid`, `automation_notion_token_required`, `automation_confluence_site_required`, `automation_confluence_site_invalid`, `automation_confluence_email_required`, `automation_confluence_email_invalid`, `automation_confluence_space_required`, `automation_confluence_space_invalid`, `automation_confluence_parent_invalid`, `automation_confluence_token_required` |
@@ -320,8 +372,15 @@ Một release note đã publish có thể được sửa bằng một bản sử
 ([ADR-0046](adr/0046-correcting-a-published-note.md);
 xem [Sửa một release note đã publish](release-notes.md#correcting-a-published-note)). Chỉ một lần
 chạy sửa mới thêm được bản sửa đổi vào một mục công khai, và bản thân mục không bao giờ thay đổi:
-văn bản đã sửa, lý do, và thời điểm là một bản sửa đổi nằm bên cạnh nó, còn bản sửa đổi 1 là mục
-đúng như lúc được publish.
+văn bản đã sửa, lý do mà lần chạy sửa đưa ra, và thời điểm là một bản sửa đổi nằm bên cạnh nó, còn
+bản sửa đổi 1 là mục đúng như lúc được publish. Xem [Gửi một bản sửa](#delivering-a-correction).
+
+- **Gửi nó.** Một bản sửa thêm bản sửa đổi tiếp theo vào mục mà lần gửi gần nhất của quy tắc đã
+  tạo. Cùng một bản sửa đổi được gửi hai lần, hoặc một lần chạy lại của action đã ghi bản sửa đổi
+  của nó, chính là bản sửa đổi đã có. Một mục đã hiển thị bản sửa đổi này bằng câu chữ khác, hoặc
+  một bản mới hơn, thất bại với `public_changelog_conflict`, nên người đọc không bao giờ nhận nội
+  dung cũ hơn. Mọi lần chạy khác gặp một mục đã sửa được so với bản sửa đổi mới nhất của nó: cùng
+  câu chữ là chính mục đó, còn câu chữ khác thất bại với `public_changelog_conflict`.
 
 - **Địa chỉ của mục hiển thị bản sửa đổi mới nhất**, dưới một dòng bằng chính ngôn ngữ của mục,
   như *Đã sửa vào ngày 15 tháng 11 năm 2026: {lý do}* hoặc *Corrected on 15 November 2026:

@@ -1,0 +1,235 @@
+{
+ "renderedBy": {
+  "commit": "0de37f7",
+  "image": "rfreplay-build:0de37f76bda62e9af4a0",
+  "run": "20261120T091203Z-0de37f7-render-adr-0046"
+ },
+ "revisions": [
+  {
+   "audience": "operator",
+   "language": "vi",
+   "revision": 2,
+   "supersedes": 1,
+   "origin": "RENDERED",
+   "reason": null,
+   "sha256": "34fa3405d873d6b51754065f171ab7ffd305c31cc61706f606fcde19d4edce28",
+   "revision1Sha256": "b3053b65731a8cfdf466b691936d50d32e3e11f9e141489513b4e9706be22e7a",
+   "placeholders": [
+    {
+     "line": 40,
+     "from": "<ZONE>",
+     "to": "<zone>"
+    },
+    {
+     "line": 46,
+     "from": "<BACKUP-id>",
+     "to": "<backup-id>"
+    },
+    {
+     "line": 46,
+     "from": "<VERIFICATION-id>",
+     "to": "<verification-id>"
+    }
+   ],
+   "identifiers": [
+    {
+     "line": 3,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 13,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 14,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 17,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    }
+   ]
+  },
+  {
+   "audience": "contributor",
+   "language": "vi",
+   "revision": 2,
+   "supersedes": 1,
+   "origin": "RENDERED",
+   "reason": null,
+   "sha256": "cd760912c1152dcf4e12b6cf7cd4d9b39cb9666d59f7d8da5fa8b1cc871d1f70",
+   "revision1Sha256": "e546ccc5513c720c4810b795e9b982e7a33efb53b0e378f4cfbed1a1c46149ca",
+   "placeholders": [
+    {
+     "line": 29,
+     "from": "<COUNT>",
+     "to": "<count>"
+    },
+    {
+     "line": 29,
+     "from": "<COUNT>",
+     "to": "<count>"
+    },
+    {
+     "line": 46,
+     "from": "<ZONE>",
+     "to": "<zone>"
+    },
+    {
+     "line": 50,
+     "from": "<BACKUP-id>",
+     "to": "<backup-id>"
+    },
+    {
+     "line": 50,
+     "from": "<VERIFICATION-id>",
+     "to": "<verification-id>"
+    },
+    {
+     "line": 52,
+     "from": "<BACKUP-id>",
+     "to": "<backup-id>"
+    },
+    {
+     "line": 52,
+     "from": "<VERIFICATION-id>",
+     "to": "<verification-id>"
+    }
+   ],
+   "identifiers": [
+    {
+     "line": 3,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 14,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 17,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    }
+   ]
+  },
+  {
+   "audience": "dba",
+   "language": "vi",
+   "revision": 2,
+   "supersedes": 1,
+   "origin": "RENDERED",
+   "reason": null,
+   "sha256": "cbd6dfe0228213c2d106d12605f8975ca54b959c642ee266692896a62bb8a690",
+   "revision1Sha256": "7a46c3dc513d4ec43f31b3c960c3cb7410d2abbcb76e4c2d2d011938e52a949c",
+   "placeholders": [],
+   "identifiers": [
+    {
+     "line": 3,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 14,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 22,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    }
+   ]
+  },
+  {
+   "audience": "end_user",
+   "language": "vi",
+   "revision": 2,
+   "supersedes": 1,
+   "origin": "RENDERED",
+   "reason": null,
+   "sha256": "7d63be6e5c5d90e9fa48a1b91d60d9e2a8cae837c905ab22955d28a15d58a1c0",
+   "revision1Sha256": "b928e4b99a1c09a9980c53348567a7e918cb3a2ae1d0aad5309d73bb0c0d3ccc",
+   "placeholders": [],
+   "identifiers": [
+    {
+     "line": 3,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 14,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    }
+   ]
+  },
+  {
+   "audience": "support",
+   "language": "vi",
+   "revision": 2,
+   "supersedes": 1,
+   "origin": "RENDERED",
+   "reason": null,
+   "sha256": "7016efe03c89d9dbe2de7a0452a1ff721ce48bdb9fb9d7c944651f13b4df3bbe",
+   "revision1Sha256": "cfb7d019316d41cf082fce96bbcd1883ecce5f01afb6c8fc478547185b1f0e6b",
+   "placeholders": [],
+   "identifiers": [
+    {
+     "line": 3,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 14,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    }
+   ]
+  },
+  {
+   "audience": "aut_r4_probe",
+   "language": "vi",
+   "revision": 2,
+   "supersedes": 1,
+   "origin": "RENDERED",
+   "reason": null,
+   "sha256": "1b00838b1552f016b8e0942f5b1836ef7b4107165f08b201baa1a1c05e1b9ef0",
+   "revision1Sha256": "cfd9c82c4220c00317ce862edc36548a7c02721855b9acc8e1f93ec5b2a841c5",
+   "placeholders": [],
+   "identifiers": [
+    {
+     "line": 3,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 14,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 25,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 36,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    },
+    {
+     "line": 48,
+     "from": "dbvault-CLI",
+     "to": "dbvault-cli"
+    }
+   ],
+   "note": "ADR-0046 §6: once aut_r4_probe is retired (ADR-0044), rendering this note again is refused with 409 audience_retired and only a correction by hand (MANUAL) is allowed; this text is what rendering again gives while the audience is active, as in set v2."
+  }
+ ]
+}

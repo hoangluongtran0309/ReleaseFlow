@@ -21,6 +21,10 @@ class AutomationMetricsTest {
         assertThat(registry.find(AutomationMetrics.EXECUTIONS).counters())
                 .hasSize(TriggerType.values().length * 3)
                 .allSatisfy(counter -> assertThat(counter.count()).isZero());
+        // A correction (ADR-0046) is a trigger like the others, there before any is delivered.
+        assertThat(count("correction", "succeeded")).isZero();
+        assertThat(count("correction", "failed")).isZero();
+        assertThat(count("correction", "unknown")).isZero();
     }
 
     @Test

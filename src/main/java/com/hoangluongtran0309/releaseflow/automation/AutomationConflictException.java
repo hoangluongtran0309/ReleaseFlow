@@ -14,6 +14,11 @@ public class AutomationConflictException extends LocalizedException {
         this.code = code;
     }
 
+    private AutomationConflictException(String code, String messageKey, Object[] arguments) {
+        super(messageKey, arguments);
+        this.code = code;
+    }
+
     static AutomationConflictException nameTaken() {
         return new AutomationConflictException("automation_rule_name_taken");
     }
@@ -53,6 +58,18 @@ public class AutomationConflictException extends LocalizedException {
 
     static AutomationConflictException runNotRetryable() {
         return new AutomationConflictException("automation_run_not_retryable");
+    }
+
+    /** A rule that cannot deliver a correction now: disabled, or for another project. */
+    static AutomationConflictException ruleUnavailableForCorrection() {
+        return new AutomationConflictException("automation_rule_unavailable", "error.automation_rule_unavailable.correction",
+                new Object[0]);
+    }
+
+    /** One picked action is not offered; the detail says which and why, in the reader's language. */
+    static AutomationConflictException correctionNotOffered(int position, CorrectionOffer.Unavailable reason) {
+        return new AutomationConflictException("automation_correction_not_offered",
+                "error.automation_correction_not_offered." + reason.code(), new Object[]{position});
     }
 
     static AutomationConflictException unknownNeedsConfirmation() {

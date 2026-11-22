@@ -194,8 +194,10 @@ class AutomationWorker {
     }
 
     private void createRuns(OutboxClaim claim) {
+        // The release is locked first, as wherever a run is created for it: a correction saved
+        // meanwhile is in every run or in none.
         Optional<ReleaseAccess.ReleaseSnapshot> release =
-                releaseAccess.find(claim.organizationId(), claim.releaseId());
+                releaseAccess.lockForRun(claim.organizationId(), claim.releaseId());
         if (release.isEmpty() || release.get().status() != ReleaseStatus.PUBLISHED) {
             completeOutbox(claim, job -> job.fail(RELEASE_UNAVAILABLE, now()));
             return;
@@ -229,6 +231,17 @@ class AutomationWorker {
             run.actionClaimed(now);
             actionRunRepository.flush();
             runRepository.flush();
+            ActionCommand.Correction correction = run.getTriggerType() != TriggerType.CORRECTION
+                    || action.getCorrectsActionRunId() == null
+                    ? null
+                    : new ActionCommand.Correction(
+                            action.getCorrectsActionRunId(),
+                            actionRunRepository.findById(action.getCorrectsActionRunId())
+                                    .map(AutomationActionRun::getAudienceNameSnapshot)
+                                    .orElse(action.getAudienceNameSnapshot()),
+                            action.getNoteRevision(),
+                            run.getReason()
+                    );
             return new Claim(
                     action.getId(),
                     action.getOrganizationId(),
@@ -249,6 +262,7 @@ class AutomationWorker {
                             action.getRuleActionId(),
                             action.getActionType()
                     ),
+                    correction,
                     now
             );
         });
@@ -263,10 +277,19 @@ class AutomationWorker {
         if (claim.noteContent() == null) {
             return ActionResult.failed(ActionResult.NOTE_MISSING);
         }
-        // A note that nothing in the release concerns is skipped too, decided from the
-        // release's changes and never from the note's text; a note a person wrote is
-        // delivered as written (ADR-0035 and ADR-0044, amended 2026-11-19).
-        if (releaseAccess.hasNothingFor(claim.organizationId(), claim.releaseId(), claim.audienceId(), claim.language())) {
+        if (claim.triggerType() == TriggerType.CORRECTION) {
+            // A correction replaces what a destination already holds, so it is never skipped
+            // for having nothing to say: that would leave text the note no longer says
+            // (ADR-0046, amended 2026-11-20). Slice A corrects only the public changelog, and
+            // a correction always names the delivery it replaces.
+            if (claim.actionType() != ActionType.PUBLIC_CHANGELOG || claim.correction() == null) {
+                return ActionResult.failed(ActionResult.CORRECTION_NOT_SUPPORTED);
+            }
+        } else if (releaseAccess.hasNothingFor(
+                claim.organizationId(), claim.releaseId(), claim.audienceId(), claim.language())) {
+            // A note that nothing in the release concerns is skipped too, decided from the
+            // release's changes and never from the note's text; a note a person wrote is
+            // delivered as written (ADR-0035 and ADR-0044, amended 2026-11-19).
             return ActionResult.skipped(ActionResult.NOTHING_FOR_AUDIENCE);
         }
         RuleActionExecutor executor = executors.get(claim.actionType());
@@ -284,7 +307,8 @@ class AutomationWorker {
                     claim.language(),
                     claim.noteContent(),
                     claim.configuration(),
-                    claim.rawSecret()
+                    claim.rawSecret(),
+                    claim.correction()
             ));
         } catch (RuntimeException exception) {
             // Nobody knows whether the provider acted, so nobody may repeat it alone.
@@ -348,6 +372,7 @@ class AutomationWorker {
             String noteContent,
             Map<String, String> configuration,
             String rawSecret,
+            ActionCommand.Correction correction,
             Instant claimedAt
     ) {
     }
