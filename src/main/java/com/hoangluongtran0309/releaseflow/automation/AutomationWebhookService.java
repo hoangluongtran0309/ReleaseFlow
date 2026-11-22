@@ -101,8 +101,13 @@ class AutomationWebhookService {
     }
 
     private AutomationRun create(AutomationRule rule, UUID releaseId, UUID deliveryId) {
-        ReleaseAccess.ReleaseSnapshot release = releaseAccess.find(rule.getOrganizationId(), releaseId)
+        ReleaseAccess.ReleaseSnapshot release = releaseAccess.lockForRun(rule.getOrganizationId(), releaseId)
                 .orElseThrow(AutomationConflictException::releaseNotPublished);
+        // The same delivery may have been waiting on that lock: it is the run already there.
+        Optional<AutomationRun> raced = runRepository.findByRuleIdAndRequestId(rule.getId(), deliveryId);
+        if (raced.isPresent()) {
+            return raced.get();
+        }
         if (release.status() != ReleaseStatus.PUBLISHED) {
             throw AutomationConflictException.releaseNotPublished();
         }

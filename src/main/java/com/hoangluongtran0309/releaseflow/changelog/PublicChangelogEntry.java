@@ -90,11 +90,6 @@ class PublicChangelogEntry {
         this.publishedAt = publishedAt;
     }
 
-    /** Whether a second delivery is saying exactly what this entry already says. */
-    boolean says(String releaseVersion, String content) {
-        return releaseVersionSnapshot.equals(releaseVersion) && contentSnapshot.equals(content);
-    }
-
     UUID getId() {
         return id;
     }

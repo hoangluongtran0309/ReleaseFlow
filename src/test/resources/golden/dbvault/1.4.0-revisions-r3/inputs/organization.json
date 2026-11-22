@@ -1,0 +1,163 @@
+{
+ "outputLanguage": "en",
+ "releaseLanguages": [
+  "en",
+  "vi"
+ ],
+ "projectContext": null,
+ "glossary": null,
+ "notCaptured": "Set v2 holds neither the Project context nor the glossary, nor the context and glossary version of each translation job; see README.md, 'What set v2 does not hold'.",
+ "audiences": [
+  {
+   "code": "contributor",
+   "displayName": "Contributor",
+   "communicationIntent": "Focus on implementation detail and what other developers must change in their own code. Technical vocabulary is expected. A change is none for contributors only when it touches nothing developers build, test, or call, such as a change to deployment settings alone.",
+   "preset": true,
+   "templateBody": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{^brief}}\n{{#whyChanged}}\n  - Why: {{.}}\n{{/whyChanged}}\n{{#technicalDetail}}\n  - Implementation: {{.}}\n{{/technicalDetail}}\n{{#limitations}}\n  - Limitations: {{.}}\n{{/limitations}}\n{{/brief}}\n{{#migrationRequired}}\n  - Required step: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - If it applies to you: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Recommended step: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Migration: {{migrationStep}}\n{{/migrationUnspecified}}\n{{/brief}}\n",
+   "templateVariants": {
+    "vi": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{^brief}}\n{{#whyChanged}}\n  - Lý do: {{.}}\n{{/whyChanged}}\n{{#technicalDetail}}\n  - Cách triển khai: {{.}}\n{{/technicalDetail}}\n{{#limitations}}\n  - Giới hạn: {{.}}\n{{/limitations}}\n{{/brief}}\n{{#migrationRequired}}\n  - Bước bắt buộc: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - Nếu áp dụng cho bạn: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Bước khuyến nghị: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Cách chuyển đổi: {{migrationStep}}\n{{/migrationUnspecified}}\n{{/brief}}\n"
+   },
+   "footerTemplateBody": "{{#compareUrl}}\n**Compare:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n",
+   "footerTemplateVariants": {
+    "vi": "{{#compareUrl}}\n**So sánh:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n"
+   },
+   "updatedAt": "2026-11-01T15:57:08.641215Z"
+  },
+  {
+   "code": "dba",
+   "displayName": "Database administrators",
+   "communicationIntent": "Write for the DBAs who run dbvault against their databases: what touches stored data, schema, credentials, or restore behaviour, what they must check after upgrading, and how to roll back. Name engines (MySQL, PostgreSQL) and versions where they matter. A change is none for DBAs when it touches no stored data, schema, credentials, or restore behaviour and leaves nothing to check after upgrading, such as a console-only, documentation-only, or CI-only change.",
+   "preset": false,
+   "templateBody": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Required step: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - If it applies to you: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Recommended step: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Migration: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Limitations: {{.}}\n{{/limitations}}\n{{#linkedIssues}}\n  - Tracked in [{{key}}]({{url}}): {{title}} ({{status}})\n{{/linkedIssues}}\n{{/brief}}\n",
+   "templateVariants": {
+    "vi": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Bước bắt buộc: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - Nếu áp dụng cho bạn: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Bước khuyến nghị: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Cách chuyển đổi: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Giới hạn: {{.}}\n{{/limitations}}\n{{#linkedIssues}}\n  - Theo dõi tại [{{key}}]({{url}}): {{title}} ({{status}})\n{{/linkedIssues}}\n{{/brief}}\n"
+   },
+   "footerTemplateBody": "{{#compareUrl}}\n**Compare:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n",
+   "footerTemplateVariants": {
+    "vi": "{{#compareUrl}}\n**So sánh:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n"
+   },
+   "updatedAt": "2026-11-01T15:57:08.763227Z"
+  },
+  {
+   "code": "end_user",
+   "displayName": "End user",
+   "communicationIntent": "Plain language, no jargon and no technical metrics. Say only what the person will notice while using the product. A change is none for end users when they cannot see it: build, CI, dependency, test, and internal changes.",
+   "preset": true,
+   "templateBody": "- **{{headline}}**{{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Required step: {{migrationStep}}\n{{/migrationRequired}}\n",
+   "templateVariants": {
+    "vi": "- **{{headline}}**{{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Bước bắt buộc: {{migrationStep}}\n{{/migrationRequired}}\n"
+   },
+   "footerTemplateBody": "",
+   "footerTemplateVariants": {
+    "vi": ""
+   },
+   "updatedAt": "2026-11-01T15:57:08.696726Z"
+  },
+  {
+   "code": "operator",
+   "displayName": "Operator",
+   "communicationIntent": "Focus on operational risk, rollback, and what changes in how the product is deployed, configured, or run. Keep concrete numbers and failure modes. Name something to watch after deploying only when the change or the project context names it. A change is none for operators when it changes nothing about deploying, configuring, or running the product, such as a test-only, CI-only, or documentation-only change.",
+   "preset": true,
+   "templateBody": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{^brief}}\n{{#whyChanged}}\n  - Why: {{.}}\n{{/whyChanged}}\n{{#technicalDetail}}\n  - Detail: {{.}}\n{{/technicalDetail}}\n{{#limitations}}\n  - Limitations: {{.}}\n{{/limitations}}\n{{/brief}}\n{{#migrationRequired}}\n  - Required step: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - If it applies to you: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Recommended step: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Migration: {{migrationStep}}\n{{/migrationUnspecified}}\n{{/brief}}\n",
+   "templateVariants": {
+    "vi": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{^brief}}\n{{#whyChanged}}\n  - Lý do: {{.}}\n{{/whyChanged}}\n{{#technicalDetail}}\n  - Chi tiết: {{.}}\n{{/technicalDetail}}\n{{#limitations}}\n  - Giới hạn: {{.}}\n{{/limitations}}\n{{/brief}}\n{{#migrationRequired}}\n  - Bước bắt buộc: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - Nếu áp dụng cho bạn: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Bước khuyến nghị: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Cách chuyển đổi: {{migrationStep}}\n{{/migrationUnspecified}}\n{{/brief}}\n"
+   },
+   "footerTemplateBody": "{{#compareUrl}}\n**Compare:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n",
+   "footerTemplateVariants": {
+    "vi": "{{#compareUrl}}\n**So sánh:** [{{previousVersion}}...{{version}}]({{compareUrl}})\n{{/compareUrl}}\n\n{{#upgradeGuideUrl}}\n**Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n"
+   },
+   "updatedAt": "2026-11-01T15:57:08.578919Z"
+  },
+  {
+   "code": "support",
+   "displayName": "Support",
+   "communicationIntent": "Write for the support team: what customers may notice or ask about, what to tell them, and whether a step is required or only advisable. Plain, precise language. A change is none for support when customers cannot notice it: build, CI, dependency, test, and internal changes.",
+   "preset": true,
+   "templateBody": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Required step: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - If it applies to you: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Recommended step: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Migration: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Limitations: {{.}}\n{{/limitations}}\n{{/brief}}\n",
+   "templateVariants": {
+    "vi": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Bước bắt buộc: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - Nếu áp dụng cho bạn: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Bước khuyến nghị: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Cách chuyển đổi: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Giới hạn: {{.}}\n{{/limitations}}\n{{/brief}}\n"
+   },
+   "footerTemplateBody": "",
+   "footerTemplateVariants": {
+    "vi": ""
+   },
+   "updatedAt": "2026-11-01T17:43:01.480966Z"
+  },
+  {
+   "code": "aut_r4_probe",
+   "displayName": "Support team",
+   "communicationIntent": "Write for the dbvault support engineers who answer customers: what customers will notice, what they need to do, and what to tell them. Skip implementation detail. A change is none for support when customers cannot notice it: build, CI, dependency, test, and internal changes.",
+   "preset": false,
+   "templateBody": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - What customers must do: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - If it applies to the customer: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - What to recommend to customers: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Migration: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Limitations: {{.}}\n{{/limitations}}\n{{/brief}}\n",
+   "templateVariants": {
+    "vi": "- **{{headline}}** ([{{reference}}]({{pullRequestUrl}})){{#narrative}} — {{.}}{{/narrative}}\n{{#migrationRequired}}\n  - Khách hàng cần làm: {{migrationStep}}\n{{/migrationRequired}}\n{{^brief}}\n{{#migrationConditional}}\n  - Nếu áp dụng cho khách hàng: {{migrationStep}}\n{{/migrationConditional}}\n{{#migrationRecommended}}\n  - Nên khuyên khách hàng: {{migrationStep}}\n{{/migrationRecommended}}\n{{#migrationUnspecified}}\n  - Cách chuyển đổi: {{migrationStep}}\n{{/migrationUnspecified}}\n{{#limitations}}\n  - Giới hạn: {{.}}\n{{/limitations}}\n{{/brief}}\n"
+   },
+   "footerTemplateBody": "{{#upgradeGuideUrl}}\n**Upgrade guide:** [Read before upgrading]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n",
+   "footerTemplateVariants": {
+    "vi": "{{#upgradeGuideUrl}}\n**Hướng dẫn nâng cấp:** [Đọc trước khi nâng cấp]({{upgradeGuideUrl}})\n{{/upgradeGuideUrl}}\n"
+   },
+   "updatedAt": "2026-11-01T15:57:08.885804Z"
+  }
+ ],
+ "categories": [
+  {
+   "code": "DOCUMENTATION",
+   "displayName": "Documentation",
+   "group": "DOCUMENTATION"
+  },
+  {
+   "code": "FEATURE",
+   "displayName": "Feature",
+   "group": "FEATURE"
+  },
+  {
+   "code": "FIX",
+   "displayName": "Fix",
+   "group": "FIX"
+  },
+  {
+   "code": "MAINTENANCE",
+   "displayName": "Maintenance",
+   "group": "MAINTENANCE"
+  },
+  {
+   "code": "PERFORMANCE",
+   "displayName": "Performance",
+   "group": "PERFORMANCE"
+  },
+  {
+   "code": "SECURITY",
+   "displayName": "Security",
+   "group": "FIX"
+  },
+  {
+   "code": "UNKNOWN",
+   "displayName": "Unknown",
+   "group": "OTHER"
+  }
+ ],
+ "sensitivePaths": [
+  "**/crypto/**",
+  "**/restore/**"
+ ],
+ "sources": [
+  {
+   "type": "GITHUB",
+   "repository": "hoangtulangtoc/dbvault"
+  },
+  {
+   "type": "GITLAB",
+   "projectPath": "dbvault1/dbvault-cli",
+   "apiBaseUrl": "https://gitlab.com"
+  },
+  {
+   "type": "LINEAR",
+   "workspaceUrl": "https://linear.app/dbvault"
+  },
+  {
+   "type": "JIRA",
+   "siteUrl": "https://hoangluongtran0309.atlassian.net",
+   "projectKey": "DBV"
+  }
+ ]
+}

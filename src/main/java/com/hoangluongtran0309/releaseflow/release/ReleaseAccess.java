@@ -3,6 +3,7 @@ package com.hoangluongtran0309.releaseflow.release;
 import com.hoangluongtran0309.releaseflow.change.ChangeInboxService;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -44,16 +45,46 @@ public class ReleaseAccess {
         }
         return releaseRepository.findById(releaseId)
                 .filter(release -> release.getOrganizationId().equals(organizationId))
-                .map(release -> new ReleaseSnapshot(
-                        release.getId(),
-                        release.getProjectId(),
-                        release.getVersion(),
-                        release.getStatus(),
-                        // A note is its latest revision, so a new run delivers the corrected text.
-                        noteRevisions.latest(organizationId, release.getId(), noteRepository
-                                .findAllByReleaseIdAndOrganizationIdOrderByAudienceNameAscAudienceCodeAscLanguageAsc(
-                                        release.getId(), organizationId))
-                ));
+                .map(this::snapshot);
+    }
+
+    /**
+     * The release for a run about to be created, its row locked first and held until the
+     * caller's transaction ends (#119, #122). A published note can change now (ADR-0046), and
+     * a correction saves its revision under this same lock, so the notes a run snapshots are
+     * the ones as of a moment no revision is half-way through, and a correction's offer and
+     * the run it starts read the same revisions. It joins the caller's transaction and refuses
+     * to run without one, since a lock released on return would protect nothing.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<ReleaseSnapshot> lockForRun(UUID organizationId, UUID releaseId) {
+        if (releaseId == null) {
+            return Optional.empty();
+        }
+        return releaseRepository.lockByIdAndOrganizationId(releaseId, organizationId).map(this::snapshot);
+    }
+
+    /**
+     * The reasons of a note's revisions after {@code after}, oldest first: what a destination
+     * holding revision {@code after} has not been told, for a person to write a correction's
+     * reason from.
+     */
+    @Transactional(readOnly = true)
+    public List<String> reasonsAfter(UUID organizationId, UUID noteId, int after) {
+        return noteRevisions.reasonsAfter(organizationId, noteId, after);
+    }
+
+    private ReleaseSnapshot snapshot(Release release) {
+        return new ReleaseSnapshot(
+                release.getId(),
+                release.getProjectId(),
+                release.getVersion(),
+                release.getStatus(),
+                // A note is its latest revision, so a new run delivers the corrected text.
+                noteRevisions.latest(release.getOrganizationId(), release.getId(), noteRepository
+                        .findAllByReleaseIdAndOrganizationIdOrderByAudienceNameAscAudienceCodeAscLanguageAsc(
+                                release.getId(), release.getOrganizationId()))
+        );
     }
 
     /**

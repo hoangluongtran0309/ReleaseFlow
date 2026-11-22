@@ -96,6 +96,9 @@
                                     <button type="submit" class="btn btn-primary btn-sm" th:text="#{ui.automation.run}">Run</button>
                                 </form>
                             </details>
+                            <!--/* Any rule that delivered a published note can correct it (ADR-0046, part 5). */-->
+                            <a class="btn btn-ghost btn-sm" th:href="@{/automation/{id}/corrections(id=${rule.id})}"
+                               th:text="#{ui.automation.deliverCorrection}">Deliver a correction</a>
                             <details class="w-full sm:w-auto" th:if="${rule.webhookSecretConfigured}">
                                 <summary class="btn btn-ghost btn-sm" th:text="#{ui.automation.rotateSecret}">Rotate secret</summary>
                                 <div class="subtle-panel mt-2 grid w-full gap-3 sm:w-72">
@@ -384,7 +387,13 @@
                 <tr th:each="run : ${runs.items}" th:id="|run-${run.id}|">
                     <td class="font-semibold" th:data-heading="#{ui.automation.column.rule}" th:text="${run.ruleName}">Announce to Slack</td>
                     <td th:data-heading="#{ui.automation.column.release}" th:text="${run.releaseVersion}">1.4.0</td>
-                    <td th:data-heading="#{ui.automation.column.ranBecause}" th:text="#{${run.triggerType.labelKey}}">Release published</td>
+                    <td th:data-heading="#{ui.automation.column.ranBecause}">
+                        <span th:text="#{${run.triggerType.labelKey}}">Release published</span>
+                        <!--/* A correction's reason is what each corrected destination shows (ADR-0046). */-->
+                        <span class="mt-1 block whitespace-pre-line text-xs text-slate-600" th:if="${run.reason != null}"
+                              th:lang="${#lists.isEmpty(run.actions)} ? null : ${run.actions[0].language}"
+                              th:text="#{ui.automation.correctionReason(${run.reason})}">Reason: the reason</span>
+                    </td>
                     <td th:data-heading="#{ui.automation.column.startedBy}" th:text="${run.initiatorName} ?: '—'">Ada</td>
                     <td th:data-heading="#{ui.automation.column.status}">
                         <span class="badge badge-sm whitespace-nowrap badge-success badge-soft" th:if="${run.status.name() == 'SUCCEEDED'}" th:text="#{${run.status.labelKey}}">Succeeded</span>
@@ -397,6 +406,8 @@
                         <ol class="text-sm">
                             <li th:each="action : ${run.actions}" th:id="|action-run-${action.id}|">
                                 <span th:text="#{ui.automation.runActionLine(${action.position + 1},#{${action.actionType.labelKey}},#{${action.status.labelKey}})}">1. Slack — Succeeded</span>
+                                <span class="text-xs text-slate-600" th:if="${action.correctsRevision != null}"
+                                      th:text="#{ui.automation.correctsRevision(${action.noteRevision}, ${action.correctsRevision})}">revision 3, replaces revision 1</span>
                                 <code class="text-xs" th:if="${action.errorCode != null}" th:text="${action.errorCode}">slack_rejected</code>
                                 <!--/* Skipped, not failed: the actions behind it still ran (ADR-0044, amended 2026-11-19). */-->
                                 <span class="text-xs text-slate-600"

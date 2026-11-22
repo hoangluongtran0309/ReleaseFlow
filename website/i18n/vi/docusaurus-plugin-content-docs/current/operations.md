@@ -33,7 +33,7 @@ Bốn số liệu trả lời các câu hỏi vận hành, và mọi label đề
 | `releaseflow_classification_completed_total` | `needs_human_review` | Bao nhiêu thay đổi đã được phân loại, và bao nhiêu trong số đó vẫn cần một người |
 | `releaseflow_classification_collect_to_complete_seconds` | — | Một thay đổi chờ bao lâu từ lúc đến tới lúc được phân loại |
 | `releaseflow_classification_provider_requests_total` | `provider`, `outcome` | AI từ chối hoặc trả về thứ không đọc được thường xuyên tới mức nào |
-| `releaseflow_automation_action_executions_total` | `trigger`, `outcome` | Các lần gửi kết thúc ra sao, với không rõ kết quả được tách riêng khỏi thất bại |
+| `releaseflow_automation_action_executions_total` | `trigger`, `outcome` | Các lần gửi kết thúc ra sao, với không rõ kết quả được tách riêng khỏi thất bại; `trigger` là `release_published`, `manual`, `scheduled_cron`, `upcoming_release_reminder`, `external_webhook` hoặc `correction` |
 
 **Không label nào mang Organization, Project, release, quy tắc, lần chạy, action, model, tham
 chiếu bên ngoài hay nội dung lỗi.** Số liệu là góc nhìn trên toàn hệ thống triển khai; một câu hỏi

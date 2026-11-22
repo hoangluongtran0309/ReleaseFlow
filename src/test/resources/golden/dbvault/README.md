@@ -16,6 +16,15 @@ the package's revision 2, byte for byte, with no DeepL request. Set `v2` holds n
 context and no glossary, so the jobs approval writes have neither, and the cache they leave
 is what rendering again reads (ADR-0046, amended 2026-11-20).
 
+`1.4.0-revisions-r3/` is the third, for the correction run (#87's fifth pull request), copied
+here unchanged beside the second, which stays as it is. It holds the second's 24 files byte for
+byte, plus `revision-3/v1.2.0/end_user.vi.md`, made from revision 2 by the one edit
+`revision-3.json` records, and that file's reasons: the revision's own, and the one the
+correction run is delivered with. `GoldenCorrectionRunIntegrationTest` pins the package's
+`MANIFEST.sha256` itself, renders `end_user`/vi again as revision 2, saves revision 3 by hand
+with its reason, and delivers a correction run to the public changelog with the run's reason:
+the entry's revision 2 must be revision 3's text byte for byte, with that reason exactly.
+
 **These files come from the dbvault workspace and are refreshed only from there.** Never
 edit a snapshot, an input, or a recorded DeepL answer by hand, and never update a snapshot
 to make the test pass. When a note changes on purpose, the workspace renders it again and

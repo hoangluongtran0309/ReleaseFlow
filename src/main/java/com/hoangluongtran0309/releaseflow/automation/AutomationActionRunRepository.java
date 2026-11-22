@@ -17,6 +17,25 @@ interface AutomationActionRunRepository extends JpaRepository<AutomationActionRu
     List<AutomationActionRun> findAllByRunIdInOrderByRunIdAscPositionAsc(Collection<UUID> runIds);
 
     /**
+     * Every run of these rule actions for one release, oldest run first: what a correction
+     * offer asks of each action's history (ADR-0046, part 5). A retry reuses its row, so the
+     * last row of an action is its latest delivery.
+     */
+    @Query(value = """
+            SELECT action_run.* FROM automation_action_runs action_run
+            JOIN automation_runs run ON run.id = action_run.run_id
+            WHERE run.organization_id = :organizationId
+              AND run.release_id = :releaseId
+              AND action_run.rule_action_id IN (:ruleActionIds)
+            ORDER BY run.created_at, run.id
+            """, nativeQuery = true)
+    List<AutomationActionRun> findAllForRuleActionsAndRelease(
+            @Param("organizationId") UUID organizationId,
+            @Param("releaseId") UUID releaseId,
+            @Param("ruleActionIds") Collection<UUID> ruleActionIds
+    );
+
+    /**
      * For each rule action that ever delivered a note of this release, its latest delivery that
      * succeeded: what that destination holds now (ADR-0046).
      */

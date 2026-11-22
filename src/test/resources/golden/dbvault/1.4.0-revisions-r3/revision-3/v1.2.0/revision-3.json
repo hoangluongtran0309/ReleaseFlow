@@ -1,0 +1,21 @@
+{
+ "release": "v1.2.0",
+ "audience": "end_user",
+ "language": "vi",
+ "revision": 3,
+ "supersedes": 2,
+ "origin": "MANUAL",
+ "edit": [
+  {
+   "line": 13,
+   "from": "- **Điểm endpoint API GET /api/v1/verifications/{id} đã bị xóa và hiện trả về mã trạng thái 404; thay vào đó, hãy sử dụng GET /api/v1/backups/{backupId}/verifications/{id}.**",
+   "to": "- **Endpoint API GET /api/v1/verifications/{id} đã bị xóa và hiện trả về mã trạng thái 404; thay vào đó, hãy sử dụng GET /api/v1/backups/{backupId}/verifications/{id}.**"
+  }
+ ],
+ "revisionReason": "Giữ nguyên thuật ngữ \"Endpoint\" như bảng thuật ngữ quy định; bản dịch trước viết thành \"Điểm endpoint\".",
+ "correctionRunReason": "Sửa lỗi bản dịch: viết đúng tên công cụ \"dbvault-cli\" và giữ nguyên thuật ngữ \"Endpoint\".",
+ "revision2Sha256": "7d63be6e5c5d90e9fa48a1b91d60d9e2a8cae837c905ab22955d28a15d58a1c0",
+ "revision3Sha256": "77d1f194c6c2465a80ea4f18ff8998fa122ac4cd0eb906c0d1f505c5895686bb",
+ "derivedFrom": "1.4.0-revisions (MANIFEST.sha256 c6a037e9015eb2814ae1b9ef625e67195766d02d48d9137575decbf0ee189ae4), revision-2/v1.2.0/end_user.vi.md, by rf-regression tools/golden/build_revision3.py",
+ "approved": "user and Hoang (Vietnamese), 2026-11-21"
+}

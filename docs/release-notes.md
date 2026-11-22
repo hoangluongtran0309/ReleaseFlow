@@ -772,7 +772,8 @@ with its reason, the corrector's name as it was then, and the time
 
 On the published release, open the note's tab and choose **Correct this note**. The page
 starts from the note's latest revision. Edit its Markdown, write the reason in the note's
-own language (at most 500 characters; it is published wherever the correction is), and
+own language (at most 500 characters; it is kept with the revision and starts the reason a
+correction run gives, which is what a corrected destination shows), and
 choose **Show the difference**. **Save as revision 3**, or whichever number is next, appears
 only once the difference is shown, and saving is refused if the text changed after that.
 A retired audience's note is corrected the same way.
@@ -798,7 +799,9 @@ lists every revision, newest first, with how its text was made, when, by whom, i
 its difference from the one before, its Markdown, and a download named
 `<version>-<audience>-<language>.r<n>.md`. **Where it went** lists each automation action
 that delivered the note, with the revision it carried, and marks one **Behind** when the
-note has been corrected since. A revision is never changed or removed; only a newer one
+note has been corrected since; an administrator's **Deliver the correction** beside it opens
+the rule's correction form ([Delivering a correction](automation.md#delivering-a-correction)).
+A revision is never changed or removed; only a newer one
 supersedes it. Every member reads revisions; only administrators correct.
 
 REST clients call `POST /api/projects/{projectId}/releases/{releaseId}/notes/{noteId}/revisions`

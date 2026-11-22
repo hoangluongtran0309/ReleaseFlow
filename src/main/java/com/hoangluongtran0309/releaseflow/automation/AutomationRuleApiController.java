@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -26,10 +27,16 @@ public class AutomationRuleApiController {
 
     private final AutomationRuleService ruleService;
     private final AutomationRunService runService;
+    private final AutomationCorrectionService correctionService;
 
-    AutomationRuleApiController(AutomationRuleService ruleService, AutomationRunService runService) {
+    AutomationRuleApiController(
+            AutomationRuleService ruleService,
+            AutomationRunService runService,
+            AutomationCorrectionService correctionService
+    ) {
         this.ruleService = ruleService;
         this.runService = runService;
+        this.correctionService = correctionService;
     }
 
     @GetMapping
@@ -111,6 +118,26 @@ public class AutomationRuleApiController {
             @Valid @RequestBody ExecuteRuleRequest request
     ) {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(runService.execute(principal, ruleId, request));
+    }
+
+    /** What a correction run of this rule could deliver for one published release (ADR-0046). */
+    @GetMapping("/{ruleId}/corrections")
+    CorrectionOffer correctionOffer(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID ruleId,
+            @RequestParam UUID releaseId
+    ) {
+        return correctionService.offer(principal, ruleId, releaseId);
+    }
+
+    // Queues a correction run of the actions picked; the worker delivers it.
+    @PostMapping("/{ruleId}/corrections")
+    ResponseEntity<AutomationRunView> correct(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID ruleId,
+            @Valid @RequestBody CorrectionRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(correctionService.start(principal, ruleId, request));
     }
 
     record CronPreviewResponse(Instant nextFireAt) {

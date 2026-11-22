@@ -90,22 +90,8 @@ abstract class PublicChangelogTestBase extends AutomationIntegrationTestBase {
             String initiatorName
     ) {
         Map<String, Object> entry = jdbcTemplate.queryForMap(
-                "SELECT organization_id, action_run_id FROM public_changelog_entries WHERE id = ?", entryId);
-        UUID deliveringAction = (UUID) entry.get("action_run_id");
-        UUID deliveringRun = jdbcTemplate.queryForObject(
-                "SELECT run_id FROM automation_action_runs WHERE id = ?", UUID.class, deliveringAction);
-        UUID runId = UUID.randomUUID();
-        UUID actionRunId = UUID.randomUUID();
-        copy("automation_runs", deliveringRun, Map.of(
-                "id", runId,
-                "trigger_type", "CORRECTION",
-                "request_id", UUID.randomUUID(),
-                "initiated_by", initiatorId,
-                "initiator_name", initiatorName));
-        copy("automation_action_runs", deliveringAction, Map.of(
-                "id", actionRunId,
-                "run_id", runId,
-                "note_revision", noteRevision));
+                "SELECT organization_id FROM public_changelog_entries WHERE id = ?", entryId);
+        UUID actionRunId = correctionActionRun(entryId, noteRevision, reason, initiatorId, initiatorName);
         int revision = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(MAX(revision), 1) + 1 FROM public_changelog_entry_revisions WHERE entry_id = ?",
                 Integer.class, entryId);
@@ -117,6 +103,34 @@ abstract class PublicChangelogTestBase extends AutomationIntegrationTestBase {
                 """, UUID.randomUUID(), entryId, entry.get("organization_id"), revision, noteRevision, actionRunId,
                 content, reason, at(correctedAt));
         return revision;
+    }
+
+    /**
+     * A {@code CORRECTION} run of the rule that published the entry, and its action run carrying
+     * the note's revision {@code noteRevision} and naming the delivery it corrects, without the
+     * revision it would write: the rows a correction run has before its action is delivered.
+     */
+    protected UUID correctionActionRun(UUID entryId, int noteRevision, String reason, UUID initiatorId,
+                                       String initiatorName) {
+        UUID deliveringAction = jdbcTemplate.queryForObject(
+                "SELECT action_run_id FROM public_changelog_entries WHERE id = ?", UUID.class, entryId);
+        UUID deliveringRun = jdbcTemplate.queryForObject(
+                "SELECT run_id FROM automation_action_runs WHERE id = ?", UUID.class, deliveringAction);
+        UUID runId = UUID.randomUUID();
+        UUID actionRunId = UUID.randomUUID();
+        copy("automation_runs", deliveringRun, Map.of(
+                "id", runId,
+                "trigger_type", "CORRECTION",
+                "request_id", UUID.randomUUID(),
+                "initiated_by", initiatorId,
+                "initiator_name", initiatorName,
+                "reason", reason));
+        copy("automation_action_runs", deliveringAction, Map.of(
+                "id", actionRunId,
+                "run_id", runId,
+                "note_revision", noteRevision,
+                "corrects_action_run_id", deliveringAction));
+        return actionRunId;
     }
 
     protected static Timestamp at(Instant instant) {

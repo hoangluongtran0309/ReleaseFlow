@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -41,6 +42,7 @@ public class AutomationPageController {
     private final ReleaseLanguageService releaseLanguageService;
     private final ProjectService projectService;
     private final ReleaseAccess releaseAccess;
+    private final AutomationCorrectionService correctionService;
 
     AutomationPageController(
             AutomationRuleService ruleService,
@@ -48,7 +50,8 @@ public class AutomationPageController {
             AudienceService audienceService,
             ReleaseLanguageService releaseLanguageService,
             ProjectService projectService,
-            ReleaseAccess releaseAccess
+            ReleaseAccess releaseAccess,
+            AutomationCorrectionService correctionService
     ) {
         this.ruleService = ruleService;
         this.runService = runService;
@@ -56,6 +59,7 @@ public class AutomationPageController {
         this.releaseLanguageService = releaseLanguageService;
         this.projectService = projectService;
         this.releaseAccess = releaseAccess;
+        this.correctionService = correctionService;
     }
 
     @GetMapping("/automation")
@@ -216,6 +220,98 @@ public class AutomationPageController {
                 () -> runService.execute(principal, ruleId, request));
     }
 
+    /**
+     * The correction form (ADR-0046, part 5): choose a published release, then see each of the
+     * rule's actions, offered or with the reason it is not, and the reason pre-filled from the
+     * revisions the picked destinations have not received.
+     */
+    @GetMapping("/automation/{ruleId}/corrections")
+    String correctionForm(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID ruleId,
+            @RequestParam(required = false) UUID releaseId,
+            Model model,
+            HttpServletResponse response
+    ) {
+        CorrectionRequest request = new CorrectionRequest();
+        request.setReleaseId(releaseId);
+        request.setRequestId(UUID.randomUUID());
+        if (releaseId == null) {
+            return renderCorrection(principal, ruleId, request, null, model);
+        }
+        try {
+            CorrectionOffer offer = correctionService.offer(principal, ruleId, releaseId);
+            request.setReason(offer.suggestedReason());
+            request.setRuleActionIds(offer.items().stream()
+                    .filter(CorrectionOffer.Item::picked)
+                    .map(CorrectionOffer.Item::ruleActionId)
+                    .toList());
+            return renderCorrection(principal, ruleId, request, offer, model);
+        } catch (AutomationConflictException exception) {
+            response.setStatus(HttpStatus.CONFLICT.value());
+            model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error(exception));
+            request.setReleaseId(null);
+            return renderCorrection(principal, ruleId, request, null, model);
+        }
+    }
+
+    /** Starts the correction run; the request ID in the form makes a second submit the same run. */
+    @PostMapping("/automation/{ruleId}/corrections")
+    String correct(
+            @AuthenticationPrincipal ReleaseFlowPrincipal principal,
+            @PathVariable UUID ruleId,
+            @Valid @ModelAttribute("correctionRequest") CorrectionRequest request,
+            BindingResult bindingResult,
+            RedirectAttributes redirect,
+            Model model,
+            HttpServletResponse response
+    ) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        if (!bindingResult.hasErrors()) {
+            try {
+                correctionService.start(principal, ruleId, request);
+                UiNotice.flash(redirect, UiNotice.success("ui.automation.correctionQueued"));
+                return "redirect:/automation";
+            } catch (AutomationConflictException exception) {
+                status = HttpStatus.CONFLICT;
+                bindingResult.reject(exception.messageKey(), exception.arguments(), null);
+            } catch (AutomationActionInvalidException exception) {
+                bindingResult.reject(exception.messageKey(), exception.arguments(), null);
+            }
+        }
+        response.setStatus(status.value());
+        CorrectionOffer offer = null;
+        try {
+            offer = request.getReleaseId() == null ? null
+                    : correctionService.offer(principal, ruleId, request.getReleaseId());
+        } catch (AutomationConflictException exception) {
+            model.addAttribute(UiNotice.PAGE_ATTRIBUTE, UiNotice.error(exception));
+        }
+        return renderCorrection(principal, ruleId, request, offer, model);
+    }
+
+    private String renderCorrection(
+            ReleaseFlowPrincipal principal,
+            UUID ruleId,
+            CorrectionRequest request,
+            CorrectionOffer offer,
+            Model model
+    ) {
+        AutomationRuleView rule = ruleService.get(principal.organizationId(), ruleId);
+        model.addAttribute("rule", rule);
+        model.addAttribute("releases", releaseAccess.published(principal.organizationId()).stream()
+                .filter(release -> rule.projectId() == null || rule.projectId().equals(release.projectId()))
+                .toList());
+        model.addAttribute("offer", offer);
+        model.addAttribute("reasonLanguage", offer == null ? null : offer.items().stream()
+                .filter(CorrectionOffer.Item::picked)
+                .map(CorrectionOffer.Item::language)
+                .findFirst()
+                .orElse(null));
+        model.addAttribute("correctionRequest", request);
+        return "automation-correction";
+    }
+
     @PostMapping("/automation/runs/{runId}/retry")
     String retry(
             @AuthenticationPrincipal ReleaseFlowPrincipal principal,
@@ -335,7 +431,8 @@ public class AutomationPageController {
         model.addAttribute("languages", releaseLanguageService.targetLanguages(organizationId));
         model.addAttribute("projects", projectService.list(organizationId));
         model.addAttribute("releases", releaseAccess.published(organizationId));
-        model.addAttribute("triggers", TriggerType.values());
+        // A correction is a run's trigger only; no rule is written with it.
+        model.addAttribute("triggers", Arrays.stream(TriggerType.values()).filter(TriggerType::isRuleTrigger).toList());
         model.addAttribute("actionTypes", ActionType.values());
         model.addAttribute("editing", editing);
         model.addAttribute("requestId", UUID.randomUUID());

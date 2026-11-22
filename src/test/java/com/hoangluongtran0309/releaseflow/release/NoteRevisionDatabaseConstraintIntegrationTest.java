@@ -215,12 +215,60 @@ class NoteRevisionDatabaseConstraintIntegrationTest extends PostgreSqlIntegratio
                 .doesNotThrowAnyException();
         assertThatThrownBy(() -> insertRun(fixture, rule, "CORRECTION", request, fixture.author()))
                 .isInstanceOf(DataIntegrityViolationException.class);
+        // A correction gives the reason its destinations show, and no other run gives one (V41).
+        assertThatThrownBy(() -> insertRun(fixture, rule, "CORRECTION", UUID.randomUUID(), fixture.author(), null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertRun(fixture, rule, "CORRECTION", UUID.randomUUID(), fixture.author(), "  "))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertRun(fixture, rule, "MANUAL", UUID.randomUUID(), fixture.author(), "Why"))
+                .isInstanceOf(DataIntegrityViolationException.class);
         // A publication still names nobody, and no rule is ever written with the trigger.
         assertThatThrownBy(() -> insertRun(fixture, rule, "RELEASE_PUBLISHED", null, fixture.author()))
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbcTemplate.update(
                 "UPDATE automation_rules SET trigger_type = 'CORRECTION' WHERE id = ?", rule))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void namesTheDeliveryACorrectionReplacesInItsOwnOrganization() {
+        Fixture fixture = fixture();
+        insertNote(fixture);
+        publish(fixture);
+        UUID rule = insertRule(fixture.organization());
+        UUID action = insertAction(rule, fixture.organization(), fixture.audience());
+        UUID publication = insertRun(fixture, rule, "RELEASE_PUBLISHED", null, null);
+        UUID delivered = insertActionRun(publication, fixture.organization(), action, fixture.audience(), 0, 1);
+        UUID correction = insertRun(fixture, rule, "CORRECTION", UUID.randomUUID(), fixture.author());
+
+        assertThatCode(() -> insertCorrecting(correction, fixture, action, 0, delivered, "# Corrected"))
+                .doesNotThrowAnyException();
+        // Only a delivery of its own Organization, never itself, and only by an action that carries a note.
+        assertThatThrownBy(() -> insertCorrecting(correction, fixture, action, 1, UUID.randomUUID(), "# Corrected"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertCorrecting(correction, fixture, action, 2, null, "# Corrected", true))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertCorrecting(correction, fixture, action, 3, delivered, null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    private void insertCorrecting(UUID run, Fixture fixture, UUID action, int position, UUID corrects, String content) {
+        insertCorrecting(run, fixture, action, position, corrects, content, false);
+    }
+
+    private void insertCorrecting(UUID run, Fixture fixture, UUID action, int position, UUID corrects, String content,
+                                  boolean itself) {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update(
+                """
+                        INSERT INTO automation_action_runs
+                            (id, run_id, organization_id, rule_action_id, position, action_type, audience_id,
+                             audience_name_snapshot, language_snapshot, note_content_snapshot, note_revision, status,
+                             corrects_action_run_id)
+                        VALUES (?, ?, ?, ?, ?, 'PUBLIC_CHANGELOG', ?, 'Operator', 'en', ?, ?, 'PENDING', ?)
+                        """,
+                id, run, fixture.organization(), action, position, fixture.audience(), content,
+                content == null ? null : 2, itself ? id : corrects);
     }
 
     private record Fixture(UUID organization, UUID project, UUID release, UUID audience, UUID author) {
@@ -325,18 +373,24 @@ class NoteRevisionDatabaseConstraintIntegrationTest extends PostgreSqlIntegratio
         return id;
     }
 
+    // A correction carries its reason (V41); no other run does.
     private UUID insertRun(Fixture fixture, UUID rule, String trigger, UUID request, UUID initiator) {
+        return insertRun(fixture, rule, trigger, request, initiator,
+                trigger.equals("CORRECTION") ? "Placeholders keep their case." : null);
+    }
+
+    private UUID insertRun(Fixture fixture, UUID rule, String trigger, UUID request, UUID initiator, String reason) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 """
                         INSERT INTO automation_runs
                             (id, rule_id, organization_id, project_id, release_id, rule_name_snapshot,
                              release_version_snapshot, trigger_type, request_id, initiated_by, initiator_name, status,
-                             created_at)
-                        VALUES (?, ?, ?, ?, ?, 'Announce', '1.2.0', ?, ?, ?, ?, 'PENDING', now())
+                             reason, created_at)
+                        VALUES (?, ?, ?, ?, ?, 'Announce', '1.2.0', ?, ?, ?, ?, 'PENDING', ?, now())
                         """,
                 id, rule, fixture.organization(), fixture.project(), fixture.release(), trigger, request, initiator,
-                initiator == null ? null : "Mai Tran");
+                initiator == null ? null : "Mai Tran", reason);
         return id;
     }
 

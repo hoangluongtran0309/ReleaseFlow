@@ -227,6 +227,7 @@ note with `POST …/revisions` and `{"corrects", "content", "reason"}`, or rende
 | `GET`, `PUT`, `DELETE /api/automation/rules/{ruleId}` | admin |
 | `POST /api/automation/rules/{ruleId}/enable`, `POST /api/automation/rules/{ruleId}/disable` | admin |
 | `POST /api/automation/rules/{ruleId}/execute` | admin |
+| `GET`, `POST /api/automation/rules/{ruleId}/corrections` | admin |
 | `POST /api/automation/rules/{ruleId}/webhook-secret/rotate` | admin |
 | `POST /api/automation/rules/cron-preview` | admin |
 | `GET /api/automation/runs`, `GET /api/automation/runs/{runId}` | admin |

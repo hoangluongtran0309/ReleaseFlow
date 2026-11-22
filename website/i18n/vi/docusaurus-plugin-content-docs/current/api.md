@@ -227,6 +227,7 @@ với `{"corrects", "content", "reason"}`, hoặc dựng lại nó từ
 | `GET`, `PUT`, `DELETE /api/automation/rules/{ruleId}` | quản trị viên |
 | `POST /api/automation/rules/{ruleId}/enable`, `POST /api/automation/rules/{ruleId}/disable` | quản trị viên |
 | `POST /api/automation/rules/{ruleId}/execute` | quản trị viên |
+| `GET`, `POST /api/automation/rules/{ruleId}/corrections` | quản trị viên |
 | `POST /api/automation/rules/{ruleId}/webhook-secret/rotate` | quản trị viên |
 | `POST /api/automation/rules/cron-preview` | quản trị viên |
 | `GET /api/automation/runs`, `GET /api/automation/runs/{runId}` | quản trị viên |

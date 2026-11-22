@@ -86,6 +86,46 @@ class AutomationRunFactory {
         return run;
     }
 
+    /**
+     * A correction run (ADR-0046, part 5): only the actions a person picked, each carrying its
+     * note's latest revision and naming the successful delivery it replaces, keyed here by
+     * rule action. The reason is the run's, and is what each corrected destination shows.
+     */
+    AutomationRun createCorrection(
+            AutomationRule rule,
+            ReleaseAccess.ReleaseSnapshot release,
+            Map<UUID, UUID> correctedDeliveries,
+            UUID requestId,
+            UUID initiatedBy,
+            String initiatorName,
+            String reason
+    ) {
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        AutomationRun run = runRepository.saveAndFlush(new AutomationRun(
+                UUID.randomUUID(),
+                rule,
+                release.projectId(),
+                release.releaseId(),
+                release.version(),
+                TriggerType.CORRECTION,
+                requestId,
+                initiatedBy,
+                initiatorName,
+                null,
+                reason,
+                now
+        ));
+        Map<UUID, String> audienceNames = audienceService.displayNames(run.getOrganizationId());
+        List<AutomationActionRun> actionRuns = ruleActionRepository.findAllByRuleIdOrderByPositionAsc(rule.getId())
+                .stream()
+                .filter(action -> correctedDeliveries.containsKey(action.getId()))
+                .map(action -> actionRun(run, action, release, audienceNames)
+                        .correcting(correctedDeliveries.get(action.getId())))
+                .toList();
+        actionRunRepository.saveAllAndFlush(actionRuns);
+        return run;
+    }
+
     private AutomationActionRun actionRun(
             AutomationRun run,
             AutomationRuleAction action,

@@ -685,10 +685,10 @@ where it first appears; ADRs are linked from the slice they record.
   - the browser suite reaches it through `tests/e2e/provider-stand-in.mjs`, a Jira and
     GitHub stand-in that only the suite runs.
 
-## In progress
+### Correcting a published note, Slice A (V40–V41)
 
 - #87, Slice A of [ADR-0046](adr/0046-correcting-a-published-note.md), in five pull
-  requests. The first four are in place. The first, with Flyway `V40`:
+  requests. The first, with Flyway `V40`:
   - `release_note_revisions` and `public_changelog_entry_revisions`, only ever inserted,
     each number the next, and the revision an automation action run carried; `CORRECTION`
     is allowed as a run trigger and never as a rule's;
@@ -733,8 +733,33 @@ where it first appears; ADRs are linked from the slice they record.
     each item, which it never did; an entry nobody corrected is otherwise served byte for
     byte as before, as `PublicChangelogAsTodayIntegrationTest` proves against pages
     captured from the code before it;
-  - only a correction run, the fifth pull request, appends a revision; until then the tests
-    write its rows.
+  - only a correction run appends a revision.
+- The fifth, with Flyway `V41`, under ADR-0046's amendment of 2026-11-21 for the correction run:
+  - an administrator delivers a corrected note with **Deliver a correction**, or
+    `POST /api/automation/rules/{ruleId}/corrections`, after reading what
+    `GET …/corrections?releaseId=` offers: each of the rule's actions, offered when its last
+    delivery carried an older revision, or named with the first reason it is not, from a
+    retired audience and Zendesk to a destination that already holds the latest;
+  - the run's reason, kept in `automation_runs.reason`, is the line a corrected public entry
+    shows, one language per run (`400 automation_correction_languages_mixed`); each action
+    names the delivery it replaces in `corrects_action_run_id`;
+  - a correction is never skipped for having nothing to say, and a retired audience's still
+    is; the public changelog appends one revision, treats the same revision twice as the one
+    already there, and refuses older text, and any other run meets a corrected entry's latest
+    revision;
+  - a rule can never have the trigger (`400 automation_trigger_invalid`), and `correction` is a
+    metric trigger label from startup;
+  - every transaction that creates a run for a release takes the release's lock first;
+  - the run history shows a correction with its reason and the revision each action replaces,
+    and a destination the release page marks **Behind** links to the form;
+  - `GoldenCorrectionRunIntegrationTest` rehearses the 1.4.0 acceptance against the workspace's
+    third package: `end_user`/vi rendered again as revision 2, revision 3 by hand, and a
+    correction run whose public revision is revision 3's text byte for byte, with the run's
+    reason.
+
+## In progress
+
+Nothing is in progress.
 
 ## Planned
 

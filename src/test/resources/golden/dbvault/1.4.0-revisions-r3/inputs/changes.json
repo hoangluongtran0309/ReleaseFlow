@@ -1,0 +1,1013 @@
+[
+ {
+  "source": "GITHUB",
+  "reference": "#55",
+  "record": {
+   "title": "test(ci): skip MongoBackupRestoreIT on GitHub Actions until DBV-45 is fixed",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/55",
+   "category": "MAINTENANCE",
+   "categoryGroup": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"test\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "The MongoBackupRestoreIT integration test is now skipped on GitHub Actions CI runners until issue DBV-45 is resolved.",
+    "whyChanged": "The test frequently fails on CI due to the MongoDB container stopping unexpectedly, blocking pull request merges.",
+    "technicalDetail": "The test is conditionally skipped when the GITHUB_ACTIONS environment variable is set to true; it still runs locally for developers. No production code or backup/restore logic is affected.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": "This change does not address the underlying issue with the MongoDB container on CI; it only unblocks CI by skipping the test."
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "",
+    "contributor": "The MongoBackupRestoreIT integration test will not run on GitHub Actions (when GITHUB_ACTIONS=true) due to frequent container failures. The test still runs locally. No production code is affected. See DBV-45 for ongoing investigation.",
+    "dba": "",
+    "end_user": "",
+    "operator": "",
+    "support": ""
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "MongoBackupRestoreIT is skipped on GitHub Actions CI until DBV-45 is fixed",
+     "body": "The MongoBackupRestoreIT integration test will not run on GitHub Actions (when GITHUB_ACTIONS=true) due to frequent container failures. The test still runs locally. No production code is affected. See DBV-45 for ongoing investigation."
+    },
+    "dba": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "end_user": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "operator": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "support": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    }
+   },
+   "linkedIssues": [
+    {
+     "key": "DBV-45",
+     "title": "MongoBackupRestoreIT: the Mongo container stops during startup on the CI runners",
+     "description": "MongoBackupRestoreIT fails on the GitHub Actions runners, almost always now, and blocks every pull request into develop (the ruleset requires verify).\nFailure: MongoBackupRestoreIT.requireClientBinariesAndAuthenticatedMongo (MongoBackupRestoreIT.java:110). The mongo:8.0.32 container (pinned by digest in #54) stops while the readiness probe waits for the final server: \"Status 409: container <id> is not running\". The assertion then prints \"(container not running)\" instead of the container log, so the reason is not captured.\nSince 2026-10-20, 8 of 13 CI runs failed this way, develop included (da64901 \"chore: open 1.2.0-SNAPSHOT\", run 39393772456). On 2026-11-01 PR #52 failed it 3 times out of 3 on 12c05d6 (run 41325439727, attempts 1 to 3, 16:16 to 16:30 UTC). The same image runs normally on a developer machine (Docker 29.6.2) for over 35 seconds, so it is specific to the runners, as 8.0.34 was before (see the comment above IMAGE).\nNext steps: keep the container log and exit code when it stops (the logs of an exited container can still be read before it is removed), find why the runner kills or stops mongod, then run the test on CI again. Until then it is skipped on GitHub Actions only.",
+     "type": "Bug",
+     "status": "To Do",
+     "url": "https://hoangluongtran0309.atlassian.net/browse/DBV-45"
+    }
+   ],
+   "mergedAt": "2026-11-01T16:48:38Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITLAB",
+  "reference": "!10",
+  "record": {
+   "title": "feat(backups): --limit to list only the newest backups (DBV-46)",
+   "url": "https://gitlab.com/dbvault1/dbvault-cli/-/merge_requests/10",
+   "category": "FEATURE",
+   "categoryGroup": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"feat\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "A --limit option was added to the 'dbvault backups' command to show only the newest backups of a target.",
+    "whyChanged": "To help users avoid paging through long backup histories and quickly access the most recent backups.",
+    "technicalDetail": "The --limit option accepts a value of 1 or more and restricts the output to that number of newest backups for a given target, in both table and JSON output modes. Using --limit 0 results in a usage error (exit code 2). The README was updated to document this option.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": "The --limit option does not accept 0 or negative values; using such values results in a usage error."
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "Customers can now use --limit with dbvault backups to see only the most recent backups for a target, making it easier to find recent backups without scrolling through long histories.",
+    "contributor": "The dbvault backups command now supports --limit <count> to display only the <count> newest backups for a target, in both table and JSON output. The option requires a value of 1 or more; 0 triggers a usage error (exit code 2). Tests and documentation were updated accordingly.",
+    "dba": "You can now use --limit with dbvault backups to quickly view the most recent backups for a target, reducing output size when reviewing backup history. No changes to stored data or restore behavior.",
+    "end_user": "You can now use --limit to show just the latest backups for a database, making it easier to find recent backups.",
+    "operator": "Operators can now use --limit with dbvault backups to display only the newest backups for a target, simplifying scripts and manual checks. No changes to deployment or configuration are required.",
+    "support": "Advise customers to use --limit with dbvault backups if they want to see only the most recent backups for a target. This helps avoid long output when many backups exist."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "BRIEF",
+     "headline": "New --limit option for listing only newest backups in dbvault-cli",
+     "body": "Customers can now use --limit with dbvault backups to see only the most recent backups for a target, making it easier to find recent backups without scrolling through long histories."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Added --limit to dbvault backups for restricting output to newest backups",
+     "body": "The dbvault backups command now supports --limit <count> to display only the <count> newest backups for a target, in both table and JSON output. The option requires a value of 1 or more; 0 triggers a usage error (exit code 2). Tests and documentation were updated accordingly."
+    },
+    "dba": {
+     "relevance": "BRIEF",
+     "headline": "dbvault-cli can now list only the newest backups with --limit",
+     "body": "You can now use --limit with dbvault backups to quickly view the most recent backups for a target, reducing output size when reviewing backup history. No changes to stored data or restore behavior."
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "See only the newest backups with the new --limit option",
+     "body": "You can now use --limit to show just the latest backups for a database, making it easier to find recent backups."
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": "dbvault backups supports --limit to restrict output to newest backups",
+     "body": "Operators can now use --limit with dbvault backups to display only the newest backups for a target, simplifying scripts and manual checks. No changes to deployment or configuration are required."
+    },
+    "support": {
+     "relevance": "BRIEF",
+     "headline": "dbvault backups now supports --limit to show only newest backups",
+     "body": "Advise customers to use --limit with dbvault backups if they want to see only the most recent backups for a target. This helps avoid long output when many backups exist."
+    }
+   },
+   "linkedIssues": [
+    {
+     "key": "DBV-46",
+     "title": "CLI: list only the newest backups of a target",
+     "description": "As an operator who scripts dbvault-cli, I want to list only the newest backups of a target, so that I do not page through a whole history to find the last one.\nAcceptance: dbvault backups --target-id <target-id> --limit <count> prints the <count> newest backups, as a table or with -o json; a count below 1 is a usage error.",
+     "type": "Story",
+     "status": "In Progress",
+     "url": "https://hoangluongtran0309.atlassian.net/browse/DBV-46"
+    }
+   ],
+   "mergedAt": "2026-11-01T16:50:34.451Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#52",
+  "record": {
+   "title": "build(deps): Bump software.amazon.awssdk:bom from 2.54.20 to 2.57.6",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/52",
+   "category": "MAINTENANCE",
+   "categoryGroup": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"build\"",
+    "Label \"dependencies\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "The AWS SDK BOM dependency was updated from version 2.54.20 to 2.57.6.",
+    "whyChanged": "To keep dependencies up to date and benefit from any improvements or fixes in the newer version.",
+    "technicalDetail": "The build now references software.amazon.awssdk:bom version 2.57.6 instead of 2.54.20. This may bring in updated transitive dependencies for AWS SDK modules.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "",
+    "contributor": "The build now uses software.amazon.awssdk:bom version 2.57.6. Check for any compatibility issues if you use AWS SDK modules directly.",
+    "dba": "",
+    "end_user": "",
+    "operator": "",
+    "support": ""
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "contributor": {
+     "relevance": "BRIEF",
+     "headline": "AWS SDK BOM dependency updated to 2.57.6",
+     "body": "The build now uses software.amazon.awssdk:bom version 2.57.6. Check for any compatibility issues if you use AWS SDK modules directly."
+    },
+    "dba": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "end_user": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "operator": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "support": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T16:55:25Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#56",
+  "record": {
+   "title": "feat(retention): preview which backups a rule would delete",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/56",
+   "category": "FEATURE",
+   "categoryGroup": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"feat\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "A preview feature was added to the retention policy form, allowing users to see which backups a rule would delete before saving changes.",
+    "whyChanged": "To let users understand the impact of a retention policy before applying it, reducing the risk of accidental data loss.",
+    "technicalDetail": "The retention form now includes a Preview button that sends the entered number to the endpoint `POST /retention/{targetId}/preview`. The response shows how many backups would be deleted and their start times, matching the logic of an actual retention run. No changes are saved or backups deleted until Save is pressed. The feature supports both English and Vietnamese.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": "The preview only simulates deletion; actual changes occur only when Save is pressed."
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "Support can inform customers that the retention policy form now offers a Preview button. This lets users see which backups would be deleted by a policy before saving, helping prevent accidental data loss. No backups are deleted until Save is pressed.",
+    "contributor": "A Preview button was added to the retention form, calling `POST /retention/{targetId}/preview` to simulate which backups would be deleted by the current policy input. The logic matches actual retention runs, and new tests cover this in `ManageBackupRetentionServiceTest` and `BackupRetentionControllerTest`. No state changes occur until Save.",
+    "dba": "DBAs can now preview which backups a retention policy would delete before applying changes. This helps avoid unintended data loss; no backups are deleted until Save is pressed.",
+    "end_user": "You can now preview which backups a retention rule would delete before saving it. No backups are deleted until you confirm the change.",
+    "operator": "Operators can preview which backups a retention policy would delete before saving changes. No operational steps are required; no backups are deleted until Save is pressed.",
+    "support": "Customers can now use the Preview button in the retention policy form to see which backups would be deleted by a policy before saving. Advise them that no backups are deleted until Save is pressed."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": "Retention policy form now previews which backups would be deleted",
+     "body": "Support can inform customers that the retention policy form now offers a Preview button. This lets users see which backups would be deleted by a policy before saving, helping prevent accidental data loss. No backups are deleted until Save is pressed."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Retention preview endpoint and UI added for backup deletion simulation",
+     "body": "A Preview button was added to the retention form, calling `POST /retention/{targetId}/preview` to simulate which backups would be deleted by the current policy input. The logic matches actual retention runs, and new tests cover this in `ManageBackupRetentionServiceTest` and `BackupRetentionControllerTest`. No state changes occur until Save."
+    },
+    "dba": {
+     "relevance": "BRIEF",
+     "headline": "Preview backup deletions before saving retention policy changes",
+     "body": "DBAs can now preview which backups a retention policy would delete before applying changes. This helps avoid unintended data loss; no backups are deleted until Save is pressed."
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "See which backups would be deleted before saving retention changes",
+     "body": "You can now preview which backups a retention rule would delete before saving it. No backups are deleted until you confirm the change."
+    },
+    "operator": {
+     "relevance": "BRIEF",
+     "headline": "Retention policy preview shows potential backup deletions before saving",
+     "body": "Operators can preview which backups a retention policy would delete before saving changes. No operational steps are required; no backups are deleted until Save is pressed."
+    },
+    "support": {
+     "relevance": "FULL",
+     "headline": "Retention policy form now previews deletions before saving",
+     "body": "Customers can now use the Preview button in the retention policy form to see which backups would be deleted by a policy before saving. Advise them that no backups are deleted until Save is pressed."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:08:10Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "LINEAR",
+  "reference": "OPS-15",
+  "record": {
+   "title": "Rotate the MinIO access key of the staging dbvault",
+   "url": "https://linear.app/dbvault/issue/OPS-15/rotate-the-minio-access-key-of-the-staging-dbvault",
+   "category": "MAINTENANCE",
+   "categoryGroup": "MAINTENANCE",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "No category rule matched",
+    "Category from AI (OpenAI gpt-4.1)"
+   ],
+   "classificationSource": "AI",
+   "neutralSummary": {
+    "whatChanged": "The MinIO access key used by the staging dbvault environment was rotated and updated in relevant secrets.",
+    "whyChanged": "To maintain good security hygiene by regularly rotating credentials and ensuring only the necessary permissions are granted.",
+    "technicalDetail": "A new MinIO access key, limited to the 'dbvault-staging' bucket, was created and updated in both the staging environment and the repository secret for the CI seeding job. The old key was deleted after verifying backup and restore operations.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "",
+    "contributor": "The MinIO access key for the staging environment was rotated, with updates to environment and CI secrets. No code changes were made; dbvault continues to read credentials from environment variables.",
+    "dba": "",
+    "end_user": "",
+    "operator": "The MinIO access key for staging was rotated and secrets updated. No changes to deployment or configuration are required for production or user environments.",
+    "support": ""
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "contributor": {
+     "relevance": "BRIEF",
+     "headline": "Staging MinIO access key rotated and secrets updated",
+     "body": "The MinIO access key for the staging environment was rotated, with updates to environment and CI secrets. No code changes were made; dbvault continues to read credentials from environment variables."
+    },
+    "dba": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "end_user": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "operator": {
+     "relevance": "BRIEF",
+     "headline": "Staging environment MinIO credentials rotated",
+     "body": "The MinIO access key for staging was rotated and secrets updated. No changes to deployment or configuration are required for production or user environments."
+    },
+    "support": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:09:24.158Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#57",
+  "record": {
+   "title": "feat(api): follow a verification under its backup; deprecate the old path",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/57",
+   "category": "FEATURE",
+   "categoryGroup": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"feat\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "A new API endpoint was added to access a restore-verification attempt under its associated backup, and the old endpoint was marked as deprecated.",
+    "whyChanged": "It groups each verification under the backup it verifies, the path that stays once the old one is removed in this release (see the breaking change).",
+    "technicalDetail": "The new endpoint is `GET /api/v1/backups/{backupId}/verifications/{id}`, and a new verification's `Location` points there. It answers `404` for an attempt of another backup.",
+    "migrationStep": "Update any integration or script that reads a restore-verification attempt to use the new endpoint; the old one is removed in this same release.",
+    "migrationKind": "RECOMMENDED",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "Restore-verification attempts are now read under their backup. The old path is removed in this release; see the breaking change for what customers must do.",
+    "contributor": "Read an attempt at `GET /api/v1/backups/{backupId}/verifications/{id}`; the POST's `Location` already points there. The old `GET /api/v1/verifications/{id}` is removed in this release, see the breaking change.",
+    "dba": "",
+    "end_user": "",
+    "operator": "Scripts that read restore-verification attempts should use the new path under the backup; the old path is removed in this release.",
+    "support": "Restore-verification attempts are now read under their backup. The old path is removed in this release; see the breaking change for what customers must do."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "BRIEF",
+     "headline": "New API path for restore-verification attempts",
+     "body": "Restore-verification attempts are now read under their backup. The old path is removed in this release; see the breaking change for what customers must do."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Restore-verification API now nested under backups",
+     "body": "Read an attempt at `GET /api/v1/backups/{backupId}/verifications/{id}`; the POST's `Location` already points there. The old `GET /api/v1/verifications/{id}` is removed in this release, see the breaking change."
+    },
+    "dba": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "end_user": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "operator": {
+     "relevance": "BRIEF",
+     "headline": "API endpoint for restore-verification attempts updated",
+     "body": "Scripts that read restore-verification attempts should use the new path under the backup; the old path is removed in this release."
+    },
+    "support": {
+     "relevance": "BRIEF",
+     "headline": "Restore-verification API endpoint changed",
+     "body": "Restore-verification attempts are now read under their backup. The old path is removed in this release; see the breaking change for what customers must do."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:13:32Z",
+   "summaryEditorName": "dbvault Lead",
+   "summaryEditedAt": "2026-11-02T02:27:35.869389Z",
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#58",
+  "record": {
+   "title": "feat(api)!: remove GET /api/v1/verifications/{id}",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/58",
+   "category": "FEATURE",
+   "categoryGroup": "FEATURE",
+   "breaking": true,
+   "security": false,
+   "reasons": [
+    "Title type \"feat\"",
+    "Title breaking marker \"!\"",
+    "BREAKING CHANGE footer"
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "The API endpoint GET /api/v1/verifications/{id} was removed and now returns 404; use GET /api/v1/backups/{backupId}/verifications/{id} instead.",
+    "whyChanged": "To simplify the API and avoid maintaining two paths to the same verification attempt, as only dbvault-cli used the old path and it now uses the new one.",
+    "technicalDetail": "The old endpoint GET /api/v1/verifications/{id} is no longer available and returns 404. The POST endpoint for creating verifications already returns a Location header pointing to the new path. Documentation and upgrade guides have been updated accordingly.",
+    "migrationStep": "Upgrade dbvault-cli to the latest version at the same time as the server, as older versions use the removed endpoint.",
+    "migrationKind": "REQUIRED",
+    "limitations": "No deprecated period for the old endpoint; it is removed immediately."
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "The endpoint GET /api/v1/verifications/{id} has been removed and now returns 404. Customers using dbvault-cli must upgrade it together with the server, as older CLI versions use the old path. Scripts should follow the Location header from POST or switch to the new endpoint.",
+    "contributor": "The GET /api/v1/verifications/{id} endpoint is gone and returns 404. Use GET /api/v1/backups/{backupId}/verifications/{id} instead. The POST endpoint already returns the correct Location. Update any code or scripts using the old path. See docs/api.md and the 1.2 upgrade guide.",
+    "dba": "The verification endpoint changed, requiring dbvault-cli to be upgraded with the server. No impact on stored data or restore behavior, but CLI 1.1 and older will not work with the new server.",
+    "end_user": "",
+    "operator": "After upgrading the server, dbvault-cli must also be upgraded, as older versions use a removed API endpoint. The old endpoint now returns 404. No configuration changes are needed, but CLI and server must be upgraded together.",
+    "support": "Customers must upgrade dbvault-cli at the same time as the server, as the old verification endpoint is removed and older CLI versions will fail. Advise customers to use the new endpoint or follow the Location header from POST."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": "Verification API endpoint removed; update CLI and scripts to new path",
+     "body": "The endpoint GET /api/v1/verifications/{id} has been removed and now returns 404. Customers using dbvault-cli must upgrade it together with the server, as older CLI versions use the old path. Scripts should follow the Location header from POST or switch to the new endpoint."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Removed GET /api/v1/verifications/{id}; use backup-scoped path",
+     "body": "The GET /api/v1/verifications/{id} endpoint is gone and returns 404. Use GET /api/v1/backups/{backupId}/verifications/{id} instead. The POST endpoint already returns the correct Location. Update any code or scripts using the old path. See docs/api.md and the 1.2 upgrade guide."
+    },
+    "dba": {
+     "relevance": "BRIEF",
+     "headline": "Verification API path changed; CLI upgrade required",
+     "body": "The verification endpoint changed, requiring dbvault-cli to be upgraded with the server. No impact on stored data or restore behavior, but CLI 1.1 and older will not work with the new server."
+    },
+    "end_user": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": "API breaking change: verification endpoint removed; CLI upgrade required",
+     "body": "After upgrading the server, dbvault-cli must also be upgraded, as older versions use a removed API endpoint. The old endpoint now returns 404. No configuration changes are needed, but CLI and server must be upgraded together."
+    },
+    "support": {
+     "relevance": "FULL",
+     "headline": "Verification endpoint removed; CLI upgrade required with server",
+     "body": "Customers must upgrade dbvault-cli at the same time as the server, as the old verification endpoint is removed and older CLI versions will fail. Advise customers to use the new endpoint or follow the Location header from POST."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:19:59Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITLAB",
+  "reference": "!11",
+  "record": {
+   "title": "fix(verify): poll the verification under its backup",
+   "url": "https://gitlab.com/dbvault1/dbvault-cli/-/merge_requests/11",
+   "category": "FIX",
+   "categoryGroup": "FIX",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"fix\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "The CLI's 'verify' command now polls the verification status using the backup-specific API path required by dbvault server 1.2.0 and later.",
+    "whyChanged": "The server removed the old verification API path, so the CLI needed to follow the new path to remain compatible.",
+    "technicalDetail": "'verify' now requests 'GET /api/v1/backups/<backup-id>/verifications/<verification-id>' instead of the old global verification path. The CLI exits with code 4 if used against a pre-1.2.0 server.",
+    "migrationStep": "Upgrade both the dbvault server to 1.2.0 or later and this CLI version together to ensure 'verify' works.",
+    "migrationKind": "REQUIRED",
+    "limitations": "This CLI version is not compatible with dbvault server 1.1 or earlier for verification polling."
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "Customers using the 'verify' command must upgrade both the CLI and the server to version 1.2.0 or later. If the server is not upgraded, 'verify' will fail with exit code 4. No changes are visible in the command's options or output.",
+    "contributor": "The CLI now uses 'GET /api/v1/backups/<backup-id>/verifications/<verification-id>' for polling, matching the server's API change in 1.2.0. Tests expect the old path to return 404. Ensure compatibility by upgrading both CLI and server.",
+    "dba": "After upgrading, ensure both the CLI and server are at least version 1.2.0 for verification to work. No changes to stored data or restore behavior.",
+    "end_user": "To use the 'verify' command, both the CLI and server must be updated to version 1.2.0 or later. The command's usage and output remain the same.",
+    "operator": "Deployments must upgrade both the dbvault server and CLI to 1.2.0 or later for verification polling to function. Using the CLI with an older server causes 'verify' to exit with code 4.",
+    "support": "If customers report 'verify' failing, check that both the CLI and server are version 1.2.0 or later. Advise upgrading both together; no command-line changes are visible."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": "dbvault-cli 'verify' now requires server 1.2.0+ for verification polling",
+     "body": "Customers using the 'verify' command must upgrade both the CLI and the server to version 1.2.0 or later. If the server is not upgraded, 'verify' will fail with exit code 4. No changes are visible in the command's options or output."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "'verify' command now polls verification status under backup-specific API path",
+     "body": "The CLI now uses 'GET /api/v1/backups/<backup-id>/verifications/<verification-id>' for polling, matching the server's API change in 1.2.0. Tests expect the old path to return 404. Ensure compatibility by upgrading both CLI and server."
+    },
+    "dba": {
+     "relevance": "BRIEF",
+     "headline": "'verify' command requires dbvault server 1.2.0+ for verification polling",
+     "body": "After upgrading, ensure both the CLI and server are at least version 1.2.0 for verification to work. No changes to stored data or restore behavior."
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "'verify' command now requires newer server version",
+     "body": "To use the 'verify' command, both the CLI and server must be updated to version 1.2.0 or later. The command's usage and output remain the same."
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": "CLI 'verify' requires server 1.2.0+; upgrade both together",
+     "body": "Deployments must upgrade both the dbvault server and CLI to 1.2.0 or later for verification polling to function. Using the CLI with an older server causes 'verify' to exit with code 4."
+    },
+    "support": {
+     "relevance": "FULL",
+     "headline": "'verify' fails with exit code 4 if server is not 1.2.0+",
+     "body": "If customers report 'verify' failing, check that both the CLI and server are version 1.2.0 or later. Advise upgrading both together; no command-line changes are visible."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:21:26.687Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#59",
+  "record": {
+   "title": "docs: v1.2 upgrade guide",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/59",
+   "category": "DOCUMENTATION",
+   "categoryGroup": "DOCUMENTATION",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "All changed files are documentation",
+    "Title type \"docs\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "An upgrade guide for version 1.2 was added to the documentation, including details about the removal of the GET /api/v1/verifications/{id} endpoint.",
+    "whyChanged": "To inform users and developers about the upgrade process to version 1.2 and the impact of the removed API endpoint.",
+    "technicalDetail": "The guide is located at docs/upgrading-to-1.2.md, linked from docs/README.md and docs/api.md. It explains who is affected by the removed endpoint, the recommended upgrade order, and rollback steps.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "A new guide explains how to upgrade to 1.2, including the removal of a specific API endpoint. Customers using scripts or dbvault-cli 1.1 verify may be affected.",
+    "contributor": "The documentation now includes an upgrade guide for 1.2, detailing the removal of GET /api/v1/verifications/{id}, who is affected, upgrade order, and rollback steps. No code changes, docs only.",
+    "dba": "",
+    "end_user": "",
+    "operator": "",
+    "support": "Support can refer to the new guide for information on the removed verification endpoint and steps for affected users upgrading to 1.2."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "BRIEF",
+     "headline": "Upgrade guide for version 1.2 added to documentation",
+     "body": "A new guide explains how to upgrade to 1.2, including the removal of a specific API endpoint. Customers using scripts or dbvault-cli 1.1 verify may be affected."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Upgrade guide for 1.2 documents removal of verification endpoint",
+     "body": "The documentation now includes an upgrade guide for 1.2, detailing the removal of GET /api/v1/verifications/{id}, who is affected, upgrade order, and rollback steps. No code changes, docs only."
+    },
+    "dba": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "end_user": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "operator": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "support": {
+     "relevance": "BRIEF",
+     "headline": "New upgrade guide for 1.2 details API change impact",
+     "body": "Support can refer to the new guide for information on the removed verification endpoint and steps for affected users upgrading to 1.2."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:26:36Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITLAB",
+  "reference": "!12",
+  "record": {
+   "title": "fix(verify): reject a --timeout that is zero or negative",
+   "url": "https://gitlab.com/dbvault1/dbvault-cli/-/merge_requests/12",
+   "category": "FIX",
+   "categoryGroup": "FIX",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"fix\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "The 'dbvault verify' command now rejects a --timeout value of zero or less before contacting the server.",
+    "whyChanged": "Previously, a zero or negative timeout would start a verification on the server and immediately give up, leaving an unnecessary verification running.",
+    "technicalDetail": "If --timeout is set to zero or a negative duration, 'dbvault verify' exits with code 2 and displays an error message. No verification is started on the server. Positive timeouts and the default behavior are unchanged.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "Customers who use 'dbvault verify' with a zero or negative --timeout will now see an error and no verification will be started. No action is needed unless they were using such values.",
+    "contributor": "The CLI now checks for --timeout <= 0 before contacting the server. It exits with code 2 and an error message if the value is invalid. Tests updated: 'aTimeoutOfZeroOrLessIsAUsageErrorAndStartsNothing' covers this, and 'verifyGivesUpAfterItsTimeout' uses a positive timeout.",
+    "dba": "",
+    "end_user": "If you set --timeout to zero or a negative value, you will now see an error and the verification will not start.",
+    "operator": "A script that passed `--timeout PT0S` or a negative duration used to start a verification and get exit code 9; it now gets exit code 2 (a usage error) and nothing starts on the server.",
+    "support": "If a customer reports an error with 'dbvault verify' and a zero or negative --timeout, explain that this is now a usage error and no verification is started. Advise them to use a positive timeout."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "BRIEF",
+     "headline": "'dbvault verify' now rejects zero or negative --timeout values",
+     "body": "Customers who use 'dbvault verify' with a zero or negative --timeout will now see an error and no verification will be started. No action is needed unless they were using such values."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "'dbvault verify' exits with usage error for zero or negative --timeout",
+     "body": "The CLI now checks for --timeout <= 0 before contacting the server. It exits with code 2 and an error message if the value is invalid. Tests updated: 'aTimeoutOfZeroOrLessIsAUsageErrorAndStartsNothing' covers this, and 'verifyGivesUpAfterItsTimeout' uses a positive timeout."
+    },
+    "dba": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "Error shown for zero or negative --timeout in 'dbvault verify'",
+     "body": "If you set --timeout to zero or a negative value, you will now see an error and the verification will not start."
+    },
+    "operator": {
+     "relevance": "BRIEF",
+     "headline": "`dbvault verify` refuses a zero or negative --timeout with exit code 2",
+     "body": "A script that passed `--timeout PT0S` or a negative duration used to start a verification and get exit code 9; it now gets exit code 2 (a usage error) and nothing starts on the server."
+    },
+    "support": {
+     "relevance": "BRIEF",
+     "headline": "'dbvault verify' blocks zero or negative --timeout values",
+     "body": "If a customer reports an error with 'dbvault verify' and a zero or negative --timeout, explain that this is now a usage error and no verification is started. Advise them to use a positive timeout."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:27:48.558Z",
+   "summaryEditorName": "dbvault Lead",
+   "summaryEditedAt": "2026-11-02T02:27:36.568244Z",
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#60",
+  "record": {
+   "title": "fix(web): turn away an address after repeated failed sign-ins",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/60",
+   "category": "FIX",
+   "categoryGroup": "FIX",
+   "breaking": false,
+   "security": true,
+   "reasons": [
+    "Title type \"fix\"",
+    "AI marked it a security change"
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "dbvault now blocks sign-in attempts from an address after 10 failed attempts within 15 minutes, returning an error and requiring a wait before retrying.",
+    "whyChanged": "To prevent repeated failed sign-in attempts from the same address, reducing the risk of password guessing attacks.",
+    "technicalDetail": "After 10 failed sign-ins from one address in 15 minutes, further attempts from that address are blocked for 15 minutes. The console shows an error message, and the API returns HTTP 429 with Retry-After. The limit and lockout duration can be configured with DBVAULT_SIGN_IN_MAX_FAILURES and DBVAULT_SIGN_IN_LOCK. The count resets on successful sign-in. The mechanism is in-memory, so a server restart clears the counts. If a proxy does not forward client addresses, all clients may be locked out together.",
+    "migrationStep": "We recommend also rate-limiting POST /login at your reverse proxy.",
+    "migrationKind": "RECOMMENDED",
+    "limitations": "Behind a proxy that doesn't forward the client address, every client shares one address and is locked out together. The counts live in memory, so a restart forgets them."
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "After 10 failed sign-ins from one address in 15 minutes, dbvault blocks further attempts from that address for 15 minutes. Customers will see an error message or HTTP 429. Advise customers to check their network setup if they are unexpectedly locked out, especially if behind a proxy. Suggest configuring the new environment variables and adding rate limiting at the reverse proxy.",
+    "contributor": "A new in-memory rate limiter blocks sign-in attempts from an address after 10 failures in 15 minutes. The limits are configurable via DBVAULT_SIGN_IN_MAX_FAILURES and DBVAULT_SIGN_IN_LOCK. The mechanism is shared between the console and API, and resets on successful sign-in. Tests added in SignInThrottleTest, SecurityConfigTest, and ApiSecurityTest.",
+    "dba": "After 10 failed sign-ins from one address in 15 minutes, further attempts are blocked for 15 minutes. No changes to stored data or schema, but DBAs should ensure proxies forward client addresses to avoid accidental lockouts.",
+    "end_user": "If you enter the wrong password too many times, you will need to wait 15 minutes before trying again. This helps protect your account.",
+    "operator": "After 10 failed sign-ins from one address in 15 minutes, that address is blocked for 15 minutes. Configure DBVAULT_SIGN_IN_MAX_FAILURES and DBVAULT_SIGN_IN_LOCK as needed. Ensure your reverse proxy forwards client addresses to avoid locking out all users. Counts are in-memory and reset on server restart.",
+    "support": "If a customer is locked out after too many failed sign-ins, explain that the system blocks further attempts from their address for 15 minutes. Advise checking proxy settings if multiple users are affected, and recommend configuring the new environment variables or adding rate limiting at the reverse proxy."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": "Sign-in attempts are now rate-limited by address after repeated failures",
+     "body": "After 10 failed sign-ins from one address in 15 minutes, dbvault blocks further attempts from that address for 15 minutes. Customers will see an error message or HTTP 429. Advise customers to check their network setup if they are unexpectedly locked out, especially if behind a proxy. Suggest configuring the new environment variables and adding rate limiting at the reverse proxy."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Sign-in throttling added: 10 failures per address in 15 minutes triggers lockout",
+     "body": "A new in-memory rate limiter blocks sign-in attempts from an address after 10 failures in 15 minutes. The limits are configurable via DBVAULT_SIGN_IN_MAX_FAILURES and DBVAULT_SIGN_IN_LOCK. The mechanism is shared between the console and API, and resets on successful sign-in. Tests added in SignInThrottleTest, SecurityConfigTest, and ApiSecurityTest."
+    },
+    "dba": {
+     "relevance": "BRIEF",
+     "headline": "Sign-in lockout after repeated failures may affect access",
+     "body": "After 10 failed sign-ins from one address in 15 minutes, further attempts are blocked for 15 minutes. No changes to stored data or schema, but DBAs should ensure proxies forward client addresses to avoid accidental lockouts."
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "Too many failed sign-ins will temporarily block your address",
+     "body": "If you enter the wrong password too many times, you will need to wait 15 minutes before trying again. This helps protect your account."
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": "Sign-in rate limiting by address; check proxy configuration and environment variables",
+     "body": "After 10 failed sign-ins from one address in 15 minutes, that address is blocked for 15 minutes. Configure DBVAULT_SIGN_IN_MAX_FAILURES and DBVAULT_SIGN_IN_LOCK as needed. Ensure your reverse proxy forwards client addresses to avoid locking out all users. Counts are in-memory and reset on server restart."
+    },
+    "support": {
+     "relevance": "FULL",
+     "headline": "Sign-in lockout after repeated failures: what to tell customers",
+     "body": "If a customer is locked out after too many failed sign-ins, explain that the system blocks further attempts from their address for 15 minutes. Advise checking proxy settings if multiple users are affected, and recommend configuring the new environment variables or adding rate limiting at the reverse proxy."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:35:44Z",
+   "summaryEditorName": "dbvault Lead",
+   "summaryEditedAt": "2026-11-02T02:27:36.225962Z",
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#61",
+  "record": {
+   "title": "feat(ui): show times in a time zone chosen in the sidebar (DBV-48)",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/61",
+   "category": "FEATURE",
+   "categoryGroup": "FEATURE",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"feat\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "The console now allows users to display times in a time zone of their choice, selectable from the sidebar.",
+    "whyChanged": "This change addresses the need for operators in different time zones to view times in their local zone, avoiding manual conversions.",
+    "technicalDetail": "A new 'Time zone' option appears in the sidebar; selecting a zone and applying it updates all displayed times (backups, restores, verifications, retention runs, connection checks) to that zone, with the zone name shown. The choice is stored in a browser cookie and can also be set via the ?tz=<zone> URL parameter. This setting is browser-specific and not tied to the user account. Schedules retain their own time zones, and the HTTP API, CLI, and logs remain in UTC. Labels are available in English and Vietnamese.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "Customers can now choose their preferred time zone in the console sidebar, and all times will be shown accordingly. This helps users avoid manual time conversions. The setting is browser-specific and does not affect API, CLI, or logs, which remain in UTC.",
+    "contributor": "A time zone selector is now present in the sidebar. The selected zone is stored in a browser cookie and applied to all time displays in the console UI. The implementation does not affect backend logic, API, CLI, or logs, which continue to use UTC. Schedules retain their own zones.",
+    "dba": "You can now set the console to display times in your local time zone, making it easier to interpret backup and restore times. This does not affect stored data, schedules, or logs, which remain in UTC.",
+    "end_user": "You can now pick your time zone in the sidebar, and all times in the console will be shown in that zone. This makes it easier to read backup and restore times.",
+    "operator": "You can now choose your preferred time zone in the sidebar, and all times in the console will be shown in that zone, labeled accordingly. This setting is browser-specific and does not affect schedules, API, CLI, or logs, which remain in UTC.",
+    "support": "Users can select a time zone in the sidebar, and all times in the console will be shown in that zone. This helps avoid confusion for users outside UTC. The setting is browser-specific and does not affect API, CLI, or logs."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "FULL",
+     "headline": "Console now supports user-selected time zones for displayed times",
+     "body": "Customers can now choose their preferred time zone in the console sidebar, and all times will be shown accordingly. This helps users avoid manual time conversions. The setting is browser-specific and does not affect API, CLI, or logs, which remain in UTC."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Time zone selection added to console UI; times shown in chosen zone",
+     "body": "A time zone selector is now present in the sidebar. The selected zone is stored in a browser cookie and applied to all time displays in the console UI. The implementation does not affect backend logic, API, CLI, or logs, which continue to use UTC. Schedules retain their own zones."
+    },
+    "dba": {
+     "relevance": "BRIEF",
+     "headline": "Console times can be shown in a chosen time zone",
+     "body": "You can now set the console to display times in your local time zone, making it easier to interpret backup and restore times. This does not affect stored data, schedules, or logs, which remain in UTC."
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "See times in your own time zone in the console",
+     "body": "You can now pick your time zone in the sidebar, and all times in the console will be shown in that zone. This makes it easier to read backup and restore times."
+    },
+    "operator": {
+     "relevance": "FULL",
+     "headline": "Operators can select time zone for all console-displayed times",
+     "body": "You can now choose your preferred time zone in the sidebar, and all times in the console will be shown in that zone, labeled accordingly. This setting is browser-specific and does not affect schedules, API, CLI, or logs, which remain in UTC."
+    },
+    "support": {
+     "relevance": "FULL",
+     "headline": "Console now lets users pick a time zone for displayed times",
+     "body": "Users can select a time zone in the sidebar, and all times in the console will be shown in that zone. This helps avoid confusion for users outside UTC. The setting is browser-specific and does not affect API, CLI, or logs."
+    }
+   },
+   "linkedIssues": [
+    {
+     "key": "DBV-48",
+     "title": "Console: show times in a time zone chosen in the sidebar",
+     "description": "As an operator outside UTC, I want the console to show times in my own time zone, so that I do not convert every backup time in my head.\nAcceptance: the sidebar has a time zone choice next to the language links; the choice applies to every time the console shows and is kept in that browser; without a choice times stay in UTC.",
+     "type": "Story",
+     "status": "In Progress",
+     "url": "https://hoangluongtran0309.atlassian.net/browse/DBV-48"
+    }
+   ],
+   "mergedAt": "2026-11-01T17:40:45Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#62",
+  "record": {
+   "title": "fix",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/62",
+   "category": "FIX",
+   "categoryGroup": "FIX",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "No category rule matched",
+    "Context score 20 is below the threshold",
+    "Category from AI (OpenAI gpt-4.1)",
+    "AI asked for human review"
+   ],
+   "classificationSource": "AI",
+   "neutralSummary": {
+    "whatChanged": "Backup sizes just under a unit boundary are shown in the next unit: 1,048,575 bytes is now 1.0 MB instead of 1024.0 KB.",
+    "whyChanged": "The size was rounded after its unit was chosen, so a value that rounds up to 1024 stayed in the smaller unit.",
+    "technicalDetail": "`ByteSizes.readable` moves to the next unit from 1023.95 of the current one, so the rounded value never reads 1024.0; `ByteSizesTest` covers both sides of the boundary.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "A size just under 1 MB now reads 1.0 MB; nothing about the backup changed.",
+    "contributor": "`ByteSizes.readable` no longer prints values like 1024.0 KB; it switches unit from 1023.95.",
+    "dba": "",
+    "end_user": "A backup just under 1 MB now shows as 1.0 MB.",
+    "operator": "A size just under 1 MiB now reads 1.0 MB in the console.",
+    "support": "If a customer asks about a size like 1024.0 KB, it now reads 1.0 MB; nothing about the backup changed."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "BRIEF",
+     "headline": "Backup sizes no longer show as 1024.0 KB",
+     "body": "A size just under 1 MB now reads 1.0 MB; nothing about the backup changed."
+    },
+    "contributor": {
+     "relevance": "BRIEF",
+     "headline": "Sizes just under a unit boundary round into the next unit",
+     "body": "`ByteSizes.readable` no longer prints values like 1024.0 KB; it switches unit from 1023.95."
+    },
+    "dba": {
+     "relevance": "NONE",
+     "headline": "",
+     "body": ""
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "Backup sizes no longer show as 1024.0 KB",
+     "body": "A backup just under 1 MB now shows as 1.0 MB."
+    },
+    "operator": {
+     "relevance": "BRIEF",
+     "headline": "Backup sizes no longer read 1024.0 KB",
+     "body": "A size just under 1 MiB now reads 1.0 MB in the console."
+    },
+    "support": {
+     "relevance": "BRIEF",
+     "headline": "Backup sizes no longer show as 1024.0 KB",
+     "body": "If a customer asks about a size like 1024.0 KB, it now reads 1.0 MB; nothing about the backup changed."
+    }
+   },
+   "linkedIssues": [],
+   "mergedAt": "2026-11-01T17:47:38Z",
+   "summaryEditorName": "dbvault Lead",
+   "summaryEditedAt": "2026-11-02T02:27:36.957138Z",
+   "contentLanguage": "en"
+  }
+ },
+ {
+  "source": "GITHUB",
+  "reference": "#63",
+  "record": {
+   "title": "fix(restore): say when the backup a restore came from was deleted (DBV-49)",
+   "url": "https://github.com/hoangtulangtoc/dbvault/pull/63",
+   "category": "FIX",
+   "categoryGroup": "FIX",
+   "breaking": false,
+   "security": false,
+   "reasons": [
+    "Title type \"fix\""
+   ],
+   "classificationSource": "RULES",
+   "neutralSummary": {
+    "whatChanged": "The Restores list now displays 'Backup deleted since' when the source backup of a restore has been deleted, instead of showing a dash.",
+    "whyChanged": "Previously, a deleted source backup showed only a dash, which looked like missing data and confused users; this clarifies the situation.",
+    "technicalDetail": "The From backup column in the Restores list checks if the source backup still exists; if not, it displays a message indicating deletion, with translations for English and Vietnamese.",
+    "migrationStep": "",
+    "migrationKind": "NONE",
+    "limitations": ""
+   },
+   "audienceNarratives": {
+    "aut_r4_probe": "Customers will now see 'Backup deleted since' if a restore's source backup has been deleted, instead of a dash. This clarifies that the backup was removed and is not a loading error. No action is required.",
+    "contributor": "The Restores list now checks if the source backup exists; if not, it displays a localized message ('Backup deleted since') instead of a dash. Test coverage is in RestoreControllerTest.theListSaysWhenTheBackupARestoreCameFromWasDeleted.",
+    "dba": "When viewing restores, if the source backup was deleted, the UI now shows 'Backup deleted since' instead of a dash. No changes to stored data or restore behavior.",
+    "end_user": "If a restore's backup was deleted, you'll now see 'Backup deleted since' instead of a dash. This helps you understand why the backup is missing.",
+    "operator": "The UI now clearly states when a restore's source backup was deleted. No operational changes or actions are needed.",
+    "support": "If customers ask about a dash in the Restores list, tell them it now says 'Backup deleted since' when the source backup was removed. No steps are needed."
+   },
+   "audienceNarrativeDetails": {
+    "aut_r4_probe": {
+     "relevance": "BRIEF",
+     "headline": "Restores list now shows when a source backup was deleted",
+     "body": "Customers will now see 'Backup deleted since' if a restore's source backup has been deleted, instead of a dash. This clarifies that the backup was removed and is not a loading error. No action is required."
+    },
+    "contributor": {
+     "relevance": "FULL",
+     "headline": "Restores list clarifies deleted source backups in UI",
+     "body": "The Restores list now checks if the source backup exists; if not, it displays a localized message ('Backup deleted since') instead of a dash. Test coverage is in RestoreControllerTest.theListSaysWhenTheBackupARestoreCameFromWasDeleted."
+    },
+    "dba": {
+     "relevance": "BRIEF",
+     "headline": "Restores list clarifies deleted backups",
+     "body": "When viewing restores, if the source backup was deleted, the UI now shows 'Backup deleted since' instead of a dash. No changes to stored data or restore behavior."
+    },
+    "end_user": {
+     "relevance": "BRIEF",
+     "headline": "Restores page now shows when a backup was deleted",
+     "body": "If a restore's backup was deleted, you'll now see 'Backup deleted since' instead of a dash. This helps you understand why the backup is missing."
+    },
+    "operator": {
+     "relevance": "BRIEF",
+     "headline": "Restores list now indicates deleted source backups",
+     "body": "The UI now clearly states when a restore's source backup was deleted. No operational changes or actions are needed."
+    },
+    "support": {
+     "relevance": "BRIEF",
+     "headline": "Restores list now explains deleted source backups",
+     "body": "If customers ask about a dash in the Restores list, tell them it now says 'Backup deleted since' when the source backup was removed. No steps are needed."
+    }
+   },
+   "linkedIssues": [
+    {
+     "key": "DBV-49",
+     "title": "Restores list: a deleted source backup shows as a bare dash",
+     "description": "On Restores, a restore whose source backup was deleted afterwards (by retention, or by hand) shows only a dash in the From backup column. It reads as missing data, and an operator cannot tell whether the backup is gone or the page failed to load it.\nExpected: the column says the backup was deleted since.",
+     "type": "Bug",
+     "status": "In Progress",
+     "url": "https://hoangluongtran0309.atlassian.net/browse/DBV-49"
+    }
+   ],
+   "mergedAt": "2026-11-01T17:53:08Z",
+   "summaryEditorName": null,
+   "summaryEditedAt": null,
+   "contentLanguage": "en"
+  }
+ }
+]

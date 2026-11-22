@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,6 +17,9 @@ interface PublicChangelogEntryRevisionRepository extends JpaRepository<PublicCha
             UUID entryId,
             UUID organizationId
     );
+
+    /** The revision one correction's action run wrote, if it wrote one. */
+    Optional<PublicChangelogEntryRevision> findByActionRunId(UUID actionRunId);
 
     /** The newest corrections of an Organization, as the feed lists them. */
     List<PublicChangelogEntryRevision> findAllByOrganizationIdOrderByCorrectedAtDescIdDesc(

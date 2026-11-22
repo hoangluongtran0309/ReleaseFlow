@@ -50,6 +50,14 @@ class ReleaseNoteRevisions {
         return !revisions.isEmpty() && revisions.getLast().getOrigin() == ReleaseNoteRevisionView.Origin.MANUAL;
     }
 
+    /** The reasons of a note's revisions after {@code after}, oldest first. */
+    List<String> reasonsAfter(UUID organizationId, UUID noteId, int after) {
+        return revisionRepository.findAllByNoteIdAndOrganizationIdOrderByRevisionAsc(noteId, organizationId).stream()
+                .filter(revision -> revision.getRevision() > after)
+                .map(ReleaseNoteRevision::getReason)
+                .toList();
+    }
+
     /** Every revision of a published note, oldest first: revision 1 is the note as published. */
     List<ReleaseNoteRevisionView> history(Release release, AudienceReleaseNote note) {
         List<ReleaseNoteRevisionView> history = new ArrayList<>();

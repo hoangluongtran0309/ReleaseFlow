@@ -66,9 +66,16 @@ public class PublicChangelogService {
      */
     @Transactional
     public Publication publish(Publication.Request request) {
-        Optional<PublicChangelogEntry> existing = existing(request);
+        // The entry this very action wrote is its delivery, as it wrote it.
+        Optional<PublicChangelogEntry> own = entryRepository.findByActionRunId(request.actionRunId());
+        if (own.isPresent()) {
+            return answer(own.get(), request, own.get().getContentSnapshot());
+        }
+        // Any other delivery of the same note meets the entry as it reads now: its latest
+        // revision. The same words are that entry; different ones are refused (ADR-0046).
+        Optional<PublicChangelogEntry> existing = samePublication(request);
         if (existing.isPresent()) {
-            return answer(existing.get(), request);
+            return answer(existing.get(), request, latestContent(existing.get()));
         }
         OrganizationSlugService.PublicOrganization organization =
                 organizations.publicOrganization(request.organizationId());
@@ -91,9 +98,95 @@ public class PublicChangelogService {
             entryRepository.saveAndFlush(entry);
         } catch (DataIntegrityViolationException raced) {
             // Another worker published the same note first; theirs is the entry.
-            return answer(existing(request).orElseThrow(() -> raced), request);
+            PublicChangelogEntry theirs = samePublication(request).orElseThrow(() -> raced);
+            return answer(theirs, request, latestContent(theirs));
         }
         return new Publication(Publication.Outcome.PUBLISHED, urls.entryUrl(organization.slug(), entry.getId()));
+    }
+
+    /**
+     * Delivers a corrected note to the entry an earlier delivery made (ADR-0046, parts 4 and
+     * 5). Only a correction run calls this. The entry is locked first, so two corrections of it
+     * decide one after the other.
+     *
+     * <ul>
+     *   <li>A revision this action already wrote is its delivery: a confirmed retry after an
+     *       unknown outcome never appends a second.</li>
+     *   <li>An entry whose latest revision already says this is the delivery too: the same
+     *       revision delivered twice is the one already there.</li>
+     *   <li>An entry that already shows this note's revision in other words, or a later
+     *       revision of it, is a conflict: what readers have is never replaced by older text.</li>
+     *   <li>Otherwise the next revision is appended, with the reason the run gives.</li>
+     * </ul>
+     */
+    @Transactional
+    public Publication correct(Publication.Correction correction) {
+        Optional<PublicChangelogEntryRevision> own = revisionRepository.findByActionRunId(correction.actionRunId());
+        if (own.isPresent()) {
+            PublicChangelogEntry entry = entryRepository
+                    .findByIdAndOrganizationId(own.get().getEntryId(), correction.organizationId())
+                    .orElseThrow();
+            return own.get().getContentSnapshot().equals(correction.content())
+                    ? published(entry)
+                    : new Publication(Publication.Outcome.CONFLICT, null);
+        }
+        Optional<PublicChangelogEntry> target = correctedEntry(correction)
+                .flatMap(found -> entryRepository.lockByIdAndOrganizationId(found.getId(), correction.organizationId()));
+        if (target.isEmpty()) {
+            return new Publication(Publication.Outcome.CONFLICT, null);
+        }
+        PublicChangelogEntry entry = target.get();
+        List<PublicChangelogEntryRevision> revisions = revisions(entry);
+        String latestContent = revisions.isEmpty() ? entry.getContentSnapshot() : revisions.getLast().getContentSnapshot();
+        int latestNoteRevision = revisions.isEmpty() ? 1 : revisions.getLast().getNoteRevision();
+        if (latestContent.equals(correction.content())) {
+            return published(entry);
+        }
+        if (latestNoteRevision >= correction.noteRevision()) {
+            return new Publication(Publication.Outcome.CONFLICT, null);
+        }
+        int next = revisions.isEmpty() ? 2 : revisions.getLast().getRevision() + 1;
+        revisionRepository.saveAndFlush(new PublicChangelogEntryRevision(
+                UUID.randomUUID(),
+                entry,
+                next,
+                correction.noteRevision(),
+                correction.actionRunId(),
+                correction.content(),
+                correction.reason(),
+                clock.instant().truncatedTo(ChronoUnit.MICROS)
+        ));
+        return published(entry);
+    }
+
+    /**
+     * The entry the corrected delivery made or met: the one it wrote, the one whose revision
+     * it wrote, or, for a delivery that found the same note already public, the entry of its
+     * release, its audience as it named it, and its language.
+     */
+    private Optional<PublicChangelogEntry> correctedEntry(Publication.Correction correction) {
+        return entryRepository.findByActionRunId(correction.correctsActionRunId())
+                .or(() -> revisionRepository.findByActionRunId(correction.correctsActionRunId())
+                        .flatMap(revision -> entryRepository.findById(revision.getEntryId())))
+                .or(() -> entryRepository.findByOrganizationIdAndReleaseIdAndAudienceNameSnapshotAndLanguage(
+                        correction.organizationId(),
+                        correction.releaseId(),
+                        correction.deliveredAudienceName(),
+                        correction.language()
+                ))
+                .filter(entry -> entry.getOrganizationId().equals(correction.organizationId()));
+    }
+
+    private Publication published(PublicChangelogEntry entry) {
+        return new Publication(
+                Publication.Outcome.PUBLISHED,
+                urls.entryUrl(entry.getOrganizationSlugSnapshot(), entry.getId())
+        );
+    }
+
+    private String latestContent(PublicChangelogEntry entry) {
+        List<PublicChangelogEntryRevision> revisions = revisions(entry);
+        return revisions.isEmpty() ? entry.getContentSnapshot() : revisions.getLast().getContentSnapshot();
     }
 
     /**
@@ -250,24 +343,20 @@ public class PublicChangelogService {
         return urls.revisionUrl(entry.getOrganizationSlugSnapshot(), entry.getId(), number);
     }
 
-    private Optional<PublicChangelogEntry> existing(Publication.Request request) {
-        return entryRepository.findByActionRunId(request.actionRunId())
-                .or(() -> entryRepository.findByOrganizationIdAndReleaseIdAndAudienceNameSnapshotAndLanguage(
-                        request.organizationId(),
-                        request.releaseId(),
-                        request.audienceName(),
-                        request.language()
-                ));
+    private Optional<PublicChangelogEntry> samePublication(Publication.Request request) {
+        return entryRepository.findByOrganizationIdAndReleaseIdAndAudienceNameSnapshotAndLanguage(
+                request.organizationId(),
+                request.releaseId(),
+                request.audienceName(),
+                request.language()
+        );
     }
 
-    private Publication answer(PublicChangelogEntry entry, Publication.Request request) {
-        if (!entry.says(request.releaseVersion(), request.content())) {
+    private Publication answer(PublicChangelogEntry entry, Publication.Request request, String content) {
+        if (!entry.getReleaseVersionSnapshot().equals(request.releaseVersion()) || !content.equals(request.content())) {
             return new Publication(Publication.Outcome.CONFLICT, null);
         }
-        return new Publication(
-                Publication.Outcome.PUBLISHED,
-                urls.entryUrl(entry.getOrganizationSlugSnapshot(), entry.getId())
-        );
+        return published(entry);
     }
 
     private EntryView view(PublicChangelogEntry entry, boolean corrected) {

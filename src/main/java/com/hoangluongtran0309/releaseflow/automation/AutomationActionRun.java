@@ -60,6 +60,10 @@ class AutomationActionRun {
     @Column(name = "note_revision", updatable = false)
     private Integer noteRevision;
 
+    // The successful delivery a correction replaces (V41); null on an action that corrects nothing.
+    @Column(name = "corrects_action_run_id", updatable = false)
+    private UUID correctsActionRunId;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "configuration_snapshot", nullable = false, columnDefinition = "jsonb", updatable = false)
     private Map<String, String> configurationSnapshot;
@@ -126,6 +130,15 @@ class AutomationActionRun {
         this.secretCiphertextSnapshot = secret == null ? null : secret.ciphertext();
         this.status = ExecutionStatus.PENDING;
         this.attempts = 0;
+    }
+
+    /** The same action as a correction of {@code delivery}, which must carry the same kind of note. */
+    AutomationActionRun correcting(UUID delivery) {
+        if (noteContentSnapshot == null) {
+            throw new IllegalStateException("A correction carries a note.");
+        }
+        this.correctsActionRunId = delivery;
+        return this;
     }
 
     void claim(Instant now) {
@@ -230,6 +243,11 @@ class AutomationActionRun {
             return null;
         }
         return noteRevision == null ? 1 : noteRevision;
+    }
+
+    /** The successful delivery this action corrects, or null when it corrects none. */
+    UUID getCorrectsActionRunId() {
+        return correctsActionRunId;
     }
 
     Map<String, String> getConfigurationSnapshot() {

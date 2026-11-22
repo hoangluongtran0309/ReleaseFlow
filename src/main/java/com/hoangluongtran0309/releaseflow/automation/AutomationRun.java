@@ -58,6 +58,11 @@ class AutomationRun {
     @Column(name = "scheduled_for", updatable = false)
     private Instant scheduledFor;
 
+    // The reason a correction run gives, which a corrected destination shows; null on any
+    // other run (V41).
+    @Column(length = 500, updatable = false)
+    private String reason;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ExecutionStatus status;
@@ -90,6 +95,24 @@ class AutomationRun {
             Instant scheduledFor,
             Instant createdAt
     ) {
+        this(id, rule, projectId, releaseId, releaseVersion, triggerType, requestId, initiatedBy, initiatorName,
+                scheduledFor, null, createdAt);
+    }
+
+    AutomationRun(
+            UUID id,
+            AutomationRule rule,
+            UUID projectId,
+            UUID releaseId,
+            String releaseVersion,
+            TriggerType triggerType,
+            UUID requestId,
+            UUID initiatedBy,
+            String initiatorName,
+            Instant scheduledFor,
+            String reason,
+            Instant createdAt
+    ) {
         this.id = id;
         this.ruleId = rule.getId();
         this.organizationId = rule.getOrganizationId();
@@ -102,6 +125,7 @@ class AutomationRun {
         this.initiatedBy = initiatedBy;
         this.initiatorName = initiatorName;
         this.scheduledFor = scheduledFor;
+        this.reason = reason;
         this.status = ExecutionStatus.PENDING;
         this.createdAt = createdAt;
     }
@@ -194,6 +218,11 @@ class AutomationRun {
     /** The occurrence this Run answers, for a Rule ReleaseFlow itself set off. */
     Instant getScheduledFor() {
         return scheduledFor;
+    }
+
+    /** The reason a correction run gives; null on any other run. */
+    String getReason() {
+        return reason;
     }
 
     ExecutionStatus getStatus() {

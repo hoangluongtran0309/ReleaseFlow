@@ -185,6 +185,18 @@ public class AutomationActionInvalidException extends LocalizedException {
         return new AutomationActionInvalidException("automation_reminder_days_invalid");
     }
 
+    static AutomationActionInvalidException triggerInvalid() {
+        return new AutomationActionInvalidException("automation_trigger_invalid");
+    }
+
+    static AutomationActionInvalidException correctionActionUnknown() {
+        return new AutomationActionInvalidException("automation_correction_action_unknown");
+    }
+
+    static AutomationActionInvalidException correctionLanguagesMixed() {
+        return new AutomationActionInvalidException("automation_correction_languages_mixed");
+    }
+
     static AutomationActionInvalidException requestIdRequired() {
         return new AutomationActionInvalidException("automation_request_id_required");
     }

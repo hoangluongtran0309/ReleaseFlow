@@ -124,6 +124,10 @@
                                 <span class="text-slate-600" th:text="${delivery.ruleName}">Announce</span>
                                 <span class="badge badge-sm badge-ghost" th:text="#{ui.releaseNote.revision(${delivery.revision})}">Revision 1</span>
                                 <span class="badge badge-sm badge-warning" th:if="${history.behind(delivery)}" th:text="#{ui.releaseNote.behind}">Behind</span>
+                                <!--/* A correction is delivered only when a person asks (ADR-0046, part 5). */-->
+                                <a class="link text-xs" th:if="${viewer.admin and history.behind(delivery)}"
+                                   th:href="@{/automation/{rule}/corrections(rule=${delivery.ruleId}, releaseId=${release.id})}"
+                                   th:text="#{ui.releaseNote.deliverCorrection}">Deliver the correction</a>
                                 <time class="text-xs text-slate-600" th:datetime="${delivery.deliveredAt}"
                                       th:text="|${#temporals.format(delivery.deliveredAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">20 Nov 2026, 10:02 UTC</time>
                                 <a class="link text-xs" th:if="${delivery.externalReference != null}"

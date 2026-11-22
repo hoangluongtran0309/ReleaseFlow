@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/main}">
+<head>
+    <title th:text="#{ui.automation.correction.title(${rule.name})}">Deliver a correction</title>
+</head>
+<body>
+<p layout:fragment="page-title" th:text="#{ui.nav.automation}">Automation</p>
+<div layout:fragment="content">
+    <header class="page-header">
+        <div>
+            <p class="page-eyebrow"><a class="link-hover" th:href="@{/automation}" th:text="#{ui.nav.automation}">Automation</a></p>
+            <h1 class="page-heading" th:text="#{ui.automation.correction.heading(${rule.name})}">Deliver a correction with Publish</h1>
+            <p class="page-subtitle" th:text="#{ui.automation.correction.subtitle}">
+                Send the latest revision of a corrected note to the destinations that hold an earlier one.
+            </p>
+        </div>
+    </header>
+
+    <div class="mb-6" th:if="${pageNotice != null}" th:insert="~{fragments/alert :: notice(${pageNotice})}"></div>
+
+    <!--/* Choosing the release is a plain GET, so the offer below is always the one the server read. */-->
+    <section class="surface-card p-6" id="correction-release">
+        <h2 class="section-heading" th:text="#{ui.automation.correction.releaseHeading}">Release</h2>
+        <p class="section-copy" th:if="${#lists.isEmpty(releases)}" th:text="#{ui.automation.correction.noReleases}">
+            This rule's project has no published release.</p>
+        <form class="mt-4 flex flex-wrap items-end gap-3" method="get" th:action="@{/automation/{id}/corrections(id=${rule.id})}"
+              th:unless="${#lists.isEmpty(releases)}" novalidate>
+            <label class="form-control w-full sm:w-64">
+                <span class="label-text font-medium" th:text="#{ui.automation.release}">Release</span>
+                <select name="releaseId" class="select select-bordered w-full" required>
+                    <option th:each="release : ${releases}" th:value="${release.id}" th:text="${release.version}"
+                            th:selected="${offer != null and offer.releaseId() == release.id}">1.4.0</option>
+                </select>
+            </label>
+            <button type="submit" class="btn btn-outline" th:text="#{ui.automation.correction.showOffer}">Show what can be corrected</button>
+        </form>
+    </section>
+
+    <section class="surface-card mt-6 p-6" id="correction-offer" th:if="${offer != null}">
+        <h2 class="section-heading" th:text="#{ui.automation.correction.offerHeading(${offer.releaseVersion()})}">Destinations of 1.4.0</h2>
+        <div class="mt-3" th:insert="~{fragments/alert :: alert('info', #{ui.automation.correction.whatItDoes})}"></div>
+
+        <form class="mt-5 grid gap-5" method="post" th:object="${correctionRequest}"
+              th:action="@{/automation/{id}/corrections(id=${rule.id})}" novalidate>
+            <th:block th:replace="~{fragments/form :: errorSummary(true)}"></th:block>
+            <input type="hidden" th:field="*{releaseId}">
+            <input type="hidden" th:field="*{requestId}">
+
+            <fieldset class="grid gap-3" th:attr="aria-describedby=${#fields.hasErrors('ruleActionIds')} ? 'actions-error' : null">
+                <legend class="label-text font-medium" th:text="#{ui.automation.correction.actionsLegend}">Destinations</legend>
+                <ul class="grid gap-3">
+                    <li class="subtle-panel" th:each="item : ${offer.items()}" th:id="|correction-action-${item.position() + 1}|">
+                        <label class="flex items-start gap-3" th:if="${item.offered()}">
+                            <input type="checkbox" name="ruleActionIds" th:value="${item.ruleActionId()}" class="checkbox mt-0.5"
+                                   th:checked="${#lists.contains(correctionRequest.ruleActionIds, item.ruleActionId())}">
+                            <span>
+                                <span class="font-medium"
+                                      th:text="#{ui.automation.correction.actionLine(${item.position() + 1}, #{${item.actionType().labelKey}}, ${item.audienceName()}, ${item.language()})}">1. Public changelog — End user, vi</span>
+                                <span class="block text-sm text-slate-600"
+                                      th:text="#{ui.automation.correction.offered(${item.latestRevision()}, ${item.carriedRevision()})}">Delivers revision 3; it holds revision 1.</span>
+                            </span>
+                        </label>
+                        <div th:unless="${item.offered()}">
+                            <p class="font-medium"
+                               th:text="#{ui.automation.correction.actionLine(${item.position() + 1}, #{${item.actionType().labelKey}}, ${item.audienceName()}, ${item.language()})}">2. Zendesk — End user, vi</p>
+                            <p class="text-sm text-slate-600">
+                                <span class="badge badge-ghost badge-sm" th:text="#{ui.automation.correction.notOffered}">Not offered</span>
+                                <span th:text="#{${item.unavailable().labelKey}}">Zendesk keeps the article it published.</span>
+                                <a class="link" th:if="${item.unavailable().name() == 'LATER'}"
+                                   href="https://github.com/hoangluongtran0309/ReleaseFlow/issues/88" rel="noreferrer noopener"
+                                   th:text="#{ui.automation.correction.issueLink(88)}">#88</a>
+                                <a class="link" th:if="${item.unavailable().name() == 'ONLY_SKIPPED' or item.unavailable().name() == 'NEVER_DELIVERED'}"
+                                   href="https://github.com/hoangluongtran0309/ReleaseFlow/issues/135" rel="noreferrer noopener"
+                                   th:text="#{ui.automation.correction.issueLink(135)}">#135</a>
+                            </p>
+                        </div>
+                    </li>
+                </ul>
+                <span th:replace="~{fragments/form :: fieldError('ruleActionIds', 'actions-error')}"></span>
+            </fieldset>
+
+            <label class="form-control" th:if="${offer.anyOffered()}">
+                <span class="label-text font-medium" th:text="#{ui.automation.correction.reason}">Reason</span>
+                <textarea th:field="*{reason}" rows="3" maxlength="500" required
+                          class="textarea textarea-bordered w-full text-sm" th:errorclass="textarea-error"
+                          th:lang="${reasonLanguage}"
+                          th:attr="aria-invalid=${#fields.hasErrors('reason')} ? 'true' : null,aria-describedby=${#fields.hasErrors('reason')} ? 'reason-error' : 'reason-hint'"></textarea>
+                <span id="reason-hint" class="mt-1 text-xs text-slate-500"
+                      th:text="#{ui.automation.correction.reasonHint}">Every picked destination shows it as written, under "Corrected on". At most 500 characters, in the note's language.</span>
+                <span th:replace="~{fragments/form :: fieldError('reason', 'reason-error')}"></span>
+            </label>
+
+            <div class="flex flex-wrap gap-3" th:if="${offer.anyOffered()}">
+                <button type="submit" class="btn btn-primary" th:text="#{ui.automation.correction.submit}">Deliver the correction</button>
+                <a class="btn btn-ghost" th:href="@{/automation}" th:text="#{ui.common.cancel}">Cancel</a>
+            </div>
+            <p class="section-copy" th:unless="${offer.anyOffered()}" th:text="#{ui.automation.correction.nothingOffered}">
+                Nothing here can be corrected now.</p>
+        </form>
+    </section>
+</div>
+</body>
+</html>

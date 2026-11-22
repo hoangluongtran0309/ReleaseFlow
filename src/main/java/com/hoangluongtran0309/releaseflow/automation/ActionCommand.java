@@ -18,11 +18,37 @@ record ActionCommand(
         String language,
         String noteContent,
         Map<String, String> configuration,
-        String rawSecret
+        String rawSecret,
+        Correction correction
 ) {
 
     ActionCommand {
         configuration = Map.copyOf(configuration);
+    }
+
+    /** A delivery that corrects nothing: every run but a correction's. */
+    ActionCommand(
+            UUID actionRunId,
+            UUID organizationId,
+            UUID projectId,
+            UUID releaseId,
+            String releaseVersion,
+            String audienceName,
+            String language,
+            String noteContent,
+            Map<String, String> configuration,
+            String rawSecret
+    ) {
+        this(actionRunId, organizationId, projectId, releaseId, releaseVersion, audienceName, language, noteContent,
+                configuration, rawSecret, null);
+    }
+
+    /**
+     * What a correction delivers beyond the note (ADR-0046, part 5): the successful delivery
+     * it replaces and the audience's name as that delivery gave it, the revision of the note
+     * it carries, and the reason its run gives.
+     */
+    record Correction(UUID correctsActionRunId, String deliveredAudienceName, int noteRevision, String reason) {
     }
 
     @Override

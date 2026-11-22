@@ -5,7 +5,8 @@ import java.util.UUID;
 
 /**
  * One delivery of one run, and how it ended. {@code noteRevision} is the revision of its
- * note the delivery carried (ADR-0046), or null when it carried no note.
+ * note the delivery carried (ADR-0046), or null when it carried no note; {@code correctsRevision}
+ * is the revision the delivery a correction replaces had carried, and null on any other.
  */
 public record AutomationActionRunView(
         UUID id,
@@ -19,7 +20,8 @@ public record AutomationActionRunView(
         int attempts,
         Instant startedAt,
         Instant completedAt,
-        Integer noteRevision
+        Integer noteRevision,
+        Integer correctsRevision
 ) {
 
     /** Whether this is the action a retry would carry out again. */

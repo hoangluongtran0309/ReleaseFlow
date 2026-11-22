@@ -10,10 +10,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A correction of a public entry (ADR-0046, part 4): the corrected text, the reason, and
- * when. Revision 1 is the entry itself, so a row is revision 2 or later. Only a correction
- * run appends one, and the database refuses an update or a delete outright. The entry row
- * never changes, and nothing here names the person who asked for the correction.
+ * A correction of a public entry (ADR-0046, part 4): the corrected text, the reason its
+ * correction run gave, and when. Revision 1 is the entry itself, so a row is revision 2 or
+ * later. Only a correction run appends one, and the database refuses an update or a delete
+ * outright. The entry row never changes, and nothing here names the person who asked for the
+ * correction.
  */
 @Entity
 @Immutable
@@ -41,7 +42,34 @@ class PublicChangelogEntryRevision {
     @Column(name = "corrected_at", nullable = false, updatable = false)
     private Instant correctedAt;
 
+    @Column(name = "note_revision", nullable = false, updatable = false)
+    private int noteRevision;
+
+    @Column(name = "action_run_id", nullable = false, updatable = false)
+    private UUID actionRunId;
+
     protected PublicChangelogEntryRevision() {
+    }
+
+    PublicChangelogEntryRevision(
+            UUID id,
+            PublicChangelogEntry entry,
+            int revision,
+            int noteRevision,
+            UUID actionRunId,
+            String content,
+            String reason,
+            Instant correctedAt
+    ) {
+        this.id = id;
+        this.entryId = entry.getId();
+        this.organizationId = entry.getOrganizationId();
+        this.revision = revision;
+        this.noteRevision = noteRevision;
+        this.actionRunId = actionRunId;
+        this.contentSnapshot = content;
+        this.reason = reason;
+        this.correctedAt = correctedAt;
     }
 
     UUID getId() {
@@ -54,6 +82,10 @@ class PublicChangelogEntryRevision {
 
     int getRevision() {
         return revision;
+    }
+
+    int getNoteRevision() {
+        return noteRevision;
     }
 
     String getContentSnapshot() {

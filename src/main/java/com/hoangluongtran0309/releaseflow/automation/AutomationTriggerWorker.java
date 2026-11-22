@@ -100,8 +100,10 @@ class AutomationTriggerWorker {
             if (!advance(rule, now)) {
                 return true;
             }
+            // The rule is locked before the release here, and nothing locks a release and then a
+            // rule, so the order cannot deadlock with a correction or a manual run.
             ReleaseAccess.ReleaseSnapshot release = releaseAccess
-                    .find(rule.getOrganizationId(), rule.getTriggerReleaseId())
+                    .lockForRun(rule.getOrganizationId(), rule.getTriggerReleaseId())
                     .orElse(null);
             // A release that is no longer published is simply not delivered again; the
             // schedule itself keeps its place.
@@ -165,8 +167,9 @@ class AutomationTriggerWorker {
                             rule.getId(), release.id(), TriggerType.UPCOMING_RELEASE_REMINDER, scheduledFor)) {
                         continue;
                     }
+                    // An approved note can still be edited, under this same lock.
                     ReleaseAccess.ReleaseSnapshot snapshot = releaseAccess
-                            .find(rule.getOrganizationId(), release.id())
+                            .lockForRun(rule.getOrganizationId(), release.id())
                             .orElse(null);
                     if (snapshot == null || snapshot.status() != ReleaseStatus.APPROVED) {
                         continue;

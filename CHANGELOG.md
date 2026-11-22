@@ -37,6 +37,19 @@ section into the version's entry, and the GitHub release is written from it.
   it was. Neither names the person. An entry is now cached for five minutes rather than a
   day, so a correction reaches readers; an entry nobody corrected is otherwise served as
   before ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+- An administrator delivers a corrected note to the public changelog with **Deliver a
+  correction**: the form offers each destination that holds an earlier revision, names every
+  other with why it is not offered, and the reason given is the line the corrected entry
+  shows. A correction is never skipped for having nothing to say, delivers the latest
+  revision once, and never replaces newer text with older. Corrections to GitHub, Confluence,
+  Notion, Slack, Teams, and email come later (#88), and Zendesk's are made there by hand
+  ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+
+### Changed
+
+- Every run for a release, from publication, by hand, a schedule, a reminder, a signed call, or
+  a correction, is created with the release locked, so it carries each note as of a moment no
+  correction is half-way through.
 
 ### Fixed
 

@@ -17,7 +17,9 @@
   Context, and how a corrected note meets ADR-0035's skip; see
   [the amendment](#amendment-2026-11-20-rendering-again-what-it-changes-in-dbvault-and-the-skip);
   and 2026-11-21, for the language in a public page's ETag; see
-  [that amendment](#amendment-2026-11-21-the-language-in-a-public-pages-etag)
+  [that amendment](#amendment-2026-11-21-the-language-in-a-public-pages-etag); and again on
+  2026-11-21, for the correction run's reason, the delivery it replaces, what it offers, and
+  the release lock; see [the correction run](#amendment-2026-11-21-the-correction-run)
 
 This record decides issue #22 and writes no code. Nothing it describes exists yet.
 
@@ -505,9 +507,13 @@ person wrote the note, and left three questions to #87.
   `nothing_for_audience` is not checked; `audience_retired` still is, first, as ADR-0044's
   order of checks says. An action whose runs for the release were all `SKIPPED`, for either
   reason, has no `SUCCEEDED` run, so part 5 does not offer it: nothing was delivered there
-  to correct. The form names such an action and says why. Running the rule again, by hand,
-  is a first delivery of the latest revision, and is skipped or delivered by ADR-0035's rule
-  like any other run.
+  to correct. The form names such an action and says why. A person delivers it through a
+  `MANUAL` rule holding those actions: that run is a first delivery of the latest revision,
+  skipped or delivered by ADR-0035's rule like any other run. A rule of any other trigger
+  cannot be run by hand, and a retry repeats only a failed or unknown action, so there is no
+  other way today; [#135](https://github.com/hoangluongtran0309/ReleaseFlow/issues/135)
+  proposes a direct one. (Corrected on 2026-11-21: this said "running the rule again, by
+  hand", which only a `MANUAL` rule can be.)
 
 **Consequences.**
 
@@ -543,3 +549,64 @@ this record, with the entry ID alone as the ETag.
   entry and of an earlier revision is as part 4 says.
 - An entry nobody corrected has revision 1, so its ETag changes once, from `"{entryId}"` to
   `"{entryId}-1-{language}"`, and a copy cached under the old one is sent again in full.
+
+## Amendment, 2026-11-21: the correction run
+
+Part 5 gives a correction run "a reason" without saying whose a destination shows, and `V40`
+has nowhere to keep one: only a note revision has a reason. A destination can be more than one
+revision behind. dbvault's 1.4.0 acceptance delivers note revision 3 to a public entry that
+still shows revision 1: revision 2 rendered again for `dbvault-CLI`, revision 3 by hand for
+"Điểm endpoint". Revision 3's reason would explain half of what that entry's readers see change.
+Only the delivery knows what the destination held.
+
+- **The line a corrected destination shows is the run's reason**, written by the person who
+  delivers it, for that destination's readers, at the moment the text becomes public. The form
+  starts it as the reasons of the revisions the picked destinations have not received, oldest
+  first, and the person edits it: at most 500 characters, in the note's language. A revision's
+  own reason is recorded with the revision, on the release page; part 2's form said it "is
+  published wherever the correction is", and now says it starts the reason a correction gives.
+- **One run, one language.** Every picked destination shows the reason as written, so a run
+  whose picked actions carry notes of more than one language is refused,
+  `400 automation_correction_languages_mixed`; each language is a correction of its own.
+- **A second migration, `V41`,** keeps it: `automation_runs.reason`, present exactly when the
+  trigger is `CORRECTION` and never blank; and `automation_action_runs.corrects_action_run_id`,
+  the successful delivery a correction replaces, in its own Organization. That is "the target
+  the earlier run recorded": the public changelog finds the entry the delivery wrote, the entry
+  whose revision it wrote, or, for a delivery that found the same note already public, the
+  entry of its release, its audience as it named it, and its language. No row written before
+  `V41` changes, and no run before it is a correction.
+- **What is offered, in this order.** The first of these that holds is the reason an action is
+  not offered; a destination that cannot be corrected at all comes first, since then its state
+  does not matter.
+  1. Its audience is retired.
+  2. Zendesk: `correction_not_supported`, corrected there by hand.
+  3. GitHub Release, Confluence, Notion, Slack, Teams, and email: their correction comes with
+     Slice B (#88).
+  4. Its latest delivery for the release is `UNKNOWN`: a person settles it first.
+  5. A delivery of it for the release has not finished.
+  6. It was only ever skipped: delivered through a `MANUAL` rule holding it (#135).
+  7. It never delivered the release otherwise. A `MANUAL` rule holding it delivers it; if its
+     run failed, a retry delivers the revision that run carried, and a correction is offered
+     after it.
+  8. The note has no revision later than its last successful delivery carried.
+
+  Every other action is offered, and the public changelog's are picked by default. Part 5's
+  "running the rule delivers the latest revision" means the same as the corrected sentence of
+  the 2026-11-20 amendment: a `MANUAL` rule's run.
+- **The public changelog.** A revision the action already wrote is its delivery, so a confirmed
+  retry never appends a second. An entry whose latest revision already says the same is the
+  delivery too. An entry that already shows this note revision in other words, or a later one,
+  fails as `public_changelog_conflict`, since readers never get older text. Any other run that
+  meets a corrected entry is compared with its latest revision: the same words are that entry,
+  and different ones fail as `public_changelog_conflict`, as part 4 says.
+- **The release lock wherever a run is created.** A published note can now change, and a
+  revision is saved with the release's row locked (#119, #122). Every transaction that creates a
+  run for a release locks that row first: publication's runs, a manual run, a schedule's, a
+  reminder's (an approved note can still be edited, under the same lock), a signed call's, and a
+  correction's. A run therefore carries each note as of a moment no revision is half-way
+  through, and a correction's offer and the revisions its run carries are the same. A schedule
+  locks its rule before the release, and nothing locks a release and then a rule, so the order
+  cannot deadlock.
+- **Only a person starts one.** `POST /api/automation/rules/{ruleId}/corrections`, by an
+  administrator, with a request ID that makes a repeat the same run. A rule can never have the
+  `CORRECTION` trigger: the API refuses it as `400 automation_trigger_invalid`.

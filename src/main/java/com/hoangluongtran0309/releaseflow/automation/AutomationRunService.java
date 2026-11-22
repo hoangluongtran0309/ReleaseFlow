@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -80,29 +81,42 @@ public class AutomationRunService {
             throw AutomationActionInvalidException.requestIdRequired();
         }
         AutomationRule rule = ruleService.require(principal.organizationId(), ruleId);
-        return runRepository.findByRuleIdAndRequestId(ruleId, request.getRequestId())
-                .map(existing -> views(List.of(existing)).getFirst())
-                .orElseGet(() -> {
-                    ReleaseAccess.ReleaseSnapshot release = releaseAccess
-                            .find(principal.organizationId(), request.getReleaseId())
-                            .orElseThrow(AutomationConflictException::releaseNotPublished);
-                    if (release.status() != ReleaseStatus.PUBLISHED) {
-                        throw AutomationConflictException.releaseNotPublished();
-                    }
-                    if (!rule.matches(release.projectId(), TriggerType.MANUAL)) {
-                        throw AutomationConflictException.ruleUnavailable();
-                    }
-                    AutomationRun run = runFactory.create(
-                            rule,
-                            release,
-                            TriggerType.MANUAL,
-                            request.getRequestId(),
-                            principal.userId(),
-                            principal.displayName(),
-                            null
-                    );
-                    return views(List.of(run)).getFirst();
-                });
+        Optional<AutomationRun> existing = runRepository.findByRuleIdAndRequestId(ruleId, request.getRequestId());
+        if (existing.isPresent()) {
+            return views(List.of(existing.get())).getFirst();
+        }
+        // The release is locked first, as wherever a run is created for it (#119, #122), so
+        // the run carries each note as of a moment no correction is half-way through.
+        ReleaseAccess.ReleaseSnapshot release = releaseAccess
+                .lockForRun(principal.organizationId(), request.getReleaseId())
+                .orElseThrow(AutomationConflictException::releaseNotPublished);
+        // A repeat of this request may have been waiting on the same lock: it is that run.
+        existing = runRepository.findByRuleIdAndRequestId(ruleId, request.getRequestId());
+        if (existing.isPresent()) {
+            return views(List.of(existing.get())).getFirst();
+        }
+        if (release.status() != ReleaseStatus.PUBLISHED) {
+            throw AutomationConflictException.releaseNotPublished();
+        }
+        if (!rule.matches(release.projectId(), TriggerType.MANUAL)) {
+            throw AutomationConflictException.ruleUnavailable();
+        }
+        AutomationRun run = runFactory.create(
+                rule,
+                release,
+                TriggerType.MANUAL,
+                request.getRequestId(),
+                principal.userId(),
+                principal.displayName(),
+                null
+        );
+        return views(List.of(run)).getFirst();
+    }
+
+    /** One run as the API and the pages show it. */
+    @Transactional(readOnly = true)
+    AutomationRunView view(AutomationRun run) {
+        return views(List.of(run)).getFirst();
     }
 
     /**
@@ -172,6 +186,15 @@ public class AutomationRunService {
                 .collect(Collectors.groupingBy(AutomationActionRun::getRunId));
         // Looked up once per Organization, and only when a row needs it.
         Map<UUID, Map<UUID, String>> audienceNames = new HashMap<>();
+        // What each correction replaced, so a page can say "revision 3, replaces revision 1".
+        List<UUID> corrected = byRun.values().stream().flatMap(List::stream)
+                .map(AutomationActionRun::getCorrectsActionRunId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        Map<UUID, Integer> correctedRevisions = corrected.isEmpty() ? Map.of() : actionRunRepository.findAllById(corrected)
+                .stream()
+                .filter(action -> action.getNoteRevision() != null)
+                .collect(Collectors.toMap(AutomationActionRun::getId, AutomationActionRun::getNoteRevision));
         return runs.stream()
                 .map(run -> new AutomationRunView(
                         run.getId(),
@@ -182,6 +205,7 @@ public class AutomationRunService {
                         run.getTriggerType(),
                         run.getRequestId(),
                         run.getInitiatorName(),
+                        run.getReason(),
                         run.getStatus(),
                         run.isCancellationRequested(),
                         run.getCreatedAt(),
@@ -190,7 +214,7 @@ public class AutomationRunService {
                         byRun.getOrDefault(run.getId(), List.of()).stream()
                                 .map(action -> view(action, namedByItsId(action)
                                         ? audienceNames.computeIfAbsent(action.getOrganizationId(), audienceService::displayNames)
-                                        : Map.of()))
+                                        : Map.of(), correctedRevisions))
                                 .toList()
                 ))
                 .toList();
@@ -202,7 +226,11 @@ public class AutomationRunService {
         return action.getAudienceNameSnapshot().equals(action.getAudienceId().toString());
     }
 
-    private static AutomationActionRunView view(AutomationActionRun action, Map<UUID, String> audienceNames) {
+    private static AutomationActionRunView view(
+            AutomationActionRun action,
+            Map<UUID, String> audienceNames,
+            Map<UUID, Integer> correctedRevisions
+    ) {
         String audienceName = namedByItsId(action)
                 ? audienceNames.getOrDefault(action.getAudienceId(), action.getAudienceNameSnapshot())
                 : action.getAudienceNameSnapshot();
@@ -218,7 +246,8 @@ public class AutomationRunService {
                 action.getAttempts(),
                 action.getStartedAt(),
                 action.getCompletedAt(),
-                action.getNoteRevision()
+                action.getNoteRevision(),
+                action.getCorrectsActionRunId() == null ? null : correctedRevisions.get(action.getCorrectsActionRunId())
         );
     }
 

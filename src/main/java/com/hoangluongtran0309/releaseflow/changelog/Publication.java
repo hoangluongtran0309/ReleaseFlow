@@ -21,6 +21,25 @@ public record Publication(Outcome outcome, String url) {
         CONFLICT
     }
 
+    /**
+     * A corrected note for the entry an earlier delivery made (ADR-0046, parts 4 and 5).
+     * {@code correctsActionRunId} is that delivery, and {@code deliveredAudienceName} the
+     * audience's name as it delivered it, which finds an entry the delivery matched rather
+     * than wrote. {@code reason} is the one the correction run gives.
+     */
+    public record Correction(
+            UUID actionRunId,
+            UUID organizationId,
+            UUID releaseId,
+            UUID correctsActionRunId,
+            String deliveredAudienceName,
+            String language,
+            int noteRevision,
+            String content,
+            String reason
+    ) {
+    }
+
     /** One note offered to the public changelog. */
     public record Request(
             UUID actionRunId,
