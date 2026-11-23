@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-09-14
+- Amended: 2026-11-23, by [ADR-0047](0047-editing-an-approved-release.md): an approved
+  release's summary and upgrade guide link change without a return to draft
 
 ## Context
 
