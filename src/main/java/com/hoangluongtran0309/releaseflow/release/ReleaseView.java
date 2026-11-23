@@ -24,7 +24,8 @@ import java.util.UUID;
  * {@code linkedIssueRead} the state of reading them ({@code null} before a review was
  * requested); {@code foldingSuggestions} holds, while in review, each tracker change a
  * code change of the release may carry, and {@code foldDecisions} what people decided
- * (ADR-0041).
+ * (ADR-0041). {@code summaryChange} and {@code upgradeGuideChange} say who last changed the
+ * summary or the upgrade guide link after approval, and when, or are null (ADR-0047).
  */
 public record ReleaseView(
         UUID id,
@@ -53,7 +54,9 @@ public record ReleaseView(
         String linkedIssueRead,
         List<FoldingSuggestion> foldingSuggestions,
         List<FoldDecisionView> foldDecisions,
-        List<MissingNarrative> missingNarratives
+        List<MissingNarrative> missingNarratives,
+        ChangeAfterApproval summaryChange,
+        ChangeAfterApproval upgradeGuideChange
 ) {
 
     public ReleaseView {
@@ -66,6 +69,40 @@ public record ReleaseView(
         foldingSuggestions = List.copyOf(foldingSuggestions);
         foldDecisions = List.copyOf(foldDecisions);
         missingNarratives = List.copyOf(missingNarratives);
+    }
+
+    /** Who changed a field after the release was approved, under their name then, and when. */
+    public record ChangeAfterApproval(String name, Instant at) {
+
+        static ChangeAfterApproval of(String name, Instant at) {
+            return name == null ? null : new ChangeAfterApproval(name, at);
+        }
+    }
+
+    /**
+     * The notes a person edited that still show the text from before the latest change of the
+     * summary or the upgrade guide link (ADR-0047). A note edited by a person after that change
+     * was written from the new text, so it is not listed. The time compared is the person's own
+     * edit, never the note's update time, which a re-render also moves.
+     */
+    public List<AudienceNoteView> notesShowingEarlierText() {
+        Instant latest = latestChangeAfterApproval();
+        if (latest == null) {
+            return List.of();
+        }
+        return notes.stream()
+                .filter(note -> !note.autoRerender())
+                .filter(note -> note.lastEditedAt() == null || note.lastEditedAt().isBefore(latest))
+                .toList();
+    }
+
+    private Instant latestChangeAfterApproval() {
+        Instant summary = summaryChange == null ? null : summaryChange.at();
+        Instant link = upgradeGuideChange == null ? null : upgradeGuideChange.at();
+        if (summary == null) {
+            return link;
+        }
+        return link == null || summary.isAfter(link) ? summary : link;
     }
 
     /** The linked issues still open while their change ships, whose status nobody accepted (ADR-0041). */

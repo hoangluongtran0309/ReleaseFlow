@@ -67,7 +67,7 @@ public class ReleaseApiController {
             @PathVariable UUID releaseId,
             @Valid @RequestBody ReleaseRequest request
     ) {
-        return releaseService.edit(principal.organizationId(), projectId, releaseId, request);
+        return releaseService.edit(principal, projectId, releaseId, request);
     }
 
     @DeleteMapping("/releases/{releaseId}")

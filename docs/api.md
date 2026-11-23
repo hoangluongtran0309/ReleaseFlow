@@ -207,6 +207,19 @@ Roles: **public** needs no session; **member** needs any signed-in person;
 | `POST /api/glossary/kept-terms`, `DELETE /api/glossary/kept-terms/{termId}` | admin |
 | `POST /api/glossary/translations`, `DELETE /api/glossary/translations/{translationId}` | admin |
 
+`PUT …/releases/{releaseId}` edits a draft, and the summary and `upgradeGuideUrl` of a release
+in review or approved ([ADR-0047](adr/0047-editing-an-approved-release.md)); outside a draft, a
+different `version` or `previousReleaseId` is `409 release_status_conflict`, and a published
+release is `409 release_published`. Once approved, an edit that would translate more than its
+new summary, because the Project context or a glossary changed since approval, is
+`409 release_edit_retranslates` with `characters` and `languages` until it is sent again with
+`"retranslationCharacters"` equal to the current `characters`; nothing is saved before. The
+release returns who last changed each field after approval as `summaryChange` and
+`upgradeGuideChange` (`name`, `at`, or `null`). A note's `lastEditedAt` is when a person last
+edited it, `null` for a note nobody edited and for one edited before Flyway `V42` on a release
+already published; its `updatedAt` moves only when its ready text changes, so not while its
+language is being translated. See [Editing an approved release](release-notes.md#editing-an-approved-release).
+
 A published note has revisions ([ADR-0046](adr/0046-correcting-a-published-note.md)).
 Revision 1 is the note as published: `origin` `PUBLISHED`, no `reason`, and the
 publisher's name and time. A later revision is a correction, with its `origin`, `reason`,
@@ -291,5 +304,5 @@ an earlier revision is `public, max-age=86400, immutable` with `X-Robots-Tag: no
 | Glossary | `409` | `glossary_term_taken`, `glossary_limit` |
 | Releases | `400` | `invalid_release_schedule`, `invalid_upgrade_guide_url`, `invalid_previous_release`, `invalid_fold_decision`, `release_note_revision_invalid`, `release_note_correction_origin_invalid` |
 | Releases | `404` | `release_not_found`, `release_note_not_found`, `folding_suggestion_not_found`, `linked_issue_not_found` |
-| Releases | `409` | `release_status_conflict`, `release_published`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed`, `release_note_revision_stale`, `release_note_correction_unchanged`, `release_note_manual`, `audience_retired`, `release_note_preview_changed`, `release_note_render_incomplete` |
+| Releases | `409` | `release_status_conflict`, `release_published`, `release_edit_retranslates`, `release_empty`, `release_review_incomplete`, `change_summary_required`, `release_version_taken`, `classification_changed`, `change_not_releasable`, `change_excluded`, `release_note_render_failed`, `release_notes_missing`, `translations_not_ready`, `linked_issue_status_changed`, `release_note_revision_stale`, `release_note_correction_unchanged`, `release_note_manual`, `audience_retired`, `release_note_preview_changed`, `release_note_render_incomplete` |
 | Automation | `400`, `404`, `409` | See [Automation](automation.md#rest) |

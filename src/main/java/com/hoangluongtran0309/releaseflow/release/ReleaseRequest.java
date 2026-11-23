@@ -27,6 +27,10 @@ public class ReleaseRequest {
 
     private boolean previousReleaseIdGiven;
 
+    // The character count a person was shown before an edit that would translate the release
+    // again (ADR-0047, amended 2026-11-23); the edit proceeds only when it is still the count.
+    private Integer retranslationCharacters;
+
     public String getVersion() {
         return version;
     }
@@ -59,6 +63,14 @@ public class ReleaseRequest {
     public void setPreviousReleaseId(UUID previousReleaseId) {
         this.previousReleaseId = previousReleaseId;
         this.previousReleaseIdGiven = true;
+    }
+
+    public Integer getRetranslationCharacters() {
+        return retranslationCharacters;
+    }
+
+    public void setRetranslationCharacters(Integer retranslationCharacters) {
+        this.retranslationCharacters = retranslationCharacters;
     }
 
     boolean upgradeGuideUrlGiven() {

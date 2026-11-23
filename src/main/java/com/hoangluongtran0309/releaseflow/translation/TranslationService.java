@@ -193,6 +193,66 @@ public class TranslationService {
         return new PublishedTranslation(merged, missing, missingCharacters, glossary);
     }
 
+    /**
+     * The characters a change's texts would send to the provider if their translation were
+     * ensured now (ADR-0047): none when a job for the same input already exists, otherwise the
+     * code points of each distinct text not cached under the Project's context and the pair's
+     * glossary version as they are now. Nothing is written and no provider is called.
+     */
+    @Transactional(readOnly = true)
+    public int charactersToSend(
+            UUID organizationId,
+            UUID projectId,
+            UUID changeId,
+            String sourceLanguage,
+            String targetLanguage,
+            Map<String, String> texts
+    ) {
+        return charactersToSend(new Subject(organizationId, projectId, changeId, null), sourceLanguage, targetLanguage,
+                texts);
+    }
+
+    /** {@link #charactersToSend} for a release's own texts, its summary. */
+    @Transactional(readOnly = true)
+    public int charactersToSendForRelease(
+            UUID organizationId,
+            UUID projectId,
+            UUID releaseId,
+            String sourceLanguage,
+            String targetLanguage,
+            Map<String, String> texts
+    ) {
+        return charactersToSend(new Subject(organizationId, projectId, null, releaseId), sourceLanguage, targetLanguage,
+                texts);
+    }
+
+    private int charactersToSend(Subject subject, String sourceLanguage, String targetLanguage, Map<String, String> texts) {
+        Map<String, String> input = TranslationTexts.nonBlank(texts);
+        if (!provider.isEnabled() || input.isEmpty() || TranslationTexts.sameLanguage(sourceLanguage, targetLanguage)) {
+            return 0;
+        }
+        String context = projectService.context(subject.organizationId(), subject.projectId());
+        String version = glossaryVersion(subject.organizationId(), sourceLanguage, targetLanguage);
+        if (find(subject, targetLanguage, TranslationTexts.inputHash(sourceLanguage, input, context, version)).isPresent()) {
+            return 0;
+        }
+        // The worker sends only what the cache lacks under the job's own glossary version.
+        Set<String> distinct = new LinkedHashSet<>(input.values());
+        Set<String> cached = new HashSet<>();
+        cacheRepository.findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
+                        subject.organizationId(), sourceLanguage, targetLanguage,
+                        distinct.stream().map(text -> TranslationTexts.textHash(text, context, version))
+                                .collect(Collectors.toSet()))
+                .forEach(entry -> cached.add(entry.getTextHash()));
+        int characters = 0;
+        for (String text : distinct) {
+            if (!cached.contains(TranslationTexts.textHash(text, context, version))) {
+                characters += text.codePointCount(0, text.length());
+            }
+        }
+        return characters;
+    }
+
     // Text -> DeepL's answer, as cached under the job's glossary version or, for a text it
     // translated without the glossary, under none.
     private Map<String, String> cachedAnswers(

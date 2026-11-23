@@ -27,6 +27,11 @@
                     <time th:datetime="${release.approvedAt}"
                           th:text="|${#temporals.format(release.approvedAt, 'd MMM yyyy, HH:mm', 'UTC')} UTC|">10 Sep 2026, 16:02 UTC</time>.
                 </th:block>
+                <!--/* What changed after approval stays on record once published (ADR-0047). */-->
+                <span th:if="${release.summaryChange != null}"
+                      th:text="#{ui.release.summaryChangedAfterApproval(${release.summaryChange.name()}, |${#temporals.format(release.summaryChange.at(), 'd MMM yyyy, HH:mm', 'UTC')} UTC|)}">Summary changed after approval by Mai Tran on 23 Nov 2026, 10:02 UTC</span>
+                <span th:if="${release.upgradeGuideChange != null}"
+                      th:text="#{ui.release.upgradeGuideChangedAfterApproval(${release.upgradeGuideChange.name()}, |${#temporals.format(release.upgradeGuideChange.at(), 'd MMM yyyy, HH:mm', 'UTC')} UTC|)}">Upgrade guide changed after approval by Mai Tran on 23 Nov 2026, 10:02 UTC</span>
                 <th:block th:if="${release.plannedReleaseAt != null}">
                     <span th:text="#{ui.releaseNote.plannedFor}">Planned for</span>
                     <time th:datetime="${release.plannedReleaseAt}"

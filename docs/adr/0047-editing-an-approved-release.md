@@ -157,3 +157,90 @@ defect; `docs/release-notes.md` and its Vietnamese page say so.
 - The review history of a change (#143, 1.5.0).
 - Editing the version or the previous release after a draft.
 - Editing a published release, other than through ADR-0046's revisions.
+
+## Amendment, 2026-11-23: holding a re-translation, the notes a person edited, and the update time
+
+Building the decision showed that three parts of it were not enough as written.
+
+### Holding an edit that re-translates the release
+
+Part 3's exception warns on the page before the edit is saved, but a caller of the API has no
+page. Its Size says "No new error code".
+
+- **An edit that would translate more than its new summary is held until the caller echoes
+  its cost.** That happens only once approved, when the Project context or a glossary changed
+  since approval, so that rendering the notes again sends texts other than the summary. The
+  edit then carries `retranslationCharacters`, the count it was shown. Without it, or when the
+  count is no longer the current one, the answer is `409 release_edit_retranslates`, with
+  `characters`, the current count, and `languages`, the languages that would be sent anything.
+  Nothing is saved or queued.
+- **The count is part 3's:** the source characters of every text the notes would send that has
+  no translation under the current context and glossary version, the new summary included, once
+  for each language. Counting sends nothing, and without a translation provider it is `0` and
+  nothing is held.
+- **An edit that sends only its new summary is never held**, and neither is an edit in review,
+  which has no notes.
+- **A link-only edit is held too** when the Project context or a glossary changed since
+  approval. This qualifies part 3's "An edit of the link sends nothing": the link itself is
+  never translated, but saving it renders the notes again, and that translates every text of
+  the release under the new context and version, exactly as an edit of the summary would.
+- **The page sends the count it displayed.** A held edit returns the page with the warning, the
+  count, and the same text; saving again sends that count.
+- So there is **one new error code**, `release_edit_retranslates`.
+
+### A published release
+
+Part 2 makes publication the boundary. The edit takes the release lock and then checks
+publication, as every write to a release does, so an edit of a published release, or one that
+waited behind a publication, answers the existing `409 release_published`, not
+`release_status_conflict`. A publication that waited behind an edit finds the notes as the edit
+left them: while they are being translated again, it answers `409 translations_not_ready`.
+
+### The notes a person edited
+
+Part 1's page names a note a person edited "as still showing the earlier summary or link". It
+names one only when its last edit by a person came before the latest change of the summary or
+the link after approval: a note edited after that change may already say it. That needs the
+time of the person's edit, which a note did not keep, and `updatedAt` is not it.
+
+- **A note records when a person last edited it** (`last_edited_at`, `V42`), with who did. Every
+  edit from now on sets both; the database allows the time only with an editor, and not the
+  other way round.
+- **`V42` gives a note of an approved release that a person edited its `updated_at` as that
+  time:** a re-render never writes such a note, so it is still the time of the edit.
+- **A note a person edited before `V42` on a release already published has no
+  `last_edited_at`:** the database refuses any write to a published release's notes
+  (`release_audience_notes_follow_release_status`, `V13`), and that is not bypassed. The API
+  returns `null` for it. Nothing reads it there: the list is shown only while a release is
+  approved.
+
+### The update time moves only when the ready text does
+
+Part 4 has `updatedAt` move when the note's content changes. That is still not enough in
+dbvault finding 33's case. While a language is being translated, every note of it is rendered
+with its changes' new text untranslated, then rendered again with the translation, which for
+four of the five Vietnamese notes is the text they had before. Their content changes twice and
+comes back, and each change moved `updatedAt`.
+
+- **`updatedAt` is when the note's ready text last changed.** A note records the SHA-256 of its
+  text when it was last ready (`ready_content_sha256`, `V42`). A re-render records the content,
+  translation status, and glossary use it gives; `updatedAt` moves only when the note is ready
+  and its text differs from that digest, which then becomes the new one. While its language is
+  translating, or a translation failed, the note shows its interim text and keeps its time.
+- **A person's edit moves `updatedAt` and sets the digest**, since their text is ready as written.
+  A note that was not ready at approval gets its first digest, and a new time, when it becomes
+  ready.
+- **`V42` sets the digest of each ready note of an approved release**, from its content, and none
+  for a note that is pending or failed, or of a published release, which is never rendered again.
+- **So a note that passes through `PENDING` with its text unchanged keeps its `updatedAt`.**
+  This replaces part 4's rule, that `updatedAt` moves whenever the content changes: it follows
+  the ready text, through `ready_content_sha256`, and finding 33's four unchanged Vietnamese
+  notes keep their time.
+- Nothing in part 4's table of readers changes: `translationStatus` still moves with the
+  language, and the translation poll reads that.
+
+### Size
+
+The one migration is `V42`. Besides the two fields' records on `releases`, it adds
+`last_edited_at` and `ready_content_sha256` to the notes and fills them for approved releases'
+notes only.

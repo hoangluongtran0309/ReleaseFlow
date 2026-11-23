@@ -494,8 +494,9 @@ release has breaking changes, the warning in every note links **read the upgrade
 to it, and the [footer](#footer) may link it too. The **previous release** is a published
 release of the same Project that the notes compare this one with. A new release follows
 the Project's most recently published release unless a person chooses another or none;
-the choice stays when another release is published later. Both can be changed while the
-release is a draft.
+the choice stays when another release is published later. The previous release can be
+changed only while the release is a draft; the upgrade guide, like the summary, also while it
+is in review or approved (see [Editing an approved release](#editing-an-approved-release)).
 
 A release moves through four steps, shown at the top of its page:
 
@@ -670,7 +671,8 @@ GET    /api/projects/{projectId}/releases
 POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt",
                                                                           "upgradeGuideUrl", "previousReleaseId"}
 GET    /api/projects/{projectId}/releases/{releaseId}
-PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary", "upgradeGuideUrl", "previousReleaseId"}
+PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary", "upgradeGuideUrl", "previousReleaseId",
+                                                                          "retranslationCharacters"}
 DELETE /api/projects/{projectId}/releases/{releaseId}
 PUT    /api/projects/{projectId}/releases/{releaseId}/schedule           {"plannedReleaseAt"} (null clears it)
 GET    /api/projects/{projectId}/releases/{releaseId}/available-changes
@@ -702,9 +704,11 @@ either. A decision that leaves `security` out confirms the change's current flag
 callers written before it do; `APPROVE` must otherwise send the flag the change has.
 A release returns `upgradeGuideUrl`, `previousReleaseId`, `previousVersion`, its `changes`, its
 `decisions` (`changeId`, `action`, `reviewerName`, `note`, `decidedAt`),
-`reviewedCount`, `plannedReleaseAt`, `approvedAt`, `approverName`, and its
+`reviewedCount`, `plannedReleaseAt`, `approvedAt`, `approverName`, `summaryChange` and
+`upgradeGuideChange` (each `null`, or the `name` and time `at` of the last change after
+approval), and its
 `notes` (`id`, `audienceCode`, `audienceName`, `language`, `content`,
-`autoRerender`, `lastEditorName`, `updatedAt`, `translationStatus`:
+`autoRerender`, `lastEditorName`, `lastEditedAt`, `updatedAt`, `translationStatus`:
 `READY`, `PENDING`, or `FAILED`, and `glossaryStatus`: `NONE`, `PENDING`, `APPLIED`, or
 `NOT_APPLIED` with a `glossaryReason`), and `glossaries`: one entry per note language whose
 pair has a [glossary](#glossary), with its `language`, `status`, and `reason`. The
@@ -728,7 +732,8 @@ of the Project's changes belongs to. Errors:
 | A change still processing or already in another release | `409 change_not_releasable` |
 | A change excluded from releases | `409 change_excluded` |
 | The version is already used in this Project | `409 release_version_taken` |
-| A summary or note edit outside the allowed status | `409 release_status_conflict` |
+| A summary or note edit outside the allowed status, or a change of the version or previous release outside a draft | `409 release_status_conflict` |
+| An edit of an approved release that would translate more than its new summary, without the count it costs or with one that is no longer current | `409 release_edit_retranslates` |
 | An audience template that cannot render at approval | `409 release_note_render_failed` |
 | Publishing an approved release that has no notes | `409 release_notes_missing` |
 | Publishing while a note is still translating or could not be translated | `409 translations_not_ready` |
@@ -736,6 +741,51 @@ of the Project's changes belongs to. Errors:
 | An unknown or foreign change | `404 change_not_found` |
 | An unknown or foreign release | `404 release_not_found` |
 | An unknown note of this release | `404 release_note_not_found` |
+
+### Editing an approved release
+
+A release's summary and upgrade guide can be corrected while it is in review or approved,
+without returning it to draft: its changes, their decisions, and its approval stay as they
+are. On the release's page, change them under **Release details** and select **Save details**,
+or **Save and translate again** when the page asks. The version and
+the previous release name the tag, the notes, and the compare link, so they change only in a
+draft; to change either, use **Return to draft**. See
+[ADR-0047](adr/0047-editing-an-approved-release.md).
+
+The summary is plain text, not Markdown: Markdown in it is shown as written, and a code
+span in it is translated like the rest of the text.
+
+Once the release is approved:
+
+- **The release says what changed after its approval.** Beside the approval, the page shows
+  **Summary changed after approval by** a person **on** a date, and the same for the upgrade
+  guide, so whoever publishes knows the approver did not see that text. A member removed
+  later keeps the name recorded then. Returning to draft clears both, with the approval.
+- **The notes that follow their template are rendered again** with the new text. A note a
+  person edited keeps its own; the page lists each one edited before the latest change, as
+  still showing the earlier summary or link, so it can be edited too.
+- **The new summary is translated before the release can be published.** Saving never calls
+  DeepL: the summary's translation is queued, and publication waits until every note is ready
+  again. Only the new summary is sent, once for each language; an upgrade guide is not
+  translated, so changing it sends nothing.
+- **If the Project context or a glossary changed since the approval,** rendering the notes
+  again translates every text of the release under the new context and glossary, as editing a
+  change's summary does. The page then holds the edit and says how many characters it would
+  send to DeepL; saving again confirms it. Without a translation provider nothing is sent and
+  nothing is held.
+
+REST clients send the same `PUT …/releases/{releaseId}` as for a draft, with the version and
+previous release left out or unchanged. An edit held for its translation returns
+`409 release_edit_retranslates` with `characters`, the current count, and `languages`; send it
+again with `"retranslationCharacters"` set to that count. A count that no longer matches,
+because something changed meanwhile, returns the same answer with the new count. Nothing is
+saved until the count matches.
+
+A note's `updatedAt` is when its text last changed once ready: while its language is being
+translated, or after a translation failed, a note may show its changes' text untranslated, and
+its `updatedAt` stays as it was. `lastEditedAt` is when a person last edited it, or `null` for
+a note nobody edited. A note a person edited before Flyway `V42` on a release already
+published has no `lastEditedAt`.
 
 ## Publishing
 

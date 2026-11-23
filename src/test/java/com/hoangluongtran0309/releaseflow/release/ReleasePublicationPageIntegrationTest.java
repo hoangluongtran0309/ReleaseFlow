@@ -91,7 +91,9 @@ class ReleasePublicationPageIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(content().string(matchesPattern(
                         "(?s).*id=\"review-" + unknown + "\".*disabled=\"disabled\">Approve as shown</button>.*An Unknown change needs a category.*")))
                 .andExpect(content().string(not(containsString("Add all available"))))
-                .andExpect(content().string(not(containsString("Save details"))));
+                // In review only the summary and the upgrade guide change (ADR-0047).
+                .andExpect(content().string(containsString("<input type=\"hidden\" name=\"version\" value=\"1.4.0\">")))
+                .andExpect(content().string(not(containsString("name=\"previousReleaseId\""))));
 
         // A page that showed another classification cannot approve this one.
         mockMvc.perform(post(releasePath + "/changes/" + feature + "/decision").session(owner.session()).with(csrf())

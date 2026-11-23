@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -72,6 +73,25 @@ class Release {
     @Column(name = "publisher_name", length = 120)
     private String publisherName;
 
+    // Who last changed the summary, and the upgrade guide link, after approval (ADR-0047, V42).
+    @Column(name = "summary_changed_by")
+    private UUID summaryChangedBy;
+
+    @Column(name = "summary_changer_name", length = 120)
+    private String summaryChangerName;
+
+    @Column(name = "summary_changed_at")
+    private Instant summaryChangedAt;
+
+    @Column(name = "upgrade_guide_changed_by")
+    private UUID upgradeGuideChangedBy;
+
+    @Column(name = "upgrade_guide_changer_name", length = 120)
+    private String upgradeGuideChangerName;
+
+    @Column(name = "upgrade_guide_changed_at")
+    private Instant upgradeGuideChangedAt;
+
     protected Release() {
     }
 
@@ -98,6 +118,32 @@ class Release {
         requireDraft();
         this.upgradeGuideUrl = upgradeGuideUrl;
         this.previousReleaseId = previousReleaseId;
+        this.updatedAt = at;
+    }
+
+    /**
+     * The summary and the upgrade guide link, in review or once approved (ADR-0047). Once
+     * approved, each one that really changes records who changed it and when, so whoever
+     * publishes knows the approver did not see that text.
+     */
+    void editText(String summary, String upgradeGuideUrl, UUID editor, String editorName, Instant at) {
+        requireUnpublished();
+        if (status != ReleaseStatus.IN_REVIEW && status != ReleaseStatus.APPROVED) {
+            throw new ReleaseStatusException("error.release_status_conflict.notDraft");
+        }
+        boolean approved = status == ReleaseStatus.APPROVED;
+        if (approved && !Objects.equals(this.summary, summary)) {
+            this.summaryChangedBy = editor;
+            this.summaryChangerName = editorName;
+            this.summaryChangedAt = at;
+        }
+        if (approved && !Objects.equals(this.upgradeGuideUrl, upgradeGuideUrl)) {
+            this.upgradeGuideChangedBy = editor;
+            this.upgradeGuideChangerName = editorName;
+            this.upgradeGuideChangedAt = at;
+        }
+        this.summary = summary;
+        this.upgradeGuideUrl = upgradeGuideUrl;
         this.updatedAt = at;
     }
 
@@ -139,6 +185,13 @@ class Release {
         this.approvedBy = null;
         this.approverName = null;
         this.approvedAt = null;
+        // What changed after an approval goes with it.
+        this.summaryChangedBy = null;
+        this.summaryChangerName = null;
+        this.summaryChangedAt = null;
+        this.upgradeGuideChangedBy = null;
+        this.upgradeGuideChangerName = null;
+        this.upgradeGuideChangedAt = null;
         this.updatedAt = at;
     }
 
@@ -186,6 +239,22 @@ class Release {
         if (status != expected) {
             throw new ReleaseStatusException(messageKey);
         }
+    }
+
+    String getSummaryChangerName() {
+        return summaryChangerName;
+    }
+
+    Instant getSummaryChangedAt() {
+        return summaryChangedAt;
+    }
+
+    String getUpgradeGuideChangerName() {
+        return upgradeGuideChangerName;
+    }
+
+    Instant getUpgradeGuideChangedAt() {
+        return upgradeGuideChangedAt;
     }
 
     boolean isPublished() {

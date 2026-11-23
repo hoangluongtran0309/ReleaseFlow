@@ -83,6 +83,15 @@ class AudienceReleaseNote {
     @Column(name = "last_editor_name", length = 120)
     private String lastEditorName;
 
+    // When a person last edited the note (V42); null on a note nobody edited, and on one edited
+    // before V42 whose release was already published.
+    @Column(name = "last_edited_at")
+    private Instant lastEditedAt;
+
+    // The SHA-256 of the text the note had when it was last ready (V42); null until it is.
+    @Column(name = "ready_content_sha256", length = 64)
+    private String readyContentSha256;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -123,22 +132,33 @@ class AudienceReleaseNote {
         this.glossaryReason = glossary.reason();
         this.createdAt = createdAt;
         this.updatedAt = createdAt;
+        if (translationStatus == TranslationState.Status.READY) {
+            this.readyContentSha256 = RenderedNote.hash(content);
+        }
     }
 
     /**
-     * Replaces the content of a note that still follows its template, with how far its
-     * translations have come; a manual note is kept.
+     * The note as its template renders it now, with how far its translations have come; a
+     * manual note is kept. Its update time is when its ready text last changed (ADR-0047):
+     * while its language is translating, or a translation failed, the note shows its changes'
+     * text untranslated and keeps the time, and once ready it moves only if the text differs
+     * from the text it had when it was last ready.
      */
     void rerender(String content, TranslationState.Status translationStatus, GlossaryUse glossary, Instant at) {
-        if (!autoRerender || (this.content.equals(content) && this.translationStatus == translationStatus
-                && glossary().equals(glossary))) {
+        if (!autoRerender) {
             return;
         }
         this.content = content;
         this.translationStatus = translationStatus;
         this.glossaryStatus = glossary.status();
         this.glossaryReason = glossary.reason();
-        this.updatedAt = at;
+        if (translationStatus == TranslationState.Status.READY) {
+            String ready = RenderedNote.hash(content);
+            if (!ready.equals(readyContentSha256)) {
+                this.readyContentSha256 = ready;
+                this.updatedAt = at;
+            }
+        }
     }
 
     GlossaryUse glossary() {
@@ -155,6 +175,8 @@ class AudienceReleaseNote {
         this.autoRerender = false;
         this.lastEditedBy = editor;
         this.lastEditorName = editorName;
+        this.lastEditedAt = at;
+        this.readyContentSha256 = RenderedNote.hash(content);
         this.updatedAt = at;
     }
 
@@ -167,11 +189,11 @@ class AudienceReleaseNote {
     AudienceNoteView view(ReleaseNoteRevision latest) {
         if (latest == null) {
             return new AudienceNoteView(id, audienceId, audienceCode, audienceName, language, content, autoRerender,
-                    lastEditorName, updatedAt, translationStatus, glossaryStatus, glossaryReason, 1);
+                    lastEditorName, lastEditedAt, updatedAt, translationStatus, glossaryStatus, glossaryReason, 1);
         }
         GlossaryUse glossary = latest.glossary();
         return new AudienceNoteView(id, audienceId, audienceCode, audienceName, language, latest.getContent(),
-                autoRerender, lastEditorName, latest.getCreatedAt(), translationStatus, glossary.status(),
+                autoRerender, lastEditorName, lastEditedAt, latest.getCreatedAt(), translationStatus, glossary.status(),
                 glossary.reason(), latest.getRevision());
     }
 
