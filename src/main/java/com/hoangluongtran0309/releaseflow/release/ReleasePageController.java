@@ -156,9 +156,17 @@ public class ReleasePageController {
             response.setStatus(HttpStatus.BAD_REQUEST.value());
             return renderRelease(principal, projectId, releaseId, model, response);
         }
-        return act(principal, projectId, releaseId, model, response, bindingResult,
-                failure -> failure instanceof ReleaseVersionTakenException ? "version" : linkField(failure),
-                () -> releaseService.edit(principal.organizationId(), projectId, releaseId, request));
+        try {
+            return act(principal, projectId, releaseId, model, response, bindingResult,
+                    failure -> failure instanceof ReleaseVersionTakenException ? "version" : linkField(failure),
+                    () -> releaseService.edit(principal, projectId, releaseId, request));
+        } catch (ReleaseEditTranslationException held) {
+            // Nothing was saved: the form comes back with what was typed, the cost, and the
+            // count to send back if the person goes ahead (ADR-0047, amended 2026-11-23).
+            response.setStatus(HttpStatus.CONFLICT.value());
+            model.addAttribute("retranslation", held);
+            return renderRelease(principal, projectId, releaseId, model, response);
+        }
     }
 
     @PostMapping("/projects/{projectId}/releases/{releaseId}/schedule")

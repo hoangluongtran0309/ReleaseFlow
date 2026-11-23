@@ -98,6 +98,7 @@ import com.hoangluongtran0309.releaseflow.release.ReleaseNotePreviewChangedExcep
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteRenderIncompleteException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNoteRenderException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseNotesMissingException;
+import com.hoangluongtran0309.releaseflow.release.ReleaseEditTranslationException;
 import com.hoangluongtran0309.releaseflow.release.ReleasePublishedException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseReviewIncompleteException;
 import com.hoangluongtran0309.releaseflow.release.ReleaseStatusException;
@@ -329,6 +330,15 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidPreviousReleaseException.class)
     ResponseEntity<ProblemDetail> invalidPreviousRelease(InvalidPreviousReleaseException exception) {
         return localized(HttpStatus.BAD_REQUEST, "invalid_previous_release", exception);
+    }
+
+    // The cost travels as values too, so a caller can show it and echo it (ADR-0047).
+    @ExceptionHandler(ReleaseEditTranslationException.class)
+    ResponseEntity<ProblemDetail> releaseEditRetranslates(ReleaseEditTranslationException exception) {
+        ProblemDetail problem = problem(HttpStatus.CONFLICT, "release_edit_retranslates", messages.of(exception));
+        problem.setProperty("characters", exception.characters());
+        problem.setProperty("languages", exception.languages());
+        return response(problem);
     }
 
     @ExceptionHandler(ReleasePublishedException.class)

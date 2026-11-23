@@ -302,6 +302,10 @@ releases
     releases_previous_release_published: only a published release, never itself)
   approved_at, approved_by (composite FK -> app_users), approver_name
   published_at, published_by (composite FK -> app_users), publisher_name
+  summary_changed_by, summary_changer_name, summary_changed_at (V42; composite FK -> app_users;
+    all or none: the last change of the summary after approval)
+  upgrade_guide_changed_by, upgrade_guide_changer_name, upgrade_guide_changed_at (V42; the same
+    for the upgrade guide; releases_changes_after_approval_only: only APPROVED or PUBLISHED)
 
 release_changes
   release_id + change_id (PK); change_id unique
@@ -343,6 +347,9 @@ release_audience_notes (written while APPROVED, immutable once PUBLISHED)
   (audience_id, organization_id) FK -> audience_definitions (blocks deleting a used audience)
   audience_code, audience_name, language, template_body_snapshot, footer_template_snapshot (V34)
   content, auto_rerender, last_edited_by (composite FK -> app_users), last_editor_name
+  last_edited_at (V42; only with last_edited_by; none for a note edited before V42 on a
+    release already published)
+  ready_content_sha256 (V42; lowercase hex SHA-256 of the content when last READY)
   translation_status (READY | PENDING | FAILED, V17)
   glossary_status (NONE | PENDING | APPLIED | NOT_APPLIED, V33), glossary_reason (exactly when NOT_APPLIED)
   created_at, updated_at
@@ -1196,7 +1203,8 @@ checks and the service checks the release's changes and decisions.
 
 | Operation | Allowed in | Also requires |
 | --- | --- | --- |
-| Edit version or summary, add changes | `DRAFT` | a processed change that is in no other release |
+| Edit version or previous release, add changes | `DRAFT` | a processed change that is in no other release |
+| Edit summary or upgrade guide | `DRAFT`, `IN_REVIEW`, `APPROVED` | once approved, the count of a re-translation beyond the summary echoed |
 | Remove a change (reject during review) | `DRAFT`, `IN_REVIEW` | |
 | Request review | `DRAFT` | at least one change; queues a read of its linked issues |
 | Accept a linked issue's status, decide a folding suggestion | `IN_REVIEW` (an acceptance also `APPROVED`) | an issue or suggestion of this release |
@@ -1237,6 +1245,36 @@ that no longer exists, so discarding an approved release still cascades.
 `releases_approval_recorded` keeps the approval columns together, requires
 them on `APPROVED`, and forbids them on `DRAFT` and `IN_REVIEW`. Releases
 published before `V12` have no approval.
+
+### Editing after approval
+
+ADR-0047 lets a release in review or approved change its summary and upgrade guide through the
+same `ReleaseService.edit`, which locks the release first and then refuses a published one
+(`409 release_published`). Outside a draft, a different version or previous release is
+`release_status_conflict` (`notDraft`). `Release.editText` records who changed each field and
+when only once the release is approved and only when the value differs; returning to draft
+clears both records with the approval, and `V8` freezes them with the release. Once approved,
+the edit renders the notes again through the same path as a change's summary edit.
+
+- **The hold.** Before saving an approved edit, `requireRetranslationConfirmed` asks
+  `ReleaseNoteWriter.charactersToSend` for each language of the notes that follow their
+  template. It counts, through `TranslationService.charactersToSendForRelease` and
+  `charactersToSend`, the source code points of each distinct text that no job with the same
+  input covers and no cache entry holds under the current Project context and glossary
+  version; it reads and sends nothing, and is `0` without a provider. When texts other than
+  the summary would be sent, the edit needs `retranslationCharacters` equal to the total, or
+  it is `ReleaseEditTranslationException`, `409 release_edit_retranslates` with `characters`
+  and `languages`. The page renders the warning and the count into the form it returns.
+- **Notes still showing the earlier text.** `ReleaseView.notesShowingEarlierText` lists the
+  notes a person edited whose `last_edited_at` is missing or before the latest of the two
+  change times. `V42` set `last_edited_at` from `updated_at` for those of approved releases,
+  which no re-render had written.
+- **The update time.** `AudienceReleaseNote.rerender` writes the content, translation status,
+  and glossary use it is given, and moves `updated_at` only when the note is `READY` and the
+  SHA-256 of its content differs from `ready_content_sha256`, which it then stores. A person's
+  edit moves both. So the interim text a note shows while its language translates, or after a
+  translation failed, never moves it. `V42` set the digest of each ready note of an approved
+  release; a published release's notes are never rendered again.
 
 The planned release time is optional and must lie in the future. REST clients
 send an ISO-8601 instant with an offset; the page's `datetime-local` input

@@ -757,6 +757,25 @@ where it first appears; ADRs are linked from the slice they record.
     correction run whose public revision is revision 3's text byte for byte, with the run's
     reason.
 
+### Editing an approved release (V42)
+
+- #114's first part, under [ADR-0047](adr/0047-editing-an-approved-release.md) and its
+  amendment of 2026-11-23:
+  - a release in review or approved changes its summary and upgrade guide through the
+    release's edit, without returning to draft; the version and the previous release stay
+    draft-only (`409 release_status_conflict`), and a published release is
+    `409 release_published`;
+  - once approved, the notes that follow their template are written again, the release records
+    who changed each field after approval and when (`summaryChange`, `upgradeGuideChange`), and
+    the page lists the notes a person edited before that change, by `last_edited_at`;
+  - only the new summary is translated; an edit that would translate more, after the Project
+    context or a glossary changed, is held until the count is echoed
+    (`409 release_edit_retranslates`, `retranslationCharacters`);
+  - a note's `updated_at` moves only when its ready text changes, by `ready_content_sha256`;
+  - `V42` fills `last_edited_at` and the digest for approved releases' notes only, since a
+    published release's notes cannot be written.
+- The review history of a change, #114's other part, is #143.
+
 ## In progress
 
 Nothing is in progress.

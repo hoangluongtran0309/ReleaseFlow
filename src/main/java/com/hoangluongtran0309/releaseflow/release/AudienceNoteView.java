@@ -15,6 +15,9 @@ import java.util.UUID;
  * with the Organization's glossary, with {@code glossaryReason} when it was not applied.
  * {@code revision} is the note's latest revision (ADR-0046): 1 until a published note is
  * corrected, and then the content, glossary, and update time are that revision's.
+ * {@code updatedAt} is when the text last changed, and {@code lastEditedAt} when a person last
+ * edited it (ADR-0047): null when nobody did, and on a note edited before V42 whose release was
+ * already published.
  */
 public record AudienceNoteView(
         UUID id,
@@ -25,6 +28,7 @@ public record AudienceNoteView(
         String content,
         boolean autoRerender,
         String lastEditorName,
+        Instant lastEditedAt,
         Instant updatedAt,
         TranslationState.Status translationStatus,
         GlossaryUse.Status glossaryStatus,

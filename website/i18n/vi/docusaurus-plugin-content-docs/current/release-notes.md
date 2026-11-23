@@ -477,7 +477,9 @@ tương thích, cảnh báo trong mọi note sẽ liên kết **đọc hướng 
 [phần cuối](#footer) cũng có thể liên kết tới nó. **Release trước** là một release đã publish của
 cùng Project mà các note so sánh release này với nó. Release mới theo release được publish gần
 nhất của Project, trừ khi một người chọn release khác hoặc không chọn release nào; lựa chọn đó
-giữ nguyên khi có release khác được publish sau. Cả hai đều sửa được khi release còn là nháp.
+giữ nguyên khi có release khác được publish sau. Release trước chỉ sửa được khi release còn là
+nháp; hướng dẫn nâng cấp, như bản tóm tắt, còn sửa được khi release đang review hoặc đã duyệt
+(xem [Sửa một release đã duyệt](#editing-an-approved-release)).
 
 Một release đi qua bốn bước, hiển thị ở đầu trang của nó:
 
@@ -637,7 +639,8 @@ GET    /api/projects/{projectId}/releases
 POST   /api/projects/{projectId}/releases                                {"version", "summary", "plannedReleaseAt",
                                                                           "upgradeGuideUrl", "previousReleaseId"}
 GET    /api/projects/{projectId}/releases/{releaseId}
-PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary", "upgradeGuideUrl", "previousReleaseId"}
+PUT    /api/projects/{projectId}/releases/{releaseId}                    {"version", "summary", "upgradeGuideUrl", "previousReleaseId",
+                                                                          "retranslationCharacters"}
 DELETE /api/projects/{projectId}/releases/{releaseId}
 PUT    /api/projects/{projectId}/releases/{releaseId}/schedule           {"plannedReleaseAt"} (null clears it)
 GET    /api/projects/{projectId}/releases/{releaseId}/available-changes
@@ -668,8 +671,10 @@ publish gần nhất, còn request cập nhật bỏ `upgradeGuideUrl` hoặc `p
 như bên gọi viết trước khi có trường này gửi; ngoài trường hợp đó, `APPROVE` phải gửi đúng cờ mà
 thay đổi đang có. Một release trả về `upgradeGuideUrl`, `previousReleaseId`, `previousVersion`, `changes`, `decisions` (`changeId`, `action`,
 `reviewerName`, `note`, `decidedAt`), `reviewedCount`, `plannedReleaseAt`, `approvedAt`,
-`approverName`, và `notes` (`id`, `audienceCode`, `audienceName`, `language`, `content`,
-`autoRerender`, `lastEditorName`, `updatedAt`, `translationStatus`: `READY`, `PENDING` hoặc
+`approverName`, `summaryChange` và `upgradeGuideChange` (mỗi trường là `null`, hoặc tên `name` và
+thời điểm `at` của lần đổi gần nhất sau khi duyệt), và `notes` (`id`, `audienceCode`,
+`audienceName`, `language`, `content`, `autoRerender`, `lastEditorName`, `lastEditedAt`,
+`updatedAt`, `translationStatus`: `READY`, `PENDING` hoặc
 `FAILED`, và `glossaryStatus`: `NONE`, `PENDING`, `APPLIED` hoặc `NOT_APPLIED` kèm
 `glossaryReason`), và `glossaries`: mỗi ngôn ngữ note có [bảng thuật ngữ](#glossary) một mục, gồm
 `language`, `status` và `reason`. Tệp tải về có kiểu `text/markdown`, tên là
@@ -691,7 +696,8 @@ phiên bản và trạng thái) mà mỗi thay đổi của Project thuộc về
 | Thay đổi đang xử lý hoặc đã thuộc một release khác | `409 change_not_releasable` |
 | Thay đổi đã bị loại khỏi release | `409 change_excluded` |
 | Phiên bản đã được dùng trong Project này | `409 release_version_taken` |
-| Sửa bản tóm tắt hoặc release note ở trạng thái không cho phép | `409 release_status_conflict` |
+| Sửa bản tóm tắt hoặc release note ở trạng thái không cho phép, hoặc đổi phiên bản hay release trước khi release không còn là nháp | `409 release_status_conflict` |
+| Sửa một release đã duyệt mà sẽ dịch nhiều hơn bản tóm tắt mới, khi không gửi kèm số ký tự phải dịch hoặc gửi một số không còn đúng | `409 release_edit_retranslates` |
 | Template của audience không dựng được lúc duyệt | `409 release_note_render_failed` |
 | Publish một release đã duyệt nhưng không có release note | `409 release_notes_missing` |
 | Publish khi một release note vẫn đang dịch hoặc không dịch được | `409 translations_not_ready` |
@@ -699,6 +705,48 @@ phiên bản và trạng thái) mà mỗi thay đổi của Project thuộc về
 | Thay đổi không tồn tại hoặc thuộc Organization khác | `404 change_not_found` |
 | Release không tồn tại hoặc thuộc Organization khác | `404 release_not_found` |
 | Release note không tồn tại trong release này | `404 release_note_not_found` |
+
+### Sửa một release đã duyệt {#editing-an-approved-release}
+
+Bản tóm tắt và hướng dẫn nâng cấp của một release sửa được khi release đang review hoặc đã duyệt,
+không cần đưa nó về nháp: các thay đổi, quyết định của chúng và lần duyệt vẫn giữ nguyên. Trên
+trang của release, sửa chúng ở **Thông tin release** rồi chọn **Lưu thông tin**, hoặc **Lưu và
+dịch lại** khi trang yêu cầu. Phiên bản và release trước quyết định tag, các note và liên kết so
+sánh, nên chỉ đổi được ở bản nháp; muốn đổi một trong hai, dùng **Đưa về nháp**. Xem
+[ADR-0047](adr/0047-editing-an-approved-release.md).
+
+Bản tóm tắt là văn bản thuần, không phải Markdown: Markdown trong đó hiển thị đúng như đã viết,
+và một đoạn code trong đó được dịch như phần còn lại.
+
+Khi release đã duyệt:
+
+- **Release cho biết những gì đã đổi sau khi duyệt.** Bên cạnh lần duyệt, trang hiển thị **Tóm tắt
+  được** một người **đổi sau khi duyệt, lúc** một thời điểm, và tương tự cho hướng dẫn nâng cấp, để
+  người publish biết người duyệt chưa đọc nội dung đó. Thành viên bị xoá sau này vẫn giữ tên đã
+  ghi lúc đó. Đưa về nháp xoá cả hai, cùng với lần duyệt.
+- **Các note còn theo template được dựng lại** với nội dung mới. Note do người sửa giữ nội dung của
+  nó; trang liệt kê từng note được sửa trước lần thay đổi gần nhất là vẫn hiển thị bản tóm tắt
+  hoặc liên kết cũ, để có thể sửa cả note đó.
+- **Bản tóm tắt mới được dịch trước khi release có thể publish.** Lưu không bao giờ gọi DeepL:
+  bản dịch của bản tóm tắt được đưa vào hàng đợi, và việc publish chờ đến khi mọi note sẵn sàng
+  lại. Chỉ bản tóm tắt mới được gửi, một lần cho mỗi ngôn ngữ; hướng dẫn nâng cấp không được dịch,
+  nên đổi nó không gửi gì.
+- **Nếu ngữ cảnh Project hoặc một bảng thuật ngữ đã đổi kể từ lần duyệt,** việc dựng lại note sẽ
+  dịch mọi văn bản của release theo ngữ cảnh và bảng thuật ngữ mới, như khi sửa tóm tắt của một
+  thay đổi. Khi đó trang giữ lại lần sửa và cho biết sẽ gửi bao nhiêu ký tự tới DeepL; lưu lần nữa
+  là xác nhận. Không có nhà cung cấp dịch thì không gửi gì và không giữ lại gì.
+
+Client REST gửi cùng `PUT …/releases/{releaseId}` như với bản nháp, bỏ phiên bản và release trước
+hoặc gửi đúng giá trị hiện tại. Một lần sửa bị giữ lại vì bản dịch trả về
+`409 release_edit_retranslates` kèm `characters`, số ký tự hiện tại, và `languages`; gửi lại với
+`"retranslationCharacters"` bằng đúng số đó. Một số không còn khớp, vì có gì đó đã đổi trong lúc
+đó, nhận lại cùng câu trả lời với số mới. Không có gì được lưu cho đến khi số khớp.
+
+`updatedAt` của một note là lúc nội dung của nó đổi lần gần nhất khi đã sẵn sàng: trong lúc ngôn
+ngữ của note đang được dịch, hoặc sau khi một bản dịch thất bại, note có thể hiển thị nội dung
+chưa dịch của các thay đổi, và `updatedAt` vẫn giữ nguyên. `lastEditedAt` là lúc một người sửa
+note lần gần nhất, hoặc `null` với note chưa ai sửa. Một note được người sửa trước Flyway `V42`
+trên một release đã publish không có `lastEditedAt`.
 
 ## Publish {#publishing}
 

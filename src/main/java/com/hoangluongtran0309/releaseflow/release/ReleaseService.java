@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -247,9 +248,15 @@ public class ReleaseService {
     }
 
     @Transactional
-    ReleaseView edit(UUID organizationId, UUID projectId, UUID releaseId, ReleaseRequest request) {
+    ReleaseView edit(ReleaseFlowPrincipal editor, UUID projectId, UUID releaseId, ReleaseRequest request) {
+        UUID organizationId = editor.organizationId();
+        // The release is locked first, as every write to it is (#119, #122): a publication, an
+        // approval, or a run created meanwhile is decided before or after this edit, never during.
         Release release = lock(organizationId, projectId, releaseId);
-        release.requireDraft();
+        release.requireUnpublished();
+        if (release.getStatus() != ReleaseStatus.DRAFT) {
+            return editAfterDraft(editor, release, request);
+        }
         if (releaseRepository.existsByOrganizationIdAndProjectIdAndVersionIgnoreCaseAndIdNot(
                 organizationId,
                 projectId,
@@ -274,6 +281,76 @@ public class ReleaseService {
             throw translate(exception);
         }
         return view(release, includedChanges(release));
+    }
+
+    /**
+     * A release in review or approved changes its summary and upgrade guide link only
+     * (ADR-0047). Every member who may approve may make the edit, which grants nothing new: any
+     * member can already return a release to draft, edit it, and approve it again. Once
+     * approved, the notes that follow their templates are rendered again, and an edit that
+     * would translate more than its new summary is held until the caller echoes the cost.
+     */
+    private ReleaseView editAfterDraft(ReleaseFlowPrincipal editor, Release release, ReleaseRequest request) {
+        boolean versionChanged = !release.getVersion().equals(request.getVersion());
+        boolean previousChanged = request.previousReleaseIdGiven()
+                && !Objects.equals(request.getPreviousReleaseId(), release.getPreviousReleaseId());
+        if (versionChanged || previousChanged) {
+            throw new ReleaseStatusException("error.release_status_conflict.notDraft");
+        }
+        String upgradeGuideUrl = request.upgradeGuideUrlGiven()
+                ? ReleaseLinkBuilder.validatedUpgradeGuideUrl(request.getUpgradeGuideUrl())
+                : release.getUpgradeGuideUrl();
+        String summary = request.getSummary();
+        if (Objects.equals(summary, release.getSummary()) && Objects.equals(upgradeGuideUrl, release.getUpgradeGuideUrl())) {
+            return view(release, includedChanges(release));
+        }
+        Instant now = clock.instant();
+        List<ChangeView> changes = includedChanges(release);
+        if (release.getStatus() == ReleaseStatus.APPROVED) {
+            requireRetranslationConfirmed(release, summary, changes, request.getRetranslationCharacters());
+        }
+        release.editText(summary, upgradeGuideUrl, editor.userId(), editor.displayName(), now);
+        releaseRepository.flush();
+        if (release.getStatus() == ReleaseStatus.APPROVED) {
+            rerenderNotes(release, changes, null, false, now);
+        }
+        return view(release, changes);
+    }
+
+    /**
+     * An approved edit sends the new summary's characters, once per language, and nothing else,
+     * unless the Project context or a glossary changed since approval. Then rendering the notes
+     * again translates the release's other texts as well, and the edit goes ahead only when the
+     * caller echoes what that costs, counted now (ADR-0047, amended 2026-11-23).
+     */
+    private void requireRetranslationConfirmed(Release release, String summary, List<ChangeView> changes,
+                                               Integer confirmed) {
+        // Without a provider every count is nothing, and nothing is held.
+        List<AudienceReleaseNote> notes = notes(release);
+        Set<String> untranslated = untranslated(release, notes);
+        int total = 0;
+        boolean retranslates = false;
+        List<String> languages = new ArrayList<>();
+        for (String language : notes.stream().filter(AudienceReleaseNote::isAutoRerender)
+                .map(AudienceReleaseNote::getLanguage).distinct().sorted().toList()) {
+            ReleaseNoteWriter.Characters characters = noteWriter.charactersToSend(release, summary, changes, language,
+                    untranslated);
+            if (characters.total() > 0) {
+                languages.add(language);
+            }
+            total += characters.total();
+            retranslates |= characters.changes() > 0;
+        }
+        if (retranslates && (confirmed == null || confirmed != total)) {
+            throw new ReleaseEditTranslationException(total, languages);
+        }
+    }
+
+    // A note written before its audience was retired still needs that audience's narratives.
+    private Set<String> untranslated(Release release, List<AudienceReleaseNote> notes) {
+        Set<String> untranslated = new HashSet<>(audienceService.retiredCodes(release.getOrganizationId()));
+        notes.forEach(note -> untranslated.remove(note.getAudienceCode()));
+        return untranslated;
     }
 
     @Transactional
@@ -1036,9 +1113,7 @@ public class ReleaseService {
         ReleaseLinks links = links(release);
         IssueStatuses statuses = statuses(release);
         List<AudienceReleaseNote> notes = notes(release);
-        // A note written before its audience was retired still needs that audience's narratives.
-        Set<String> untranslated = new HashSet<>(audienceService.retiredCodes(release.getOrganizationId()));
-        notes.forEach(note -> untranslated.remove(note.getAudienceCode()));
+        Set<String> untranslated = untranslated(release, notes);
         for (AudienceReleaseNote note : notes) {
             if (!note.isAutoRerender() || (onlyLanguage != null && !onlyLanguage.equals(note.getLanguage()))) {
                 continue;
@@ -1257,7 +1332,9 @@ public class ReleaseService {
                 review.linkedIssueRead(),
                 review.foldingSuggestions(),
                 review.foldDecisions(),
-                review.missingNarratives()
+                review.missingNarratives(),
+                ReleaseView.ChangeAfterApproval.of(release.getSummaryChangerName(), release.getSummaryChangedAt()),
+                ReleaseView.ChangeAfterApproval.of(release.getUpgradeGuideChangerName(), release.getUpgradeGuideChangedAt())
         );
     }
 

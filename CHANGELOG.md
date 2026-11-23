@@ -44,6 +44,16 @@ section into the version's entry, and the GitHub release is written from it.
   revision once, and never replaces newer text with older. Corrections to GitHub, Confluence,
   Notion, Slack, Teams, and email come later (#88), and Zendesk's are made there by hand
   ([ADR-0046](docs/adr/0046-correcting-a-published-note.md), [#87](https://github.com/hoangluongtran0309/ReleaseFlow/issues/87)).
+- A release in review or approved can change its summary and upgrade guide without returning
+  to draft, so its decisions and approval stay. Once approved, the notes that follow their
+  template are written again, only the new summary is translated, and the release page and
+  API say who changed each after approval and when, and which notes edited by hand still
+  show the earlier text. An edit that would translate the whole release, because the Project
+  context or a glossary changed since approval, is held until the person, or the API caller
+  with `retranslationCharacters`, confirms the characters it sends to DeepL
+  (`409 release_edit_retranslates`). The version and the previous release still change only
+  in a draft. A note's `lastEditedAt` says when a person last edited it
+  ([ADR-0047](docs/adr/0047-editing-an-approved-release.md), [#114](https://github.com/hoangluongtran0309/ReleaseFlow/issues/114)).
 
 ### Changed
 
@@ -60,6 +70,10 @@ section into the version's entry, and the GitHub release is written from it.
 - A public changelog entry's `ETag` names the reader's interface language, so a reader who
   switches between English and Vietnamese gets the page in the new language instead of a
   `304` that kept the old one.
+- A release note's `updatedAt` moves only when its ready text changes. Editing one audience's
+  narrative used to move the update time of every note in each translated language, though
+  most stayed the same byte for byte, because each went through translating and back
+  ([ADR-0047](docs/adr/0047-editing-an-approved-release.md), [#114](https://github.com/hoangluongtran0309/ReleaseFlow/issues/114)).
 
 ## [1.3.1] - 2026-11-20
 

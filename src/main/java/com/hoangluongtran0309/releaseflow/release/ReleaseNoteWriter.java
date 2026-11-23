@@ -51,6 +51,39 @@ class ReleaseNoteWriter {
      *                     the retired audiences it has no note for (ADR-0044); empty when none
      *                     is retired, so the texts are what they always were
      */
+    /**
+     * What rendering a release's notes again into this language would send to the translation
+     * provider, with {@code summary} as the release's summary (ADR-0047): the characters of its
+     * changes' texts and of the summary, each counted as {@link #localize} would ensure them,
+     * without writing anything or calling the provider.
+     */
+    Characters charactersToSend(Release release, String summary, List<ChangeView> changes, String language,
+                                Set<String> untranslated) {
+        int changeCharacters = 0;
+        for (ChangeView change : changes) {
+            if (change.neutralSummary() == null || change.contentLanguage() == null) {
+                continue;
+            }
+            changeCharacters += translationService.charactersToSend(release.getOrganizationId(), release.getProjectId(),
+                    change.id(), change.contentLanguage(), language, texts(change, untranslated));
+        }
+        int summaryCharacters = 0;
+        if (summary != null && !summary.isBlank()) {
+            String sourceLanguage = outputLanguageService.outputLanguage(release.getOrganizationId()).tag();
+            summaryCharacters = translationService.charactersToSendForRelease(release.getOrganizationId(),
+                    release.getProjectId(), release.getId(), sourceLanguage, language, Map.of(RELEASE_SUMMARY, summary));
+        }
+        return new Characters(changeCharacters, summaryCharacters);
+    }
+
+    /** The characters one language would send: its changes' texts, and the release's summary. */
+    record Characters(int changes, int summary) {
+
+        int total() {
+            return changes + summary;
+        }
+    }
+
     Localized localize(Release release, List<ChangeView> changes, String language, boolean retry,
                        Set<String> untranslated) {
         List<ChangeView> localized = new ArrayList<>(changes.size());
