@@ -59,7 +59,7 @@ Sources can be disconnected, reconnected under their own ID, and have their webh
 secret rotated, and each one's health shows where people look. Administrators change
 members' roles and remove members, and a changed member's sessions stop. An audience
 can be retired, so it gets no note, narrative, or translation, and brought back.
-The decisions behind all of it are ADR-0001 through ADR-0045, indexed in
+The decisions behind all of it are the ADRs in `docs/adr/`, indexed in
 `docs/adr/README.md`. Read `README.md`, `docs/architecture.md`,
 `docs/implementation-status.md`, and the guide in `docs/` for the capability before
 changing behavior.
