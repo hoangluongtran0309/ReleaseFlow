@@ -21,8 +21,20 @@ cd "$(dirname "$0")/../.."
 jar=.mvn/wrapper/maven-wrapper.jar
 expected="$(sed -n 's/^wrapperSha256Sum=//p' .mvn/wrapper/maven-wrapper.properties)"
 
+# A retry runs with MVNW_VERBOSE and keeps its output, so the log shows the URL, the
+# download, and why it failed; the first attempt stays quiet. mvnw prints the URL and its
+# downloader's own messages; CI sets no MVNW_USERNAME or MVNW_PASSWORD, and mvnw passes
+# those, when set, to wget or curl without echoing them.
+started() {
+  if [ "$1" = 1 ]; then
+    ./mvnw -B --no-transfer-progress --version >/dev/null
+  else
+    MVNW_VERBOSE=true ./mvnw -B --no-transfer-progress --version
+  fi
+}
+
 for attempt in $(seq 1 "${ATTEMPTS}"); do
-  if ./mvnw -B --no-transfer-progress --version >/dev/null; then
+  if started "${attempt}"; then
     exit 0
   fi
   # A jar that does not match is a download that came back wrong; mvnw keeps it and would

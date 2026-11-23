@@ -311,7 +311,14 @@ them weekly).
   `scripts/ci/maven-wrapper-ready.sh` starts the wrapper up to five times before the
   first Maven step, pausing 10, 20, 40, and 60 s between attempts so a short Maven
   Central outage is outlasted, and the Dockerfile's build stage does the same before
-  resolving dependencies (#128).
+  resolving dependencies (#128). Each retry runs with `MVNW_VERBOSE=true`, for that
+  command only, so the log shows the download and why it failed. CI's browser suite
+  and the Container job build the image with Docker Buildx and GitHub's layer cache
+  (scope `releaseflow-image`, shared by both), so the build stage reaches Maven Central
+  only when the POM or the wrapper changes or the cache is evicted; the suite then
+  starts the stack with `RELEASEFLOW_E2E_PREBUILT_IMAGE=true`, which makes Playwright
+  run Compose with `--no-build`. A release builds its image without that cache, with
+  the retry.
 - "Failed to validate Maven wrapper SHA-256, your Maven wrapper might be compromised"
   after a fresh checkout almost always means the download failed: `mvnw` deletes a
   failed download and then checks a file that is no longer there. Run `./mvnw --version`
