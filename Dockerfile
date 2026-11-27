@@ -16,11 +16,14 @@ COPY mvnw pom.xml ./
 # mvnw downloads maven-wrapper.jar, then Maven, from Maven Central and tries each once, so
 # its first start is retried, five times with longer pauses, as
 # scripts/ci/maven-wrapper-ready.sh does (#128). The jar never comes from the build context
-# (.dockerignore), so whatever a failed attempt left is a bad download and goes.
+# (.dockerignore), so whatever a failed attempt left is a bad download and goes. A retry runs
+# with MVNW_VERBOSE for that command alone and keeps its output, so the log says why the
+# download failed; it is never an ENV, and nothing here sets wrapper credentials to print.
 RUN chmod +x mvnw \
  && attempt=1 \
  && for pause in 10 20 40 60 ""; do \
-      ./mvnw -B --no-transfer-progress --version >/dev/null && break; \
+      if [ "$attempt" = 1 ]; then ./mvnw -B --no-transfer-progress --version >/dev/null && break; \
+      else MVNW_VERBOSE=true ./mvnw -B --no-transfer-progress --version && break; fi; \
       rm -f .mvn/wrapper/maven-wrapper.jar; \
       [ -n "$pause" ] || exit 1; \
       echo "The Maven wrapper did not start (attempt $attempt of 5); trying again in $pause s." >&2; \

@@ -54,7 +54,10 @@ export default defineConfig({
   webServer: process.env.RELEASEFLOW_E2E_BASE_URL
     ? undefined
     : {
-        command: 'docker compose -f docker-compose.demo.yml -f tests/e2e/compose.yaml up --build app db providers',
+        // CI builds the image first, from GitHub's layer cache (#128), and says so; a local run
+        // builds it here.
+        command: 'docker compose -f docker-compose.demo.yml -f tests/e2e/compose.yaml up '
+          + `${process.env.RELEASEFLOW_E2E_PREBUILT_IMAGE === 'true' ? '--no-build' : '--build'} app db providers`,
         env: NO_PROVIDERS,
         url: `${baseURL}/api/status`,
         // An application already answering may have been started from .env with a provider,
