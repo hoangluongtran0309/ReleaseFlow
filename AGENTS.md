@@ -16,7 +16,7 @@ deployment observability, UI localization, parity UI, licence, release
 automation, quickstart, documentation site, change exclusion, Project
 context, translation glossary, linked context and folding, source lifecycle and
 health, member management, and audience retirement slices: one Spring Boot application,
-PostgreSQL/Flyway V1-V41,
+PostgreSQL/Flyway V1-V42,
 administrator
 registration, member
 invitations with administrator and member roles, session

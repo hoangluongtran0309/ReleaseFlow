@@ -1258,10 +1258,10 @@ the edit renders the notes again through the same path as a change's summary edi
 
 - **The hold.** Before saving an approved edit, `requireRetranslationConfirmed` asks
   `ReleaseNoteWriter.charactersToSend` for each language of the notes that follow their
-  template. It counts, through `TranslationService.charactersToSendForRelease` and
-  `charactersToSend`, the source code points of each distinct text that no job with the same
-  input covers and no cache entry holds under the current Project context and glossary
-  version; it reads and sends nothing, and is `0` without a provider. When texts other than
+  template. It collects the missing texts across all changes and the release summary, using
+  the same selection as the worker. Each distinct text contributes its source code points
+  when no job with the same input covers it and the cache has no answer under the Project
+  context and glossary version the job would use. Counting calls no provider and gives `0` without one. When texts other than
   the summary would be sent, the edit needs `retranslationCharacters` equal to the total, or
   it is `ReleaseEditTranslationException`, `409 release_edit_retranslates` with `characters`
   and `languages`. The page renders the warning and the count into the form it returns.
@@ -1605,8 +1605,11 @@ ADR-0015 writes a note per audience and **release note language**; see
   (`translation_jobs.context`, Flyway `V30`):
   `SUCCEEDED` when every text is in `translation_cache`, `FAILED`
   (`translation_disabled`) without a provider, and `PENDING` otherwise.
-- **Worker.** `TranslationWorker` runs every second. It claims one due job with
-  `FOR UPDATE SKIP LOCKED`, looks its texts up in the cache, and sends only the
+- **Worker.** `TranslationWorker` runs every second. Each short claim locks the Organization
+  and checks for a running job of the same language pair. A worker can claim the next job of
+  that pair once the first commits its result and cache entries. Other pairs can translate
+  concurrently. The worker claims a due job with `FOR UPDATE SKIP LOCKED`, looks its texts up
+  in the cache, and sends only the
   missing ones, each once and in the order of their keys, so every run sends the same
   list, to `DeepLTranslator` outside any transaction: `POST
   /v2/translate` with `DeepL-Auth-Key`, the job's context as `context` when it has

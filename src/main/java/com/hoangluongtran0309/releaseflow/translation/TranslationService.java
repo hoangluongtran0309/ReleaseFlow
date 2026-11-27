@@ -7,8 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -16,7 +14,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * Translations of change content, and of a release's own summary, one job per change or
@@ -171,36 +168,35 @@ public class TranslationService {
     ) {
         Map<String, String> input = TranslationTexts.nonBlank(texts);
         if (input.isEmpty() || TranslationTexts.sameLanguage(sourceLanguage, targetLanguage)) {
-            return new PublishedTranslation(texts, Set.of(), 0, GlossaryUse.NONE);
+            return new PublishedTranslation(texts, Set.of(), Set.of(), GlossaryUse.NONE);
         }
         Optional<TranslationJob> job = jobOf.get();
-        Map<String, String> answers = job.map(found -> cachedAnswers(organizationId, sourceLanguage, targetLanguage,
-                input.values(), found.getContext(), found.getGlossaryVersion())).orElse(Map.of());
+        String context = job.map(TranslationJob::getContext).orElse(null);
+        String version = job.map(TranslationJob::getGlossaryVersion).orElse(null);
+        Map<String, String> answers = job.isEmpty() ? Map.of()
+                : cacheRepository.answers(organizationId, sourceLanguage, targetLanguage, input.values(),
+                        context, version, true).texts();
         Map<String, String> merged = new LinkedHashMap<>(texts);
         Set<String> missing = new LinkedHashSet<>();
-        int missingCharacters = 0;
         for (Map.Entry<String, String> text : input.entrySet()) {
             String answer = answers.get(text.getValue());
             if (answer == null) {
                 missing.add(text.getKey());
-                missingCharacters += text.getValue().codePointCount(0, text.getValue().length());
             } else {
                 merged.put(text.getKey(), SourceForms.restore(text.getValue(), answer));
             }
         }
         GlossaryUse glossary = job.filter(found -> !answers.isEmpty()).map(TranslationJob::glossaryUse)
                 .orElse(GlossaryUse.NONE);
-        return new PublishedTranslation(merged, missing, missingCharacters, glossary);
+        return new PublishedTranslation(merged, missing, MissingTranslation.find(input, answers, sourceLanguage,
+                targetLanguage, context, version), glossary);
     }
 
     /**
-     * The characters a change's texts would send to the provider if their translation were
-     * ensured now (ADR-0047): none when a job for the same input already exists, otherwise the
-     * code points of each distinct text not cached under the Project's context and the pair's
-     * glossary version as they are now. Nothing is written and no provider is called.
+     * Distinct uncached texts a new job for this input would send (ADR-0047).
      */
     @Transactional(readOnly = true)
-    public int charactersToSend(
+    public Set<MissingTranslation> textsToSend(
             UUID organizationId,
             UUID projectId,
             UUID changeId,
@@ -208,13 +204,13 @@ public class TranslationService {
             String targetLanguage,
             Map<String, String> texts
     ) {
-        return charactersToSend(new Subject(organizationId, projectId, changeId, null), sourceLanguage, targetLanguage,
+        return textsToSend(new Subject(organizationId, projectId, changeId, null), sourceLanguage, targetLanguage,
                 texts);
     }
 
-    /** {@link #charactersToSend} for a release's own texts, its summary. */
+    /** {@link #textsToSend} for a release's own texts, its summary. */
     @Transactional(readOnly = true)
-    public int charactersToSendForRelease(
+    public Set<MissingTranslation> textsToSendForRelease(
             UUID organizationId,
             UUID projectId,
             UUID releaseId,
@@ -222,69 +218,30 @@ public class TranslationService {
             String targetLanguage,
             Map<String, String> texts
     ) {
-        return charactersToSend(new Subject(organizationId, projectId, null, releaseId), sourceLanguage, targetLanguage,
+        return textsToSend(new Subject(organizationId, projectId, null, releaseId), sourceLanguage, targetLanguage,
                 texts);
     }
 
-    private int charactersToSend(Subject subject, String sourceLanguage, String targetLanguage, Map<String, String> texts) {
+    private Set<MissingTranslation> textsToSend(Subject subject, String sourceLanguage, String targetLanguage,
+                                                Map<String, String> texts) {
         Map<String, String> input = TranslationTexts.nonBlank(texts);
         if (!provider.isEnabled() || input.isEmpty() || TranslationTexts.sameLanguage(sourceLanguage, targetLanguage)) {
-            return 0;
+            return Set.of();
         }
         String context = projectService.context(subject.organizationId(), subject.projectId());
         String version = glossaryVersion(subject.organizationId(), sourceLanguage, targetLanguage);
         if (find(subject, targetLanguage, TranslationTexts.inputHash(sourceLanguage, input, context, version)).isPresent()) {
-            return 0;
+            return Set.of();
         }
-        // The worker sends only what the cache lacks under the job's own glossary version.
-        Set<String> distinct = new LinkedHashSet<>(input.values());
-        Set<String> cached = new HashSet<>();
-        cacheRepository.findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
-                        subject.organizationId(), sourceLanguage, targetLanguage,
-                        distinct.stream().map(text -> TranslationTexts.textHash(text, context, version))
-                                .collect(Collectors.toSet()))
-                .forEach(entry -> cached.add(entry.getTextHash()));
-        int characters = 0;
-        for (String text : distinct) {
-            if (!cached.contains(TranslationTexts.textHash(text, context, version))) {
-                characters += text.codePointCount(0, text.length());
-            }
-        }
-        return characters;
-    }
-
-    // Text -> DeepL's answer, as cached under the job's glossary version or, for a text it
-    // translated without the glossary, under none.
-    private Map<String, String> cachedAnswers(
-            UUID organizationId,
-            String sourceLanguage,
-            String targetLanguage,
-            Collection<String> sources,
-            String context,
-            String version
-    ) {
-        Map<String, String> withGlossary = new LinkedHashMap<>();
-        Map<String, String> withoutGlossary = new LinkedHashMap<>();
-        for (String text : sources) {
-            withGlossary.put(TranslationTexts.textHash(text, context, version), text);
-            withoutGlossary.put(TranslationTexts.textHash(text, context, ""), text);
-        }
-        Set<String> hashes = new HashSet<>(withGlossary.keySet());
-        hashes.addAll(withoutGlossary.keySet());
-        Map<String, String> found = new LinkedHashMap<>();
-        Map<String, String> fallback = new LinkedHashMap<>();
-        cacheRepository.findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
-                        organizationId, sourceLanguage, targetLanguage, hashes)
-                .forEach(entry -> {
-                    if (withGlossary.containsKey(entry.getTextHash())) {
-                        found.put(withGlossary.get(entry.getTextHash()), entry.getTranslatedText());
-                    }
-                    if (withoutGlossary.containsKey(entry.getTextHash())) {
-                        fallback.put(withoutGlossary.get(entry.getTextHash()), entry.getTranslatedText());
-                    }
-                });
-        fallback.forEach(found::putIfAbsent);
-        return found;
+        // A failed or unsupported sync of this version stays so until a person retries.
+        boolean withoutGlossary = !version.isEmpty() && syncRepository.findById(new GlossarySync.Key(
+                        subject.organizationId(), TranslationTexts.primary(sourceLanguage), TranslationTexts.primary(targetLanguage)))
+                .filter(sync -> sync.getWantedVersion().equals(version))
+                .filter(sync -> sync.getStatus() == GlossarySync.Status.FAILED || sync.getStatus() == GlossarySync.Status.UNSUPPORTED)
+                .isPresent();
+        var answers = cacheRepository.answers(subject.organizationId(), sourceLanguage, targetLanguage, input.values(),
+                context, version, withoutGlossary);
+        return MissingTranslation.find(input, answers.texts(), sourceLanguage, targetLanguage, context, version);
     }
 
     private TranslationState ensure(Subject subject, String sourceLanguage, String targetLanguage, Map<String, String> texts) {
@@ -384,19 +341,11 @@ public class TranslationService {
             String context,
             String version
     ) {
-        Map<String, String> byHash = cacheRepository
-                .findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
-                        organizationId,
-                        sourceLanguage,
-                        targetLanguage,
-                        input.values().stream().map(text -> TranslationTexts.textHash(text, context, version))
-                                .collect(Collectors.toSet())
-                )
-                .stream()
-                .collect(Collectors.toMap(TranslationCacheEntry::getTextHash, TranslationCacheEntry::getTranslatedText));
+        Map<String, String> answers = cacheRepository.answers(organizationId, sourceLanguage, targetLanguage,
+                input.values(), context, version, false).texts();
         Map<String, String> translated = new LinkedHashMap<>();
         for (Map.Entry<String, String> text : input.entrySet()) {
-            String hit = byHash.get(TranslationTexts.textHash(text.getValue(), context, version));
+            String hit = answers.get(text.getValue());
             if (hit == null) {
                 return Optional.empty();
             }

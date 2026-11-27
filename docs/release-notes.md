@@ -771,8 +771,9 @@ Once the release is approved:
 - **If the Project context or a glossary changed since the approval,** rendering the notes
   again translates every text of the release under the new context and glossary, as editing a
   change's summary does. The page then holds the edit and says how many characters it would
-  send to DeepL; saving again confirms it. Without a translation provider nothing is sent and
-  nothing is held.
+  send to DeepL. For each language, a text shared by several changes, fields, or the release
+  summary counts once under the same context and glossary version. Saving again confirms it.
+  Without a translation provider nothing is sent and nothing is held.
 
 REST clients send the same `PUT …/releases/{releaseId}` as for a draft, with the version and
 previous release left out or unchanged. An edit held for its translation returns
@@ -836,8 +837,9 @@ lowercase hyphenated identifiers, and code spans written as their source writes 
 The difference from the latest revision is shown at once. Saved unchanged, the text is
 recorded as rendered again and claims the glossary only as those translations used it; any
 edit makes it a correction by hand. A text whose translation the release was not published
-with, such as a summary rewritten since, stays untranslated and is counted, and saving it as
-rendered again is refused: correct it by hand. A note a person wrote, before publication or
+with, such as a summary rewritten since, stays untranslated. The preview marks each missing
+field and counts the characters of each distinct missing text once per translation. A note
+with missing translations can be corrected by hand. A note a person wrote, before publication or
 in a later correction, and a retired audience's note, are corrected by hand only. A
 translation that needs a new answer, such as a glossary term DeepL got wrong, needs a hand
 too: translating a note again is not part of this release.

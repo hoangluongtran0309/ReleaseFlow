@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * Translates due jobs. A claim and a result are each written in a short transaction; the
@@ -107,12 +106,21 @@ class TranslationWorker {
                 log.warn("Recovered {} translation job(s) whose worker stopped responding.", recovered);
             }
         });
-        Optional<Claim> claim = transactionTemplate.execute(status -> jobRepository.lockNextDue(now).map(job -> {
+        Optional<Claim> claim = transactionTemplate.execute(status -> jobRepository.lockNextDue(now).flatMap(job -> {
+            // The claim query locked the Organization. Read again under that lock: another
+            // claim could have committed after the query took its snapshot.
+            if (jobRepository.existsByOrganizationIdAndSourceLanguageAndTargetLanguageAndStatus(
+                    job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(), TranslationJob.Status.RUNNING)) {
+                return Optional.empty();
+            }
             job.claim(now);
-            return new Claim(job.getId(), job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(),
-                    job.getInput(), job.getContext(), job.getGlossaryVersion(), glossary(job),
+            GlossaryChoice choice = glossary(job);
+            var cached = cacheRepository.answers(job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(),
+                    job.getInput().values(), job.getContext(), job.getGlossaryVersion(), choice.deeplGlossaryId() == null);
+            return Optional.of(new Claim(job.getId(), job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(),
+                    job.getInput(), job.getContext(), job.getGlossaryVersion(), choice,
                     glossaryService.verbatimTerms(job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage()),
-                    cached(job), job.getAttempts(), now);
+                    cached, job.getAttempts(), now));
         }));
         if (claim.isEmpty()) {
             return false;
@@ -127,15 +135,13 @@ class TranslationWorker {
             finish(claim, job -> job.fail(TranslationService.DISABLED, now()), true);
             return;
         }
-        // The last attempt goes without the glossary, so a broken glossary never fails a
-        // translation that would succeed without it.
-        String glossaryId = claim.attempt() < MAX_ATTEMPTS ? claim.glossary().deeplGlossaryId() : null;
+        String glossaryId = claim.glossary().deeplGlossaryId();
         String withoutReason = claim.glossary().reasonWithout() != null ? claim.glossary().reasonWithout()
                 : GlossaryUse.SYNC_FAILED;
-        List<String> missing = missing(claim.input(), claim.cached());
+        List<String> missing = TranslationTexts.missing(claim.input(), claim.cached().texts());
         UntranslatedGuard guard = new UntranslatedGuard(claim.targetLanguage(), claim.verbatimTerms());
         Map<String, String> fresh = new HashMap<>();
-        Set<String> withoutGlossary = new HashSet<>();
+        Set<String> withoutGlossary = new HashSet<>(claim.cached().withoutGlossary());
         try {
             if (!missing.isEmpty()) {
                 List<String> translated = translator.get().translate(
@@ -185,7 +191,7 @@ class TranslationWorker {
         }
 
         Map<String, String> output = new LinkedHashMap<>();
-        claim.input().forEach((key, text) -> output.put(key, claim.cached().getOrDefault(text, fresh.get(text))));
+        claim.input().forEach((key, text) -> output.put(key, claim.cached().texts().getOrDefault(text, fresh.get(text))));
         Instant at = now();
         finish(claim, job -> {
             job.succeed(output, outcome, at);
@@ -252,39 +258,14 @@ class TranslationWorker {
         String glossaryId = glossaryRepository.findById(job.getOrganizationId())
                 .map(TranslationGlossary::getDeeplGlossaryId)
                 .orElse(null);
-        if (sync.isPresent() && sync.get().usable(job.getGlossaryVersion()) && glossaryId != null) {
+        // The last attempt goes without the glossary. The cache lookup and the request
+        // must use the same choice, including when a stopped worker's claim is recovered.
+        if (job.getAttempts() < MAX_ATTEMPTS && sync.isPresent()
+                && sync.get().usable(job.getGlossaryVersion()) && glossaryId != null) {
             return new GlossaryChoice(glossaryId, null);
         }
         boolean unsupported = sync.map(found -> found.getStatus() == GlossarySync.Status.UNSUPPORTED).orElse(false);
         return new GlossaryChoice(null, unsupported ? GlossaryUse.UNSUPPORTED : GlossaryUse.SYNC_FAILED);
-    }
-
-    // Text -> translation for every input text already in the cache, under the job's glossary version.
-    private Map<String, String> cached(TranslationJob job) {
-        Map<String, String> byHash = job.getInput().values().stream()
-                .distinct()
-                .collect(Collectors.toMap(text -> TranslationTexts.textHash(text, job.getContext(), job.getGlossaryVersion()),
-                        text -> text));
-        Map<String, String> cached = new HashMap<>();
-        cacheRepository.findAllByOrganizationIdAndSourceLanguageAndTargetLanguageAndTextHashIn(
-                        job.getOrganizationId(), job.getSourceLanguage(), job.getTargetLanguage(), byHash.keySet())
-                .forEach(entry -> cached.put(byHash.get(entry.getTextHash()), entry.getTranslatedText()));
-        return cached;
-    }
-
-    /**
-     * The texts to send, once each, in the order of their keys. A job's input comes back
-     * from the database as a map whose order nothing promises, so the request would
-     * otherwise list the same texts in another order from one run to the next. DeepL
-     * translates each text on its own, so the order changes no translation.
-     */
-    static List<String> missing(Map<String, String> input, Map<String, String> cached) {
-        return input.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(Map.Entry::getValue)
-                .filter(text -> !cached.containsKey(text))
-                .distinct()
-                .toList();
     }
 
     // 2, 4, 8 … seconds, capped at five minutes.
@@ -306,7 +287,7 @@ class TranslationWorker {
             String glossaryVersion,
             GlossaryChoice glossary,
             List<String> verbatimTerms,
-            Map<String, String> cached,
+            TranslationCacheRepository.Answers cached,
             int attempt,
             Instant claimedAt
     ) {

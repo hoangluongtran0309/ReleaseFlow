@@ -5,12 +5,14 @@ import com.hoangluongtran0309.releaseflow.change.AudienceNarrative;
 import com.hoangluongtran0309.releaseflow.change.ChangeView;
 import com.hoangluongtran0309.releaseflow.change.NeutralSummary;
 import com.hoangluongtran0309.releaseflow.translation.GlossaryUse;
+import com.hoangluongtran0309.releaseflow.translation.MissingTranslation;
 import com.hoangluongtran0309.releaseflow.translation.PublishedTranslation;
 import com.hoangluongtran0309.releaseflow.translation.TranslationService;
 import com.hoangluongtran0309.releaseflow.translation.TranslationState;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,12 +48,6 @@ class ReleaseNoteWriter {
     }
 
     /**
-     * @param retry whether to start failed translations over first
-     * @param untranslated the audience codes whose narratives no note of this release needs:
-     *                     the retired audiences it has no note for (ADR-0044); empty when none
-     *                     is retired, so the texts are what they always were
-     */
-    /**
      * What rendering a release's notes again into this language would send to the translation
      * provider, with {@code summary} as the release's summary (ADR-0047): the characters of its
      * changes' texts and of the summary, each counted as {@link #localize} would ensure them,
@@ -59,31 +55,32 @@ class ReleaseNoteWriter {
      */
     Characters charactersToSend(Release release, String summary, List<ChangeView> changes, String language,
                                 Set<String> untranslated) {
-        int changeCharacters = 0;
+        Set<MissingTranslation> missing = new HashSet<>();
         for (ChangeView change : changes) {
             if (change.neutralSummary() == null || change.contentLanguage() == null) {
                 continue;
             }
-            changeCharacters += translationService.charactersToSend(release.getOrganizationId(), release.getProjectId(),
-                    change.id(), change.contentLanguage(), language, texts(change, untranslated));
+            missing.addAll(translationService.textsToSend(release.getOrganizationId(), release.getProjectId(),
+                    change.id(), change.contentLanguage(), language, texts(change, untranslated)));
         }
-        int summaryCharacters = 0;
+        boolean retranslatesChanges = !missing.isEmpty();
         if (summary != null && !summary.isBlank()) {
             String sourceLanguage = outputLanguageService.outputLanguage(release.getOrganizationId()).tag();
-            summaryCharacters = translationService.charactersToSendForRelease(release.getOrganizationId(),
-                    release.getProjectId(), release.getId(), sourceLanguage, language, Map.of(RELEASE_SUMMARY, summary));
+            missing.addAll(translationService.textsToSendForRelease(release.getOrganizationId(),
+                    release.getProjectId(), release.getId(), sourceLanguage, language, Map.of(RELEASE_SUMMARY, summary)));
         }
-        return new Characters(changeCharacters, summaryCharacters);
+        return new Characters(MissingTranslation.characters(missing), retranslatesChanges);
     }
 
-    /** The characters one language would send: its changes' texts, and the release's summary. */
-    record Characters(int changes, int summary) {
-
-        int total() {
-            return changes + summary;
-        }
+    record Characters(int total, boolean retranslatesChanges) {
     }
 
+    /**
+     * @param retry whether to start failed translations over first
+     * @param untranslated the audience codes whose narratives no note of this release needs:
+     *                     the retired audiences it has no note for (ADR-0044); empty when none
+     *                     is retired, so the texts are what they always were
+     */
     Localized localize(Release release, List<ChangeView> changes, String language, boolean retry,
                        Set<String> untranslated) {
         List<ChangeView> localized = new ArrayList<>(changes.size());
@@ -140,7 +137,7 @@ class ReleaseNoteWriter {
         List<ChangeView> localized = new ArrayList<>(changes.size());
         List<GlossaryUse> glossary = new ArrayList<>();
         int missingTexts = 0;
-        int missingCharacters = 0;
+        Set<MissingTranslation> missing = new HashSet<>();
         for (ChangeView change : changes) {
             NeutralSummary summary = change.neutralSummary();
             if (summary == null || change.contentLanguage() == null) {
@@ -151,7 +148,7 @@ class ReleaseNoteWriter {
                     change.contentLanguage(), language, textsFor(change, audienceCode), release.getPublishedAt());
             glossary.add(found.glossary());
             missingTexts += found.missing().size();
-            missingCharacters += found.missingCharacters();
+            missing.addAll(found.missingTranslations());
             localized.add(translated(change, found.texts(), language));
         }
         String summary = release.getSummary();
@@ -161,10 +158,10 @@ class ReleaseNoteWriter {
                     release.getId(), sourceLanguage, language, Map.of(RELEASE_SUMMARY, summary), release.getPublishedAt());
             glossary.add(found.glossary());
             missingTexts += found.missing().size();
-            missingCharacters += found.missingCharacters();
+            missing.addAll(found.missingTranslations());
             summary = found.texts().get(RELEASE_SUMMARY);
         }
-        return new Published(localized, summary, missingTexts, missingCharacters, GlossaryUse.combine(glossary));
+        return new Published(localized, summary, missingTexts, MissingTranslation.characters(missing), GlossaryUse.combine(glossary));
     }
 
     // The texts one audience's note uses: the summary fields, and that audience's own headline

@@ -63,6 +63,9 @@ section into the version's entry, and the GitHub release is written from it.
 
 ### Fixed
 
+- The approved-release edit and the published-note correction preview count the source
+  characters of a repeated text once per translation, even when several changes, fields,
+  or the release summary share it. Concurrent workers reuse the first job's cached answer.
 - The public changelog's RSS feed closes each item. Since the feed was added, every item was
   left open, so with two entries or more each one sat inside the one before it, as 1.3.0 and
   1.3.1 serve it, and most readers showed only the newest entry. Each item is now a child of

@@ -339,7 +339,7 @@ public class ReleaseService {
                 languages.add(language);
             }
             total += characters.total();
-            retranslates |= characters.changes() > 0;
+            retranslates |= characters.retranslatesChanges();
         }
         if (retranslates && (confirmed == null || confirmed != total)) {
             throw new ReleaseEditTranslationException(total, languages);

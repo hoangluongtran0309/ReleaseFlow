@@ -7,6 +7,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
@@ -28,6 +29,21 @@ final class TranslationTexts {
             }
         });
         return kept;
+    }
+
+    /**
+     * The texts to send, once each, in the order of their keys. A job's input comes back
+     * from the database as a map whose order nothing promises, so the request would
+     * otherwise list the same texts in another order from one run to the next. DeepL
+     * translates each text on its own, so the order changes no translation.
+     */
+    static List<String> missing(Map<String, String> input, Map<String, String> cached) {
+        return input.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue)
+                .filter(text -> !cached.containsKey(text))
+                .distinct()
+                .toList();
     }
 
     /**

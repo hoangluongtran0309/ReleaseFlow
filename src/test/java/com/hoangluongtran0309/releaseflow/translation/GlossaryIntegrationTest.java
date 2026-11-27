@@ -375,6 +375,8 @@ class GlossaryIntegrationTest extends PostgreSqlIntegrationTest {
         keep(owner, "console").andExpect(status().isCreated());
         UUID projectId = createProject(owner);
         summarizedChange(owner, projectId, 1, "The console is faster.");
+        // The second job uses the first job's answer under the empty glossary version.
+        summarizedChange(owner, projectId, 2, "The console is faster.");
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.1.0", null);
         approve(owner, projectId, releaseId);
 

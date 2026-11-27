@@ -21,11 +21,16 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -60,6 +65,12 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private TranslationJobRepository jobs;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @DynamicPropertySource
     static void deepLProperties(DynamicPropertyRegistry registry) {
@@ -196,7 +207,30 @@ class MultilingualReleaseNoteIntegrationTest extends PostgreSqlIntegrationTest {
         UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0");
         approve(owner, projectId, releaseId);
 
-        assertThat(worker.processOne()).isTrue();
+        // A second transaction cannot yet see RUNNING. It must still skip the pair.
+        new TransactionTemplate(transactionManager).executeWithoutResult(transaction -> {
+            TranslationJob firstClaim = jobs.lockNextDue(Instant.now()).orElseThrow();
+            firstClaim.claim(Instant.now());
+            jobs.flush();
+            assertThat(CompletableFuture.supplyAsync(worker::processOne).orTimeout(10, TimeUnit.SECONDS).join())
+                    .as("overlapping claim transactions cannot both send").isFalse();
+            transaction.setRollbackOnly();
+        });
+
+        CompletableFuture<Void> received = new CompletableFuture<>();
+        CompletableFuture<Void> respond = new CompletableFuture<>();
+        DEEPL.beforeTranslation(() -> {
+            received.complete(null);
+            respond.orTimeout(10, TimeUnit.SECONDS).join();
+        });
+        CompletableFuture<Boolean> first = CompletableFuture.supplyAsync(worker::processOne);
+        try {
+            received.get(10, TimeUnit.SECONDS);
+            assertThat(worker.processOne()).as("a second worker waits for the pair's cached answer").isFalse();
+        } finally {
+            respond.complete(null);
+            assertThat(first.get(10, TimeUnit.SECONDS)).isTrue();
+        }
         assertThat(worker.processOne()).isTrue();
         assertThat(worker.processOne()).isFalse();
         assertThat(DEEPL.requests()).as("the second change's texts all came from the cache").hasSize(1);

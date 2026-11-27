@@ -13,6 +13,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
@@ -264,6 +266,49 @@ class ReleaseEditAfterApprovalIntegrationTest extends PostgreSqlIntegrationTest 
                 .mapToInt(text -> text.codePointCount(0, text.length()))
                 .sum();
         assertThat(sent).as("the count shown is what DeepL was sent").isEqualTo(recounted);
+    }
+
+    @ParameterizedTest(name = "{0} changes sharing a text")
+    @ValueSource(ints = {1, 2})
+    void editAndCorrectionPreviewCountExactlyWhatDeepLReceives(int changes) throws Exception {
+        Owner owner = registerWithLanguages("owner@example.com", "en", "vi");
+        UUID projectId = createProject(owner);
+        String shared = "Export finished 🚀.";
+        for (int n = 1; n <= changes; n++) {
+            UUID change = TestChanges.insert(jdbcTemplate, owner.organizationId(), projectId, n,
+                    "feat: add export " + n, "FEATURE", false, false, null);
+            // In one case two fields repeat the text. In the other two changes share it.
+            String narratives = changes == 1 ? JSON.writeValueAsString(Map.of("operator", shared)) : "{}";
+            TestChanges.summarize(jdbcTemplate, change, shared, narratives);
+        }
+        UUID releaseId = draftWithAllChanges(owner, projectId, "1.4.0", "Original summary.");
+        approveEverything(owner, projectId, releaseId);
+        drain();
+        DEEPL.reset();
+        projectContext(owner, projectId, "A new context for this approval.");
+        int echo = JsonPath.read(edit(owner, projectId, releaseId, Map.of("version", "1.4.0", "summary", shared))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("release_edit_retranslates"))
+                .andReturn().getResponse().getContentAsString(), "$.characters");
+        edit(owner, projectId, releaseId, Map.of("version", "1.4.0", "summary", shared, "retranslationCharacters", echo))
+                .andExpect(status().isOk());
+        assertThat(DEEPL.translatedTexts()).isEmpty();
+        drain();
+        assertThat(DEEPL.translatedTexts()).containsExactlyInAnyOrder(shared, "Users asked.", "Streams rows.");
+        int sent = DEEPL.translatedTexts().stream().mapToInt(text -> text.codePointCount(0, text.length())).sum();
+        assertThat(echo).isEqualTo(sent);
+        action(owner, projectId, releaseId, "publish").andExpect(status().isOk());
+
+        // Reproduce missing published answers for the same inputs. The preview still
+        // marks every affected field, including the release summary, and calls no provider.
+        jdbcTemplate.update("DELETE FROM translation_cache WHERE organization_id = ?", owner.organizationId());
+        DEEPL.reset();
+        mockMvc.perform(get(releaseApi(projectId, releaseId) + "/notes/{id}/correction-preview",
+                        noteId(releaseId, "operator", "vi")).param("origin", "RENDERED").session(owner.session()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.missingTexts").value(changes == 1 ? 5 : 7))
+                .andExpect(jsonPath("$.missingCharacters").value(sent));
+        assertThat(DEEPL.requests()).isEmpty();
     }
 
     @Test

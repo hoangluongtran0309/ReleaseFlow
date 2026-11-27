@@ -52,6 +52,7 @@ public final class DeepLStub implements AutoCloseable {
     private final Map<String, Map<String, Map<String, String>>> glossaries = new ConcurrentHashMap<>();
     private volatile int failureStatus = 500;
     private volatile String failurePath = "/";
+    private volatile Runnable beforeTranslation = () -> {};
     private volatile boolean dropOne;
     private volatile boolean untranslatedWithGlossary;
     private volatile boolean untranslated;
@@ -92,6 +93,11 @@ public final class DeepLStub implements AutoCloseable {
         failurePath = pathPrefix;
         failureStatus = status;
         failuresLeft.set(times);
+    }
+
+    /** Runs after a translation request is recorded and before it is answered. */
+    public void beforeTranslation(Runnable action) {
+        beforeTranslation = action;
     }
 
     /** Answers with one translation fewer than the texts it was sent. */
@@ -179,6 +185,7 @@ public final class DeepLStub implements AutoCloseable {
 
     public void reset() {
         requests.clear();
+        beforeTranslation = () -> {};
         failuresLeft.set(0);
         failurePath = "/";
         glossaryRefusalsLeft.set(0);
@@ -238,6 +245,7 @@ public final class DeepLStub implements AutoCloseable {
         }
         String method = exchange.getRequestMethod();
         if (path.equals("/v2/translate")) {
+            beforeTranslation.run();
             translate(exchange, body, texts);
         } else if (path.equals("/v3/languages")) {
             languages(exchange);

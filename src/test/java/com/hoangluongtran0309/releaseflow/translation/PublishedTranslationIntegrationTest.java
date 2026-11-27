@@ -101,7 +101,7 @@ class PublishedTranslationIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(found.texts()).containsEntry("whatChanged", "Khôi phục nó.")
                 .containsEntry("whyChanged", "A sentence written after publication.");
         assertThat(found.missing()).containsExactly("whyChanged");
-        assertThat(found.missingCharacters()).isEqualTo("A sentence written after publication.".length());
+        assertThat(MissingTranslation.characters(found.missingTranslations())).isEqualTo("A sentence written after publication.".length());
         assertThat(found.complete()).isFalse();
     }
 

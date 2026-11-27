@@ -770,7 +770,8 @@ where it first appears; ADRs are linked from the slice they record.
     the page lists the notes a person edited before that change, by `last_edited_at`;
   - only the new summary is translated; an edit that would translate more, after the Project
     context or a glossary changed, is held until the count is echoed
-    (`409 release_edit_retranslates`, `retranslationCharacters`);
+    (`409 release_edit_retranslates`, `retranslationCharacters`). This count and the correction
+    preview count a shared source text once for its language pair, context, and glossary version;
   - a note's `updated_at` moves only when its ready text changes, by `ready_content_sha256`;
   - `V42` fills `last_edited_at` and the digest for approved releases' notes only, since a
     published release's notes cannot be written.
