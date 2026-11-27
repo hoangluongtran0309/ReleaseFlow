@@ -85,6 +85,7 @@ class RegistrationApiIntegrationTest extends PostgreSqlIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.instance").value("/api/registrations"))
                 .andExpect(jsonPath("$.code").value("validation_failed"))
                 .andExpect(jsonPath("$.errors.organizationName").exists())
                 .andExpect(jsonPath("$.errors.email").exists())

@@ -2020,6 +2020,10 @@ refusals Spring MVC raises before a controller runs: a method the address does n
 missing or unconvertible parameter (`invalid_parameter`). A browser asking for a page
 gets the error page for that status instead.
 
+An MVC error response interceptor fills an absent `instance` with the current servlet
+request URI, preserving the path returned before Spring Framework 7.1. On an error
+dispatch that URI is `/error`. Security filters write their own bodies before MVC.
+
 A page that names something the Organization does not have — a Project, release, change,
 audience, rule, run, invitation, or any other `ResourceNotFoundException` — is the same
 404 page rather than itself with an alert, because there is nothing on it to act on.

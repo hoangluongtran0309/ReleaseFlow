@@ -73,17 +73,20 @@ application port and set:
 ```bash
 RELEASEFLOW_PUBLIC_BASE_URL=https://releaseflow.example.com
 RELEASEFLOW_SESSION_COOKIE_SECURE=true
-SERVER_FORWARD_HEADERS_STRATEGY=native
+SERVER_REQUEST_HEADER_FORWARDED_STRATEGY=web-server
 ```
 
-The last one is Spring Boot's own setting: it lets the application read the proxy's
-`X-Forwarded-Proto` and `X-Forwarded-Host`. Without it, behind a proxy that terminates
-TLS, a redirect such as the one to the sign-in page points at `http://`, and the
-interface-language and remembered-Project cookies are not marked `Secure`. The embedded
-Tomcat accepts these headers only from private and loopback addresses; a proxy anywhere
-else is named with `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES`. Neither Compose file
-forwards these variables, so add them to the `app` service's `environment` if you build
-on one.
+Have the proxy overwrite `X-Forwarded-Proto` and `X-Forwarded-Host` with the public
+scheme and host. Tomcat uses them to mark cookies `Secure` and for any absolute address
+it builds. Redirects are relative, so the browser resolves them against the public
+address. Serve ReleaseFlow at the root of that address: deployment under a path, using
+`X-Forwarded-Prefix`, is not supported.
+
+Tomcat trusts private and loopback proxy addresses by default. If your proxy runs
+elsewhere, configure `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` for its address.
+For a Compose deployment, add the forwarded-header strategy to the `app` service's
+`environment`. When upgrading, remove the deprecated `SERVER_FORWARD_HEADERS_STRATEGY`
+before setting its replacement. Setting both stops startup.
 
 **What the internet reaches.** Providers need `/webhooks/`, and anonymous readers need
 `/changelog/` if you publish a public changelog. Your own people need the rest, which can

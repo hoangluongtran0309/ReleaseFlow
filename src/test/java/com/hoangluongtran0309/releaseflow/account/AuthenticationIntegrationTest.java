@@ -45,6 +45,7 @@ class AuthenticationIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(get("/api/session"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.instance").doesNotHaveJsonPath())
                 .andExpect(jsonPath("$.code").value("authentication_required"));
     }
 

@@ -117,6 +117,20 @@ class AnthropicChangeClassifierTest {
         assertThat(stub.requests()).hasSize(1);
     }
 
+    // SDK 3.11.0 throws its own PaymentRequiredException for a 402, an AnthropicServiceException
+    // like the rest, so it is still one request and a failure that names only the status.
+    @Test
+    void linkedBillingRefusalIsOneStatusOnlyFailure(CapturedOutput output) {
+        stub.respond(402, """
+                {"type":"error","error":{"type":"billing_error","message":"secret-body",
+                "details":{"error_code":"linked_organization_spend_limit_reached"}}}
+                """);
+
+        assertFailure("Anthropic returned HTTP 402.");
+        assertThat(stub.requests()).hasSize(1);
+        assertThat(output.getAll()).doesNotContain("secret-body", "linked_organization_spend_limit_reached");
+    }
+
     @Test
     void reportsRefusalsTruncationAndInvalidAnswers() {
         stub.respond(200, AnthropicStub.message("I can't help with that.", "refusal"));

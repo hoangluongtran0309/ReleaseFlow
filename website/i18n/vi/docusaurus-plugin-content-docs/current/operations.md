@@ -68,16 +68,20 @@ những thứ dưới đây, và ReleaseFlow không tự cung cấp thứ nào t
 ```bash
 RELEASEFLOW_PUBLIC_BASE_URL=https://releaseflow.example.com
 RELEASEFLOW_SESSION_COOKIE_SECURE=true
-SERVER_FORWARD_HEADERS_STRATEGY=native
+SERVER_REQUEST_HEADER_FORWARDED_STRATEGY=web-server
 ```
 
-Biến cuối cùng là cấu hình của chính Spring Boot: nó cho ứng dụng đọc `X-Forwarded-Proto` và
-`X-Forwarded-Host` của proxy. Thiếu nó, sau một proxy kết thúc TLS, các redirect như redirect
-tới trang đăng nhập sẽ trỏ về `http://`, và cookie ngôn ngữ giao diện cùng cookie ghi nhớ
-Project không được đánh dấu `Secure`. Tomcat nhúng chỉ chấp nhận các header này từ địa chỉ nội
-bộ và loopback; proxy đặt ở nơi khác được khai báo bằng `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES`.
-Cả hai file Compose đều không chuyển tiếp các biến này, nên nếu dựa trên một file Compose, thêm
-chúng vào `environment` của service `app`.
+Cấu hình proxy ghi đè `X-Forwarded-Proto` và `X-Forwarded-Host` bằng giao thức và tên
+máy chủ công khai. Tomcat dùng chúng để đánh dấu cookie là `Secure` và cho mọi địa chỉ
+tuyệt đối nó tạo ra. Redirect là tương đối, nên trình duyệt hiểu chúng theo địa chỉ công
+khai. Triển khai ReleaseFlow tại đường dẫn gốc của địa chỉ này: ReleaseFlow không hỗ trợ
+triển khai dưới một đường dẫn con bằng `X-Forwarded-Prefix`.
+
+Theo mặc định, Tomcat tin cậy proxy ở địa chỉ mạng riêng và loopback. Nếu proxy chạy
+ở nơi khác, cấu hình `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` cho địa chỉ của proxy.
+Với Compose, thêm biến cấu hình forwarded header vào `environment` của service `app`.
+Khi nâng cấp, bỏ biến cũ `SERVER_FORWARD_HEADERS_STRATEGY` trước khi đặt biến thay thế.
+Ứng dụng dừng khi khởi động nếu cả hai biến cùng được đặt.
 
 **Những gì internet truy cập được.** Nhà cung cấp cần `/webhooks/`, và người đọc ẩn danh cần
 `/changelog/` nếu bạn publish changelog công khai. Người trong nhóm cần phần còn lại, phần này có
