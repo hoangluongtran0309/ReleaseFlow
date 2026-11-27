@@ -16,6 +16,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -62,11 +68,21 @@ class ManagementPortIntegrationTest {
         HttpResponse<String> metrics = get(managementPort, "/actuator/prometheus");
         assertThat(metrics.statusCode()).isEqualTo(200);
         // Present before anything has happened, because every series is registered at zero.
-        assertThat(metrics.body())
-                .contains("releaseflow_classification_completed_total")
-                .contains("releaseflow_classification_collect_to_complete_seconds_count")
-                .contains("releaseflow_classification_provider_requests_total")
-                .contains("releaseflow_automation_action_executions_total");
+        assertThat(metrics.body()).contains(
+                "releaseflow_classification_completed_total{needs_human_review=\"false\"} ",
+                "releaseflow_classification_collect_to_complete_seconds_count ",
+                "releaseflow_classification_collect_to_complete_seconds_bucket{le=\"+Inf\"} ",
+                "releaseflow_classification_provider_requests_total{outcome=\"success\",provider=\"anthropic\"} ",
+                "releaseflow_automation_action_executions_total{outcome=\"succeeded\",trigger=\"manual\"} ");
+        // Dashboards and alerts query these names and labels, so neither may drift.
+        assertThat(seriesLabels(metrics.body())).isEqualTo(Map.of(
+                "releaseflow_classification_completed_total", Set.of("needs_human_review"),
+                "releaseflow_classification_collect_to_complete_seconds_bucket", Set.of("le"),
+                "releaseflow_classification_collect_to_complete_seconds_count", Set.of(),
+                "releaseflow_classification_collect_to_complete_seconds_sum", Set.of(),
+                "releaseflow_classification_collect_to_complete_seconds_max", Set.of(),
+                "releaseflow_classification_provider_requests_total", Set.of("outcome", "provider"),
+                "releaseflow_automation_action_executions_total", Set.of("outcome", "trigger")));
 
         // Everything else the actuator could offer is refused, whether it is exposed or not.
         assertThat(get(managementPort, "/actuator/env").statusCode()).isNotEqualTo(200);
@@ -85,6 +101,23 @@ class ManagementPortIntegrationTest {
 
         // The public status endpoint is unaffected and still answers.
         assertThat(get(applicationPort, "/api/status").statusCode()).isEqualTo(200);
+    }
+
+    /** Each {@code releaseflow_} series name with the label names it carries. */
+    private static Map<String, Set<String>> seriesLabels(String exposition) {
+        Map<String, Set<String>> labels = new TreeMap<>();
+        Pattern sample = Pattern.compile("^(releaseflow_[a-z_]+)(?:\\{([^}]*)})? .*$");
+        Pattern label = Pattern.compile("([a-z_]+)=\"");
+        for (String line : exposition.split("\n")) {
+            Matcher matched = sample.matcher(line);
+            if (matched.matches()) {
+                Set<String> names = labels.computeIfAbsent(matched.group(1), name -> new TreeSet<>());
+                if (matched.group(2) != null) {
+                    label.matcher(matched.group(2)).results().forEach(result -> names.add(result.group(1)));
+                }
+            }
+        }
+        return labels;
     }
 
     private HttpResponse<String> get(int port, String path) throws IOException, InterruptedException {

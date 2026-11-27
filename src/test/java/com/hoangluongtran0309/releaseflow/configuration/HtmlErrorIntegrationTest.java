@@ -73,6 +73,7 @@ class HtmlErrorIntegrationTest extends PostgreSqlIntegrationTest {
 
         mockMvc.perform(get("/nope").session(session).accept(MediaType.ALL))
                 .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.instance").value("/nope"))
                 .andExpect(jsonPath("$.code").value("not_found"));
 
         // An address under /api is an API address whatever it says it accepts.
@@ -138,10 +139,12 @@ class HtmlErrorIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(patch("/api/projects").session(session).with(csrf()))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.instance").value("/api/projects"))
                 .andExpect(jsonPath("$.code").value("method_not_allowed"))
                 .andExpect(jsonPath("$.title").value("Method not allowed"));
         mockMvc.perform(get("/api/projects/not-a-uuid/releases").session(session))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.instance").value("/api/projects/not-a-uuid/releases"))
                 .andExpect(jsonPath("$.code").value("invalid_parameter"))
                 .andExpect(content().string(Matchers.not(Matchers.containsString("problemDetail."))));
         mockMvc.perform(get("/api/projects/not-a-uuid/releases").session(session)
@@ -150,6 +153,7 @@ class HtmlErrorIntegrationTest extends PostgreSqlIntegrationTest {
         mockMvc.perform(post("/api/projects").session(session).with(csrf())
                         .contentType(MediaType.TEXT_PLAIN).content("ReleaseFlow"))
                 .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.instance").value("/api/projects"))
                 .andExpect(jsonPath("$.code").value("unsupported_media_type"));
         // A browser that follows a wrong link to a page still gets a page.
         mockMvc.perform(get("/projects/not-a-uuid/releases/also-not").session(session).accept(MediaType.TEXT_HTML))
@@ -169,6 +173,7 @@ class HtmlErrorIntegrationTest extends PostgreSqlIntegrationTest {
                         .requestAttr(RequestDispatcher.ERROR_REQUEST_URI, "/api/audiences/42"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.instance").value("/error"))
                 .andExpect(jsonPath("$.code").value("internal_error"))
                 .andExpect(jsonPath("$.title").value("Internal error"))
                 .andExpect(content().string(Matchers.not(Matchers.containsString("hunter2"))))
@@ -235,6 +240,7 @@ class HtmlErrorIntegrationTest extends PostgreSqlIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Checkout\"}"))
                 .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.instance").doesNotHaveJsonPath())
                 .andExpect(jsonPath("$.code").value("access_denied"));
     }
 

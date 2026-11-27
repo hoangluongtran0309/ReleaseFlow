@@ -72,6 +72,9 @@ Every failure under `/api` is `application/problem+json` with a stable `code`:
 `title` and `detail` are written in the reader's [interface
 language](workspace.md#interface-language); **`code` never changes**, so match on it.
 A validation failure adds `errors`, a map from field to message.
+MVC errors include the request path in `instance`, without its query string. An API
+failure dispatched to the error controller carries `/error`. Authentication and
+access refusals written directly by the security filters omit `instance`.
 
 | Status | Codes that can come from any endpoint |
 | --- | --- |

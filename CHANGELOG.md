@@ -57,6 +57,11 @@ section into the version's entry, and the GitHub release is written from it.
 
 ### Changed
 
+- Upgrade note: behind an HTTPS proxy, set `SERVER_REQUEST_HEADER_FORWARDED_STRATEGY=web-server`,
+  Spring Boot 4.2.0's name for it. The old `SERVER_FORWARD_HEADERS_STRATEGY=native` still works
+  in 1.4.0 but is deprecated. A deployment must not set both: startup stops if it does. Redirects
+  now carry a relative `Location`, which the browser resolves against the public address. See
+  [Deploying to production](docs/operations.md#deploying-to-production).
 - Every run for a release, from publication, by hand, a schedule, a reminder, a signed call, or
   a correction, is created with the release locked, so it carries each note as of a moment no
   correction is half-way through.

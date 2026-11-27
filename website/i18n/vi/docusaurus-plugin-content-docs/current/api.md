@@ -71,6 +71,9 @@ Mọi lỗi dưới `/api` đều là `application/problem+json` với một `co
 `title` và `detail` được viết bằng [ngôn ngữ giao diện](workspace.md#interface-language) của
 người đọc; **`code` không bao giờ thay đổi**, nên bên gọi cần so khớp theo nó. Lỗi kiểm tra dữ liệu có
 thêm `errors`, một map từ tên trường tới thông báo.
+Lỗi MVC có trường `instance` chứa đường dẫn yêu cầu, bỏ phần query. Nếu yêu cầu API được
+chuyển tới controller xử lý lỗi, `instance` là `/error`. Lỗi xác thực và từ chối truy cập
+do bộ lọc bảo mật trả về trực tiếp không có trường `instance`.
 
 | Trạng thái | Mã có thể đến từ bất kỳ endpoint nào |
 | --- | --- |

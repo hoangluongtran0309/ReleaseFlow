@@ -17,7 +17,8 @@ where it first appears; ADRs are linked from the slice they record.
 - Session authentication, tenant-bearing principal, form login, POST logout,
   and CSRF protection shared by REST and UI.
 - Authenticated session identity and a public CSRF-token endpoint.
-- Problem Details responses with stable codes for implemented API failures.
+- Problem Details responses with stable codes for implemented API failures. MVC preserves
+  the request path in `instance`, including `/error` on an error dispatch.
 - Project creation/listing through shared REST and Thymeleaf application
   behavior.
 - One canonical GitHub repository per Project, unique inside an Organization (V2;
