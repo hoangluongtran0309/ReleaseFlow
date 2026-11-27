@@ -326,8 +326,8 @@ What each destination does:
 - **No AI request**, for any of it. A statement the AI got wrong is corrected by hand.
 - **By hand and rendered again: no provider.** dbvault's ten placeholders cost nothing.
 - **DeepL only when a person asks to translate again**, and the page shows the characters
-  first: the total length of the note's texts with no answer under today's context and
-  glossary version, worked out without sending anything. The request carries that number,
+  first. It counts the code points of each distinct source text with no answer under today's
+  context and glossary version, without sending anything. The request carries that number,
   and is refused and shown again if the count has grown. A `456` is a stop, never a retry.
 - **A glossary change empties the cache for its pair**, since the version is part of every
   key. Fixing "Điểm cuối" by adding the term and translating again therefore sends all of
@@ -446,8 +446,9 @@ summary, and nothing links a note to the job it was written from. So:
   cached there (ADR-0036). The answer found is repaired as ADR-0040 repairs any answer.
 - **The job's stored output is not read.** It is keyed by field, so a field whose source
   text changed since publication would get an answer to a different text. The cache is
-  keyed by the text itself, so such a text finds nothing, and the preview marks and counts
-  it as part 2 says.
+  keyed by the text itself, so the preview marks every field whose text has no answer. Its
+  character count includes each distinct source text once for its language pair, context,
+  and glossary version.
 - **A subject with no such job**, or a text found under neither version, is missing in the
   same way. A note in the release's source language reads no job.
 - **A revision with a missing text is not saved as rendered again.** Saving a `RENDERED`

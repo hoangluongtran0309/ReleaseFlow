@@ -41,12 +41,20 @@ interface TranslationJobRepository extends JpaRepository<TranslationJob, UUID> {
             TranslationJob.Status status
     );
 
-    // SKIP LOCKED lets several workers claim different jobs without waiting on each other.
+    boolean existsByOrganizationIdAndSourceLanguageAndTargetLanguageAndStatus(
+            UUID organizationId, String sourceLanguage, String targetLanguage, TranslationJob.Status status);
+
+    // Lock the Organization only for the short claim transaction. Its RUNNING job
+    // reserves the language pair until the result and cache entries commit together.
     // A job waits while the glossary version it asked for is being synced (ADR-0036); the
     // sync is bounded, so the wait is too.
     @Query(value = """
-            SELECT * FROM translation_jobs j
+            SELECT j.* FROM translation_jobs j JOIN organizations o ON o.id = j.organization_id
             WHERE j.status = 'PENDING' AND j.next_attempt_at <= :now
+              AND NOT EXISTS (
+                  SELECT 1 FROM translation_jobs r
+                  WHERE r.organization_id = j.organization_id AND r.source_language = j.source_language
+                    AND r.target_language = j.target_language AND r.status = 'RUNNING')
               AND NOT EXISTS (
                   SELECT 1 FROM glossary_syncs s
                   WHERE s.organization_id = j.organization_id
@@ -56,7 +64,8 @@ interface TranslationJobRepository extends JpaRepository<TranslationJob, UUID> {
                     AND s.status IN ('PENDING', 'RUNNING'))
             ORDER BY j.next_attempt_at, j.created_at
             LIMIT 1
-            FOR UPDATE SKIP LOCKED
+            FOR UPDATE OF j SKIP LOCKED
+            FOR NO KEY UPDATE OF o SKIP LOCKED
             """, nativeQuery = true)
     Optional<TranslationJob> lockNextDue(@Param("now") Instant now);
 

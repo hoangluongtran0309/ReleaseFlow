@@ -733,8 +733,10 @@ Khi release đã duyệt:
   nên đổi nó không gửi gì.
 - **Nếu ngữ cảnh Project hoặc một bảng thuật ngữ đã đổi kể từ lần duyệt,** việc dựng lại note sẽ
   dịch mọi văn bản của release theo ngữ cảnh và bảng thuật ngữ mới, như khi sửa tóm tắt của một
-  thay đổi. Khi đó trang giữ lại lần sửa và cho biết sẽ gửi bao nhiêu ký tự tới DeepL; lưu lần nữa
-  là xác nhận. Không có nhà cung cấp dịch thì không gửi gì và không giữ lại gì.
+  thay đổi. Khi đó trang giữ lại lần sửa và cho biết sẽ gửi bao nhiêu ký tự tới DeepL. Với mỗi
+  ngôn ngữ, một đoạn văn xuất hiện ở nhiều thay đổi, nhiều trường hoặc trong tóm tắt release chỉ
+  được tính một lần nếu cùng ngữ cảnh và phiên bản bảng thuật ngữ. Lưu lần nữa để xác nhận.
+  Không có nhà cung cấp dịch thì không gửi gì và không giữ lại gì.
 
 Client REST gửi cùng `PUT …/releases/{releaseId}` như với bản nháp, bỏ phiên bản và release trước
 hoặc gửi đúng giá trị hiện tại. Một lần sửa bị giữ lại vì bản dịch trả về
@@ -796,8 +798,10 @@ viết như nguồn viết chúng ([ADR-0040](adr/0040-translation-placeholders.
 tới DeepL hay AI. Khác biệt so với bản sửa đổi mới nhất được hiển thị ngay. Lưu nguyên như vậy, nội
 dung được ghi là dựng lại và chỉ nhận đã dùng bảng thuật ngữ đúng như các bản dịch đó đã dùng; mọi
 chỉnh sửa sẽ biến nó thành một lần sửa tay. Một đoạn văn mà release không được publish cùng bản dịch
-của nó, chẳng hạn một tóm tắt được viết lại sau đó, vẫn chưa dịch và được đếm, và việc lưu nó như một
-lần dựng lại bị từ chối: hãy sửa nó bằng tay. Note do một người viết, trước khi publish hay ở một lần
+của nó, chẳng hạn một tóm tắt được viết lại sau đó, vẫn chưa được dịch. Bản xem trước đánh dấu từng
+trường thiếu bản dịch và chỉ tính số ký tự của đoạn văn trùng nhau một lần cho mỗi bản dịch.
+Khi còn thiếu bản dịch, bạn có thể sửa note bằng tay. Note do một người viết, trước khi
+publish hay ở một lần
 sửa sau đó, và note của một audience đã ngừng dùng, chỉ được sửa bằng tay. Một bản dịch cần một câu
 trả lời mới, chẳng hạn một thuật ngữ mà DeepL dịch sai, cũng cần sửa tay: dịch lại một note không nằm
 trong bản phát hành này.

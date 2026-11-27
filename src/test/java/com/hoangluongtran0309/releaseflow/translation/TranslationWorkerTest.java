@@ -24,7 +24,7 @@ class TranslationWorkerTest {
 
         // Map.copyOf, as a job hands its input out, iterates in an order salted per JVM.
         for (Map<String, String> input : new Map[] {written, reversed, Map.copyOf(written), new HashMap<>(written)}) {
-            assertThat(TranslationWorker.missing(input, Map.of())).containsExactly(
+            assertThat(TranslationTexts.missing(input, Map.of())).containsExactly(
                     "Use ExportJob.", "Download any table.", "Watch the export queue.",
                     "Streams rows.", "Tables export as CSV.", "Users asked.");
         }
@@ -38,7 +38,7 @@ class TranslationWorkerTest {
                 "whyChanged", "Users asked.",
                 "technicalDetail", "Streams rows.");
 
-        assertThat(TranslationWorker.missing(input, Map.of("Users asked.", "Người dùng yêu cầu.")))
+        assertThat(TranslationTexts.missing(input, Map.of("Users asked.", "Người dùng yêu cầu.")))
                 .containsExactly("Exports run faster.", "Streams rows.");
     }
 }

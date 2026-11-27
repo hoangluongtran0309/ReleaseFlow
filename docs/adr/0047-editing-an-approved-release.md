@@ -93,8 +93,8 @@ and link as they were published.
   the new context and version, as editing a change's summary already does. When it applies,
   the page warns before the edit is saved and names how many characters would be sent to DeepL,
   counted the way ADR-0046's correction preview counts `missingCharacters`: the source
-  characters of every text that has no translation under the new context and version, once for
-  each language it would be translated into. Counting sends nothing.
+  code points of each distinct text that has no translation under the new context and version,
+  once for each language it would be translated into. Counting sends nothing.
 
 ### 4. A note's update time moves only when its text does
 
@@ -174,9 +174,9 @@ page. Its Size says "No new error code".
   count is no longer the current one, the answer is `409 release_edit_retranslates`, with
   `characters`, the current count, and `languages`, the languages that would be sent anything.
   Nothing is saved or queued.
-- **The count is part 3's:** the source characters of every text the notes would send that has
-  no translation under the current context and glossary version, the new summary included, once
-  for each language. Counting sends nothing, and without a translation provider it is `0` and
+- **The count follows part 3.** It includes the source code points of each distinct text
+  without a translation under the current context and glossary version, the new summary
+  included, once for each language. Counting sends nothing, and without a translation provider it is `0` and
   nothing is held.
 - **An edit that sends only its new summary is never held**, and neither is an edit in review,
   which has no notes.

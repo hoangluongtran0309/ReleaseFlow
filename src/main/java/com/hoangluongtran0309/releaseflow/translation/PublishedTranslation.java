@@ -10,15 +10,16 @@ import java.util.Set;
  *
  * @param texts      the given texts, each found one replaced by its translation
  * @param missing    the keys of the non-blank texts no answer was found for
- * @param missingCharacters how long those texts are, in characters
+ * @param missingTranslations the distinct translations those fields lack
  * @param glossary   what the translations that were found did with the glossary
  */
-public record PublishedTranslation(Map<String, String> texts, Set<String> missing, int missingCharacters,
+public record PublishedTranslation(Map<String, String> texts, Set<String> missing, Set<MissingTranslation> missingTranslations,
                                    GlossaryUse glossary) {
 
     public PublishedTranslation {
         texts = Map.copyOf(texts);
         missing = Set.copyOf(missing);
+        missingTranslations = Set.copyOf(missingTranslations);
     }
 
     public boolean complete() {
