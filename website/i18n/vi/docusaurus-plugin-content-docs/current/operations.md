@@ -80,8 +80,9 @@ triển khai dưới một đường dẫn con bằng `X-Forwarded-Prefix`.
 Theo mặc định, Tomcat tin cậy proxy ở địa chỉ mạng riêng và loopback. Nếu proxy chạy
 ở nơi khác, cấu hình `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` cho địa chỉ của proxy.
 Với Compose, thêm biến cấu hình forwarded header vào `environment` của service `app`.
-Khi nâng cấp, bỏ biến cũ `SERVER_FORWARD_HEADERS_STRATEGY` trước khi đặt biến thay thế.
-Ứng dụng dừng khi khởi động nếu cả hai biến cùng được đặt.
+Biến cũ `SERVER_FORWARD_HEADERS_STRATEGY` đã bị deprecated nhưng vẫn hoạt động và không ghi
+cảnh báo nào vào log, nên hãy chuyển sang tên mới ngay: bỏ biến cũ trước khi đặt biến thay
+thế, vì ứng dụng dừng khi khởi động nếu cả hai biến cùng được đặt.
 
 **Những gì internet truy cập được.** Nhà cung cấp cần `/webhooks/`, và người đọc ẩn danh cần
 `/changelog/` nếu bạn publish changelog công khai. Người trong nhóm cần phần còn lại, phần này có

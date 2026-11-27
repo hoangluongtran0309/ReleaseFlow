@@ -59,9 +59,19 @@ section into the version's entry, and the GitHub release is written from it.
 
 - Upgrade note: behind an HTTPS proxy, set `SERVER_REQUEST_HEADER_FORWARDED_STRATEGY=web-server`,
   Spring Boot 4.2.0's name for it. The old `SERVER_FORWARD_HEADERS_STRATEGY=native` still works
-  in 1.4.0 but is deprecated. A deployment must not set both: startup stops if it does. Redirects
-  now carry a relative `Location`, which the browser resolves against the public address. See
+  in 1.4.0 but is deprecated, and it logs no warning, so move to the new name now. A deployment
+  must not set both: startup stops if it does. Redirects now carry a relative `Location`, which
+  the browser resolves against the public address. See
   [Deploying to production](docs/operations.md#deploying-to-production).
+- Upgrade note: with Spring Boot 4.2.0 and Micrometer 1.18, observations no longer create their
+  active long-task timers, so the Prometheus scrape loses every `*_active_seconds` series
+  (`_count`, `_sum`, and `_max` of `http_server_requests_active_seconds`,
+  `spring_security_authorizations_active_seconds`, `spring_security_filterchains_active_seconds`,
+  `spring_security_http_secured_requests_active_seconds`, and
+  `tasks_scheduled_execution_active_seconds`) and gains the JVM's
+  `jvm_memory_used_after_last_gc_bytes`. ReleaseFlow's four metric families keep their names and
+  labels. `management.metrics.observations.include-active-long-task-timer=true`
+  (`MANAGEMENT_METRICS_OBSERVATIONS_INCLUDE_ACTIVE_LONG_TASK_TIMER`) turns the timers back on.
 - Every run for a release, from publication, by hand, a schedule, a reminder, a signed call, or
   a correction, is created with the release locked, so it carries each note as of a moment no
   correction is half-way through.

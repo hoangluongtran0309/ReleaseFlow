@@ -85,8 +85,9 @@ address. Serve ReleaseFlow at the root of that address: deployment under a path,
 Tomcat trusts private and loopback proxy addresses by default. If your proxy runs
 elsewhere, configure `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` for its address.
 For a Compose deployment, add the forwarded-header strategy to the `app` service's
-`environment`. When upgrading, remove the deprecated `SERVER_FORWARD_HEADERS_STRATEGY`
-before setting its replacement. Setting both stops startup.
+`environment`. The deprecated `SERVER_FORWARD_HEADERS_STRATEGY` still works but logs no
+warning, so move to the new name now: remove the old variable before setting its
+replacement, because setting both stops startup.
 
 **What the internet reaches.** Providers need `/webhooks/`, and anonymous readers need
 `/changelog/` if you publish a public changelog. Your own people need the rest, which can
